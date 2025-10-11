@@ -1,0 +1,851 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+  <title>Whistel Space — P2P encrypted tips + Solana memo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script crossorigin src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
+<style>
+    html,body{height:100%}
+    body{background:#0b0f14}
+    /* Premium dynamic visuals */
+    @keyframes gradientMove{0%{transform:translate3d(-6%, -4%, 0) scale(1)}100%{transform:translate3d(6%, 4%, 0) scale(1.08)}}
+    @keyframes floatSlow{0%{transform:translateY(0)}50%{transform:translateY(-4px)}100%{transform:translateY(0)}}
+    @keyframes ripple{0%{transform:scale(0);opacity:.5}100%{transform:scale(4);opacity:0}}
+    @keyframes toastIn{0%{transform:translateY(8px);opacity:0}100%{transform:translateY(0);opacity:1}}
+    .bg-anim{animation:gradientMove 14s ease-in-out infinite alternate}
+    .float-slow{animation:floatSlow 6s ease-in-out infinite}
+    .glass-hover{transition:transform .3s ease, box-shadow .3s ease}
+    .glass-hover:hover{transform:translateY(-2px);box-shadow:0 20px 40px rgba(0,0,0,.35)}
+    .btn-ripple{position:relative;overflow:hidden}
+    .btn-ripple span.ripple{position:absolute;border-radius:9999px;background:rgba(255,255,255,.35);transform:scale(0);animation:ripple .6s linear;pointer-events:none}
+    .toast-enter{animation:toastIn .25s ease-out}
+</style>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="preconnect" href="https://cdn.tailwindcss.com">
+  <link rel="icon" type="image/png" href="whistel_logo_top_right_2048.png">
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useEffect, useMemo, useRef, useState } = React;
+
+    // ---------- small helpers ----------
+    const enc = new TextEncoder();
+    const dec = new TextDecoder();
+    const hex = (b) => Array.from(b).map((x) => x.toString(16).padStart(2, "0")).join("");
+    // robust base64 helpers (URL-safe tolerant + large arrays)
+    function safeAtob(str){
+      let s = String(str||'');
+      s = s.replace(/\s+/g,'').replace(/-/g,'+').replace(/_/g,'/');
+      while (s.length % 4) s += '=';
+      return atob(s);
+    }
+    function b64(u8){
+      let binary = '';
+      const CHUNK = 0x8000;
+      for (let i=0;i<u8.length;i+=CHUNK){
+        const sub = u8.subarray(i, i+CHUNK);
+        binary += String.fromCharCode.apply(null, sub);
+      }
+      return btoa(binary);
+    }
+    function ub64(s){
+      const bin = safeAtob(s);
+      const out = new Uint8Array(bin.length);
+      for (let i=0;i<bin.length;i++) out[i] = bin.charCodeAt(i);
+      return out;
+    }
+    function textToB64(str){ return b64(new TextEncoder().encode(str)); }
+    function b64ToText(s){ return new TextDecoder().decode(ub64(s)); }
+
+    // Ensure Buffer polyfill for web3 internals in browser
+    async function ensureBuffer(){
+      if (!window.Buffer){
+        try{
+          const m = await import('https://esm.sh/buffer@6.0.3?bundle');
+          window.Buffer = m.Buffer;
+        }catch(e){ /* ignore; some environments already polyfill */ }
+      }
+    }
+
+    // RPC defaults (hidden in UI; configurable via localStorage keys rpcHttpUrl / rpcWsUrl)
+    const DEFAULT_RPC_HTTP = 'https://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0';
+    const DEFAULT_RPC_WS   = 'wss://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0';
+    function getRpcUrls(){
+      try{
+        const http = (localStorage.getItem('rpcHttpUrl') || DEFAULT_RPC_HTTP).trim();
+        const ws = (localStorage.getItem('rpcWsUrl') || '').trim();
+        return { http, ws };
+      }catch{ return { http: DEFAULT_RPC_HTTP, ws: '' }; }
+    }
+
+    // Short, domain-like code for hashes (Base32 RFC4648, lowercase, dotted groups)
+    function toBase32(u8){
+      const alphabet = 'abcdefghijklmnopqrstuvwxyz234567';
+      let out = '';
+      let bits = 0, value = 0;
+      for (let i=0;i<u8.length;i++){
+        value = (value << 8) | u8[i];
+        bits += 8;
+        while (bits >= 5){
+          out += alphabet[(value >>> (bits - 5)) & 31];
+          bits -= 5;
+        }
+      }
+      if (bits > 0){ out += alphabet[(value << (5 - bits)) & 31]; }
+      return out;
+    }
+    function fromBase32(str){
+      const alphabet = 'abcdefghijklmnopqrstuvwxyz234567';
+      const map = Object.create(null);
+      for (let i=0;i<alphabet.length;i++){ map[alphabet[i]] = i; }
+      let bits = 0, value = 0, out = [];
+      for (const ch of str.toLowerCase()){
+        if (!(ch in map)) throw new Error('invalid base32');
+        value = (value << 5) | map[ch];
+        bits += 5;
+        if (bits >= 8){
+          out.push((value >>> (bits - 8)) & 255);
+          bits -= 8;
+        }
+      }
+      return new Uint8Array(out);
+    }
+    function formatShortCode(bytes){
+      const b32 = toBase32(bytes).toLowerCase();
+      return 'whis.' + b32.match(/.{1,4}/g).join('.');
+    }
+    function parseHashOrCode(input){
+      const t = (input||'').trim().toLowerCase();
+      if (/^[0-9a-f]{64}$/.test(t)) return t; // hex
+      const clean = t.replace(/^whis\./,'').replace(/\./g,'');
+      if (/^[a-z2-7]+$/.test(clean)){
+        const bytes = fromBase32(clean);
+        return hex(bytes);
+      }
+      throw new Error('Enter 64-hex or a whis.xxxx short code');
+    }
+
+    async function sha256(bytes) {
+      const h = await crypto.subtle.digest("SHA-256", bytes);
+      return new Uint8Array(h);
+    }
+
+    // ---------- persistence helpers ----------
+    function usePersistentState(key, defaultValue){
+      const [value, setValue] = React.useState(() => {
+        try{
+          const raw = localStorage.getItem(key);
+          return raw != null ? JSON.parse(raw) : defaultValue;
+        }catch{ return defaultValue; }
+      });
+      React.useEffect(()=>{
+        try{ localStorage.setItem(key, JSON.stringify(value)); }catch{}
+      }, [key, value]);
+      return [value, setValue];
+    }
+
+    const HISTORY_KEY = 'whistleHistory';
+    const HISTORY_MAX = 50;
+    function storageGetHistory(){
+      try{ return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }catch{ return []; }
+    }
+    function storageSetHistory(list){
+      try{ localStorage.setItem(HISTORY_KEY, JSON.stringify(list)); }catch{}
+    }
+    function storagePushHistory(entry){
+      const list = storageGetHistory();
+      list.unshift({ id: Math.random().toString(36).slice(2), ...entry });
+      while (list.length > HISTORY_MAX) list.pop();
+      storageSetHistory(list);
+      try{ window.dispatchEvent(new CustomEvent('whHistory')); }catch{}
+    }
+
+    async function packBundle(text, files) {
+      const pkg = { v: 1, createdAt: new Date().toISOString(), text, files: [] };
+      let total = 0;
+      for (const f of files) {
+        const buf = new Uint8Array(await f.arrayBuffer());
+        total += buf.length;
+        if (total > 50 * 1024 * 1024) throw new Error("Total evidence > 50 MB");
+        pkg.files.push({ name: f.name, type: f.type, size: f.size, b64: b64(buf) });
+      }
+      const payload = enc.encode(JSON.stringify(pkg));
+      const aesKeyRaw = crypto.getRandomValues(new Uint8Array(32));
+      const aesKey = await crypto.subtle.importKey("raw", aesKeyRaw, "AES-GCM", false, ["encrypt", "decrypt"]);
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, aesKey, payload));
+      return { pkgBytes: payload, aesKeyRaw, iv, ct };
+    }
+
+    async function unpackBundle(aesKeyRaw, iv, ct) {
+      const aesKey = await crypto.subtle.importKey("raw", aesKeyRaw, "AES-GCM", false, ["decrypt"]);
+      const plain = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv }, aesKey, ct));
+      return JSON.parse(dec.decode(plain));
+    }
+
+    function useToasts() {
+      const [toasts, setToasts] = useState([]);
+      function push(msg, tone = "default") {
+        const id = Math.random().toString(36).slice(2);
+        setToasts((t) => [...t, { id, msg, tone }]);
+        setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2800);
+      }
+      return { toasts, push };
+    }
+
+    // micro interaction: ripple on buttons
+    function ripple(e){
+      try{
+        const btn = e.currentTarget;
+        const rect = btn.getBoundingClientRect();
+        const size = Math.max(rect.width, rect.height);
+        const x = e.clientX - rect.left - size/2;
+        const y = e.clientY - rect.top - size/2;
+        const circle = document.createElement('span');
+        circle.className = 'ripple';
+        circle.style.width = circle.style.height = size + 'px';
+        circle.style.left = x + 'px';
+        circle.style.top = y + 'px';
+        btn.appendChild(circle);
+        setTimeout(()=>{ try{ circle.remove(); }catch{} }, 650);
+      }catch{}
+    }
+
+    function GlassCard({ title, subtitle, children, className = "" }) {
+      const ref = useRef(null);
+      const [tilt, setTilt] = useState('');
+      function onMove(e){
+        const el = ref.current; if(!el) return;
+        const r = el.getBoundingClientRect();
+        const px = (e.clientX - r.left) / r.width; // 0..1
+        const py = (e.clientY - r.top) / r.height; // 0..1
+        const rx = (py - .5) * 6; // tilt X
+        const ry = (px - .5) * -6; // tilt Y
+        setTilt(`perspective(900px) rotateX(${rx}deg) rotateY(${ry}deg)`);
+      }
+      function onLeave(){ setTilt(''); }
+      return (
+        <section ref={ref} onMouseMove={onMove} onMouseLeave={onLeave}
+          className={`relative rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl p-5 shadow-xl shadow-black/30 glass-hover will-change-transform ${className}`}
+          style={{ transform: tilt }}>
+          <div className="mb-3">
+            <h3 className="text-lg font-semibold text-white/90">{title}</h3>
+            {subtitle && <p className="text-xs text-white/50">{subtitle}</p>}
+  </div>
+          {children}
+        </section>
+      );
+    }
+
+    function SectionHeader() {
+      return (
+        <header className="flex items-center justify-between border-b border-white/10 pb-3">
+          <div className="flex items-center gap-3">
+            <div className="relative h-9 w-9 rounded-xl overflow-hidden border border-white/20 float-slow bg-white/5">
+              <img src="whistel_logo_top_right_2048.png" alt="Whistel Space" className="absolute inset-0 h-full w-full object-contain"/>
+               {!walletStore.pubkey && <span className="absolute inset-0 rounded-xl bg-cyan-400/20 animate-ping" />}
+      </div>
+      <div>
+               <div className="text-white font-semibold">Whistel Space</div>
+               <div className="text-xs text-white/50">P2P encrypted tips • Solana proof</div>
+      </div>
+    </div>
+          <WalletConnectButton />
+</header>
+      );
+    }
+
+    // simple wallet event store
+    const walletStore = { pubkey: null, setPub: () => {} };
+
+    function WalletConnectButton() {
+      const [label, setLabel] = useState("Connect Phantom");
+      useEffect(() => {
+        walletStore.setPub = (pk) => setLabel(pk ? `Connected: ${pk.slice(0, 4)}…` : "Connect Phantom");
+      }, []);
+      return (
+        <button
+          className="rounded-xl bg-cyan-500/80 hover:bg-cyan-400 text-black font-semibold px-4 py-2 transition-colors btn-ripple active:scale-[.98]"
+          onClick={async (e) => {
+            ripple(e);
+            if (!window?.solana?.isPhantom) {
+              alert("Install Phantom to post Solana Memo (optional). Other features work without it.");
+              return;
+            }
+            try {
+              const r = await window.solana.connect();
+              walletStore.pubkey = r.publicKey.toBase58();
+              walletStore.setPub(walletStore.pubkey);
+            } catch (e) {}
+          }}
+        >
+          {label}
+        </button>
+      );
+    }
+
+    function StepPills({ step, setStep }) {
+      const tabs = [
+        { id: "receive", label: "1) Newsroom" },
+        { id: "send", label: "2) Tipster" },
+        { id: "verify", label: "3) Verify / Memo" },
+      ];
+      return (
+        <div className="flex flex-wrap gap-2">
+          {tabs.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setStep(t.id)}
+              className={`rounded-full px-4 py-2 text-sm border ${
+                step === t.id
+                  ? "border-cyan-400 bg-cyan-400/20 text-cyan-200"
+                  : "border-white/10 bg-white/[0.03] text-white/70 hover:bg-white/[0.06]"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+      </div>
+      );
+    }
+
+    function Onboarding({ setStep }) {
+      const [open, setOpen] = useState(true);
+      if (!open) return null;
+      return (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 backdrop-blur">
+          <div className="max-w-3xl w-[92%] rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.08] to-white/[0.03] p-6 text-white shadow-2xl">
+            <h2 className="text-xl font-semibold mb-2">Choose your role to get started</h2>
+            <div className="grid md:grid-cols-2 gap-4 mt-3">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                <h3 className="font-semibold text-white/90">Newsroom</h3>
+                <ul className="text-sm text-white/70 list-disc list-inside space-y-1 mt-1">
+                  <li>Paste Offer</li>
+                  <li>Generate Answer and send it back</li>
+                  <li>Receive and decrypt tip</li>
+                </ul>
+                <button onClick={() => { setStep('receive'); setOpen(false); }} className="mt-3 w-full rounded-xl bg-cyan-500/80 hover:bg-cyan-400 text-black font-semibold px-4 py-2">I'm the Newsroom</button>
+    </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                <h3 className="font-semibold text-white/90">Tipster</h3>
+                <ul className="text-sm text-white/70 list-disc list-inside space-y-1 mt-1">
+                  <li>Write tip + attach files</li>
+                  <li>Generate Offer and share it</li>
+                  <li>Paste Answer • Connect • Send</li>
+                </ul>
+                <button onClick={() => { setStep('send'); setOpen(false); }} className="mt-3 w-full rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold px-4 py-2 border border-white/10">I'm the Tipster</button>
+    </div>
+    </div>
+    </div>
+</div>
+      );
+    }
+
+    function Sender({ pushToast, onHashReady }) {
+      const [tipText, setTipText] = usePersistentState('tipText', "");
+      const fileRef = useRef(null);
+      const [offerOut, setOfferOut] = useState("");
+      const [answerIn, setAnswerIn] = usePersistentState('tipAnswerIn', "");
+      const [connStatus, setConnStatus] = useState("Not connected");
+      const [sending, setSending] = useState(false);
+      const [prog, setProg] = useState(0);
+      const peerRef = useRef(null);
+      const dcRef = useRef(null);
+      const [isDrag, setIsDrag] = useState(false);
+      const [droppedFiles, setDroppedFiles] = useState([]);
+      const [memoSig, setMemoSig] = useState("");
+      const [shortCode, setShortCode] = useState("");
+      const [waitingForAnswer, setWaitingForAnswer] = useState(false);
+      const [connecting, setConnecting] = useState(false);
+
+      async function copyOffer(){
+        try{ await navigator.clipboard.writeText(offerOut || ""); pushToast("Offer copied", "ok"); }catch(e){ pushToast("Copy failed", "err"); }
+      }
+      async function shareOffer(){
+        try{
+          if (!offerOut){ pushToast("Generate an Offer first", "err"); return; }
+          const message = `Whistle Courier Offer (Tipster)\n\nPaste this in Newsroom → Step 1 (Paste Offer), click Generate Answer, and send the Answer back.\n\n${offerOut}`;
+          if (navigator.share){
+            await navigator.share({ title: 'Whistle Courier Offer', text: message });
+            pushToast("Shared", "ok");
+          } else {
+            await navigator.clipboard.writeText(message);
+            pushToast("Offer + instructions copied — share anywhere", "ok");
+          }
+        }catch(e){ pushToast("Share failed", "err"); }
+      }
+      async function pasteAnswer(){
+        try{ const t = await navigator.clipboard.readText(); setAnswerIn(t || ""); if((t||"").trim()) setWaitingForAnswer(false); pushToast("Pasted from clipboard", "ok"); }catch(e){ pushToast("Paste failed", "err"); }
+      }
+      function resetSender(){
+        try{ dcRef.current?.close?.(); }catch{}
+        try{ peerRef.current?.close?.(); }catch{}
+        setTipText(""); if (fileRef.current) fileRef.current.value="";
+        setOfferOut(""); setAnswerIn(""); setConnStatus("Not connected"); setSending(false); setProg(0);
+        setWaitingForAnswer(false); setConnecting(false);
+        pushToast("Tipster reset", "ok");
+      }
+
+      async function makeOffer() {
+        try {
+          const pc = new RTCPeerConnection({ iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }] });
+          peerRef.current = pc;
+          const dc = pc.createDataChannel("whistle", { ordered: true });
+          dc.binaryType = "arraybuffer";
+          dcRef.current = dc;
+          dc.onopen = () => { setConnStatus("Connected"); setConnecting(false); };
+          dc.onclose = () => { setConnStatus("Closed"); };
+          pc.onicecandidate = (e) => { if (!e.candidate) setOfferOut(textToB64(JSON.stringify(pc.localDescription))); };
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          pushToast("Offer created. Copy to newsroom.", "ok");
+          setWaitingForAnswer(true);
+          setConnecting(false);
+        } catch (e) {
+          pushToast("Offer failed: " + (e.message || e), "err");
+        }
+      }
+
+      async function acceptAnswer() {
+        try {
+          if (!peerRef.current) throw new Error("Create an Offer first");
+          const ans = JSON.parse(b64ToText(answerIn.trim()));
+          await peerRef.current.setRemoteDescription(new RTCSessionDescription(ans));
+          setConnStatus("Connecting…");
+          setConnecting(true);
+        } catch (e) {
+          pushToast("Accept failed: " + (e.message || e), "err");
+        }
+      }
+
+      async function sendNow() {
+        try {
+          const dc = dcRef.current;
+          if (!dc || dc.readyState !== "open") throw new Error("Not connected");
+          const inputFiles = fileRef.current?.files || [];
+          const files = [...inputFiles, ...droppedFiles];
+          const { pkgBytes, aesKeyRaw, iv, ct } = await packBundle(tipText, files);
+          const hash = await sha256(ct);
+          const bundleHash = hex(hash);
+          setShortCode(formatShortCode(hash));
+          onHashReady(bundleHash);
+
+          setSending(true); setProg(0);
+          const header = JSON.stringify({ v: 1, iv: b64(iv), key: b64(aesKeyRaw), ctSize: ct.length });
+          dc.send(new TextEncoder().encode(header));
+          await new Promise((r) => setTimeout(r, 50));
+          const chunk = 64 * 1024; let sent = 0;
+          while (sent < ct.length) {
+            const part = ct.slice(sent, Math.min(sent + chunk, ct.length));
+            dc.send(part);
+            sent += part.length;
+            setProg(Math.round((sent * 100) / ct.length));
+            await new Promise((r) => setTimeout(r, 0));
+          }
+          setSending(false);
+          pushToast("Tip sent", "ok");
+          storagePushHistory({ role:'tipster', kind:'sent', hash: bundleHash, short: formatShortCode(hash), at: new Date().toISOString() });
+
+          // Immediately post memo (required)
+          try{
+            const { Connection, PublicKey, SystemProgram, Transaction, TransactionInstruction } = solanaWeb3;
+            await ensureBuffer();
+            if (!walletStore.pubkey){
+              const r = await window.solana?.connect?.();
+              if(!r) throw new Error("Wallet not connected");
+              walletStore.pubkey = r.publicKey.toBase58();
+              walletStore.setPub(walletStore.pubkey);
+            }
+            const { http: httpUrl, ws: wsUrl } = getRpcUrls();
+            const conn = wsUrl ? new Connection(httpUrl, { commitment:'confirmed', wsEndpoint: wsUrl }) : new Connection(httpUrl, 'confirmed');
+            const MEMO = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+            const memoBuf = enc.encode("WHISTLE_HASH:" + bundleHash); // Uint8Array
+            const ixMemo = new TransactionInstruction({ keys: [], programId: MEMO, data: memoBuf });
+            const ixPing = SystemProgram.transfer({ fromPubkey: new PublicKey(walletStore.pubkey), toPubkey: new PublicKey(walletStore.pubkey), lamports: 0 });
+            const tx = new Transaction().add(ixPing, ixMemo);
+            tx.feePayer = new PublicKey(walletStore.pubkey);
+            tx.recentBlockhash = (await conn.getLatestBlockhash()).blockhash;
+            const signed = await window.solana.signTransaction(tx);
+            const sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
+            await conn.confirmTransaction(sig, 'confirmed');
+            setMemoSig(sig);
+            pushToast("Solana memo posted", "ok");
+            storagePushHistory({ role:'tipster', kind:'memo', hash: bundleHash, short: formatShortCode(hash), sig, at: new Date().toISOString() });
+          }catch(err){
+            const msg = (err && err.message) ? err.message : String(err);
+            pushToast("Memo failed: "+msg, "err");
+          }
+        } catch (e) {
+          setSending(false);
+          pushToast("Send failed: " + (e.message || e), "err");
+        }
+      }
+
+      return (
+        <GlassCard title="Tipster — Send" subtitle="Compose, connect, and send end-to-end encrypted">
+          <div className="grid md:grid-cols-2 gap-4">
+      <div>
+              <label className="text-xs text-white/60">Tip (text)</label>
+              <textarea value={tipText} onChange={(e) => setTipText(e.target.value)} rows={8} className="mt-1 w-full rounded-xl bg-white/[0.06] border border-white/10 p-3 outline-none focus:ring-2 focus:ring-cyan-400/40" placeholder="Describe the issue with verifiable details." />
+      </div>
+            <div onDragOver={(e)=>{e.preventDefault(); setIsDrag(true);}} onDragLeave={()=>setIsDrag(false)} onDrop={(e)=>{ e.preventDefault(); setIsDrag(false); const files = Array.from(e.dataTransfer.files||[]); setDroppedFiles(files); pushToast(files.length?`Added ${files.length} file(s)`:'No files', files.length?'ok':'err'); }} className={"rounded-xl p-2 "+(isDrag?"border-2 border-dashed border-cyan-400 bg-white/10":"")}>
+              <label className="text-xs text-white/60">Attach evidence (≤ 50 MB total)</label>
+              <input ref={fileRef} type="file" multiple className="mt-1 w-full rounded-xl bg-white/[0.06] border border-white/10 p-2" />
+              <p className="text-xs text-white/50 mt-1">Nothing uploads; it streams directly to the newsroom over an encrypted data channel.</p>
+              {droppedFiles.length>0 && (
+                <div className="mt-2 text-xs text-white/70">
+                  <div className="mb-1">Dropped files:</div>
+                  <ul className="list-disc list-inside space-y-0.5">
+                    {droppedFiles.map((f,i)=> <li key={i}>{f.name} ({Math.round(f.size/1024)} KB)</li>)}
+                  </ul>
+                  <button onClick={(e)=>{ ripple(e); setDroppedFiles([]); }} className="mt-2 rounded-xl bg-white/10 hover:bg-white/20 text-white px-3 py-1 border border-white/10 btn-ripple text-xs">Clear dropped</button>
+                </div>
+              )}
+      </div>
+    </div>
+
+          <div className="my-4 h-px bg-white/10" />
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <h4 className="text-white/90 font-semibold mb-1">Step A — Create Offer</h4>
+              <div className="flex gap-2">
+                <button onClick={(e)=>{ ripple(e); makeOffer(); }} className="rounded-xl bg-cyan-500/80 hover:bg-cyan-400 text-black font-semibold px-4 py-2 btn-ripple active:scale-[.98]">Generate Offer</button>
+                <button onClick={(e)=>{ ripple(e); copyOffer(); }} disabled={!offerOut} className="rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-50 text-white font-semibold px-4 py-2 border border-white/10 btn-ripple active:scale-[.98]">Copy Offer</button>
+                <button onClick={(e)=>{ ripple(e); shareOffer(); }} disabled={!offerOut} className="rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-50 text-white font-semibold px-4 py-2 border border-white/10 btn-ripple active:scale-[.98]">Share</button>
+              </div>
+              <p className="text-xs text-white/50 mt-1">Copy this text and send it to the newsroom. They will respond with an Answer.</p>
+              <textarea readOnly value={offerOut} rows={6} className="mt-2 w-full rounded-xl bg-black/50 border border-white/10 p-3 font-mono text-xs" />
+              {waitingForAnswer && !answerIn.trim() && connStatus!=="Connected" && (
+                <div className="mt-2 flex items-center gap-2 text-xs text-white/60">
+                  <span className="inline-block h-3 w-3 rounded-full border-2 border-white/30 border-t-cyan-400 animate-spin" />
+                  <span>Waiting for newsroom Answer…</span>
+                </div>
+              )}
+    </div>
+            <div>
+              <h4 className="text-white/90 font-semibold mb-1">Step B — Paste Answer</h4>
+              <textarea value={answerIn} onChange={(e) => { setAnswerIn(e.target.value); if(e.target.value.trim()) setWaitingForAnswer(false); }} rows={6} className="w-full rounded-xl bg-white/[0.06] border border-white/10 p-3 font-mono text-xs" placeholder="Paste newsroom Answer here" />
+              <div className="flex items-center gap-3 mt-2">
+                <button onClick={(e)=>{ ripple(e); pasteAnswer(); }} className="rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold px-3 py-2 border border-white/10 btn-ripple active:scale-[.98]">Paste Answer</button>
+                <button onClick={(e)=>{ ripple(e); acceptAnswer(); }} disabled={!answerIn.trim()} className="rounded-xl bg-white/15 hover:bg-white/25 disabled:opacity-50 text-white font-semibold px-4 py-2 border border-white/10 btn-ripple active:scale-[.98]">Connect</button>
+                <button onClick={(e)=>{ ripple(e); resetSender(); }} className="rounded-xl bg-white/5 hover:bg-white/15 text-white font-semibold px-3 py-2 border border-white/10 btn-ripple active:scale-[.98]">Reset</button>
+                <span className="text-xs text-white/60">{connStatus}</span>
+              </div>
+              {connecting && connStatus!=="Connected" && (
+                <div className="mt-2 flex items-center gap-2 text-xs text-white/60">
+                  <span className="inline-block h-3 w-3 rounded-full border-2 border-white/30 border-t-purple-400 animate-spin" />
+                  <span>Connecting to newsroom…</span>
+    </div>
+              )}
+    </div>
+</div>
+
+          <div className="mt-4">
+            <button onClick={(e)=>{ ripple(e); sendNow(); }} className="rounded-xl bg-gradient-to-r from-cyan-400 to-purple-400 text-black font-semibold px-4 py-2 disabled:opacity-60 btn-ripple active:scale-[.98]" disabled={connStatus !== "Connected" || sending}>
+              {sending ? "Sending…" : "Send Encrypted Tip"}
+            </button>
+            {sending && (
+              <div className="mt-2 h-2 w-full rounded-full bg-white/10 overflow-hidden">
+                <div className="h-2 bg-cyan-400 rounded-full transition-all" style={{ width: `${prog}%` }} />
+              </div>
+            )}
+          </div>
+          <div className="text-xs text-white/60 mt-2 space-y-1">
+            <p>Short code: <span className="font-mono">{shortCode}</span></p>
+            {memoSig && (
+              <p>🧾 Memo: <a className="text-cyan-300" target="_blank" rel="noreferrer" href={`https://solscan.io/tx/${memoSig}`}>{memoSig}</a></p>
+            )}
+          </div>
+        </GlassCard>
+      );
+    }
+
+    function Receiver({ pushToast, onHashReady, setVerifyHash }) {
+      const [offerIn, setOfferIn] = useState("");
+      const [answerOut, setAnswerOut] = useState("");
+      const [status, setStatus] = useState("Waiting…");
+      const [prog, setProg] = useState(0);
+      const [text, setText] = useState("");
+      const [files, setFiles] = useState([]);
+      const [hash, setHash] = useState("");
+      const peerRef = useRef(null);
+      const dcRef = useRef(null);
+
+      async function pasteOffer(){
+        try{ const t = await navigator.clipboard.readText(); setOfferIn(t || ""); pushToast("Pasted Offer", "ok"); }catch(e){ pushToast("Paste failed", "err"); }
+      }
+      async function copyAnswer(){
+        try{ await navigator.clipboard.writeText(answerOut || ""); pushToast("Answer copied", "ok"); }catch(e){ pushToast("Copy failed", "err"); }
+      }
+      function resetReceiver(){
+        try{ dcRef.current?.close?.(); }catch{}
+        try{ peerRef.current?.close?.(); }catch{}
+        setOfferIn(""); setAnswerOut(""); setStatus("Waiting…"); setProg(0); setText(""); setFiles([]); setHash("");
+        pushToast("Newsroom reset", "ok");
+      }
+
+      async function makeAnswer() {
+        try {
+          const pc = new RTCPeerConnection({ iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }] });
+          peerRef.current = pc;
+          pc.ondatachannel = (ev) => {
+            const dc = ev.channel;
+            dcRef.current = dc;
+            dc.binaryType = "arraybuffer";
+            let rcvAccum = [];
+            let rcvExpect = 0;
+            let rcvIV = null;
+            let rcvKey = null;
+            dc.onopen = () => setStatus("Connected");
+            dc.onmessage = async (e) => {
+              const buf = new Uint8Array(e.data);
+              if (!rcvIV) {
+                const meta = JSON.parse(new TextDecoder().decode(buf));
+                rcvIV = ub64(meta.iv);
+                rcvKey = ub64(meta.key);
+                rcvExpect = meta.ctSize | 0;
+                rcvAccum = [];
+                setProg(0);
+              } else {
+                rcvAccum.push(buf);
+                const sofar = rcvAccum.reduce((n, b) => n + b.length, 0);
+                setProg(Math.round((sofar * 100) / rcvExpect));
+                if (sofar >= rcvExpect) {
+                  const ct = new Uint8Array(sofar);
+                  let off = 0;
+                  for (const b of rcvAccum) { ct.set(b, off); off += b.length; }
+                  const pkg = await unpackBundle(rcvKey, rcvIV, ct);
+                  setText(pkg.text || "(no text)");
+                  setFiles(pkg.files || []);
+                  const h = hex(await sha256(ct));
+                  setHash(h);
+                  setVerifyHash(h);
+                  onHashReady(h);
+                  setStatus("Received & decrypted");
+                  pushToast("Received & decrypted", "ok");
+                  storagePushHistory({ role:'newsroom', kind:'received', hash: h, short: formatShortCode(await sha256(ct)), at: new Date().toISOString() });
+                }
+              }
+            };
+          };
+          pc.onicecandidate = (e) => { if (!e.candidate) setAnswerOut(textToB64(JSON.stringify(pc.localDescription))); };
+          const offer = JSON.parse(b64ToText(offerIn.trim()));
+          await pc.setRemoteDescription(new RTCSessionDescription(offer));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          setStatus("Answer created. Send it back to tipster.");
+          pushToast("Answer ready", "ok");
+        } catch (e) {
+          pushToast("Answer failed: " + (e.message || e), "err");
+        }
+      }
+
+      return (
+        <GlassCard title="Newsroom — Receive" subtitle="Paste Offer, generate Answer, accept the stream">
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <h4 className="text-white/90 font-semibold mb-1">Step 1 — Paste Offer</h4>
+              <p className="text-xs text-white/50 mb-1">Paste the code the Tipster sent you. Then click <span className="text-white/70 font-semibold">Generate Answer</span> and send the Answer back to the Tipster.</p>
+              <textarea value={offerIn} onChange={(e) => setOfferIn(e.target.value)} rows={6} className="w-full rounded-xl bg-white/[0.06] border border-white/10 p-3 font-mono text-xs" placeholder="Paste tipster Offer here" />
+              <div className="flex gap-2 mt-2">
+                <button onClick={(e)=>{ ripple(e); pasteOffer(); }} className="rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold px-3 py-2 border border-white/10 btn-ripple active:scale-[.98]">Paste Offer</button>
+                <button onClick={(e)=>{ ripple(e); makeAnswer(); }} className="rounded-xl bg-cyan-500/80 hover:bg-cyan-400 text-black font-semibold px-4 py-2 btn-ripple active:scale-[.98]">Generate Answer</button>
+              </div>
+              <div className="flex gap-2 mt-2">
+                <button onClick={(e)=>{ ripple(e); copyAnswer(); }} disabled={!answerOut} className="rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-50 text-white font-semibold px-3 py-2 border border-white/10 btn-ripple active:scale-[.98]">Copy Answer</button>
+                <button onClick={(e)=>{ ripple(e); resetReceiver(); }} className="rounded-xl bg-white/5 hover:bg-white/15 text-white font-semibold px-3 py-2 border border-white/10 btn-ripple active:scale-[.98]">Reset</button>
+              </div>
+              <textarea readOnly value={answerOut} rows={6} className="mt-2 w-full rounded-xl bg-black/50 border border-white/10 p-3 font-mono text-xs" placeholder="Copy this Answer back to tipster" />
+            </div>
+            <div>
+              <h4 className="text-white/90 font-semibold mb-1">Status</h4>
+              <p className="text-xs text-white/60">{status}</p>
+              <div className="mt-2 h-2 w-full rounded-full bg-white/10 overflow-hidden">
+                <div className="h-2 bg-purple-400 rounded-full transition-all" style={{ width: `${prog}%` }} />
+              </div>
+            </div>
+          </div>
+
+          <div className="my-4 h-px bg-white/10" />
+
+          <div>
+            <h4 className="text-white/90 font-semibold mb-1">Decrypted Tip</h4>
+            <pre className="font-mono text-xs bg-black/40 p-3 rounded-xl border border-white/10 min-h-[96px] whitespace-pre-wrap">{text}</pre>
+            <div className="mt-2 space-y-1">
+              {files.map((x, i) => (
+                <a key={i} href={URL.createObjectURL(new Blob([ub64(x.b64)], { type: x.type || "application/octet-stream" }))} download={x.name} className="block text-cyan-300 hover:text-cyan-200 text-sm">
+                  Download {x.name} ({x.type || "file"})
+                </a>
+              ))}
+            </div>
+            <p className="text-xs text-white/60 mt-2">Computed bundle hash: <span className="font-mono">{hash}</span></p>
+          </div>
+        </GlassCard>
+      );
+    }
+
+    function VerifyMemo({ pushToast, verifyHash }) {
+      const [hashIn, setHashIn] = useState(verifyHash || "");
+      const [memoSig, setMemoSig] = useState("");
+      const [hist, setHist] = useState(storageGetHistory());
+      useEffect(()=>{
+        function onH(){ setHist(storageGetHistory()); }
+        window.addEventListener('whHistory', onH);
+        return ()=> window.removeEventListener('whHistory', onH);
+      },[]);
+
+      useEffect(() => { if (verifyHash) setHashIn(verifyHash); }, [verifyHash]);
+
+      async function postMemo() {
+        try {
+          let hash;
+          try{ hash = parseHashOrCode(hashIn); }
+          catch{ throw new Error("Enter 64-hex or whis.xxxx short code"); }
+          if (!walletStore.pubkey) {
+            const r = await window.solana?.connect?.();
+            if (!r) throw new Error("Wallet not connected");
+            walletStore.pubkey = r.publicKey.toBase58();
+            walletStore.setPub(walletStore.pubkey);
+          }
+          const { Connection, PublicKey, SystemProgram, Transaction, TransactionInstruction } = solanaWeb3;
+          await ensureBuffer();
+          const { http: httpUrl, ws: wsUrl } = getRpcUrls();
+          const conn = wsUrl
+            ? new Connection(httpUrl, { commitment: 'confirmed', wsEndpoint: wsUrl })
+            : new Connection(httpUrl, 'confirmed');
+          const MEMO = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+          const memoBuf = enc.encode("WHISTLE_HASH:" + hash); // Uint8Array
+          const ixMemo = new TransactionInstruction({ keys: [], programId: MEMO, data: memoBuf });
+          const ixPing = SystemProgram.transfer({ fromPubkey: new PublicKey(walletStore.pubkey), toPubkey: new PublicKey(walletStore.pubkey), lamports: 0 });
+    const tx = new Transaction().add(ixPing, ixMemo);
+          tx.feePayer = new PublicKey(walletStore.pubkey);
+    tx.recentBlockhash = (await conn.getLatestBlockhash()).blockhash;
+    const signed = await window.solana.signTransaction(tx);
+          const sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
+          await conn.confirmTransaction(sig, "confirmed");
+          setMemoSig(sig);
+          pushToast("Memo posted", "ok");
+        } catch (e) {
+          const msg = (e && e.message) ? e.message : String(e);
+          if (msg.includes('403')){
+            pushToast("Memo failed: RPC access forbidden (403). Check custom RPC HTTP/WS.", "err");
+          } else {
+            pushToast("Memo failed: " + msg, "err");
+          }
+        }
+      }
+
+      return (
+        <GlassCard title="Verify / Memo" subtitle="Post Solana Memo with the bundle hash (required)">
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-white/60">Bundle hash (sha256 hex or short code)</label>
+              <input value={hashIn} onChange={(e) => setHashIn(e.target.value)} placeholder="e.g., 4f2c… or whis.abcd.efgh…" className="mt-1 w-full rounded-xl bg-white/[0.06] border border-white/10 p-3 font-mono text-xs outline-none focus:ring-2 focus:ring-cyan-400/40" />
+
+              <button onClick={postMemo} className="mt-3 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold px-4 py-2 border border-white/10">Post Memo</button>
+              {memoSig && (
+                <p className="text-xs text-white/60 mt-2">🧾 Memo: <a className="text-cyan-300" target="_blank" rel="noreferrer" href={`https://solscan.io/tx/${memoSig}`}>{memoSig}</a></p>
+              )}
+            </div>
+            <div className="text-xs text-white/70 space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-white/90 font-semibold">History</h4>
+                <button onClick={()=>{ setHistory([]); setHistory([]); setHistory([]); setHistory([]); setHistory([]); /* noop */ }} className="hidden" />
+                <button onClick={()=>{ setHistory([]); setHistory([]); }} className="hidden" />
+                <button onClick={()=>{ setHistory([]); }} className="hidden" />
+              </div>
+              <div className="rounded-xl bg-white/[0.04] border border-white/10 max-h-64 overflow-auto">
+                {hist.length === 0 && <div className="p-3 text-white/50">No previous items.</div>}
+                {hist.map((h)=> (
+                  <div key={h.id} className="flex items-center justify-between px-3 py-2 border-b border-white/5">
+                    <div className="min-w-0">
+                      <div className="text-white/80 font-mono truncate">{h.short}</div>
+                      <div className="text-white/40 text-[11px]">{h.kind} • {new Date(h.at).toLocaleString()}</div>
+                    </div>
+                    <div className="flex gap-2 ml-3 shrink-0">
+                      <button onClick={async ()=>{ try{ await navigator.clipboard.writeText(h.short); pushToast('Copied short code','ok'); }catch{} }} className="rounded-md bg-white/10 hover:bg-white/20 text-white text-[11px] px-2 py-1 border border-white/10">Copy</button>
+                      <button onClick={async ()=>{ try{ await navigator.clipboard.writeText(h.hash); pushToast('Copied hash','ok'); }catch{} }} className="rounded-md bg-white/10 hover:bg-white/20 text-white text-[11px] px-2 py-1 border border-white/10">Hash</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={()=> setHist(storageGetHistory())} className="rounded-md bg-white/10 hover:bg-white/20 text-white text-[11px] px-2 py-1 border border-white/10">Refresh</button>
+                <button onClick={()=>{ setHistory([]); setHistory([]); setHistory([]); setHistory([]); setHistory([]); }} className="hidden" />
+                <button onClick={()=>{ setHistory([]); setHistory([]); }} className="hidden" />
+                <button onClick={()=>{ setHistory([]); setHistory([]); }} className="hidden" />
+                <button onClick={()=>{ setHistory([]); setHistory([]); }} className="hidden" />
+                <button onClick={()=>{ setHistory([]); setHistory([]); }} className="hidden" />
+                <button onClick={()=>{ setHistory([]); setHistory([]); }} className="hidden" />
+                <button onClick={()=>{ storageSetHistory([]); setHist([]); }} className="rounded-md bg-rose-500/20 hover:bg-rose-500/30 text-rose-100 text-[11px] px-2 py-1 border border-rose-400/30">Clear (local)</button>
+              </div>
+            </div>
+          </div>
+        </GlassCard>
+      );
+    }
+
+    function App() {
+      const { toasts, push } = useToasts();
+      const [step, setStep] = usePersistentState('uiStep', "receive");
+      const [hashFromFlow, setHashFromFlow] = useState("");
+      return (
+        <div className="relative min-h-screen text-white">
+          {/* animated gradient blobs */}
+          <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+            <div className="absolute -top-24 -left-24 h-[420px] w-[420px] rounded-full bg-gradient-to-br from-cyan-500/20 to-purple-500/20 blur-3xl bg-anim" />
+            <div className="absolute -bottom-24 -right-24 h-[420px] w-[420px] rounded-full bg-gradient-to-tr from-fuchsia-500/15 to-emerald-400/15 blur-3xl bg-anim" style={{animationDelay:'-7s'}} />
+          </div>
+          <div className="max-w-5xl mx-auto p-6">
+            <SectionHeader />
+            <Onboarding setStep={setStep} />
+
+            <div className="mt-5 flex items-center justify-between">
+              <StepPills step={step} setStep={setStep} />
+              <div className="text-xs text-white/60">Bundle hash: <span className="font-mono">{hashFromFlow || "—"}</span></div>
+            </div>
+
+            <div className="mt-5 grid gap-4">
+              {step === "send" && (
+                <Sender pushToast={push} onHashReady={setHashFromFlow} />
+              )}
+              {step === "receive" && (
+                <Receiver pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />
+              )}
+              {step === "verify" && (
+                <VerifyMemo pushToast={push} verifyHash={hashFromFlow} />
+              )}
+            </div>
+          </div>
+
+          {/* Toasts */}
+          <div className="fixed right-4 bottom-4 space-y-2">
+            {toasts.map((t) => (
+              <div key={t.id} className={`toast-enter rounded-xl border px-4 py-2 text-sm backdrop-blur-xl ${
+                t.tone === "ok"
+                  ? "bg-emerald-400/15 border-emerald-400/30 text-emerald-200"
+                  : t.tone === "err"
+                  ? "bg-rose-400/15 border-rose-400/30 text-rose-200"
+                  : "bg-white/10 border-white/15 text-white/80"
+              }`}>{t.msg}</div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+</script>
+</body>
+</html>
+
+
