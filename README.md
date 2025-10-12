@@ -26,7 +26,7 @@ The app is a single‑page React app (no build step) served by a tiny Express se
 ## How it works (roles)
 
 ### Tipster
-1) Write the tip and optionally attach files (≤ 50 MB total)
+1) Write the tip and optionally attach files (≤ 5 GB total)
 2) Step A — Generate Offer and share the Offer text with the newsroom
 3) Step B — Paste the newsroom Answer, click Connect, then Send
 4) The app posts the bundle hash to Solana Memo automatically; copy the tx link if needed
@@ -89,7 +89,7 @@ netlify deploy --prod --dir .
 - Connection stuck at Connecting…
   - Corporate/VPN/NATs can block WebRTC; try a different network/browser
 - File too large
-  - Evidence limit is 50 MB per send
+  - Evidence limit is 5 GB per send
 
 ## Repository layout
 
