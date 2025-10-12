@@ -1,8 +1,8 @@
 {
-  "name": "whistel-space",
+  "name": "whistle",
   "version": "1.0.0",
   "private": true,
-  "description": "Whistel Space - P2P encrypted tips with Solana memo",
+  "description": "Whistle - P2P encrypted tips with Solana memo",
   "license": "MIT",
   "type": "module",
   "scripts": {

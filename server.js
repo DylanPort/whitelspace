@@ -30,7 +30,7 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Whistel Space running at http://localhost:${PORT}`);
+  console.log(`Whistle running at http://localhost:${PORT}`);
 });
 
 

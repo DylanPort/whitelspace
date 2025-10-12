@@ -1,4 +1,4 @@
-# Whistel Space
+# Whistle
 
 P2P end‑to‑end encrypted tips over WebRTC with an on‑chain Solana Memo proof of existence.
 
@@ -82,14 +82,12 @@ netlify deploy --prod --dir .
 - Memo failed: 403 Access forbidden
   - Use your own RPC provider URL (Helius/QuickNode/Alchemy/etc.)
   - Ensure your key permits `getLatestBlockhash` and `sendRawTransaction`
-- Buffer is not defined
-  - The app loads a browser Buffer polyfill before sending; ensure the network allows `https://esm.sh` and no extensions block it
+- Buffer is not defined / Buffer.from is not a function
+  - The app loads a browser Buffer polyfill before web3; ensure the network allows `https://esm.sh` and `https://unpkg.com`
 - Offer/Answer invalid or garbled
   - Use the built‑in Copy/Share buttons; don’t reformat the code block
 - Connection stuck at Connecting…
   - Corporate/VPN/NATs can block WebRTC; try a different network/browser
-- Wallet connect fails
-  - Install Phantom and run on HTTPS (or localhost), then retry
 - File too large
   - Evidence limit is 50 MB per send
 
