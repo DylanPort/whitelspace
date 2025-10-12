@@ -302,12 +302,13 @@
 
     function StepPills({ step, setStep }) {
       const tabs = [
-        { id: "receive", label: "1) Newsroom" },
-        { id: "send", label: "2) Tipster" },
-        { id: "verify", label: "3) Verify / Memo" },
+        { id: "home", label: "Home" },
+        { id: "receive", label: "Newsroom" },
+        { id: "send", label: "Tipster" },
+        { id: "verify", label: "Verify / Memo" },
       ];
       return (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 md:hidden">
           {tabs.map((t) => (
             <button
               key={t.id}
@@ -322,6 +323,74 @@
             </button>
           ))}
       </div>
+      );
+    }
+
+    // Sidebar navigation
+    function Sidebar({ step, setStep }){
+      const items = [
+        { id:'home',    label:'Home',     emoji:'🏠' },
+        { id:'send',    label:'Tipster',  emoji:'📤' },
+        { id:'receive', label:'Newsroom', emoji:'📥' },
+        { id:'verify',  label:'Verify',   emoji:'🧾' },
+      ];
+      return (
+        <aside className="hidden md:block w-[260px] shrink-0">
+          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 sticky top-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="relative h-10 w-10 rounded-xl overflow-hidden border border-white/20 bg-white/5">
+                <img src="whistel_logo_top_right_2048.png" alt="Whistle" className="absolute inset-0 h-full w-full object-contain"/>
+      </div>
+      <div>
+                <div className="text-white font-semibold">Whistle</div>
+                <div className="text-[11px] text-white/60">P2P tips • Solana proof</div>
+              </div>
+            </div>
+            <nav className="space-y-2">
+              {items.map(x=> (
+                <button key={x.id} onClick={()=>setStep(x.id)}
+                  className={`w-full text-left rounded-xl px-3 py-2 border text-sm ${step===x.id
+                    ? 'border-cyan-400/60 bg-cyan-400/15 text-cyan-100'
+                    : 'border-white/10 bg-white/[0.03] text-white/80 hover:bg-white/[0.07]'}
+                  `}>
+                  <span className="mr-2">{x.emoji}</span>{x.label}
+                </button>
+              ))}
+            </nav>
+            <div className="mt-3 text-[11px] text-white/60">
+              <div className="mb-1">CA</div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono truncate" title={CONTRACT_ADDRESS}>{CONTRACT_ADDRESS}</span>
+                <button onClick={async()=>{ try{ await navigator.clipboard.writeText(CONTRACT_ADDRESS); }catch{} }} className="rounded-md bg-white/10 hover:bg-white/20 border border-white/10 px-2 py-[2px] text-white/80">Copy</button>
+              </div>
+      </div>
+    </div>
+        </aside>
+      );
+    }
+
+    // Home landing
+    function Home({ setStep }){
+      return (
+        <div className="space-y-4">
+          <GlassCard title="Welcome to Whistle" subtitle="Private, peer‑to‑peer tips with on‑chain proof">
+            <p className="text-white/70 text-sm">Choose your role below. No sign‑ups, no uploads — your encrypted bundle streams directly to the newsroom. A small hash is posted to Solana as public proof of existence.</p>
+          </GlassCard>
+          <div className="grid md:grid-cols-2 gap-4">
+            <GlassCard title="Tipster" subtitle="Send an encrypted tip" className="bg-gradient-to-b from-cyan-400/5 to-transparent">
+              <p className="text-white/70 text-sm">Write your tip, add files (≤ 50 MB), generate Offer, paste newsroom Answer, then send.</p>
+              <div className="mt-3">
+                <button onClick={()=>setStep('send')} className="rounded-xl bg-cyan-500/80 hover:bg-cyan-400 text-black font-semibold px-4 py-2">Start as Tipster</button>
+              </div>
+            </GlassCard>
+            <GlassCard title="Newsroom" subtitle="Receive & decrypt" className="bg-gradient-to-b from-purple-400/5 to-transparent">
+              <p className="text-white/70 text-sm">Paste the Offer, generate Answer, send it back, and receive the encrypted stream.</p>
+              <div className="mt-3">
+                <button onClick={()=>setStep('receive')} className="rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold px-4 py-2 border border-white/10">Start as Newsroom</button>
+              </div>
+            </GlassCard>
+          </div>
+    </div>
       );
     }
 
@@ -804,7 +873,7 @@
 
     function App() {
       const { toasts, push } = useToasts();
-      const [step, setStep] = usePersistentState('uiStep', "receive");
+      const [step, setStep] = usePersistentState('uiStep', "home");
       const [hashFromFlow, setHashFromFlow] = useState("");
       return (
         <div className="relative min-h-screen text-white">
@@ -813,25 +882,20 @@
             <div className="absolute -top-24 -left-24 h-[420px] w-[420px] rounded-full bg-gradient-to-br from-cyan-500/20 to-purple-500/20 blur-3xl bg-anim" />
             <div className="absolute -bottom-24 -right-24 h-[420px] w-[420px] rounded-full bg-gradient-to-tr from-fuchsia-500/15 to-emerald-400/15 blur-3xl bg-anim" style={{animationDelay:'-7s'}} />
           </div>
-          <div className="max-w-5xl mx-auto p-6">
+          <div className="max-w-6xl mx-auto p-6">
             <SectionHeader />
-            <Onboarding setStep={setStep} />
-
-            <div className="mt-5 flex items-center justify-between">
-              <StepPills step={step} setStep={setStep} />
-              <div className="text-xs text-white/60">Bundle hash: <span className="font-mono">{hashFromFlow || "—"}</span></div>
-            </div>
-
-            <div className="mt-5 grid gap-4">
-              {step === "send" && (
-                <Sender pushToast={push} onHashReady={setHashFromFlow} />
-              )}
-              {step === "receive" && (
-                <Receiver pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />
-              )}
-              {step === "verify" && (
-                <VerifyMemo pushToast={push} verifyHash={hashFromFlow} />
-              )}
+            <div className="mt-5 flex gap-6">
+              <Sidebar step={step} setStep={setStep} />
+              <main className="flex-1 min-w-0">
+                <div className="mb-4 md:hidden">
+                  <StepPills step={step} setStep={setStep} />
+                </div>
+                {step === 'home' && <Home setStep={setStep} />}
+                {step === 'send' && <Sender pushToast={push} onHashReady={setHashFromFlow} />}
+                {step === 'receive' && <Receiver pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />}
+                {step === 'verify' && <VerifyMemo pushToast={push} verifyHash={hashFromFlow} />}
+                <div className="mt-6 text-xs text-white/60">Bundle hash: <span className="font-mono">{hashFromFlow || "—"}</span></div>
+              </main>
             </div>
           </div>
 
