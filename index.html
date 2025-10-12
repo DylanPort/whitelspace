@@ -27,6 +27,33 @@
     .btn-ripple{position:relative;overflow:hidden}
     .btn-ripple span.ripple{position:absolute;border-radius:9999px;background:rgba(255,255,255,.35);transform:scale(0);animation:ripple .6s linear;pointer-events:none}
     .toast-enter{animation:toastIn .25s ease-out}
+
+    /* Animated sky with clouds */
+    .sky{position:fixed;inset:0;pointer-events:none;z-index:-9;background:linear-gradient(180deg,#7ec8ff 0%, #bfe4ff 45%, #e8f4ff 100%)}
+    .cloud{position:absolute;filter:blur(1px);opacity:.9}
+    .cloud::before{content:"";position:absolute;inset:0; background:
+      radial-gradient(120px 70px at 60px 60px, rgba(255,255,255,.95) 40%, rgba(255,255,255,0) 60%),
+      radial-gradient(100px 60px at 120px 60px, rgba(255,255,255,.95) 40%, rgba(255,255,255,0) 60%),
+      radial-gradient(140px 80px at 180px 70px, rgba(255,255,255,.95) 40%, rgba(255,255,255,0) 60%),
+      radial-gradient(110px 65px at 110px 90px, rgba(255,255,255,.95) 40%, rgba(255,255,255,0) 60%);
+    }
+    @keyframes cloudDrift{from{transform:translateX(-35%)}to{transform:translateX(135%)}}
+    .c1{top:12%;left:-30%;width:420px;height:160px;animation:cloudDrift 55s linear infinite}
+    .c2{top:28%;left:-40%;width:520px;height:190px;animation:cloudDrift 85s linear infinite}
+    .c3{top:42%;left:-35%;width:360px;height:140px;animation:cloudDrift 60s linear infinite}
+    .c4{top:58%;left:-45%;width:620px;height:200px;animation:cloudDrift 95s linear infinite}
+    .c5{top:70%;left:-38%;width:380px;height:140px;animation:cloudDrift 70s linear infinite}
+    .c6{top:18%;left:-48%;width:300px;height:120px;animation:cloudDrift 72s linear infinite}
+    .c7{top:35%;left:-52%;width:260px;height:110px;animation:cloudDrift 66s linear infinite}
+    .c8{top:64%;left:-50%;width:440px;height:170px;animation:cloudDrift 88s linear infinite}
+    .c9{top:78%;left:-46%;width:300px;height:120px;animation:cloudDrift 76s linear infinite}
+
+    /* Dim overlay to ensure text contrast */
+    .sky-dim{position:fixed;inset:0;pointer-events:none;z-index:-8;background:linear-gradient(180deg,rgba(0,0,0,.38) 0%, rgba(0,0,0,.32) 35%, rgba(0,0,0,.28) 65%, rgba(0,0,0,.36) 100%)}
+
+    /* Stronger glass panels for readability */
+    .glass-strong{background:rgba(10,14,20,.58)!important;border-color:rgba(255,255,255,.12)!important;box-shadow:0 24px 60px rgba(0,0,0,.45)!important}
+    .panel-strong{background:rgba(10,14,20,.58)!important;border-color:rgba(255,255,255,.12)!important}
 </style>
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="preconnect" href="https://cdn.tailwindcss.com">
@@ -238,7 +265,7 @@
       function onLeave(){ setTilt(''); }
       return (
         <section ref={ref} onMouseMove={onMove} onMouseLeave={onLeave}
-          className={`relative rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl p-5 shadow-xl shadow-black/30 glass-hover will-change-transform ${className}`}
+          className={`relative rounded-2xl border border-white/10 backdrop-blur-xl p-5 shadow-xl shadow-black/30 glass-hover will-change-transform ${className} glass-strong`}
           style={{ transform: tilt }}>
           <div className="mb-3">
             <h3 className="text-lg font-semibold text-white/90">{title}</h3>
@@ -336,7 +363,7 @@
       ];
       return (
         <aside className="hidden md:block w-[260px] shrink-0">
-          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 sticky top-4">
+          <div className="rounded-3xl border border-white/10 p-4 sticky top-4 panel-strong">
             <div className="flex items-center gap-3 mb-3">
               <div className="relative h-10 w-10 rounded-xl overflow-hidden border border-white/20 bg-white/5">
                 <img src="whistel_logo_top_right_2048.png" alt="Whistle" className="absolute inset-0 h-full w-full object-contain"/>
@@ -878,9 +905,18 @@
       return (
         <div className="relative min-h-screen text-white">
           {/* animated gradient blobs */}
+          <div className="sky"></div>
+          <div className="sky-dim"></div>
           <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-            <div className="absolute -top-24 -left-24 h-[420px] w-[420px] rounded-full bg-gradient-to-br from-cyan-500/20 to-purple-500/20 blur-3xl bg-anim" />
-            <div className="absolute -bottom-24 -right-24 h-[420px] w-[420px] rounded-full bg-gradient-to-tr from-fuchsia-500/15 to-emerald-400/15 blur-3xl bg-anim" style={{animationDelay:'-7s'}} />
+            <div className="cloud c1"></div>
+            <div className="cloud c2"></div>
+            <div className="cloud c3"></div>
+            <div className="cloud c4"></div>
+            <div className="cloud c5"></div>
+            <div className="cloud c6"></div>
+            <div className="cloud c7"></div>
+            <div className="cloud c8"></div>
+            <div className="cloud c9"></div>
           </div>
           <div className="max-w-6xl mx-auto p-6">
             <SectionHeader />
