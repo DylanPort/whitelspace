@@ -112,3 +112,52 @@ Issues and PRs are welcome. Please avoid adding heavy dependencies; the project 
 ## License
 
 MIT
+
+## 📝 **Tweet-length (280 chars):**
+```
+Whistle is a P2P encrypted whistleblowing app. Send tips + files (up to 5GB) directly to journalists with zero servers. Every transmission is cryptographically proven on Solana blockchain. No accounts, no tracking, no middlemen.
+```
+
+## 🎯 **Product Hunt Style (1-2 sentences):**
+```
+Whistle lets whistleblowers send encrypted tips and evidence directly to journalists over WebRTC—no servers, no uploads. Every transmission gets a cryptographic proof posted to Solana for verification.
+```
+
+## 💼 **Investor Pitch (concise):**
+```
+Peer-to-peer encrypted communication platform for whistleblowers. 
+WebRTC ensures direct transmission with zero server-side storage. 
+Solana blockchain provides immutable proof of transmission timing and integrity.
+```
+
+## 🌐 **Website Hero (very short):**
+```
+Send encrypted tips directly to journalists. 
+No servers. No accounts. Just truth with proof.
+```
+
+## 📱 **App Store Description (detailed but scannable):**
+```
+Whistle enables secure, anonymous communication between whistleblowers and journalists.
+
+How it works:
+• Sender writes tip + attaches evidence (up to 5GB)
+• Files stream peer-to-peer via encrypted WebRTC connection
+• No servers store your data—everything is direct
+• Bundle hash posted to Solana blockchain as proof
+• Receiver decrypts locally in their browser
+
+Perfect for:
+✓ Investigative journalists receiving sensitive leaks
+✓ Whistleblowers sharing evidence safely
+✓ Anyone needing verifiable, encrypted file transfers
+
+Open source. Self-hostable. Auditable.
+```
+
+## 💎 **My Top Pick (balanced):**
+```
+Whistle is an open-source whistleblowing platform that streams encrypted tips and evidence (up to 5GB) directly between sender and receiver using peer-to-peer WebRTC. No servers touch your data. Every transmission is cryptographically timestamped on Solana blockchain for verification.
+```
+
+Which style fits your use case? 🎯

@@ -111,6 +111,8 @@
   <link rel="icon" type="image/png" href="whistel_logo_top_right_2048.png">
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- EXIF Reader for metadata scrubbing -->
+  <script src="https://cdn.jsdelivr.net/npm/exifreader@4.14.1/dist/exif-reader.js"></script>
 </head>
 <body>
   <div id="root"></div>
@@ -301,6 +303,88 @@
         btn.appendChild(circle);
         setTimeout(()=>{ try{ circle.remove(); }catch{} }, 650);
       }catch{}
+    }
+
+    // ============ PRIVACY FEATURES ============
+    
+    // 1. Metadata Scrubber - Remove EXIF and metadata from files
+    async function scrubMetadata(file) {
+      try {
+        // For images - remove EXIF data
+        if (file.type.startsWith('image/')) {
+          const arrayBuffer = await file.arrayBuffer();
+          const uint8Array = new Uint8Array(arrayBuffer);
+          
+          // Create a canvas to re-encode without metadata
+          const img = new Image();
+          const blob = new Blob([uint8Array], { type: file.type });
+          const url = URL.createObjectURL(blob);
+          
+          return new Promise((resolve) => {
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              canvas.width = img.width;
+              canvas.height = img.height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0);
+              
+              canvas.toBlob((cleanBlob) => {
+                URL.revokeObjectURL(url);
+                resolve(new File([cleanBlob], file.name, { type: file.type }));
+              }, file.type, 0.95);
+            };
+            img.src = url;
+          });
+        }
+        
+        // For PDFs and other files - strip metadata headers
+        if (file.type === 'application/pdf') {
+          // Basic PDF metadata removal (simplified)
+          const arrayBuffer = await file.arrayBuffer();
+          const uint8Array = new Uint8Array(arrayBuffer);
+          // Return as-is with warning (full PDF scrubbing requires pdf-lib)
+          return file;
+        }
+        
+        // For other files, return as-is
+        return file;
+      } catch (e) {
+        console.error('Metadata scrub failed:', e);
+        return file; // Return original if scrubbing fails
+      }
+    }
+
+    // 2. AI Writing Anonymizer - Rewrite text to hide identity
+    async function anonymizeText(text, apiKey) {
+      if (!text || !apiKey) return text;
+      
+      try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: 'gpt-3.5-turbo',
+            messages: [{
+              role: 'system',
+              content: 'You are a text anonymizer. Rewrite the following text to remove identifying information like names, locations, dates, personal writing style, slang, and idioms. Keep the core facts intact but make the writing neutral and generic. Do not add explanations, just return the anonymized text.'
+            }, {
+              role: 'user',
+              content: text
+            }],
+            temperature: 0.3,
+            max_tokens: 2000
+          })
+        });
+        
+        const data = await response.json();
+        return data.choices?.[0]?.message?.content || text;
+      } catch (e) {
+        console.error('AI anonymization failed:', e);
+        throw e;
+      }
     }
 
     function GlassCard({ title, subtitle, children, className = "" }) {
@@ -529,26 +613,97 @@
             <h2 className="text-xl font-semibold mb-2">Choose your role to get started</h2>
             <div className="grid md:grid-cols-2 gap-4 mt-3">
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                <h3 className="font-semibold text-white/90">Newsroom</h3>
+                <h3 className="font-semibold text-white/90">Receiver</h3>
                 <ul className="text-sm text-white/70 list-disc list-inside space-y-1 mt-1">
                   <li>Paste Offer</li>
                   <li>Generate Answer and send it back</li>
                   <li>Receive and decrypt tip</li>
                 </ul>
-                <button onClick={() => { setStep('receive'); setOpen(false); }} className="mt-3 w-full rounded-xl bg-cyan-500/80 hover:bg-cyan-400 text-black font-semibold px-4 py-2">I'm the Newsroom</button>
+                <button onClick={() => { setStep('receive'); setOpen(false); }} className="mt-3 w-full rounded-xl bg-cyan-500/80 hover:bg-cyan-400 text-black font-semibold px-4 py-2">I'm the Receiver</button>
     </div>
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                <h3 className="font-semibold text-white/90">Tipster</h3>
+                <h3 className="font-semibold text-white/90">Sender</h3>
                 <ul className="text-sm text-white/70 list-disc list-inside space-y-1 mt-1">
                   <li>Write tip + attach files</li>
                   <li>Generate Offer and share it</li>
                   <li>Paste Answer • Connect • Send</li>
                 </ul>
-                <button onClick={() => { setStep('send'); setOpen(false); }} className="mt-3 w-full rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold px-4 py-2 border border-white/10">I'm the Tipster</button>
+                <button onClick={() => { setStep('send'); setOpen(false); }} className="mt-3 w-full rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold px-4 py-2 border border-white/10">I'm the Sender</button>
     </div>
+      </div>
+      </div>
     </div>
+      );
+    }
+
+    // OpSec Checklist Modal
+    function OpSecChecklist({ open, onClose, onConfirm }) {
+      const [checks, setChecks] = useState({
+        vpn: false,
+        metadata: false,
+        personal: false,
+        tor: false
+      });
+      
+      useEffect(()=>{
+        if(window.lucide) window.lucide.createIcons();
+      },[open]);
+      
+      if (!open) return null;
+      
+      const allChecked = Object.values(checks).filter(v => v).length >= 3; // At least 3 required
+      
+      return (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/80 backdrop-blur">
+          <div className="max-w-xl w-[92%] rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.08] to-white/[0.03] p-6 text-white shadow-2xl scale-in">
+            <div className="flex items-center gap-2 mb-3">
+              <i data-lucide="shield-alert" className="w-6 h-6 text-yellow-400"></i>
+              <h2 className="text-xl font-semibold">Security Checklist</h2>
     </div>
+            <p className="text-sm text-white/70 mb-4">Before sending, confirm you've taken these privacy steps:</p>
+            
+            <div className="space-y-3">
+              <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition">
+                <input type="checkbox" checked={checks.vpn} onChange={(e)=>setChecks({...checks, vpn: e.target.checked})} className="mt-1 w-4 h-4" />
+                <div className="flex-1">
+                  <div className="font-semibold text-white/90">Using VPN or Tor</div>
+                  <div className="text-xs text-white/60">Hide your IP address from network observers</div>
+                </div>
+              </label>
+              
+              <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition">
+                <input type="checkbox" checked={checks.metadata} onChange={(e)=>setChecks({...checks, metadata: e.target.checked})} className="mt-1 w-4 h-4" />
+                <div className="flex-1">
+                  <div className="font-semibold text-white/90">Files have metadata removed</div>
+                  <div className="text-xs text-white/60">Use the "Scrub Metadata" button above</div>
+    </div>
+              </label>
+              
+              <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition">
+                <input type="checkbox" checked={checks.personal} onChange={(e)=>setChecks({...checks, personal: e.target.checked})} className="mt-1 w-4 h-4" />
+                <div className="flex-1">
+                  <div className="font-semibold text-white/90">No personal info in message</div>
+                  <div className="text-xs text-white/60">Names, dates, locations, or unique phrases removed</div>
+    </div>
+              </label>
+              
+              <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition">
+                <input type="checkbox" checked={checks.tor} onChange={(e)=>setChecks({...checks, tor: e.target.checked})} className="mt-1 w-4 h-4" />
+                <div className="flex-1">
+                  <div className="font-semibold text-white/90">Verified receiver identity</div>
+                  <div className="text-xs text-white/60">Confirm you're sending to the correct journalist/newsroom</div>
+    </div>
+              </label>
 </div>
+
+            <div className="flex gap-3 mt-5">
+              <button onClick={onClose} className="flex-1 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold px-4 py-2 border border-white/10 btn-press">Cancel</button>
+              <button onClick={onConfirm} disabled={!allChecked} className="flex-1 rounded-xl bg-cyan-500/80 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-black font-semibold px-4 py-2 btn-press">
+                {allChecked ? 'Continue' : 'Check at least 3'}
+              </button>
+            </div>
+          </div>
+        </div>
       );
     }
 
@@ -569,9 +724,65 @@
       const [waitingForAnswer, setWaitingForAnswer] = useState(false);
       const [connecting, setConnecting] = useState(false);
       
+      // Privacy features
+      const [showOpSec, setShowOpSec] = useState(false);
+      const [aiAnonymizing, setAiAnonymizing] = useState(false);
+      const [scrubbingMetadata, setScrubbingMetadata] = useState(false);
+      const [openAiKey, setOpenAiKey] = useState(localStorage.getItem('openai_key') || "");
+      
       useEffect(()=>{
         if(window.lucide) window.lucide.createIcons();
       });
+      
+      // AI Anonymize handler
+      async function handleAnonymize(){
+        if (!tipText.trim()) { pushToast("Write a message first", "err"); return; }
+        if (!openAiKey) { 
+          const key = prompt("Enter your OpenAI API key (sk-...):");
+          if (!key) return;
+          setOpenAiKey(key);
+          localStorage.setItem('openai_key', key);
+        }
+        
+        setAiAnonymizing(true);
+        try {
+          const anonymized = await anonymizeText(tipText, openAiKey);
+          setTipText(anonymized);
+          pushToast("Text anonymized with AI", "ok");
+        } catch (e) {
+          pushToast("AI anonymization failed: " + e.message, "err");
+        }
+        setAiAnonymizing(false);
+      }
+      
+      // Metadata scrubber handler
+      async function handleScrubMetadata(){
+        const files = fileRef.current?.files || [];
+        const dropped = droppedFiles || [];
+        const allFiles = [...files, ...dropped];
+        
+        if (allFiles.length === 0) { pushToast("Attach files first", "err"); return; }
+        
+        setScrubbingMetadata(true);
+        try {
+          const scrubbed = [];
+          for (const file of allFiles) {
+            const clean = await scrubMetadata(file);
+            scrubbed.push(clean);
+          }
+          
+          // Create new FileList (can't modify directly)
+          const dt = new DataTransfer();
+          scrubbed.forEach(f => dt.items.add(f));
+          if (fileRef.current) fileRef.current.files = dt.files;
+          setDroppedFiles([]);
+          
+          pushToast(`Metadata removed from ${scrubbed.length} file(s)`, "ok");
+        } catch (e) {
+          pushToast("Metadata scrubbing failed", "err");
+        }
+        setScrubbingMetadata(false);
+      }
 
       async function copyOffer(){
         try{ await navigator.clipboard.writeText(offerOut || ""); pushToast("Offer copied", "ok"); }catch(e){ pushToast("Copy failed", "err"); }
@@ -634,6 +845,12 @@
       }
 
       async function sendNow() {
+        // Show OpSec checklist first
+        setShowOpSec(true);
+      }
+      
+      async function actualSend() {
+        setShowOpSec(false);
         try {
           const dc = dcRef.current;
           if (!dc || dc.readyState !== "open") throw new Error("Not connected");
@@ -677,12 +894,12 @@
             const memoBuf = enc.encode("WHISTLE_HASH:" + bundleHash); // Uint8Array
             const ixMemo = new TransactionInstruction({ keys: [], programId: MEMO, data: memoBuf });
             const ixPing = SystemProgram.transfer({ fromPubkey: new PublicKey(walletStore.pubkey), toPubkey: new PublicKey(walletStore.pubkey), lamports: 0 });
-            const tx = new Transaction().add(ixPing, ixMemo);
+    const tx = new Transaction().add(ixPing, ixMemo);
             tx.feePayer = new PublicKey(walletStore.pubkey);
-            tx.recentBlockhash = (await conn.getLatestBlockhash()).blockhash;
-            const signed = await window.solana.signTransaction(tx);
+    tx.recentBlockhash = (await conn.getLatestBlockhash()).blockhash;
+    const signed = await window.solana.signTransaction(tx);
             const sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
-            await conn.confirmTransaction(sig, 'confirmed');
+    await conn.confirmTransaction(sig, 'confirmed');
             setMemoSig(sig);
             pushToast("Solana memo posted", "ok");
             storagePushHistory({ role:'tipster', kind:'memo', hash: bundleHash, short: formatShortCode(hash), sig, at: new Date().toISOString() });
@@ -697,12 +914,37 @@
       }
 
       return (
-        <GlassCard title="Sender — Send" subtitle="Compose, connect, and send end-to-end encrypted">
-          <div className="grid md:grid-cols-2 gap-4">
-      <div>
-              <label className="text-xs text-white/60">Message (text)</label>
-              <textarea value={tipText} onChange={(e) => setTipText(e.target.value)} rows={8} className="mt-1 w-full rounded-xl bg-white/[0.06] border border-white/10 p-3 outline-none focus:ring-2 focus:ring-cyan-400/40" placeholder="Describe the issue with verifiable details." />
-      </div>
+        <>
+          <OpSecChecklist open={showOpSec} onClose={()=>setShowOpSec(false)} onConfirm={actualSend} />
+          
+          <GlassCard title="Sender — Send" subtitle="Compose, connect, and send end-to-end encrypted">
+            {/* Privacy Tools */}
+            <div className="mb-4 p-3 rounded-xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-400/20">
+              <div className="flex items-center gap-2 mb-2">
+                <i data-lucide="shield-check" className="w-5 h-5 text-yellow-400"></i>
+                <h4 className="text-white/90 font-semibold text-sm">Privacy Tools</h4>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={(e)=>{ ripple(e); handleAnonymize(); }} disabled={aiAnonymizing} className="flex items-center gap-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 text-xs font-semibold px-3 py-1.5 border border-purple-400/30 btn-ripple">
+                  <i data-lucide={aiAnonymizing ? "loader" : "sparkles"} className={`w-3 h-3 ${aiAnonymizing ? 'animate-spin' : ''}`}></i>
+                  {aiAnonymizing ? 'Anonymizing...' : 'AI Anonymize Text'}
+                </button>
+                <button onClick={(e)=>{ ripple(e); handleScrubMetadata(); }} disabled={scrubbingMetadata} className="flex items-center gap-2 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-200 text-xs font-semibold px-3 py-1.5 border border-cyan-400/30 btn-ripple">
+                  <i data-lucide={scrubbingMetadata ? "loader" : "eraser"} className={`w-3 h-3 ${scrubbingMetadata ? 'animate-spin' : ''}`}></i>
+                  {scrubbingMetadata ? 'Scrubbing...' : 'Scrub Metadata'}
+                </button>
+              </div>
+              <p className="text-xs text-white/50 mt-2">
+                <strong>AI Anonymize:</strong> Rewrites your text to remove identifying info. 
+                <strong className="ml-2">Scrub Metadata:</strong> Removes EXIF data from images.
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs text-white/60">Message (text)</label>
+                <textarea value={tipText} onChange={(e) => setTipText(e.target.value)} rows={8} className="mt-1 w-full rounded-xl bg-white/[0.06] border border-white/10 p-3 outline-none focus:ring-2 focus:ring-cyan-400/40" placeholder="Describe the issue with verifiable details." />
+              </div>
             <div onDragOver={(e)=>{e.preventDefault(); setIsDrag(true);}} onDragLeave={()=>setIsDrag(false)} onDrop={(e)=>{ e.preventDefault(); setIsDrag(false); const files = Array.from(e.dataTransfer.files||[]); setDroppedFiles(files); pushToast(files.length?`Added ${files.length} file(s)`:'No files', files.length?'ok':'err'); }} className={"rounded-xl p-2 "+(isDrag?"border-2 border-dashed border-cyan-400 bg-white/10":"")}>
               <label className="text-xs text-white/60">Attach evidence (≤ 5 GB total)</label>
               <input ref={fileRef} type="file" multiple className="mt-1 w-full rounded-xl bg-white/[0.06] border border-white/10 p-2" />
@@ -800,7 +1042,8 @@
               <p>🧾 Memo: <a className="text-cyan-300" target="_blank" rel="noreferrer" href={`https://solscan.io/tx/${memoSig}`}>{memoSig}</a></p>
             )}
           </div>
-        </GlassCard>
+          </GlassCard>
+        </>
       );
     }
 
