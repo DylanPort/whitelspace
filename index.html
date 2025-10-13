@@ -747,7 +747,7 @@
       const [showOpSec, setShowOpSec] = useState(false);
       const [aiAnonymizing, setAiAnonymizing] = useState(false);
       const [scrubbingMetadata, setScrubbingMetadata] = useState(false);
-      const [aimlApiKey, setAimlApiKey] = useState(localStorage.getItem('aiml_api_key') || "");
+      const [aimlApiKey, setAimlApiKey] = useState(localStorage.getItem('aiml_api_key') || ""); // No default key - user must provide their own
       
       useEffect(()=>{
         if(window.lucide) window.lucide.createIcons();
@@ -757,9 +757,15 @@
       async function handleAnonymize(){
         if (!tipText.trim()) { pushToast("Write a message first", "err"); return; }
         
-        // API key is required - but provide the default one
-        const apiKey = aimlApiKey || "3b4e91635b3341129a9bbe5c3ae2e5e8";
-        if (!aimlApiKey) {
+        // Prompt for API key
+        let apiKey = aimlApiKey;
+        if (!apiKey) {
+          const userKey = prompt("Enter your AI/ML API key:\n\nGet a FREE key at: https://aimlapi.com/\n\n1. Sign up (free)\n2. Copy your API key\n3. Paste here\n\nNote: The previous key may have expired or has restrictions.");
+          if (!userKey || !userKey.trim()) {
+            pushToast("API key required for AI anonymizer", "err");
+            return;
+          }
+          apiKey = userKey.trim();
           setAimlApiKey(apiKey);
           localStorage.setItem('aiml_api_key', apiKey);
         }
@@ -779,7 +785,15 @@
           }
         } catch (e) {
           setTipText(originalText); // Restore original on error
-          pushToast("AI failed: " + e.message, "err");
+          
+          // If 403 error, clear the key and ask for new one
+          if (e.message.includes('403')) {
+            setAimlApiKey("");
+            localStorage.removeItem('aiml_api_key');
+            pushToast("API key invalid or expired. Click again to enter a new key.", "err");
+          } else {
+            pushToast("AI failed: " + e.message, "err");
+          }
           console.error("Anonymization error:", e);
         }
         setAiAnonymizing(false);
@@ -965,7 +979,7 @@
                 </button>
               </div>
               <p className="text-xs text-white/50 mt-2">
-                <strong>AI Anonymize:</strong> Uses AI/ML API (Llama 3.3 70B) to rewrite text & remove identifying info. 
+                <strong>AI Anonymize:</strong> Uses AI/ML API (Llama 3.3 70B) to rewrite text & remove identifying info. Requires free API key from <a href="https://aimlapi.com/" target="_blank" className="text-cyan-300 underline">aimlapi.com</a>.
                 <strong className="ml-2">Scrub Metadata:</strong> Removes EXIF/GPS data from images.
               </p>
             </div>
