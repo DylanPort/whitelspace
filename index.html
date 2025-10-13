@@ -359,7 +359,9 @@
       if (!text || !apiKey) return text;
       
       try {
-        // Use AI/ML API with DeepSeek or Llama model
+        console.log('Anonymizing text with AI/ML API...');
+        
+        // Use AI/ML API with DeepSeek model
         const response = await fetch('https://api.aimlapi.com/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -383,9 +385,21 @@
           })
         });
         
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('API Error Response:', errorData);
+          throw new Error(errorData.error?.message || `API returned ${response.status}`);
+        }
+        
         const data = await response.json();
+        console.log('API Response:', data);
+        
         if (data.error) throw new Error(data.error.message || 'API error');
-        return data.choices?.[0]?.message?.content?.trim() || text;
+        
+        const anonymized = data.choices?.[0]?.message?.content?.trim();
+        if (!anonymized) throw new Error('No response from AI');
+        
+        return anonymized;
       } catch (e) {
         console.error('AI anonymization failed:', e);
         throw e;
@@ -425,7 +439,7 @@
             <div className="relative h-9 w-9 rounded-xl overflow-hidden border border-white/20 float-slow bg-white/5 hover:scale-110 transition-transform">
               <img src="whistel_logo_top_right_2048.png" alt="Whistle" className="absolute inset-0 h-full w-full object-contain"/>
                {!walletStore.pubkey && <span className="absolute inset-0 rounded-xl bg-cyan-400/20 animate-ping pulse-glow" />}
-      </div>
+    </div>
       <div>
               <div className="text-white font-semibold">Whistle</div>
               <div className="text-xs text-white/50">P2P encrypted tips • Solana proof</div>
@@ -689,7 +703,7 @@
                 <div className="flex-1">
                   <div className="font-semibold text-white/90">No personal info in message</div>
                   <div className="text-xs text-white/60">Names, dates, locations, or unique phrases removed</div>
-    </div>
+</div>
               </label>
               
               <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition">
@@ -744,20 +758,29 @@
         if (!tipText.trim()) { pushToast("Write a message first", "err"); return; }
         
         // API key is required - but provide the default one
+        const apiKey = aimlApiKey || "3b4e91635b3341129a9bbe5c3ae2e5e8";
         if (!aimlApiKey) {
-          // Use the provided API key by default
-          const defaultKey = "3b4e91635b3341129a9bbe5c3ae2e5e8";
-          setAimlApiKey(defaultKey);
-          localStorage.setItem('aiml_api_key', defaultKey);
+          setAimlApiKey(apiKey);
+          localStorage.setItem('aiml_api_key', apiKey);
         }
         
+        const originalText = tipText;
         setAiAnonymizing(true);
+        setTipText("🤖 AI is anonymizing your text...");
+        
         try {
-          const anonymized = await anonymizeText(tipText, aimlApiKey || "3b4e91635b3341129a9bbe5c3ae2e5e8");
-          setTipText(anonymized);
-          pushToast("Text anonymized with AI ✓", "ok");
+          const anonymized = await anonymizeText(originalText, apiKey);
+          if (anonymized && anonymized !== originalText) {
+            setTipText(anonymized);
+            pushToast("✓ Text anonymized successfully", "ok");
+          } else {
+            setTipText(originalText);
+            pushToast("No changes needed - text already neutral", "ok");
+          }
         } catch (e) {
+          setTipText(originalText); // Restore original on error
           pushToast("AI failed: " + e.message, "err");
+          console.error("Anonymization error:", e);
         }
         setAiAnonymizing(false);
       }
