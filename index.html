@@ -307,6 +307,108 @@
 
     // ============ PRIVACY FEATURES ============
     
+    // ===== STEGANOGRAPHY MODE =====
+    // Hide encrypted data inside an innocent-looking image
+    async function hideDataInImage(imageFile, secretText) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            // Convert secret to binary
+            const secretBinary = secretText.split('').map(c => 
+              c.charCodeAt(0).toString(2).padStart(8, '0')
+            ).join('');
+            
+            // Add length prefix (32 bits)
+            const lengthBinary = secretBinary.length.toString(2).padStart(32, '0');
+            const fullBinary = lengthBinary + secretBinary;
+            
+            // Check if image has enough capacity
+            if (fullBinary.length > data.length / 4) {
+              reject(new Error('Image too small for this message'));
+              return;
+            }
+            
+            // Hide data in LSB of red channel
+            for (let i = 0; i < fullBinary.length; i++) {
+              data[i * 4] = (data[i * 4] & 0xFE) | parseInt(fullBinary[i]);
+            }
+            
+            ctx.putImageData(imageData, 0, 0);
+            canvas.toBlob((blob) => {
+              resolve(new File([blob], 'photo.png', { type: 'image/png' }));
+            }, 'image/png', 1.0);
+          };
+          img.src = e.target.result;
+        };
+        
+        reader.onerror = reject;
+        reader.readAsDataURL(imageFile);
+      });
+    }
+    
+    async function extractDataFromImage(imageFile) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            // Extract length (first 32 bits)
+            let lengthBinary = '';
+            for (let i = 0; i < 32; i++) {
+              lengthBinary += (data[i * 4] & 1).toString();
+            }
+            const length = parseInt(lengthBinary, 2);
+            
+            if (length <= 0 || length > data.length * 4) {
+              reject(new Error('No hidden data found or corrupted'));
+              return;
+            }
+            
+            // Extract secret data
+            let secretBinary = '';
+            for (let i = 32; i < 32 + length; i++) {
+              secretBinary += (data[i * 4] & 1).toString();
+            }
+            
+            // Convert binary back to text
+            let secret = '';
+            for (let i = 0; i < secretBinary.length; i += 8) {
+              const byte = secretBinary.substr(i, 8);
+              secret += String.fromCharCode(parseInt(byte, 2));
+            }
+            
+            resolve(secret);
+          };
+          img.src = e.target.result;
+        };
+        
+        reader.onerror = reject;
+        reader.readAsDataURL(imageFile);
+      });
+    }
+
     // 1. Metadata Scrubber - Remove EXIF and metadata from files
     async function scrubMetadata(file) {
       try {
@@ -388,7 +490,7 @@
             <div className="relative h-9 w-9 rounded-xl overflow-hidden border border-white/20 float-slow bg-white/5 hover:scale-110 transition-transform">
               <img src="whistel_logo_top_right_2048.png" alt="Whistle" className="absolute inset-0 h-full w-full object-contain"/>
                {!walletStore.pubkey && <span className="absolute inset-0 rounded-xl bg-cyan-400/20 animate-ping pulse-glow" />}
-      </div>
+    </div>
       <div>
               <div className="text-white font-semibold">Whistle</div>
               <div className="text-xs text-white/50">P2P encrypted tips • Solana proof</div>
@@ -652,7 +754,7 @@
                 <div className="flex-1">
                   <div className="font-semibold text-white/90">No personal info in message</div>
                   <div className="text-xs text-white/60">Names, dates, locations, or unique phrases removed</div>
-    </div>
+</div>
               </label>
               
               <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition">
@@ -695,6 +797,10 @@
       // Privacy features
       const [showOpSec, setShowOpSec] = useState(false);
       const [scrubbingMetadata, setScrubbingMetadata] = useState(false);
+      const [stegoMode, setStegoMode] = useState(false);
+      const [stegoImage, setStegoImage] = useState(null);
+      const [stegoProcessing, setStegoProcessing] = useState(false);
+      const stegoFileRef = useRef(null);
       
       useEffect(()=>{
         if(window.lucide) window.lucide.createIcons();
@@ -727,6 +833,40 @@
           pushToast("Metadata scrubbing failed", "err");
         }
         setScrubbingMetadata(false);
+      }
+      
+      // Steganography mode handler
+      async function handleCreateStegoImage(){
+        if (!stegoFileRef.current?.files?.[0]) {
+          pushToast("Select a cover image first", "err");
+          return;
+        }
+        if (!offerOut) {
+          pushToast("Generate an Offer first", "err");
+          return;
+        }
+        
+        setStegoProcessing(true);
+        try {
+          const coverImage = stegoFileRef.current.files[0];
+          const hiddenImage = await hideDataInImage(coverImage, offerOut);
+          setStegoImage(hiddenImage);
+          pushToast("✓ Offer hidden in image! Download and share.", "ok");
+        } catch (e) {
+          pushToast("Steganography failed: " + e.message, "err");
+        }
+        setStegoProcessing(false);
+      }
+      
+      async function downloadStegoImage(){
+        if (!stegoImage) return;
+        const url = URL.createObjectURL(stegoImage);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'vacation-photo.png';
+        a.click();
+        URL.revokeObjectURL(url);
+        pushToast("Image downloaded — share it anywhere!", "ok");
       }
 
       async function copyOffer(){
@@ -869,14 +1009,48 @@
                 <i data-lucide="shield-check" className="w-5 h-5 text-yellow-400"></i>
                 <h4 className="text-white/90 font-semibold text-sm">Privacy Tools</h4>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 mb-2">
                 <button onClick={(e)=>{ ripple(e); handleScrubMetadata(); }} disabled={scrubbingMetadata} className="flex items-center gap-2 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-200 text-xs font-semibold px-3 py-1.5 border border-cyan-400/30 btn-ripple">
                   <i data-lucide={scrubbingMetadata ? "loader" : "eraser"} className={`w-3 h-3 ${scrubbingMetadata ? 'animate-spin' : ''}`}></i>
                   {scrubbingMetadata ? 'Scrubbing...' : 'Scrub Metadata'}
                 </button>
+                <button onClick={(e)=>{ ripple(e); setStegoMode(!stegoMode); }} className={`flex items-center gap-2 rounded-lg ${stegoMode ? 'bg-purple-500/30 border-purple-400/50' : 'bg-purple-500/20 border-purple-400/30'} hover:bg-purple-500/30 text-purple-200 text-xs font-semibold px-3 py-1.5 border btn-ripple`}>
+                  <i data-lucide="image" className="w-3 h-3"></i>
+                  {stegoMode ? '✓ Steganography ON' : 'Steganography Mode'}
+                </button>
               </div>
+              
+              {stegoMode && (
+                <div className="mt-3 p-3 rounded-xl bg-purple-500/10 border border-purple-400/20 scale-in">
+                  <div className="flex items-center gap-2 mb-2">
+                    <i data-lucide="eye-off" className="w-4 h-4 text-purple-300"></i>
+                    <h5 className="text-white/90 font-semibold text-xs">Hide Offer Inside Image</h5>
+                  </div>
+                  <p className="text-xs text-white/60 mb-2">Share as an innocent vacation photo — perfect plausible deniability!</p>
+                  <input ref={stegoFileRef} type="file" accept="image/*" className="w-full rounded-lg bg-white/[0.06] border border-white/10 p-2 text-xs mb-2" />
+                  <div className="flex gap-2">
+                    <button onClick={(e)=>{ ripple(e); handleCreateStegoImage(); }} disabled={stegoProcessing} className="flex items-center gap-2 rounded-lg bg-purple-500/30 hover:bg-purple-400/40 text-purple-100 text-xs font-semibold px-3 py-1.5 border border-purple-400/30 btn-ripple">
+                      <i data-lucide={stegoProcessing ? "loader" : "wand-2"} className={`w-3 h-3 ${stegoProcessing ? 'animate-spin' : ''}`}></i>
+                      {stegoProcessing ? 'Hiding...' : 'Hide Offer in Image'}
+                    </button>
+                    {stegoImage && (
+                      <button onClick={(e)=>{ ripple(e); downloadStegoImage(); }} className="flex items-center gap-2 rounded-lg bg-emerald-500/30 hover:bg-emerald-400/40 text-emerald-100 text-xs font-semibold px-3 py-1.5 border border-emerald-400/30 btn-ripple">
+                        <i data-lucide="download" className="w-3 h-3"></i>
+                        Download Image
+                      </button>
+                    )}
+                  </div>
+                  {stegoImage && (
+                    <div className="mt-2 text-xs text-white/60">
+                      ✓ Offer hidden! Send this image via email, social media, or messaging apps. Receiver can extract it.
+                    </div>
+                  )}
+                </div>
+              )}
+              
               <p className="text-xs text-white/50 mt-2">
-                <strong>Scrub Metadata:</strong> Removes EXIF/GPS data from images to protect your privacy.
+                <strong>Scrub Metadata:</strong> Removes EXIF/GPS data from images.
+                <strong className="ml-2">Steganography:</strong> Hides Offer inside an innocent-looking image.
               </p>
             </div>
             
@@ -998,9 +1172,40 @@
       const peerRef = useRef(null);
       const dcRef = useRef(null);
       
+      // Self-destruct features
+      const [selfDestructTime, setSelfDestructTime] = useState(24); // hours
+      const [destructCountdown, setDestructCountdown] = useState(null);
+      const destructTimerRef = useRef(null);
+      
+      // Steganography extraction
+      const [extractingStegoImage, setExtractingStegoImage] = useState(false);
+      const stegoExtractRef = useRef(null);
+      
       useEffect(()=>{
         if(window.lucide) window.lucide.createIcons();
       });
+      
+      // Start self-destruct timer when content is received
+      useEffect(() => {
+        if (text && selfDestructTime > 0) {
+          const destructTime = Date.now() + (selfDestructTime * 60 * 60 * 1000);
+          setDestructCountdown(destructTime);
+          
+          destructTimerRef.current = setInterval(() => {
+            const remaining = destructTime - Date.now();
+            if (remaining <= 0) {
+              setText("");
+              setFiles([]);
+              setHash("");
+              clearInterval(destructTimerRef.current);
+              setDestructCountdown(null);
+              pushToast("Message self-destructed ✓", "ok");
+            }
+          }, 1000);
+          
+          return () => clearInterval(destructTimerRef.current);
+        }
+      }, [text, selfDestructTime]);
 
       async function pasteOffer(){
         try{ const t = await navigator.clipboard.readText(); setOfferIn(t || ""); pushToast("Pasted Offer", "ok"); }catch(e){ pushToast("Paste failed", "err"); }
@@ -1011,8 +1216,37 @@
       function resetReceiver(){
         try{ dcRef.current?.close?.(); }catch{}
         try{ peerRef.current?.close?.(); }catch{}
-        setOfferIn(""); setAnswerOut(""); setStatus("Waiting…"); setProg(0); setText(""); setFiles([]); setHash("");
+        if (destructTimerRef.current) clearInterval(destructTimerRef.current);
+        setOfferIn(""); setAnswerOut(""); setStatus("Waiting…"); setProg(0); setText(""); setFiles([]); setHash(""); setDestructCountdown(null);
         pushToast("Newsroom reset", "ok");
+      }
+      
+      async function extractFromStegoImage(){
+        if (!stegoExtractRef.current?.files?.[0]) {
+          pushToast("Select an image first", "err");
+          return;
+        }
+        
+        setExtractingStegoImage(true);
+        try {
+          const imageFile = stegoExtractRef.current.files[0];
+          const extracted = await extractDataFromImage(imageFile);
+          setOfferIn(extracted);
+          pushToast("✓ Offer extracted from image!", "ok");
+        } catch (e) {
+          pushToast("Extraction failed: " + e.message, "err");
+        }
+        setExtractingStegoImage(false);
+      }
+      
+      function getTimeRemaining(){
+        if (!destructCountdown) return '';
+        const remaining = destructCountdown - Date.now();
+        if (remaining <= 0) return 'Expired';
+        const hours = Math.floor(remaining / (1000 * 60 * 60));
+        const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+        return `${hours}h ${minutes}m ${seconds}s`;
       }
 
       async function makeAnswer() {
@@ -1073,6 +1307,49 @@
 
       return (
         <GlassCard title="Receiver — Receive" subtitle="Paste Offer, generate Answer, accept the stream">
+          {/* Steganography Extraction */}
+          <div className="mb-4 p-3 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-400/20">
+            <div className="flex items-center gap-2 mb-2">
+              <i data-lucide="image-plus" className="w-5 h-5 text-purple-400"></i>
+              <h4 className="text-white/90 font-semibold text-sm">Extract Offer from Image</h4>
+            </div>
+            <p className="text-xs text-white/60 mb-2">If sender used steganography, upload the image to extract the hidden Offer.</p>
+            <div className="flex gap-2 items-end">
+              <div className="flex-1">
+                <input ref={stegoExtractRef} type="file" accept="image/*" className="w-full rounded-lg bg-white/[0.06] border border-white/10 p-2 text-xs" />
+              </div>
+              <button onClick={(e)=>{ ripple(e); extractFromStegoImage(); }} disabled={extractingStegoImage} className="flex items-center gap-2 rounded-lg bg-purple-500/30 hover:bg-purple-400/40 text-purple-100 text-xs font-semibold px-3 py-2 border border-purple-400/30 btn-ripple">
+                <i data-lucide={extractingStegoImage ? "loader" : "scan"} className={`w-3 h-3 ${extractingStegoImage ? 'animate-spin' : ''}`}></i>
+                {extractingStegoImage ? 'Extracting...' : 'Extract Offer'}
+              </button>
+            </div>
+          </div>
+          
+          {/* Self-Destruct Settings */}
+          <div className="mb-4 p-3 rounded-xl bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-400/20">
+            <div className="flex items-center gap-2 mb-2">
+              <i data-lucide="timer" className="w-5 h-5 text-orange-400"></i>
+              <h4 className="text-white/90 font-semibold text-sm">Self-Destruct Timer</h4>
+            </div>
+            <p className="text-xs text-white/60 mb-2">Messages will automatically delete after this time. No trace left.</p>
+            <div className="flex items-center gap-3">
+              <select value={selfDestructTime} onChange={(e)=>setSelfDestructTime(Number(e.target.value))} className="rounded-lg bg-white/[0.06] border border-white/10 p-2 text-xs text-white">
+                <option value="0">Disabled</option>
+                <option value="1">1 hour</option>
+                <option value="6">6 hours</option>
+                <option value="12">12 hours</option>
+                <option value="24">24 hours (default)</option>
+                <option value="72">3 days</option>
+              </select>
+              {destructCountdown && (
+                <span className="text-xs text-orange-300 font-mono flex items-center gap-1">
+                  <i data-lucide="clock" className="w-3 h-3"></i>
+                  Deletes in: {getTimeRemaining()}
+                </span>
+              )}
+            </div>
+          </div>
+          
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <h4 className="flex items-center gap-2 text-white/90 font-semibold mb-1">
@@ -1080,7 +1357,7 @@
                 Step 1 — Paste Offer
               </h4>
                <p className="text-xs text-white/50 mb-1">Paste the code the sender sent you. Then click <span className="text-white/70 font-semibold">Generate Answer</span> and send the Answer back to the sender.</p>
-              <textarea value={offerIn} onChange={(e) => setOfferIn(e.target.value)} rows={6} className="w-full rounded-xl bg-white/[0.06] border border-white/10 p-3 font-mono text-xs" placeholder="Paste tipster Offer here" />
+              <textarea value={offerIn} onChange={(e) => setOfferIn(e.target.value)} rows={6} className="w-full rounded-xl bg-white/[0.06] border border-white/10 p-3 font-mono text-xs" placeholder="Paste tipster Offer here (or extract from image above)" />
               <div className="flex gap-2 mt-2 flex-wrap">
                 <button onClick={(e)=>{ ripple(e); pasteOffer(); }} className="flex items-center gap-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold px-3 py-2 border border-white/10 btn-ripple active:scale-[.98]">
                   <i data-lucide="clipboard" className="w-4 h-4"></i>
