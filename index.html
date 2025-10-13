@@ -361,15 +361,15 @@
       try {
         console.log('Anonymizing text with AI/ML API...');
         
-        // Use AI/ML API with DeepSeek model
-        const response = await fetch('https://api.aimlapi.com/v1/chat/completions', {
+        // Use AI/ML API with Llama model (more compatible than DeepSeek)
+        const response = await fetch('https://api.aimlapi.com/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`
           },
           body: JSON.stringify({
-            model: 'DeepSeek-V3',
+            model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo',
             messages: [
               {
                 role: 'system',
@@ -965,7 +965,7 @@
                 </button>
               </div>
               <p className="text-xs text-white/50 mt-2">
-                <strong>AI Anonymize:</strong> Uses AI/ML API (DeepSeek-V3) to rewrite text & remove identifying info. 
+                <strong>AI Anonymize:</strong> Uses AI/ML API (Llama 3.3 70B) to rewrite text & remove identifying info. 
                 <strong className="ml-2">Scrub Metadata:</strong> Removes EXIF/GPS data from images.
               </p>
             </div>
