@@ -109,6 +109,109 @@
     .stagger-2{animation-delay:.1s}
     .stagger-3{animation-delay:.15s}
     .stagger-4{animation-delay:.2s}
+    
+    /* ===== MOBILE OPTIMIZATION ===== */
+    @media (max-width: 768px) {
+      /* Reduce cloud sizes on mobile */
+      .c1,.c2,.c3,.c4,.c5,.c6,.c7,.c8,.c9{
+        width:250px!important;
+        height:100px!important;
+      }
+      
+      /* Optimize toast for mobile */
+      .toast-enter{
+        min-width:280px!important;
+        max-width:calc(100vw - 32px)!important;
+        font-size:14px!important;
+        padding:12px 16px!important;
+      }
+      
+      /* Smaller glass cards on mobile */
+      .glass-strong{
+        padding:16px!important;
+      }
+      
+      /* Adjust animations for mobile */
+      .hover-lift:active{
+        transform:translateY(-2px) scale(1.005);
+      }
+      
+      /* Better button sizing for touch */
+      button{
+        min-height:44px;
+        min-width:44px;
+      }
+      
+      /* Optimize text sizing */
+      .text-base{font-size:15px!important}
+      .text-sm{font-size:13px!important}
+      .text-xs{font-size:11px!important}
+    }
+    
+    @media (max-width: 640px) {
+      /* Even smaller on phones */
+      body{
+        font-size:14px;
+      }
+      
+      /* Reduce header size */
+      h1,h2,h3{
+        font-size:1.25rem!important;
+      }
+      
+      /* Stack buttons vertically on small screens */
+      .flex-wrap{
+        flex-direction:column!important;
+        width:100%;
+      }
+      .flex-wrap > button{
+        width:100%;
+      }
+      
+      /* Full width inputs */
+      input[type="file"],
+      textarea,
+      select{
+        font-size:16px!important; /* Prevents zoom on iOS */
+      }
+      
+      /* Adjust toast position for mobile */
+      .fixed.top-20{
+        top:70px!important;
+        right:8px!important;
+        left:8px!important;
+      }
+    }
+    
+    /* Landscape phone optimization */
+    @media (max-width: 896px) and (orientation: landscape) {
+      .sky,.sky-dim,.cloud{
+        display:none; /* Hide animations in landscape for better performance */
+      }
+      body{
+        background:#0b0f14;
+      }
+    }
+    
+    /* Touch-friendly improvements */
+    @media (hover: none) and (pointer: coarse) {
+      /* Better tap targets */
+      button, a, input[type="button"]{
+        min-height:48px;
+        padding:12px 20px;
+      }
+      
+      /* Remove glass hover effect on touch */
+      .glass-hover:hover{
+        transform:none;
+        box-shadow:0 10px 30px rgba(0,0,0,.3);
+      }
+      
+      /* Disable hover scale on touch devices */
+      *:hover{
+        transform:none!important;
+      }
+    }
 </style>
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="preconnect" href="https://cdn.tailwindcss.com">
@@ -496,18 +599,18 @@
 
     function SectionHeader() {
       return (
-        <header className="flex items-center justify-between border-b border-white/10 pb-3 fade-up">
-          <div className="flex items-center gap-3">
-            <div className="relative h-9 w-9 rounded-xl overflow-hidden border border-white/20 float-slow bg-white/5 hover:scale-110 transition-transform">
+        <header className="flex items-center justify-between border-b border-white/10 pb-3 fade-up flex-wrap gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="relative h-9 w-9 shrink-0 rounded-xl overflow-hidden border border-white/20 float-slow bg-white/5 hover:scale-110 transition-transform">
               <img src="whistel_logo_top_right_2048.png" alt="Whistle" className="absolute inset-0 h-full w-full object-contain"/>
                {!walletStore.pubkey && <span className="absolute inset-0 rounded-xl bg-cyan-400/20 animate-ping pulse-glow" />}
     </div>
-      <div>
-              <div className="text-white font-semibold">Whistle</div>
-              <div className="text-xs text-white/50">P2P encrypted tips • Solana proof</div>
+      <div className="min-w-0 flex-1">
+              <div className="text-white font-semibold text-base sm:text-lg">Whistle</div>
+              <div className="text-xs text-white/50 hidden sm:block">P2P encrypted tips • Solana proof</div>
               <div className="mt-1 flex items-center gap-2 text-[11px] text-white/60">
-                <span className="font-mono truncate max-w-[42ch]" title={CONTRACT_ADDRESS}>{CONTRACT_ADDRESS}</span>
-                <button onClick={async()=>{ try{ await navigator.clipboard.writeText(CONTRACT_ADDRESS); alert('CA copied'); }catch{} }} className="rounded-md bg-white/10 hover:bg-white/20 border border-white/10 px-2 py-[2px] text-white/80 btn-press">Copy</button>
+                <span className="font-mono truncate max-w-[28ch] sm:max-w-[42ch]" title={CONTRACT_ADDRESS}>{CONTRACT_ADDRESS}</span>
+                <button onClick={async()=>{ try{ await navigator.clipboard.writeText(CONTRACT_ADDRESS); alert('CA copied'); }catch{} }} className="rounded-md bg-white/10 hover:bg-white/20 border border-white/10 px-2 py-[2px] text-white/80 btn-press shrink-0">Copy</button>
       </div>
       </div>
     </div>
@@ -1877,7 +1980,7 @@
             <div className="cloud c8"></div>
             <div className="cloud c9"></div>
           </div>
-          <div className="max-w-6xl mx-auto p-6">
+          <div className="max-w-6xl mx-auto p-6 sm:p-4 md:p-6">
             <SectionHeader />
             <div className="mt-5 flex gap-6">
               <Sidebar step={step} setStep={setStep} />
