@@ -354,33 +354,38 @@
       }
     }
 
-    // 2. AI Writing Anonymizer - Rewrite text to hide identity (Hugging Face API)
+    // 2. AI Writing Anonymizer - Rewrite text to hide identity (AI/ML API)
     async function anonymizeText(text, apiKey) {
       if (!text || !apiKey) return text;
       
       try {
-        const prompt = `Rewrite this text to remove all identifying information (names, locations, dates, personal style). Keep facts intact but make it neutral and generic:\n\n${text}\n\nAnonymized version:`;
-        
-        // Use Hugging Face Mistral model
-        const response = await fetch('https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2', {
+        // Use AI/ML API with DeepSeek or Llama model
+        const response = await fetch('https://api.aimlapi.com/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`
           },
           body: JSON.stringify({
-            inputs: prompt,
-            parameters: {
-              max_new_tokens: 1000,
-              temperature: 0.3,
-              return_full_text: false
-            }
+            model: 'DeepSeek-V3',
+            messages: [
+              {
+                role: 'system',
+                content: 'You are a text anonymizer. Rewrite the user\'s text to remove ALL identifying information including names, locations, dates, personal writing style, slang, idioms, and unique phrases. Keep the core facts intact but make the writing completely neutral and generic. Return ONLY the anonymized text without explanations.'
+              },
+              {
+                role: 'user',
+                content: text
+              }
+            ],
+            temperature: 0.3,
+            max_tokens: 2000
           })
         });
         
         const data = await response.json();
-        if (data.error) throw new Error(data.error);
-        return data[0]?.generated_text?.trim() || text;
+        if (data.error) throw new Error(data.error.message || 'API error');
+        return data.choices?.[0]?.message?.content?.trim() || text;
       } catch (e) {
         console.error('AI anonymization failed:', e);
         throw e;
@@ -728,7 +733,7 @@
       const [showOpSec, setShowOpSec] = useState(false);
       const [aiAnonymizing, setAiAnonymizing] = useState(false);
       const [scrubbingMetadata, setScrubbingMetadata] = useState(false);
-      const [hfApiKey, setHfApiKey] = useState(localStorage.getItem('hf_api_key') || "");
+      const [aimlApiKey, setAimlApiKey] = useState(localStorage.getItem('aiml_api_key') || "");
       
       useEffect(()=>{
         if(window.lucide) window.lucide.createIcons();
@@ -738,27 +743,21 @@
       async function handleAnonymize(){
         if (!tipText.trim()) { pushToast("Write a message first", "err"); return; }
         
-        // API key is required
-        if (!hfApiKey) {
-          const key = prompt("Enter your Hugging Face API key (hf_...):\n\nGet one FREE at: https://huggingface.co/settings/tokens\n\n1. Sign up (free)\n2. Create 'Read' token\n3. Paste here");
-          if (!key) {
-            pushToast("API key required for AI anonymizer", "err");
-            return;
-          }
-          setHfApiKey(key);
-          localStorage.setItem('hf_api_key', key);
+        // API key is required - but provide the default one
+        if (!aimlApiKey) {
+          // Use the provided API key by default
+          const defaultKey = "3b4e91635b3341129a9bbe5c3ae2e5e8";
+          setAimlApiKey(defaultKey);
+          localStorage.setItem('aiml_api_key', defaultKey);
         }
         
         setAiAnonymizing(true);
         try {
-          const anonymized = await anonymizeText(tipText, hfApiKey);
+          const anonymized = await anonymizeText(tipText, aimlApiKey || "3b4e91635b3341129a9bbe5c3ae2e5e8");
           setTipText(anonymized);
           pushToast("Text anonymized with AI ✓", "ok");
         } catch (e) {
           pushToast("AI failed: " + e.message, "err");
-          // Clear invalid key
-          setHfApiKey("");
-          localStorage.removeItem('hf_api_key');
         }
         setAiAnonymizing(false);
       }
@@ -943,7 +942,7 @@
                 </button>
               </div>
               <p className="text-xs text-white/50 mt-2">
-                <strong>AI Anonymize:</strong> Uses Hugging Face AI to rewrite text & remove identifying info (requires free API key). 
+                <strong>AI Anonymize:</strong> Uses AI/ML API (DeepSeek-V3) to rewrite text & remove identifying info. 
                 <strong className="ml-2">Scrub Metadata:</strong> Removes EXIF/GPS data from images.
               </p>
             </div>
