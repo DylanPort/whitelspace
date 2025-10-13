@@ -26,7 +26,11 @@
     .glass-hover:hover{transform:translateY(-2px);box-shadow:0 20px 40px rgba(0,0,0,.35)}
     .btn-ripple{position:relative;overflow:hidden}
     .btn-ripple span.ripple{position:absolute;border-radius:9999px;background:rgba(255,255,255,.35);transform:scale(0);animation:ripple .6s linear;pointer-events:none}
-    .toast-enter{animation:toastIn .25s ease-out}
+    .toast-enter{animation:toastIn .4s cubic-bezier(0.68, -0.55, 0.265, 1.55)}
+    @keyframes toastIn{
+      0%{transform:translateX(400px) scale(0.8);opacity:0}
+      100%{transform:translateX(0) scale(1);opacity:1}
+    }
 
      /* Animated sky with clouds */
      .sky{position:fixed;inset:0;pointer-events:none;z-index:-9;background:linear-gradient(180deg,#7ec8ff 0%, #bfe4ff 45%, #e8f4ff 100%)}
@@ -279,10 +283,17 @@
 
     function useToasts() {
       const [toasts, setToasts] = useState([]);
+      
+      useEffect(() => {
+        if (window.lucide && toasts.length > 0) {
+          setTimeout(() => window.lucide.createIcons(), 0);
+        }
+      }, [toasts]);
+      
       function push(msg, tone = "default") {
         const id = Math.random().toString(36).slice(2);
         setToasts((t) => [...t, { id, msg, tone }]);
-        setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2800);
+        setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3500);
       }
       return { toasts, push };
     }
@@ -1884,15 +1895,22 @@
           </div>
 
           {/* Toasts */}
-          <div className="fixed right-4 bottom-4 space-y-2">
+          <div className="fixed top-20 right-4 space-y-3 z-50">
             {toasts.map((t) => (
-              <div key={t.id} className={`toast-enter rounded-xl border px-4 py-2 text-sm backdrop-blur-xl ${
+              <div key={t.id} className={`toast-enter rounded-2xl border-2 px-6 py-4 text-base font-semibold backdrop-blur-xl shadow-2xl min-w-[320px] ${
                 t.tone === "ok"
-                  ? "bg-emerald-400/15 border-emerald-400/30 text-emerald-200"
+                  ? "bg-emerald-500/90 border-emerald-300/50 text-white shadow-emerald-500/50"
                   : t.tone === "err"
-                  ? "bg-rose-400/15 border-rose-400/30 text-rose-200"
-                  : "bg-white/10 border-white/15 text-white/80"
-              }`}>{t.msg}</div>
+                  ? "bg-rose-500/90 border-rose-300/50 text-white shadow-rose-500/50"
+                  : "bg-cyan-500/90 border-cyan-300/50 text-white shadow-cyan-500/50"
+              }`}>
+                <div className="flex items-center gap-3">
+                  {t.tone === "ok" && <i data-lucide="check-circle" className="w-6 h-6 shrink-0"></i>}
+                  {t.tone === "err" && <i data-lucide="x-circle" className="w-6 h-6 shrink-0"></i>}
+                  {t.tone !== "ok" && t.tone !== "err" && <i data-lucide="info" className="w-6 h-6 shrink-0"></i>}
+                  <span className="flex-1">{t.msg}</span>
+                </div>
+              </div>
             ))}
           </div>
         </div>
