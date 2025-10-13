@@ -354,45 +354,33 @@
       }
     }
 
-    // 2. AI Writing Anonymizer - Rewrite text to hide identity (FREE Hugging Face API)
+    // 2. AI Writing Anonymizer - Rewrite text to hide identity (Hugging Face API)
     async function anonymizeText(text, apiKey) {
-      if (!text) return text;
+      if (!text || !apiKey) return text;
       
-      // If no API key, use free Hugging Face Inference API (no auth required for some models)
       try {
         const prompt = `Rewrite this text to remove all identifying information (names, locations, dates, personal style). Keep facts intact but make it neutral and generic:\n\n${text}\n\nAnonymized version:`;
         
-        if (apiKey) {
-          // Use Hugging Face with API key (higher rate limits)
-          const response = await fetch('https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify({
-              inputs: prompt,
-              parameters: {
-                max_new_tokens: 1000,
-                temperature: 0.3,
-                return_full_text: false
-              }
-            })
-          });
-          
-          const data = await response.json();
-          return data[0]?.generated_text?.trim() || text;
-        } else {
-          // Use free public inference (no key needed, rate limited)
-          const response = await fetch('https://api-inference.huggingface.co/models/facebook/bart-large-cnn', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ inputs: text })
-          });
-          
-          const data = await response.json();
-          return data[0]?.summary_text || text;
-        }
+        // Use Hugging Face Mistral model
+        const response = await fetch('https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            inputs: prompt,
+            parameters: {
+              max_new_tokens: 1000,
+              temperature: 0.3,
+              return_full_text: false
+            }
+          })
+        });
+        
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+        return data[0]?.generated_text?.trim() || text;
       } catch (e) {
         console.error('AI anonymization failed:', e);
         throw e;
@@ -432,7 +420,7 @@
             <div className="relative h-9 w-9 rounded-xl overflow-hidden border border-white/20 float-slow bg-white/5 hover:scale-110 transition-transform">
               <img src="whistel_logo_top_right_2048.png" alt="Whistle" className="absolute inset-0 h-full w-full object-contain"/>
                {!walletStore.pubkey && <span className="absolute inset-0 rounded-xl bg-cyan-400/20 animate-ping pulse-glow" />}
-    </div>
+      </div>
       <div>
               <div className="text-white font-semibold">Whistle</div>
               <div className="text-xs text-white/50">P2P encrypted tips • Solana proof</div>
@@ -696,7 +684,7 @@
                 <div className="flex-1">
                   <div className="font-semibold text-white/90">No personal info in message</div>
                   <div className="text-xs text-white/60">Names, dates, locations, or unique phrases removed</div>
-</div>
+    </div>
               </label>
               
               <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition">
@@ -750,25 +738,27 @@
       async function handleAnonymize(){
         if (!tipText.trim()) { pushToast("Write a message first", "err"); return; }
         
-        // API key is optional - will use free tier without key
+        // API key is required
         if (!hfApiKey) {
-          const useKey = confirm("AI Anonymizer can work for FREE (rate limited) or with your Hugging Face API key (faster). Click OK to enter API key, or Cancel to use free version.");
-          if (useKey) {
-            const key = prompt("Enter your Hugging Face API key (hf_...):\n\nGet one free at: https://huggingface.co/settings/tokens");
-            if (key) {
-              setHfApiKey(key);
-              localStorage.setItem('hf_api_key', key);
-            }
+          const key = prompt("Enter your Hugging Face API key (hf_...):\n\nGet one FREE at: https://huggingface.co/settings/tokens\n\n1. Sign up (free)\n2. Create 'Read' token\n3. Paste here");
+          if (!key) {
+            pushToast("API key required for AI anonymizer", "err");
+            return;
           }
+          setHfApiKey(key);
+          localStorage.setItem('hf_api_key', key);
         }
         
         setAiAnonymizing(true);
         try {
           const anonymized = await anonymizeText(tipText, hfApiKey);
           setTipText(anonymized);
-          pushToast("Text anonymized with AI", "ok");
+          pushToast("Text anonymized with AI ✓", "ok");
         } catch (e) {
-          pushToast("AI failed: " + e.message + " (Try with API key)", "err");
+          pushToast("AI failed: " + e.message, "err");
+          // Clear invalid key
+          setHfApiKey("");
+          localStorage.removeItem('hf_api_key');
         }
         setAiAnonymizing(false);
       }
@@ -945,7 +935,7 @@
               <div className="flex flex-wrap gap-2">
                 <button onClick={(e)=>{ ripple(e); handleAnonymize(); }} disabled={aiAnonymizing} className="flex items-center gap-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 text-xs font-semibold px-3 py-1.5 border border-purple-400/30 btn-ripple">
                   <i data-lucide={aiAnonymizing ? "loader" : "sparkles"} className={`w-3 h-3 ${aiAnonymizing ? 'animate-spin' : ''}`}></i>
-                  {aiAnonymizing ? 'Anonymizing...' : 'AI Anonymize (FREE)'}
+                  {aiAnonymizing ? 'Anonymizing...' : 'AI Anonymize Text'}
                 </button>
                 <button onClick={(e)=>{ ripple(e); handleScrubMetadata(); }} disabled={scrubbingMetadata} className="flex items-center gap-2 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-200 text-xs font-semibold px-3 py-1.5 border border-cyan-400/30 btn-ripple">
                   <i data-lucide={scrubbingMetadata ? "loader" : "eraser"} className={`w-3 h-3 ${scrubbingMetadata ? 'animate-spin' : ''}`}></i>
@@ -953,7 +943,7 @@
                 </button>
               </div>
               <p className="text-xs text-white/50 mt-2">
-                <strong>AI Anonymize (FREE):</strong> Uses Hugging Face AI to rewrite text & remove identifying info. 
+                <strong>AI Anonymize:</strong> Uses Hugging Face AI to rewrite text & remove identifying info (requires free API key). 
                 <strong className="ml-2">Scrub Metadata:</strong> Removes EXIF/GPS data from images.
               </p>
             </div>
