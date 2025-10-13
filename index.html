@@ -539,6 +539,8 @@
         { id: "home", label: "Home" },
         { id: "receive", label: "Receiver" },
         { id: "send", label: "Sender" },
+        { id: "stego-send", label: "🎭 Stego Send" },
+        { id: "stego-receive", label: "🎭 Stego Receive" },
       ];
       return (
         <div className="flex flex-wrap gap-2 md:hidden">
@@ -565,6 +567,8 @@
         { id:'home',    label:'Home', icon:'home' },
         { id:'send',    label:'Sender', icon:'send' },
         { id:'receive', label:'Receiver', icon:'download' },
+        { id:'stego-send', label:'🎭 Stego Sender', icon:'image' },
+        { id:'stego-receive', label:'🎭 Stego Receiver', icon:'scan' },
       ];
       
       useEffect(()=>{
@@ -1565,6 +1569,283 @@
       );
     }
 
+    // ===== STEGANOGRAPHY-ONLY COMMUNICATION SECTION =====
+    
+    function StegoSender({ pushToast }) {
+      const [message, setMessage] = useState("");
+      const [stegoImage, setStegoImage] = useState(null);
+      const [processing, setProcessing] = useState(false);
+      const coverImageRef = useRef(null);
+      
+      useEffect(()=>{
+        if(window.lucide) window.lucide.createIcons();
+      });
+      
+      async function createStegoImage() {
+        if (!message.trim()) {
+          pushToast("Write a message first", "err");
+          return;
+        }
+        if (!coverImageRef.current?.files?.[0]) {
+          pushToast("Select a cover image", "err");
+          return;
+        }
+        
+        setProcessing(true);
+        try {
+          const coverImage = coverImageRef.current.files[0];
+          const hiddenImage = await hideDataInImage(coverImage, message);
+          setStegoImage(hiddenImage);
+          pushToast("✓ Message hidden in image!", "ok");
+        } catch (e) {
+          pushToast("Failed: " + e.message, "err");
+        }
+        setProcessing(false);
+      }
+      
+      function downloadImage() {
+        if (!stegoImage) return;
+        const url = URL.createObjectURL(stegoImage);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'photo.png';
+        a.click();
+        URL.revokeObjectURL(url);
+        pushToast("Image downloaded!", "ok");
+      }
+      
+      function resetStegoSender() {
+        setMessage("");
+        setStegoImage(null);
+        if (coverImageRef.current) coverImageRef.current.value = "";
+        pushToast("Reset", "ok");
+      }
+      
+      return (
+        <GlassCard title="🎭 Steganography — Sender" subtitle="Hide your message inside an innocent-looking image">
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm text-white/80 font-semibold mb-2 block">Your Secret Message</label>
+              <textarea 
+                value={message} 
+                onChange={(e) => setMessage(e.target.value)} 
+                rows={6} 
+                className="w-full rounded-xl bg-white/[0.06] border border-white/10 p-3 outline-none focus:ring-2 focus:ring-purple-400/40 text-white" 
+                placeholder="Type your confidential message here..."
+              />
+              <p className="text-xs text-white/50 mt-1">This message will be invisible to anyone looking at the image.</p>
+            </div>
+            
+            <div>
+              <label className="text-sm text-white/80 font-semibold mb-2 block">Cover Image</label>
+              <input 
+                ref={coverImageRef} 
+                type="file" 
+                accept="image/*" 
+                className="w-full rounded-xl bg-white/[0.06] border border-white/10 p-3 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-500/30 file:text-purple-100 hover:file:bg-purple-500/40"
+              />
+              <p className="text-xs text-white/50 mt-1">Choose any image: vacation photo, pet, landscape, meme, etc.</p>
+            </div>
+            
+            <div className="flex gap-3 flex-wrap">
+              <button 
+                onClick={(e)=>{ ripple(e); createStegoImage(); }} 
+                disabled={processing}
+                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 disabled:opacity-50 text-white font-semibold px-6 py-3 btn-ripple btn-press shadow-lg"
+              >
+                <i data-lucide={processing ? "loader" : "wand-2"} className={`w-5 h-5 ${processing ? 'animate-spin' : ''}`}></i>
+                {processing ? "Hiding Message..." : "Create Stego Image"}
+              </button>
+              
+              {stegoImage && (
+                <>
+                  <button 
+                    onClick={(e)=>{ ripple(e); downloadImage(); }}
+                    className="flex items-center gap-2 rounded-xl bg-emerald-500/80 hover:bg-emerald-400 text-white font-semibold px-6 py-3 btn-ripple btn-press"
+                  >
+                    <i data-lucide="download" className="w-5 h-5"></i>
+                    Download Image
+                  </button>
+                  
+                  <button 
+                    onClick={(e)=>{ ripple(e); 
+                      const url = URL.createObjectURL(stegoImage);
+                      const preview = window.open('', '_blank');
+                      preview.document.write(`
+                        <html><head><title>Stego Image Preview</title></head>
+                        <body style="margin:0;padding:20px;background:#111;color:#fff;font-family:sans-serif;">
+                          <h2>✅ Your Steganography Image</h2>
+                          <img src="${url}" style="max-width:100%;height:auto;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.5);" />
+                          <p>👆 This image looks completely normal, but contains your hidden message!</p>
+                          <p>Share it via email, WhatsApp, Twitter, Instagram, or any messaging platform.</p>
+                        </body></html>
+                      `);
+                    }}
+                    className="flex items-center gap-2 rounded-xl bg-cyan-500/80 hover:bg-cyan-400 text-white font-semibold px-6 py-3 btn-ripple btn-press"
+                  >
+                    <i data-lucide="eye" className="w-5 h-5"></i>
+                    Preview
+                  </button>
+                </>
+              )}
+              
+              <button 
+                onClick={(e)=>{ ripple(e); resetStegoSender(); }}
+                className="flex items-center gap-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold px-4 py-3 border border-white/10 btn-ripple btn-press"
+              >
+                <i data-lucide="refresh-cw" className="w-4 h-4"></i>
+                Reset
+              </button>
+            </div>
+            
+            {stegoImage && (
+              <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 border border-emerald-400/30 scale-in">
+                <div className="flex items-center gap-2 mb-2">
+                  <i data-lucide="check-circle" className="w-5 h-5 text-emerald-300"></i>
+                  <h4 className="text-white/90 font-semibold">✅ Stego Image Ready!</h4>
+                </div>
+                <p className="text-sm text-white/80 mb-2">
+                  Your message is now hidden inside the image. Share it anywhere:
+                </p>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/20">📧 Email</span>
+                  <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/20">💬 WhatsApp</span>
+                  <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/20">🐦 Twitter</span>
+                  <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/20">📸 Instagram</span>
+                  <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/20">💼 LinkedIn</span>
+                  <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/20">📱 Telegram</span>
+                </div>
+                <p className="text-xs text-white/60 mt-2">
+                  🔒 Perfect plausible deniability — it's just a normal photo!
+                </p>
+              </div>
+            )}
+          </div>
+        </GlassCard>
+      );
+    }
+    
+    function StegoReceiver({ pushToast }) {
+      const [extractedMessage, setExtractedMessage] = useState("");
+      const [extracting, setExtracting] = useState(false);
+      const imageFileRef = useRef(null);
+      
+      useEffect(()=>{
+        if(window.lucide) window.lucide.createIcons();
+      });
+      
+      async function extractMessage() {
+        if (!imageFileRef.current?.files?.[0]) {
+          pushToast("Select an image first", "err");
+          return;
+        }
+        
+        setExtracting(true);
+        try {
+          const imageFile = imageFileRef.current.files[0];
+          const extracted = await extractDataFromImage(imageFile);
+          setExtractedMessage(extracted);
+          pushToast("✓ Message extracted!", "ok");
+        } catch (e) {
+          pushToast("Extraction failed: " + e.message, "err");
+          setExtractedMessage("");
+        }
+        setExtracting(false);
+      }
+      
+      async function copyMessage() {
+        try {
+          await navigator.clipboard.writeText(extractedMessage);
+          pushToast("Message copied", "ok");
+        } catch (e) {
+          pushToast("Copy failed", "err");
+        }
+      }
+      
+      function resetStegoReceiver() {
+        setExtractedMessage("");
+        if (imageFileRef.current) imageFileRef.current.value = "";
+        pushToast("Reset", "ok");
+      }
+      
+      return (
+        <GlassCard title="🎭 Steganography — Receiver" subtitle="Extract hidden messages from images">
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm text-white/80 font-semibold mb-2 block">Upload Image with Hidden Message</label>
+              <input 
+                ref={imageFileRef} 
+                type="file" 
+                accept="image/*" 
+                onChange={() => setExtractedMessage("")}
+                className="w-full rounded-xl bg-white/[0.06] border border-white/10 p-3 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-500/30 file:text-purple-100 hover:file:bg-purple-500/40"
+              />
+              <p className="text-xs text-white/50 mt-1">Select the image you received from the sender.</p>
+            </div>
+            
+            <div className="flex gap-3">
+              <button 
+                onClick={(e)=>{ ripple(e); extractMessage(); }} 
+                disabled={extracting}
+                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 disabled:opacity-50 text-white font-semibold px-6 py-3 btn-ripple btn-press shadow-lg"
+              >
+                <i data-lucide={extracting ? "loader" : "scan"} className={`w-5 h-5 ${extracting ? 'animate-spin' : ''}`}></i>
+                {extracting ? "Extracting..." : "Extract Message"}
+              </button>
+              
+              {extractedMessage && (
+                <button 
+                  onClick={(e)=>{ ripple(e); copyMessage(); }}
+                  className="flex items-center gap-2 rounded-xl bg-cyan-500/80 hover:bg-cyan-400 text-white font-semibold px-6 py-3 btn-ripple btn-press"
+                >
+                  <i data-lucide="copy" className="w-5 h-5"></i>
+                  Copy Message
+                </button>
+              )}
+              
+              <button 
+                onClick={(e)=>{ ripple(e); resetStegoReceiver(); }}
+                className="flex items-center gap-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold px-4 py-3 border border-white/10 btn-ripple btn-press"
+              >
+                <i data-lucide="refresh-cw" className="w-4 h-4"></i>
+                Reset
+              </button>
+            </div>
+            
+            {extractedMessage && (
+              <div className="mt-4 scale-in">
+                <label className="text-sm text-white/80 font-semibold mb-2 block flex items-center gap-2">
+                  <i data-lucide="lock-open" className="w-4 h-4 text-emerald-400"></i>
+                  Extracted Message
+                </label>
+                <div className="rounded-xl bg-emerald-500/10 border border-emerald-400/30 p-4">
+                  <pre className="whitespace-pre-wrap text-sm text-white/90 font-mono">{extractedMessage}</pre>
+                </div>
+                <p className="text-xs text-white/60 mt-2">
+                  ✅ Message successfully extracted from the image!
+                </p>
+              </div>
+            )}
+            
+            {!extractedMessage && !extracting && (
+              <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-400/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <i data-lucide="info" className="w-4 h-4 text-purple-300"></i>
+                  <h4 className="text-white/90 font-semibold text-sm">How it works</h4>
+                </div>
+                <ul className="text-xs text-white/70 space-y-1 list-disc list-inside">
+                  <li>Sender hides a message inside a normal-looking image</li>
+                  <li>The image looks 100% innocent to anyone else</li>
+                  <li>You upload that image here to reveal the hidden message</li>
+                  <li>Perfect for covert communication!</li>
+                </ul>
+              </div>
+            )}
+          </div>
+        </GlassCard>
+      );
+    }
+
     function App() {
       const { toasts, push } = useToasts();
       const [step, setStep] = usePersistentState('uiStep', "home");
@@ -1596,6 +1877,8 @@
                 {step === 'home' && <Home setStep={setStep} />}
                 {step === 'send' && <Sender pushToast={push} onHashReady={setHashFromFlow} />}
                 {step === 'receive' && <Receiver pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />}
+                {step === 'stego-send' && <StegoSender pushToast={push} />}
+                {step === 'stego-receive' && <StegoReceiver pushToast={push} />}
               </main>
             </div>
           </div>
