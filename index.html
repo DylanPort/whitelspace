@@ -729,7 +729,7 @@
             
             // Verify magic header
             if (!message.startsWith('WHSS')) {
-              reject(new Error('No Spread Spectrum data found or wrong password. Make sure you use the same password as encoding.'));
+              reject(new Error('No Spread Spectrum data found. The image may be corrupted or not encoded with Whistle.'));
               return;
             }
             
@@ -1918,8 +1918,7 @@
       const [message, setMessage] = useState("");
       const [stegoImage, setStegoImage] = useState(null);
       const [processing, setProcessing] = useState(false);
-      const [mode, setMode] = useState('lsb'); // 'lsb' or 'spread'
-      const [password, setPassword] = useState('');
+      const [mode, setMode] = useState('spread'); // 'lsb' or 'spread' - default to spread for compression resistance
       const coverImageRef = useRef(null);
       
       useEffect(()=>{
@@ -1935,10 +1934,6 @@
           pushToast("Select a cover image", "err");
           return;
         }
-        if (mode === 'spread' && !password.trim()) {
-          pushToast("Password required for Spread Spectrum mode", "err");
-          return;
-        }
         
         setProcessing(true);
         try {
@@ -1946,7 +1941,8 @@
           let hiddenImage;
           
           if (mode === 'spread') {
-            hiddenImage = await spreadSpectrumEncode(coverImage, message, password);
+            // Use empty string as default password for Spread Spectrum
+            hiddenImage = await spreadSpectrumEncode(coverImage, message, '');
             pushToast("✓ Message hidden with Spread Spectrum! Compression-resistant.", "ok");
           } else {
             hiddenImage = await hideDataInImage(coverImage, message);
@@ -2006,26 +2002,10 @@
                   <p className="text-xs opacity-80">Compression-resistant, works on X/Instagram!</p>
                 </button>
               </div>
+              <p className="text-xs text-white/60 mt-2">
+                💡 <strong>Spread Spectrum</strong> is recommended — it survives compression from social media apps!
+              </p>
             </div>
-            
-            {mode === 'spread' && (
-              <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-400/20 scale-in">
-                <div className="flex items-center gap-2 mb-2">
-                  <i data-lucide="key" className="w-4 h-4 text-purple-300"></i>
-                  <label className="text-sm text-white/80 font-semibold">Password (Required)</label>
-                </div>
-                <input 
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-xl bg-white/[0.06] border border-white/10 p-3 outline-none focus:ring-2 focus:ring-purple-400/40 text-white"
-                  placeholder="Enter a strong password..."
-                />
-                <p className="text-xs text-white/60 mt-2">
-                  ⚠️ Receiver needs the SAME password to extract the message. Share it separately via secure channel.
-                </p>
-              </div>
-            )}
             
             <div>
               <label className="text-sm text-white/80 font-semibold mb-2 block">Your Secret Message</label>
@@ -2036,14 +2016,10 @@
                 className="w-full rounded-xl bg-white/[0.06] border border-white/10 p-3 outline-none focus:ring-2 focus:ring-purple-400/40 text-white" 
                 placeholder="Type your confidential message here..."
               />
-              <div className="flex items-center justify-between mt-1">
-                <p className="text-xs text-white/50">This message will be invisible to anyone looking at the image.</p>
-                {mode === 'spread' && (
-                  <span className="text-xs text-purple-300 font-mono">
-                    {message.length} / ~500 chars
-                  </span>
-                )}
-              </div>
+              <p className="text-xs text-white/50 mt-1">
+                This message will be invisible to anyone looking at the image.
+                {mode === 'spread' && <span className="ml-2 text-purple-300 font-mono">{message.length} / ~500 chars</span>}
+              </p>
             </div>
             
             <div>
@@ -2170,7 +2146,6 @@
       const [extractedMessage, setExtractedMessage] = useState("");
       const [extracting, setExtracting] = useState(false);
       const [mode, setMode] = useState('auto'); // 'auto', 'lsb', or 'spread'
-      const [password, setPassword] = useState('');
       const imageFileRef = useRef(null);
       
       useEffect(()=>{
@@ -2188,25 +2163,23 @@
           const imageFile = imageFileRef.current.files[0];
           let extracted = null;
           
-          // Auto mode: Try both methods
+          // Auto mode: Try both methods with empty password
           if (mode === 'auto') {
             // Try LSB first (faster)
             try {
               extracted = await extractDataFromImage(imageFile);
               pushToast("✓ Message extracted (LSB mode)!", "ok");
             } catch (lsbError) {
-              // LSB failed, try Spread Spectrum
-              if (!password.trim()) {
-                throw new Error("LSB extraction failed. If this is a Spread Spectrum image, enter the password and try again.");
+              // LSB failed, try Spread Spectrum with empty password
+              try {
+                extracted = await spreadSpectrumDecode(imageFile, '');
+                pushToast("✓ Message extracted (Spread Spectrum mode)!", "ok");
+              } catch (spreadError) {
+                throw new Error("No hidden message found. Make sure this image was created with Whistle's steganography feature.");
               }
-              extracted = await spreadSpectrumDecode(imageFile, password);
-              pushToast("✓ Message extracted (Spread Spectrum mode)!", "ok");
             }
           } else if (mode === 'spread') {
-            if (!password.trim()) {
-              throw new Error("Password required for Spread Spectrum extraction");
-            }
-            extracted = await spreadSpectrumDecode(imageFile, password);
+            extracted = await spreadSpectrumDecode(imageFile, '');
             pushToast("✓ Message extracted (Spread Spectrum)!", "ok");
           } else {
             extracted = await extractDataFromImage(imageFile);
@@ -2274,26 +2247,10 @@
                   <p className="text-[10px] opacity-80">Robust</p>
                 </button>
               </div>
+              <p className="text-xs text-white/60 mt-2">
+                💡 <strong>Auto mode</strong> automatically detects the encoding method used.
+              </p>
             </div>
-            
-            {(mode === 'spread' || mode === 'auto') && (
-              <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-400/20 scale-in">
-                <div className="flex items-center gap-2 mb-2">
-                  <i data-lucide="key" className="w-4 h-4 text-purple-300"></i>
-                  <label className="text-sm text-white/80 font-semibold">Password {mode === 'spread' && '(Required)'}</label>
-                </div>
-                <input 
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-xl bg-white/[0.06] border border-white/10 p-3 outline-none focus:ring-2 focus:ring-purple-400/40 text-white"
-                  placeholder="Enter the password shared by sender..."
-                />
-                <p className="text-xs text-white/60 mt-2">
-                  {mode === 'auto' ? 'Enter password if sender used Spread Spectrum mode.' : 'Must match the password sender used.'}
-                </p>
-              </div>
-            )}
             
             <div>
               <label className="text-sm text-white/80 font-semibold mb-2 block">Upload Image with Hidden Message</label>
