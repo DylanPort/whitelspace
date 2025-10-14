@@ -216,14 +216,14 @@
       });
       
       const tools = [
-        { icon: 'radio', name: 'WebRTC P2P', desc: 'Direct encrypted transfers, no servers', color: 'blue' },
-        { icon: 'image', name: 'Image Stego', desc: 'LSB & Spread Spectrum encoding', color: 'purple' },
-        { icon: 'music', name: 'Audio Stego', desc: 'Hide messages in sound waves', color: 'pink' },
-        { icon: 'video', name: 'Video Stego', desc: 'Distribute data across frames', color: 'violet' },
-        { icon: 'eraser', name: 'Metadata Scrubber', desc: 'Remove EXIF and GPS data', color: 'cyan' },
-        { icon: 'clock', name: 'Self-Destruct', desc: 'Auto-delete after timer', color: 'orange' },
-        { icon: 'shield-check', name: 'OpSec Checklist', desc: 'Pre-send security validation', color: 'green' },
-        { icon: 'link', name: 'Blockchain Proof', desc: 'Immutable Solana timestamps', color: 'yellow' }
+        { icon: 'activity', name: 'WebRTC P2P', desc: 'Direct encrypted transfers, no servers', color: 'blue', gradient: 'from-blue-500 to-cyan-500' },
+        { icon: 'image', name: 'Image Stego', desc: 'LSB & Spread Spectrum encoding', color: 'purple', gradient: 'from-purple-500 to-pink-500' },
+        { icon: 'mic', name: 'Audio Stego', desc: 'Hide messages in sound waves', color: 'pink', gradient: 'from-pink-500 to-rose-500' },
+        { icon: 'film', name: 'Video Stego', desc: 'Distribute data across frames', color: 'violet', gradient: 'from-violet-500 to-purple-500' },
+        { icon: 'scan', name: 'Metadata Scrubber', desc: 'Remove EXIF and GPS data', color: 'cyan', gradient: 'from-cyan-500 to-blue-500' },
+        { icon: 'timer', name: 'Self-Destruct', desc: 'Auto-delete after timer', color: 'orange', gradient: 'from-orange-500 to-red-500' },
+        { icon: 'shield-alert', name: 'OpSec Checklist', desc: 'Pre-send security validation', color: 'green', gradient: 'from-green-500 to-emerald-500' },
+        { icon: 'link-2', name: 'Blockchain Proof', desc: 'Immutable Solana timestamps', color: 'yellow', gradient: 'from-yellow-500 to-amber-500' }
       ];
       
       return (
@@ -235,7 +235,14 @@
           <div className="relative overflow-hidden py-20 px-6">
             <div className="max-w-6xl mx-auto text-center">
               <div className="mb-8 inline-block">
-                <div className="text-8xl mb-4">🎭</div>
+                <div className="relative w-32 h-32 mx-auto mb-4">
+                  <img 
+                    src="whistel_logo_top_right_2048.png" 
+                    alt="Whistle Logo" 
+                    className="w-full h-full object-contain animate-pulse"
+                    style={{ animationDuration: '3s' }}
+                  />
+                </div>
               </div>
               <h1 className="text-6xl md:text-8xl font-bold mb-6 typing-text">
                 WHISTLE
@@ -258,8 +265,10 @@
           {/* Mission Statement */}
           <div className="max-w-4xl mx-auto px-6 my-20">
             <div className="feature-card p-8 glow">
-              <h2 className="text-4xl font-bold mb-6 text-center">
-                <i data-lucide="target" className="inline w-10 h-10 mr-3"></i>
+              <h2 className="text-4xl font-bold mb-6 text-center flex items-center justify-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                  <i data-lucide="flag" className="w-6 h-6 text-white"></i>
+                </div>
                 Our Mission
               </h2>
               <p className="text-xl text-white/90 leading-relaxed text-center">
@@ -273,16 +282,23 @@
           
           {/* Tools Grid */}
           <div className="max-w-6xl mx-auto px-6 my-20">
-            <h2 className="text-5xl font-bold mb-12 text-center">
-              <i data-lucide="wrench" className="inline w-12 h-12 mr-3"></i>
+            <h2 className="text-5xl font-bold mb-12 text-center flex items-center justify-center gap-4">
+              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">
+                <i data-lucide="shield" className="w-8 h-8 text-white"></i>
+              </div>
               Arsenal of Privacy
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {tools.map((tool, i) => (
-                <div key={i} className="feature-card p-6 hover:rotate-1" style={{ animationDelay: `${i * 0.1}s` }}>
-                  <i data-lucide={tool.icon} className={`w-12 h-12 mb-4 text-${tool.color}-400`}></i>
-                  <h3 className="text-xl font-bold mb-2">{tool.name}</h3>
-                  <p className="text-white/70 text-sm">{tool.desc}</p>
+                <div key={i} className="feature-card p-6 hover:rotate-1 relative overflow-hidden group" style={{ animationDelay: `${i * 0.1}s` }}>
+                  <div className={`absolute inset-0 bg-gradient-to-br ${tool.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}></div>
+                  <div className="relative z-10">
+                    <div className={`w-16 h-16 mb-4 rounded-xl bg-gradient-to-br ${tool.gradient} flex items-center justify-center`}>
+                      <i data-lucide={tool.icon} className="w-8 h-8 text-white"></i>
+                    </div>
+                    <h3 className="text-xl font-bold mb-2 text-white">{tool.name}</h3>
+                    <p className="text-white/70 text-sm">{tool.desc}</p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -369,7 +385,12 @@
           {/* The Manifesto */}
           <div className="max-w-4xl mx-auto px-6 my-20">
             <div className="feature-card p-12 glow text-center">
-              <h2 className="text-5xl font-bold mb-8">The Manifesto</h2>
+              <h2 className="text-5xl font-bold mb-8 flex items-center justify-center gap-4">
+                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                  <i data-lucide="book-open" className="w-8 h-8 text-white"></i>
+                </div>
+                The Manifesto
+              </h2>
               <div className="space-y-6 text-xl text-white/90">
                 <p>🔓 <strong>Privacy is not a feature.</strong> It's a fundamental right.</p>
                 <p>⚔️ <strong>We are not speculators.</strong> We are freedom fighters.</p>
