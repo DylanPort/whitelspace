@@ -752,6 +752,317 @@
       });
     }
 
+    // ===== AUDIO STEGANOGRAPHY =====
+    
+    // Encode message into WAV audio file using LSB in audio samples
+    async function hideDataInAudio(audioFile, secretText) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        
+        reader.onload = async (e) => {
+          try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const arrayBuffer = e.target.result;
+            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+            
+            // Get audio samples (use first channel)
+            const channelData = audioBuffer.getChannelData(0);
+            const samples = new Float32Array(channelData);
+            
+            // Add magic header
+            const MAGIC = 'WHAU'; // Whistle Audio
+            const fullMessage = MAGIC + secretText + '\0';
+            
+            // Convert message to binary
+            const messageBits = fullMessage.split('').map(c => 
+              c.charCodeAt(0).toString(2).padStart(8, '0')
+            ).join('');
+            
+            // Check capacity (we can hide 1 bit per sample)
+            if (messageBits.length > samples.length) {
+              reject(new Error('Audio file too short for message. Need longer audio or shorter message.'));
+              return;
+            }
+            
+            // Encode bits into LSB of audio samples
+            for (let i = 0; i < messageBits.length; i++) {
+              const bit = parseInt(messageBits[i]);
+              // Convert float to 16-bit integer, modify LSB, convert back
+              let sample16 = Math.floor(samples[i] * 32768);
+              sample16 = (sample16 & ~1) | bit; // Clear LSB and set new bit
+              samples[i] = sample16 / 32768;
+            }
+            
+            // Create new audio buffer with modified samples
+            const newBuffer = audioContext.createBuffer(
+              audioBuffer.numberOfChannels,
+              audioBuffer.length,
+              audioBuffer.sampleRate
+            );
+            newBuffer.copyToChannel(samples, 0);
+            
+            // Convert to WAV blob
+            const wavBlob = audioBufferToWav(newBuffer);
+            resolve(wavBlob);
+          } catch (e) {
+            reject(e);
+          }
+        };
+        
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(audioFile);
+      });
+    }
+    
+    // Extract hidden message from audio file
+    async function extractDataFromAudio(audioFile) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        
+        reader.onload = async (e) => {
+          try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const arrayBuffer = e.target.result;
+            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+            
+            const channelData = audioBuffer.getChannelData(0);
+            const samples = new Float32Array(channelData);
+            
+            // Extract bits from LSB
+            let messageBits = '';
+            for (let i = 0; i < Math.min(samples.length, 100000); i++) {
+              const sample16 = Math.floor(samples[i] * 32768);
+              const bit = sample16 & 1;
+              messageBits += bit;
+              
+              // Try to decode every 8 bits
+              if (messageBits.length % 8 === 0) {
+                const chars = messageBits.match(/.{8}/g).map(b => String.fromCharCode(parseInt(b, 2)));
+                const text = chars.join('');
+                if (text.startsWith('WHAU')) {
+                  // Found magic header, continue until null terminator
+                  const nullIndex = text.indexOf('\0');
+                  if (nullIndex > 0) {
+                    resolve(text.substring(4, nullIndex));
+                    return;
+                  }
+                }
+              }
+            }
+            
+            reject(new Error('No hidden message found in audio file.'));
+          } catch (e) {
+            reject(e);
+          }
+        };
+        
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(audioFile);
+      });
+    }
+    
+    // Helper: Convert AudioBuffer to WAV Blob
+    function audioBufferToWav(buffer) {
+      const length = buffer.length * buffer.numberOfChannels * 2;
+      const arrayBuffer = new ArrayBuffer(44 + length);
+      const view = new DataView(arrayBuffer);
+      const channels = [];
+      let offset = 0;
+      let pos = 0;
+      
+      // Write WAV header
+      const setUint16 = (data) => { view.setUint16(pos, data, true); pos += 2; };
+      const setUint32 = (data) => { view.setUint32(pos, data, true); pos += 4; };
+      
+      setUint32(0x46464952); // "RIFF"
+      setUint32(36 + length); // file length - 8
+      setUint32(0x45564157); // "WAVE"
+      setUint32(0x20746d66); // "fmt " chunk
+      setUint32(16); // length = 16
+      setUint16(1); // PCM
+      setUint16(buffer.numberOfChannels);
+      setUint32(buffer.sampleRate);
+      setUint32(buffer.sampleRate * 2 * buffer.numberOfChannels);
+      setUint16(buffer.numberOfChannels * 2);
+      setUint16(16); // bits per sample
+      setUint32(0x61746164); // "data" chunk
+      setUint32(length);
+      
+      // Write interleaved audio data
+      for (let i = 0; i < buffer.numberOfChannels; i++) {
+        channels.push(buffer.getChannelData(i));
+      }
+      
+      while (pos < arrayBuffer.byteLength) {
+        for (let i = 0; i < buffer.numberOfChannels; i++) {
+          let sample = Math.max(-1, Math.min(1, channels[i][offset]));
+          sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+          view.setInt16(pos, sample, true);
+          pos += 2;
+        }
+        offset++;
+      }
+      
+      return new Blob([arrayBuffer], { type: 'audio/wav' });
+    }
+    
+    // ===== VIDEO STEGANOGRAPHY =====
+    
+    // Encode message into video by hiding in frames
+    async function hideDataInVideo(videoFile, secretText) {
+      return new Promise((resolve, reject) => {
+        const video = document.createElement('video');
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        video.onloadedmetadata = async () => {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          
+          const MAGIC = 'WHVI'; // Whistle Video
+          const fullMessage = MAGIC + secretText + '\0';
+          
+          // Convert to binary
+          const messageBits = fullMessage.split('').map(c => 
+            c.charCodeAt(0).toString(2).padStart(8, '0')
+          ).join('');
+          
+          const duration = video.duration;
+          const fps = 30; // Assume 30 FPS
+          const totalFrames = Math.floor(duration * fps);
+          const bitsPerFrame = 100; // Hide 100 bits per frame
+          const requiredFrames = Math.ceil(messageBits.length / bitsPerFrame);
+          
+          if (requiredFrames > totalFrames) {
+            reject(new Error('Video too short for message. Need longer video or shorter message.'));
+            return;
+          }
+          
+          // Use MediaRecorder to create new video
+          const stream = canvas.captureStream(fps);
+          const mediaRecorder = new MediaRecorder(stream, { 
+            mimeType: 'video/webm;codecs=vp9',
+            videoBitsPerSecond: 5000000
+          });
+          
+          const chunks = [];
+          mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+          mediaRecorder.onstop = () => {
+            const blob = new Blob(chunks, { type: 'video/webm' });
+            resolve(blob);
+          };
+          
+          mediaRecorder.start();
+          
+          let frameIndex = 0;
+          let bitIndex = 0;
+          
+          const processFrame = () => {
+            if (frameIndex >= totalFrames || bitIndex >= messageBits.length) {
+              mediaRecorder.stop();
+              return;
+            }
+            
+            // Seek to frame
+            video.currentTime = frameIndex / fps;
+            
+            video.onseeked = () => {
+              ctx.drawImage(video, 0, 0);
+              const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+              const data = imageData.data;
+              
+              // Hide bits in this frame
+              let hiddenBits = 0;
+              for (let i = 0; i < data.length && bitIndex < messageBits.length && hiddenBits < bitsPerFrame; i += 4) {
+                const bit = parseInt(messageBits[bitIndex]);
+                data[i] = (data[i] & ~1) | bit; // LSB of red channel
+                bitIndex++;
+                hiddenBits++;
+              }
+              
+              ctx.putImageData(imageData, 0, 0);
+              frameIndex++;
+              
+              setTimeout(processFrame, 1000 / fps);
+            };
+          };
+          
+          processFrame();
+        };
+        
+        video.onerror = reject;
+        video.src = URL.createObjectURL(videoFile);
+        video.load();
+      });
+    }
+    
+    // Extract hidden message from video
+    async function extractDataFromVideo(videoFile) {
+      return new Promise((resolve, reject) => {
+        const video = document.createElement('video');
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        video.onloadedmetadata = () => {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          
+          const duration = video.duration;
+          const fps = 30;
+          const totalFrames = Math.floor(duration * fps);
+          const bitsPerFrame = 100;
+          
+          let messageBits = '';
+          let frameIndex = 0;
+          
+          const processFrame = () => {
+            if (frameIndex >= totalFrames) {
+              reject(new Error('No hidden message found in video.'));
+              return;
+            }
+            
+            video.currentTime = frameIndex / fps;
+            
+            video.onseeked = () => {
+              ctx.drawImage(video, 0, 0);
+              const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+              const data = imageData.data;
+              
+              // Extract bits from this frame
+              let extractedBits = 0;
+              for (let i = 0; i < data.length && extractedBits < bitsPerFrame; i += 4) {
+                const bit = data[i] & 1;
+                messageBits += bit;
+                extractedBits++;
+                
+                // Try to decode
+                if (messageBits.length % 8 === 0) {
+                  const chars = messageBits.match(/.{8}/g).map(b => String.fromCharCode(parseInt(b, 2)));
+                  const text = chars.join('');
+                  if (text.startsWith('WHVI')) {
+                    const nullIndex = text.indexOf('\0');
+                    if (nullIndex > 0) {
+                      resolve(text.substring(4, nullIndex));
+                      return;
+                    }
+                  }
+                }
+              }
+              
+              frameIndex++;
+              processFrame();
+            };
+          };
+          
+          processFrame();
+        };
+        
+        video.onerror = reject;
+        video.src = URL.createObjectURL(videoFile);
+        video.load();
+      });
+    }
+
     // 1. Metadata Scrubber - Remove EXIF and metadata from files
     async function scrubMetadata(file) {
       try {
@@ -882,9 +1193,10 @@
         { id: "home", label: "Home" },
         { id: "receive", label: "Receiver" },
         { id: "send", label: "Sender" },
-        { id: "stego-send", label: "🎭 Stego Send" },
-        { id: "stego-receive", label: "🎭 Stego Receive" },
-        { id: "swap", label: "Privacy Swap" },
+        { id: "stego-send", label: "🎭 Image" },
+        { id: "audio-send", label: "🎵 Audio" },
+        { id: "video-send", label: "🎥 Video" },
+        { id: "swap", label: "Swap" },
       ];
       return (
         <div className="flex flex-wrap gap-2 md:hidden">
@@ -911,8 +1223,12 @@
         { id:'home',    label:'Home', icon:'home' },
         { id:'send',    label:'Sender', icon:'send' },
         { id:'receive', label:'Receiver', icon:'download' },
-        { id:'stego-send', label:'🎭 Stego Sender', icon:'image' },
-        { id:'stego-receive', label:'🎭 Stego Receiver', icon:'scan' },
+        { id:'stego-send', label:'🎭 Image Stego', icon:'image' },
+        { id:'stego-receive', label:'🎭 Extract Image', icon:'scan' },
+        { id:'audio-send', label:'🎵 Audio Stego', icon:'music' },
+        { id:'audio-receive', label:'🎵 Extract Audio', icon:'headphones' },
+        { id:'video-send', label:'🎥 Video Stego', icon:'video' },
+        { id:'video-receive', label:'🎥 Extract Video', icon:'film' },
         { id:'swap', label:'Privacy Swap', icon:'shuffle' },
       ];
       
@@ -2329,6 +2645,550 @@
       );
     }
     
+    // ===== AUDIO STEGANOGRAPHY COMPONENTS =====
+    
+    function AudioStegoSender({ pushToast }) {
+      const [message, setMessage] = useState("");
+      const [stegoAudio, setStegoAudio] = useState(null);
+      const [processing, setProcessing] = useState(false);
+      const audioFileRef = useRef(null);
+      
+      useEffect(()=>{
+        if(window.lucide) window.lucide.createIcons();
+      },[]);
+      
+      async function createStegoAudio() {
+        if (!message.trim()) {
+          pushToast("Write a message first", "err");
+          return;
+        }
+        if (!audioFileRef.current?.files?.[0]) {
+          pushToast("Select an audio file", "err");
+          return;
+        }
+        
+        setProcessing(true);
+        try {
+          const audioFile = audioFileRef.current.files[0];
+          const hiddenAudio = await hideDataInAudio(audioFile, message);
+          setStegoAudio(hiddenAudio);
+          pushToast("✓ Message hidden in audio!", "ok");
+        } catch (e) {
+          pushToast("Failed: " + e.message, "err");
+        }
+        setProcessing(false);
+      }
+      
+      function downloadAudio() {
+        if (!stegoAudio) return;
+        const url = URL.createObjectURL(stegoAudio);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'audio_message.wav';
+        a.click();
+        URL.revokeObjectURL(url);
+        pushToast("Audio downloaded!", "ok");
+      }
+      
+      function resetAudioSender() {
+        setMessage("");
+        setStegoAudio(null);
+        if (audioFileRef.current) audioFileRef.current.value = "";
+        pushToast("Reset", "ok");
+      }
+      
+      return (
+        <GlassCard title="🎵 Audio Steganography — Sender" subtitle="Hide messages inside audio files (WAV, MP3)">
+          <div className="space-y-4">
+            <div className="p-3 rounded-xl bg-gradient-to-r from-pink-500/10 to-rose-500/10 border border-pink-400/20">
+              <div className="flex items-center gap-2 mb-2">
+                <i data-lucide="music" className="w-5 h-5 text-pink-400"></i>
+                <h4 className="text-white/90 font-semibold text-sm">Share via Voice Memos</h4>
+              </div>
+              <p className="text-xs text-white/70">
+                Hide secret messages in audio files. Perfect for sharing through SoundCloud, voice messages, or podcast uploads.
+                The audio sounds completely normal!
+              </p>
+            </div>
+            
+            <div>
+              <label className="text-sm text-white/80 font-semibold mb-2 block">Your Secret Message</label>
+              <textarea 
+                value={message} 
+                onChange={(e) => setMessage(e.target.value)} 
+                rows={4} 
+                className="w-full rounded-xl bg-white/[0.06] border border-white/10 p-3 outline-none focus:ring-2 focus:ring-pink-400/40 text-white" 
+                placeholder="Type your confidential message here..."
+              />
+              <p className="text-xs text-white/50 mt-1">
+                Message will be encoded into audio samples. Limit: ~10,000 characters for a 1-minute audio.
+              </p>
+            </div>
+            
+            <div>
+              <label className="text-sm text-white/80 font-semibold mb-2 block">Cover Audio File</label>
+              <input 
+                ref={audioFileRef} 
+                type="file" 
+                accept="audio/*" 
+                className="w-full rounded-xl bg-white/[0.06] border border-white/10 p-3 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-pink-500/30 file:text-pink-100 hover:file:bg-pink-500/40"
+              />
+              <p className="text-xs text-white/50 mt-1">
+                Choose any audio: music, voice memo, podcast clip, ambient sound, etc.
+              </p>
+            </div>
+            
+            <div className="flex gap-3 flex-wrap">
+              <button 
+                onClick={(e)=>{ ripple(e); createStegoAudio(); }} 
+                disabled={processing}
+                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400 disabled:opacity-50 text-white font-semibold px-6 py-3 btn-ripple btn-press shadow-lg"
+              >
+                <i data-lucide={processing ? "loader" : "wand-2"} className={`w-5 h-5 ${processing ? 'animate-spin' : ''}`}></i>
+                {processing ? "Hiding Message..." : "Create Stego Audio"}
+              </button>
+              
+              {stegoAudio && (
+                <>
+                  <button 
+                    onClick={(e)=>{ ripple(e); downloadAudio(); }}
+                    className="flex items-center gap-2 rounded-xl bg-emerald-500/30 hover:bg-emerald-400/40 text-emerald-100 font-semibold px-6 py-3 btn-ripple btn-press shadow-lg border border-emerald-400/30"
+                  >
+                    <i data-lucide="download" className="w-5 h-5"></i>
+                    Download Audio
+                  </button>
+                  <button 
+                    onClick={(e)=>{ ripple(e); resetAudioSender(); }}
+                    className="flex items-center gap-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold px-6 py-3 btn-ripple btn-press border border-white/10"
+                  >
+                    <i data-lucide="refresh-cw" className="w-5 h-5"></i>
+                    Reset
+                  </button>
+                </>
+              )}
+            </div>
+            
+            {stegoAudio && (
+              <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-400/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <i data-lucide="check-circle" className="w-5 h-5 text-emerald-300"></i>
+                  <h4 className="text-white/90 font-semibold text-sm">Ready to Share!</h4>
+                </div>
+                <p className="text-xs text-white/70 mb-2">
+                  Your message is now hidden in the audio file. Share it via:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/20 text-xs">💬 WhatsApp Voice</span>
+                  <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/20 text-xs">🎵 SoundCloud</span>
+                  <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/20 text-xs">📧 Email</span>
+                  <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/20 text-xs">🎙️ Podcast</span>
+                  <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/20 text-xs">☁️ Dropbox</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </GlassCard>
+      );
+    }
+    
+    function AudioStegoReceiver({ pushToast }) {
+      const [extractedMessage, setExtractedMessage] = useState("");
+      const [extracting, setExtracting] = useState(false);
+      const audioFileRef = useRef(null);
+      
+      useEffect(()=>{
+        if(window.lucide) window.lucide.createIcons();
+      },[]);
+      
+      async function extractMessage() {
+        if (!audioFileRef.current?.files?.[0]) {
+          pushToast("Select an audio file first", "err");
+          return;
+        }
+        
+        setExtracting(true);
+        try {
+          const audioFile = audioFileRef.current.files[0];
+          const message = await extractDataFromAudio(audioFile);
+          setExtractedMessage(message);
+          pushToast("✓ Message extracted from audio!", "ok");
+        } catch (e) {
+          pushToast("Extraction failed: " + e.message, "err");
+          setExtractedMessage("");
+        }
+        setExtracting(false);
+      }
+      
+      async function copyMessage() {
+        try {
+          await navigator.clipboard.writeText(extractedMessage);
+          pushToast("Message copied", "ok");
+        } catch (e) {
+          pushToast("Copy failed", "err");
+        }
+      }
+      
+      function resetAudioReceiver() {
+        setExtractedMessage("");
+        if (audioFileRef.current) audioFileRef.current.value = "";
+        pushToast("Reset", "ok");
+      }
+      
+      return (
+        <GlassCard title="🎵 Audio Steganography — Receiver" subtitle="Extract hidden messages from audio files">
+          <div className="space-y-4">
+            <div className="p-3 rounded-xl bg-gradient-to-r from-pink-500/10 to-rose-500/10 border border-pink-400/20">
+              <div className="flex items-center gap-2 mb-2">
+                <i data-lucide="headphones" className="w-5 h-5 text-pink-400"></i>
+                <h4 className="text-white/90 font-semibold text-sm">Decode Audio Messages</h4>
+              </div>
+              <p className="text-xs text-white/70">
+                Upload an audio file that contains a hidden message to reveal the secret text.
+              </p>
+            </div>
+            
+            <div>
+              <label className="text-sm text-white/80 font-semibold mb-2 block">Upload Audio with Hidden Message</label>
+              <input 
+                ref={audioFileRef} 
+                type="file" 
+                accept="audio/*" 
+                className="w-full rounded-xl bg-white/[0.06] border border-white/10 p-3 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-pink-500/30 file:text-pink-100 hover:file:bg-pink-500/40"
+              />
+              <p className="text-xs text-white/50 mt-1">
+                Supports WAV, MP3, M4A, and other audio formats.
+              </p>
+            </div>
+            
+            <div className="flex gap-3 flex-wrap">
+              <button 
+                onClick={(e)=>{ ripple(e); extractMessage(); }} 
+                disabled={extracting}
+                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400 disabled:opacity-50 text-white font-semibold px-6 py-3 btn-ripple btn-press shadow-lg"
+              >
+                <i data-lucide={extracting ? "loader" : "unlock"} className={`w-5 h-5 ${extracting ? 'animate-spin' : ''}`}></i>
+                {extracting ? "Extracting..." : "Extract Message"}
+              </button>
+              
+              {extractedMessage && (
+                <>
+                  <button 
+                    onClick={(e)=>{ ripple(e); copyMessage(); }}
+                    className="flex items-center gap-2 rounded-xl bg-cyan-500/30 hover:bg-cyan-400/40 text-cyan-100 font-semibold px-6 py-3 btn-ripple btn-press border border-cyan-400/30"
+                  >
+                    <i data-lucide="copy" className="w-5 h-5"></i>
+                    Copy Message
+                  </button>
+                  <button 
+                    onClick={(e)=>{ ripple(e); resetAudioReceiver(); }}
+                    className="flex items-center gap-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold px-6 py-3 btn-ripple btn-press border border-white/10"
+                  >
+                    <i data-lucide="refresh-cw" className="w-5 h-5"></i>
+                    Reset
+                  </button>
+                </>
+              )}
+            </div>
+            
+            {extractedMessage && (
+              <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-400/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <i data-lucide="check-circle" className="w-5 h-5 text-emerald-300"></i>
+                  <h4 className="text-white/90 font-semibold text-sm">Hidden Message Revealed</h4>
+                </div>
+                <div className="mt-2 p-3 rounded-lg bg-black/30 border border-white/10">
+                  <pre className="text-sm text-white/90 whitespace-pre-wrap font-mono">{extractedMessage}</pre>
+                </div>
+              </div>
+            )}
+          </div>
+        </GlassCard>
+      );
+    }
+    
+    // ===== VIDEO STEGANOGRAPHY COMPONENTS =====
+    
+    function VideoStegoSender({ pushToast }) {
+      const [message, setMessage] = useState("");
+      const [stegoVideo, setStegoVideo] = useState(null);
+      const [processing, setProcessing] = useState(false);
+      const videoFileRef = useRef(null);
+      
+      useEffect(()=>{
+        if(window.lucide) window.lucide.createIcons();
+      },[]);
+      
+      async function createStegoVideo() {
+        if (!message.trim()) {
+          pushToast("Write a message first", "err");
+          return;
+        }
+        if (!videoFileRef.current?.files?.[0]) {
+          pushToast("Select a video file", "err");
+          return;
+        }
+        
+        setProcessing(true);
+        try {
+          const videoFile = videoFileRef.current.files[0];
+          const hiddenVideo = await hideDataInVideo(videoFile, message);
+          setStegoVideo(hiddenVideo);
+          pushToast("✓ Message hidden in video!", "ok");
+        } catch (e) {
+          pushToast("Failed: " + e.message, "err");
+        }
+        setProcessing(false);
+      }
+      
+      function downloadVideo() {
+        if (!stegoVideo) return;
+        const url = URL.createObjectURL(stegoVideo);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'video_message.webm';
+        a.click();
+        URL.revokeObjectURL(url);
+        pushToast("Video downloaded!", "ok");
+      }
+      
+      function resetVideoSender() {
+        setMessage("");
+        setStegoVideo(null);
+        if (videoFileRef.current) videoFileRef.current.value = "";
+        pushToast("Reset", "ok");
+      }
+      
+      return (
+        <GlassCard title="🎥 Video Steganography — Sender" subtitle="Hide messages across video frames">
+          <div className="space-y-4">
+            <div className="p-3 rounded-xl bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-400/20">
+              <div className="flex items-center gap-2 mb-2">
+                <i data-lucide="video" className="w-5 h-5 text-violet-400"></i>
+                <h4 className="text-white/90 font-semibold text-sm">Share on Social Media</h4>
+              </div>
+              <p className="text-xs text-white/70">
+                Hide secret messages distributed across video frames. Share on YouTube, TikTok, Instagram Reels.
+                The video looks completely normal!
+              </p>
+            </div>
+            
+            <div>
+              <label className="text-sm text-white/80 font-semibold mb-2 block">Your Secret Message</label>
+              <textarea 
+                value={message} 
+                onChange={(e) => setMessage(e.target.value)} 
+                rows={4} 
+                className="w-full rounded-xl bg-white/[0.06] border border-white/10 p-3 outline-none focus:ring-2 focus:ring-violet-400/40 text-white" 
+                placeholder="Type your confidential message here..."
+              />
+              <p className="text-xs text-white/50 mt-1">
+                Message will be distributed across video frames. Limit: ~1,000 characters per 10-second video.
+              </p>
+            </div>
+            
+            <div>
+              <label className="text-sm text-white/80 font-semibold mb-2 block">Cover Video File</label>
+              <input 
+                ref={videoFileRef} 
+                type="file" 
+                accept="video/*" 
+                className="w-full rounded-xl bg-white/[0.06] border border-white/10 p-3 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-violet-500/30 file:text-violet-100 hover:file:bg-violet-500/40"
+              />
+              <p className="text-xs text-white/50 mt-1">
+                Choose any video: vacation clip, pet video, screen recording, vlog, etc.
+              </p>
+            </div>
+            
+            <div className="flex gap-3 flex-wrap">
+              <button 
+                onClick={(e)=>{ ripple(e); createStegoVideo(); }} 
+                disabled={processing}
+                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-400 hover:to-purple-400 disabled:opacity-50 text-white font-semibold px-6 py-3 btn-ripple btn-press shadow-lg"
+              >
+                <i data-lucide={processing ? "loader" : "wand-2"} className={`w-5 h-5 ${processing ? 'animate-spin' : ''}`}></i>
+                {processing ? "Processing Video..." : "Create Stego Video"}
+              </button>
+              
+              {stegoVideo && (
+                <>
+                  <button 
+                    onClick={(e)=>{ ripple(e); downloadVideo(); }}
+                    className="flex items-center gap-2 rounded-xl bg-emerald-500/30 hover:bg-emerald-400/40 text-emerald-100 font-semibold px-6 py-3 btn-ripple btn-press shadow-lg border border-emerald-400/30"
+                  >
+                    <i data-lucide="download" className="w-5 h-5"></i>
+                    Download Video
+                  </button>
+                  <button 
+                    onClick={(e)=>{ ripple(e); resetVideoSender(); }}
+                    className="flex items-center gap-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold px-6 py-3 btn-ripple btn-press border border-white/10"
+                  >
+                    <i data-lucide="refresh-cw" className="w-5 h-5"></i>
+                    Reset
+                  </button>
+                </>
+              )}
+            </div>
+            
+            {processing && (
+              <div className="p-3 rounded-xl bg-yellow-500/20 border border-yellow-400/30">
+                <div className="flex items-center gap-2">
+                  <i data-lucide="loader" className="w-5 h-5 text-yellow-300 animate-spin"></i>
+                  <p className="text-sm text-yellow-100">
+                    Processing video frames... This may take a minute for longer videos.
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {stegoVideo && (
+              <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-400/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <i data-lucide="check-circle" className="w-5 h-5 text-emerald-300"></i>
+                  <h4 className="text-white/90 font-semibold text-sm">Ready to Upload!</h4>
+                </div>
+                <p className="text-xs text-white/70 mb-2">
+                  Your message is now hidden across the video frames. Share it via:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/20 text-xs">📹 YouTube</span>
+                  <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/20 text-xs">🎵 TikTok</span>
+                  <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/20 text-xs">📷 Instagram Reels</span>
+                  <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/20 text-xs">💬 WhatsApp</span>
+                  <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/20 text-xs">📧 Email</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </GlassCard>
+      );
+    }
+    
+    function VideoStegoReceiver({ pushToast }) {
+      const [extractedMessage, setExtractedMessage] = useState("");
+      const [extracting, setExtracting] = useState(false);
+      const videoFileRef = useRef(null);
+      
+      useEffect(()=>{
+        if(window.lucide) window.lucide.createIcons();
+      },[]);
+      
+      async function extractMessage() {
+        if (!videoFileRef.current?.files?.[0]) {
+          pushToast("Select a video file first", "err");
+          return;
+        }
+        
+        setExtracting(true);
+        try {
+          const videoFile = videoFileRef.current.files[0];
+          const message = await extractDataFromVideo(videoFile);
+          setExtractedMessage(message);
+          pushToast("✓ Message extracted from video!", "ok");
+        } catch (e) {
+          pushToast("Extraction failed: " + e.message, "err");
+          setExtractedMessage("");
+        }
+        setExtracting(false);
+      }
+      
+      async function copyMessage() {
+        try {
+          await navigator.clipboard.writeText(extractedMessage);
+          pushToast("Message copied", "ok");
+        } catch (e) {
+          pushToast("Copy failed", "err");
+        }
+      }
+      
+      function resetVideoReceiver() {
+        setExtractedMessage("");
+        if (videoFileRef.current) videoFileRef.current.value = "";
+        pushToast("Reset", "ok");
+      }
+      
+      return (
+        <GlassCard title="🎥 Video Steganography — Receiver" subtitle="Extract hidden messages from videos">
+          <div className="space-y-4">
+            <div className="p-3 rounded-xl bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-400/20">
+              <div className="flex items-center gap-2 mb-2">
+                <i data-lucide="film" className="w-5 h-5 text-violet-400"></i>
+                <h4 className="text-white/90 font-semibold text-sm">Decode Video Messages</h4>
+              </div>
+              <p className="text-xs text-white/70">
+                Upload a video file that contains a hidden message distributed across its frames.
+              </p>
+            </div>
+            
+            <div>
+              <label className="text-sm text-white/80 font-semibold mb-2 block">Upload Video with Hidden Message</label>
+              <input 
+                ref={videoFileRef} 
+                type="file" 
+                accept="video/*" 
+                className="w-full rounded-xl bg-white/[0.06] border border-white/10 p-3 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-violet-500/30 file:text-violet-100 hover:file:bg-violet-500/40"
+              />
+              <p className="text-xs text-white/50 mt-1">
+                Supports MP4, WebM, MOV, and other video formats.
+              </p>
+            </div>
+            
+            <div className="flex gap-3 flex-wrap">
+              <button 
+                onClick={(e)=>{ ripple(e); extractMessage(); }} 
+                disabled={extracting}
+                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-400 hover:to-purple-400 disabled:opacity-50 text-white font-semibold px-6 py-3 btn-ripple btn-press shadow-lg"
+              >
+                <i data-lucide={extracting ? "loader" : "unlock"} className={`w-5 h-5 ${extracting ? 'animate-spin' : ''}`}></i>
+                {extracting ? "Extracting..." : "Extract Message"}
+              </button>
+              
+              {extractedMessage && (
+                <>
+                  <button 
+                    onClick={(e)=>{ ripple(e); copyMessage(); }}
+                    className="flex items-center gap-2 rounded-xl bg-cyan-500/30 hover:bg-cyan-400/40 text-cyan-100 font-semibold px-6 py-3 btn-ripple btn-press border border-cyan-400/30"
+                  >
+                    <i data-lucide="copy" className="w-5 h-5"></i>
+                    Copy Message
+                  </button>
+                  <button 
+                    onClick={(e)=>{ ripple(e); resetVideoReceiver(); }}
+                    className="flex items-center gap-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold px-6 py-3 btn-ripple btn-press border border-white/10"
+                  >
+                    <i data-lucide="refresh-cw" className="w-5 h-5"></i>
+                    Reset
+                  </button>
+                </>
+              )}
+            </div>
+            
+            {extracting && (
+              <div className="p-3 rounded-xl bg-yellow-500/20 border border-yellow-400/30">
+                <div className="flex items-center gap-2">
+                  <i data-lucide="loader" className="w-5 h-5 text-yellow-300 animate-spin"></i>
+                  <p className="text-sm text-yellow-100">
+                    Scanning video frames... This may take a minute for longer videos.
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {extractedMessage && (
+              <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-400/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <i data-lucide="check-circle" className="w-5 h-5 text-emerald-300"></i>
+                  <h4 className="text-white/90 font-semibold text-sm">Hidden Message Revealed</h4>
+                </div>
+                <div className="mt-2 p-3 rounded-lg bg-black/30 border border-white/10">
+                  <pre className="text-sm text-white/90 whitespace-pre-wrap font-mono">{extractedMessage}</pre>
+                </div>
+              </div>
+            )}
+          </div>
+        </GlassCard>
+      );
+    }
+    
     // ===== PRIVACY SWAP (4NON Widget Integration) =====
     
     function PrivacySwap() {
@@ -2410,6 +3270,10 @@
                 {step === 'receive' && <Receiver pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />}
                 {step === 'stego-send' && <StegoSender pushToast={push} />}
                 {step === 'stego-receive' && <StegoReceiver pushToast={push} />}
+                {step === 'audio-send' && <AudioStegoSender pushToast={push} />}
+                {step === 'audio-receive' && <AudioStegoReceiver pushToast={push} />}
+                {step === 'video-send' && <VideoStegoSender pushToast={push} />}
+                {step === 'video-receive' && <VideoStegoReceiver pushToast={push} />}
                 {step === 'swap' && <PrivacySwap />}
               </main>
             </div>
