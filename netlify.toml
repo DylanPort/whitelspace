@@ -3,6 +3,12 @@
   command = ""
 
 [[redirects]]
+  from = "/whitepaper.html"
+  to = "/whitepaper.html"
+  status = 200
+  force = false
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
