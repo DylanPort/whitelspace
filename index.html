@@ -1191,11 +1191,10 @@
     function StepPills({ step, setStep }) {
       const tabs = [
         { id: "home", label: "Home" },
-        { id: "receive", label: "Receiver" },
-        { id: "send", label: "Sender" },
-        { id: "stego-send", label: "🎭 Image" },
-        { id: "audio-send", label: "🎵 Audio" },
-        { id: "video-send", label: "🎥 Video" },
+        { id: "webrtc", label: "Transfer" },
+        { id: "image-stego", label: "🎭 Image" },
+        { id: "audio-stego", label: "🎵 Audio" },
+        { id: "video-stego", label: "🎥 Video" },
         { id: "swap", label: "Swap" },
       ];
       return (
@@ -1221,14 +1220,10 @@
     function Sidebar({ step, setStep }){
       const items = [
         { id:'home',    label:'Home', icon:'home' },
-        { id:'send',    label:'Sender', icon:'send' },
-        { id:'receive', label:'Receiver', icon:'download' },
-        { id:'stego-send', label:'🎭 Image Stego', icon:'image' },
-        { id:'stego-receive', label:'🎭 Extract Image', icon:'scan' },
-        { id:'audio-send', label:'🎵 Audio Stego', icon:'music' },
-        { id:'audio-receive', label:'🎵 Extract Audio', icon:'headphones' },
-        { id:'video-send', label:'🎥 Video Stego', icon:'video' },
-        { id:'video-receive', label:'🎥 Extract Video', icon:'film' },
+        { id:'webrtc',    label:'WebRTC Transfer', icon:'radio' },
+        { id:'image-stego', label:'🎭 Image Stego', icon:'image' },
+        { id:'audio-stego', label:'🎵 Audio Stego', icon:'music' },
+        { id:'video-stego', label:'🎥 Video Stego', icon:'video' },
         { id:'swap', label:'Privacy Swap', icon:'shuffle' },
       ];
       
@@ -1287,9 +1282,9 @@
                 <div className="mini-code font-mono text-xs text-gray-700 shimmer-bg">OFFER: eyJ0eXAiOiJ... (copy, paste to receiver)</div>
               </div>
               <div className="mt-3">
-                <button onClick={()=>setStep('send')} className="flex items-center gap-2 rounded-xl bg-cyan-500/80 hover:bg-cyan-400 text-black font-semibold px-4 py-2 btn-press">
+                <button onClick={()=>setStep('webrtc')} className="flex items-center gap-2 rounded-xl bg-cyan-500/80 hover:bg-cyan-400 text-black font-semibold px-4 py-2 btn-press">
                   <i data-lucide="arrow-right" className="w-5 h-5"></i>
-                  Start as Sender
+                  Start Transfer
                 </button>
               </div>
             </div>
@@ -1310,9 +1305,9 @@
                 <div className="mini-code font-mono text-xs text-gray-700 shimmer-bg">ANSWER: eyJhbGciOiJ... (copy, send back to sender)</div>
               </div>
               <div className="mt-3">
-                <button onClick={()=>setStep('receive')} className="flex items-center gap-2 rounded-xl bg-white/15 hover:bg-white/25 text-gray-900 font-semibold px-4 py-2 border border-white/10 btn-press">
+                <button onClick={()=>setStep('webrtc')} className="flex items-center gap-2 rounded-xl bg-white/15 hover:bg-white/25 text-gray-900 font-semibold px-4 py-2 border border-white/10 btn-press">
                   <i data-lucide="arrow-right" className="w-5 h-5"></i>
-                  Start as Receiver
+                  Start Transfer
                 </button>
               </div>
             </div>
@@ -2645,6 +2640,184 @@
       );
     }
     
+    // ===== WRAPPER COMPONENTS WITH TABS =====
+    
+    function WebRTCTransfer({ pushToast, onHashReady, setVerifyHash }) {
+      const [mode, setMode] = useState('send');
+      
+      useEffect(()=>{
+        if(window.lucide) window.lucide.createIcons();
+      },[mode]);
+      
+      return (
+        <div className="space-y-4">
+          <div className="flex gap-2 p-1 rounded-xl bg-white/[0.04] border border-white/10 w-fit">
+            <button
+              onClick={() => setMode('send')}
+              className={`px-6 py-2 rounded-lg font-semibold text-sm transition-all ${
+                mode === 'send'
+                  ? 'bg-cyan-500/30 text-cyan-100 border border-cyan-400/50'
+                  : 'text-white/70 hover:text-white/90'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <i data-lucide="send" className="w-4 h-4"></i>
+                Sender
+              </div>
+            </button>
+            <button
+              onClick={() => setMode('receive')}
+              className={`px-6 py-2 rounded-lg font-semibold text-sm transition-all ${
+                mode === 'receive'
+                  ? 'bg-purple-500/30 text-purple-100 border border-purple-400/50'
+                  : 'text-white/70 hover:text-white/90'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <i data-lucide="download" className="w-4 h-4"></i>
+                Receiver
+              </div>
+            </button>
+          </div>
+          
+          {mode === 'send' && <Sender pushToast={pushToast} onHashReady={onHashReady} />}
+          {mode === 'receive' && <Receiver pushToast={pushToast} onHashReady={onHashReady} setVerifyHash={setVerifyHash} />}
+        </div>
+      );
+    }
+    
+    function ImageStego({ pushToast }) {
+      const [mode, setMode] = useState('send');
+      
+      useEffect(()=>{
+        if(window.lucide) window.lucide.createIcons();
+      },[mode]);
+      
+      return (
+        <div className="space-y-4">
+          <div className="flex gap-2 p-1 rounded-xl bg-white/[0.04] border border-white/10 w-fit">
+            <button
+              onClick={() => setMode('send')}
+              className={`px-6 py-2 rounded-lg font-semibold text-sm transition-all ${
+                mode === 'send'
+                  ? 'bg-purple-500/30 text-purple-100 border border-purple-400/50'
+                  : 'text-white/70 hover:text-white/90'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <i data-lucide="image" className="w-4 h-4"></i>
+                Hide in Image
+              </div>
+            </button>
+            <button
+              onClick={() => setMode('receive')}
+              className={`px-6 py-2 rounded-lg font-semibold text-sm transition-all ${
+                mode === 'receive'
+                  ? 'bg-cyan-500/30 text-cyan-100 border border-cyan-400/50'
+                  : 'text-white/70 hover:text-white/90'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <i data-lucide="scan" className="w-4 h-4"></i>
+                Extract from Image
+              </div>
+            </button>
+          </div>
+          
+          {mode === 'send' && <StegoSender pushToast={pushToast} />}
+          {mode === 'receive' && <StegoReceiver pushToast={pushToast} />}
+        </div>
+      );
+    }
+    
+    function AudioStego({ pushToast }) {
+      const [mode, setMode] = useState('send');
+      
+      useEffect(()=>{
+        if(window.lucide) window.lucide.createIcons();
+      },[mode]);
+      
+      return (
+        <div className="space-y-4">
+          <div className="flex gap-2 p-1 rounded-xl bg-white/[0.04] border border-white/10 w-fit">
+            <button
+              onClick={() => setMode('send')}
+              className={`px-6 py-2 rounded-lg font-semibold text-sm transition-all ${
+                mode === 'send'
+                  ? 'bg-pink-500/30 text-pink-100 border border-pink-400/50'
+                  : 'text-white/70 hover:text-white/90'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <i data-lucide="music" className="w-4 h-4"></i>
+                Hide in Audio
+              </div>
+            </button>
+            <button
+              onClick={() => setMode('receive')}
+              className={`px-6 py-2 rounded-lg font-semibold text-sm transition-all ${
+                mode === 'receive'
+                  ? 'bg-cyan-500/30 text-cyan-100 border border-cyan-400/50'
+                  : 'text-white/70 hover:text-white/90'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <i data-lucide="headphones" className="w-4 h-4"></i>
+                Extract from Audio
+              </div>
+            </button>
+          </div>
+          
+          {mode === 'send' && <AudioStegoSender pushToast={pushToast} />}
+          {mode === 'receive' && <AudioStegoReceiver pushToast={pushToast} />}
+        </div>
+      );
+    }
+    
+    function VideoStego({ pushToast }) {
+      const [mode, setMode] = useState('send');
+      
+      useEffect(()=>{
+        if(window.lucide) window.lucide.createIcons();
+      },[mode]);
+      
+      return (
+        <div className="space-y-4">
+          <div className="flex gap-2 p-1 rounded-xl bg-white/[0.04] border border-white/10 w-fit">
+            <button
+              onClick={() => setMode('send')}
+              className={`px-6 py-2 rounded-lg font-semibold text-sm transition-all ${
+                mode === 'send'
+                  ? 'bg-violet-500/30 text-violet-100 border border-violet-400/50'
+                  : 'text-white/70 hover:text-white/90'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <i data-lucide="video" className="w-4 h-4"></i>
+                Hide in Video
+              </div>
+            </button>
+            <button
+              onClick={() => setMode('receive')}
+              className={`px-6 py-2 rounded-lg font-semibold text-sm transition-all ${
+                mode === 'receive'
+                  ? 'bg-cyan-500/30 text-cyan-100 border border-cyan-400/50'
+                  : 'text-white/70 hover:text-white/90'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <i data-lucide="film" className="w-4 h-4"></i>
+                Extract from Video
+              </div>
+            </button>
+          </div>
+          
+          {mode === 'send' && <VideoStegoSender pushToast={pushToast} />}
+          {mode === 'receive' && <VideoStegoReceiver pushToast={pushToast} />}
+        </div>
+      );
+    }
+    
     // ===== AUDIO STEGANOGRAPHY COMPONENTS =====
     
     function AudioStegoSender({ pushToast }) {
@@ -3266,14 +3439,10 @@
                   <StepPills step={step} setStep={setStep} />
                 </div>
                 {step === 'home' && <Home setStep={setStep} />}
-                {step === 'send' && <Sender pushToast={push} onHashReady={setHashFromFlow} />}
-                {step === 'receive' && <Receiver pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />}
-                {step === 'stego-send' && <StegoSender pushToast={push} />}
-                {step === 'stego-receive' && <StegoReceiver pushToast={push} />}
-                {step === 'audio-send' && <AudioStegoSender pushToast={push} />}
-                {step === 'audio-receive' && <AudioStegoReceiver pushToast={push} />}
-                {step === 'video-send' && <VideoStegoSender pushToast={push} />}
-                {step === 'video-receive' && <VideoStegoReceiver pushToast={push} />}
+                {step === 'webrtc' && <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />}
+                {step === 'image-stego' && <ImageStego pushToast={push} />}
+                {step === 'audio-stego' && <AudioStego pushToast={push} />}
+                {step === 'video-stego' && <VideoStego pushToast={push} />}
                 {step === 'swap' && <PrivacySwap />}
               </main>
             </div>
