@@ -176,54 +176,6 @@
       return <div className="scroll-indicator" style={{ width: `${progress}%` }} />;
     }
     
-    // Interactive Steganography Demo
-    function StegoDemo() {
-      const [hidden, setHidden] = useState(false);
-      const canvasRef = useRef(null);
-      
-      useEffect(() => {
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        
-        // Draw gradient
-        const gradient = ctx.createLinearGradient(0, 0, 300, 150);
-        gradient.addColorStop(0, '#60a5fa');
-        gradient.addColorStop(1, '#a855f7');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, 300, 150);
-        
-        if (hidden) {
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-          ctx.font = '14px Space Grotesk';
-          ctx.fillText('🔒 SECRET DATA HIDDEN', 10, 75);
-        }
-      }, [hidden]);
-      
-      return (
-        <div className="interactive-demo">
-          <h3 className="text-2xl font-bold text-white mb-4">
-            <i data-lucide="wand-2" className="inline w-6 h-6 mr-2"></i>
-            Interactive Steganography
-          </h3>
-          <canvas 
-            ref={canvasRef} 
-            width="300" 
-            height="150" 
-            className="rounded-lg border border-blue-400/30 interactive-stego-demo"
-          />
-          <button 
-            onClick={() => setHidden(!hidden)}
-            className="mt-4 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all transform hover:scale-105"
-          >
-            {hidden ? 'Hide Secret' : 'Reveal Secret'}
-          </button>
-          <p className="text-white/60 text-sm mt-2">
-            Click to toggle hidden message visualization
-          </p>
-        </div>
-      );
-    }
-    
     // Live Stats Counter
     function LiveStats() {
       const [stats, setStats] = useState({ users: 0, transfers: 0, privacy: 0 });
@@ -318,10 +270,6 @@
             </div>
           </div>
           
-          {/* Interactive Stego Demo */}
-          <div className="max-w-4xl mx-auto px-6 my-20">
-            <StegoDemo />
-          </div>
           
           {/* Tools Grid */}
           <div className="max-w-6xl mx-auto px-6 my-20">
