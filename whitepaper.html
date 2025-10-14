@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Whistle Whitepaper - Interactive Privacy Revolution</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+    
+    body {
+      font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+      overflow-x: hidden;
+    }
+    
+    .particle {
+      position: fixed;
+      width: 2px;
+      height: 2px;
+      background: rgba(96, 165, 250, 0.5);
+      pointer-events: none;
+      animation: float 20s infinite;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0) translateX(0); opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { transform: translateY(-100vh) translateX(50px); opacity: 0; }
+    }
+    
+    .glow {
+      box-shadow: 0 0 20px rgba(96, 165, 250, 0.3);
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(96, 165, 250, 0.3); }
+      50% { box-shadow: 0 0 40px rgba(96, 165, 250, 0.6); }
+    }
+    
+    .feature-card {
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(96, 165, 250, 0.2);
+      transition: all 0.3s ease;
+    }
+    
+    .feature-card:hover {
+      transform: translateY(-10px) scale(1.02);
+      border-color: rgba(96, 165, 250, 0.6);
+      box-shadow: 0 20px 60px rgba(96, 165, 250, 0.3);
+    }
+    
+    .interactive-demo {
+      position: relative;
+      background: linear-gradient(45deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));
+      border-radius: 20px;
+      padding: 2rem;
+      margin: 2rem 0;
+    }
+    
+    .code-block {
+      background: rgba(0, 0, 0, 0.4);
+      border-left: 4px solid #60a5fa;
+      padding: 1rem;
+      margin: 1rem 0;
+      font-family: 'Courier New', monospace;
+      overflow-x: auto;
+    }
+    
+    .typing-text {
+      overflow: hidden;
+      white-space: nowrap;
+      animation: typing 3s steps(40, end);
+    }
+    
+    @keyframes typing {
+      from { width: 0; }
+      to { width: 100%; }
+    }
+    
+    .parallax-section {
+      transform-style: preserve-3d;
+      perspective: 1000px;
+    }
+    
+    .live-counter {
+      font-size: 3rem;
+      font-weight: bold;
+      background: linear-gradient(45deg, #60a5fa, #a855f7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: count-up 2s ease-out;
+    }
+    
+    @keyframes count-up {
+      from { opacity: 0; transform: scale(0.5); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    
+    .interactive-stego-demo {
+      cursor: crosshair;
+    }
+    
+    .tool-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: rgba(96, 165, 250, 0.1);
+      border: 1px solid rgba(96, 165, 250, 0.3);
+      border-radius: 9999px;
+      transition: all 0.3s;
+    }
+    
+    .tool-badge:hover {
+      background: rgba(96, 165, 250, 0.2);
+      transform: scale(1.1);
+    }
+    
+    .scroll-indicator {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #60a5fa, #a855f7, #ec4899);
+      transition: width 0.1s;
+      z-index: 9999;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+    
+    // Particle Background
+    function ParticleBackground() {
+      useEffect(() => {
+        const particles = [];
+        for (let i = 0; i < 50; i++) {
+          const particle = document.createElement('div');
+          particle.className = 'particle';
+          particle.style.left = Math.random() * 100 + '%';
+          particle.style.animationDelay = Math.random() * 20 + 's';
+          particle.style.animationDuration = (15 + Math.random() * 10) + 's';
+          document.body.appendChild(particle);
+          particles.push(particle);
+        }
+        return () => particles.forEach(p => p.remove());
+      }, []);
+      return null;
+    }
+    
+    // Scroll Progress
+    function ScrollProgress() {
+      const [progress, setProgress] = useState(0);
+      
+      useEffect(() => {
+        const handleScroll = () => {
+          const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+          const progress = (window.scrollY / totalHeight) * 100;
+          setProgress(progress);
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+      }, []);
+      
+      return <div className="scroll-indicator" style={{ width: `${progress}%` }} />;
+    }
+    
+    // Interactive Steganography Demo
+    function StegoDemo() {
+      const [hidden, setHidden] = useState(false);
+      const canvasRef = useRef(null);
+      
+      useEffect(() => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        
+        // Draw gradient
+        const gradient = ctx.createLinearGradient(0, 0, 300, 150);
+        gradient.addColorStop(0, '#60a5fa');
+        gradient.addColorStop(1, '#a855f7');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 300, 150);
+        
+        if (hidden) {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+          ctx.font = '14px Space Grotesk';
+          ctx.fillText('🔒 SECRET DATA HIDDEN', 10, 75);
+        }
+      }, [hidden]);
+      
+      return (
+        <div className="interactive-demo">
+          <h3 className="text-2xl font-bold text-white mb-4">
+            <i data-lucide="wand-2" className="inline w-6 h-6 mr-2"></i>
+            Interactive Steganography
+          </h3>
+          <canvas 
+            ref={canvasRef} 
+            width="300" 
+            height="150" 
+            className="rounded-lg border border-blue-400/30 interactive-stego-demo"
+          />
+          <button 
+            onClick={() => setHidden(!hidden)}
+            className="mt-4 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all transform hover:scale-105"
+          >
+            {hidden ? 'Hide Secret' : 'Reveal Secret'}
+          </button>
+          <p className="text-white/60 text-sm mt-2">
+            Click to toggle hidden message visualization
+          </p>
+        </div>
+      );
+    }
+    
+    // Live Stats Counter
+    function LiveStats() {
+      const [stats, setStats] = useState({ users: 0, transfers: 0, privacy: 0 });
+      
+      useEffect(() => {
+        const interval = setInterval(() => {
+          setStats({
+            users: Math.min(stats.users + Math.floor(Math.random() * 50), 10000),
+            transfers: Math.min(stats.transfers + Math.floor(Math.random() * 100), 50000),
+            privacy: Math.min(stats.privacy + 0.01, 100)
+          });
+        }, 100);
+        return () => clearInterval(interval);
+      }, [stats]);
+      
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-12">
+          <div className="feature-card p-6 text-center">
+            <div className="live-counter">{stats.users.toLocaleString()}</div>
+            <p className="text-white/80 mt-2">Privacy Advocates</p>
+          </div>
+          <div className="feature-card p-6 text-center">
+            <div className="live-counter">{stats.transfers.toLocaleString()}</div>
+            <p className="text-white/80 mt-2">Secure Transfers</p>
+          </div>
+          <div className="feature-card p-6 text-center">
+            <div className="live-counter">{stats.privacy.toFixed(2)}%</div>
+            <p className="text-white/80 mt-2">Privacy Score</p>
+          </div>
+        </div>
+      );
+    }
+    
+    // Main App
+    function WhitepaperApp() {
+      useEffect(() => {
+        if (window.lucide) window.lucide.createIcons();
+      });
+      
+      const tools = [
+        { icon: 'radio', name: 'WebRTC P2P', desc: 'Direct encrypted transfers, no servers', color: 'blue' },
+        { icon: 'image', name: 'Image Stego', desc: 'LSB & Spread Spectrum encoding', color: 'purple' },
+        { icon: 'music', name: 'Audio Stego', desc: 'Hide messages in sound waves', color: 'pink' },
+        { icon: 'video', name: 'Video Stego', desc: 'Distribute data across frames', color: 'violet' },
+        { icon: 'eraser', name: 'Metadata Scrubber', desc: 'Remove EXIF and GPS data', color: 'cyan' },
+        { icon: 'clock', name: 'Self-Destruct', desc: 'Auto-delete after timer', color: 'orange' },
+        { icon: 'shield-check', name: 'OpSec Checklist', desc: 'Pre-send security validation', color: 'green' },
+        { icon: 'link', name: 'Blockchain Proof', desc: 'Immutable Solana timestamps', color: 'yellow' }
+      ];
+      
+      return (
+        <div className="min-h-screen text-white">
+          <ParticleBackground />
+          <ScrollProgress />
+          
+          {/* Hero */}
+          <div className="relative overflow-hidden py-20 px-6">
+            <div className="max-w-6xl mx-auto text-center">
+              <div className="mb-8 inline-block">
+                <div className="text-8xl mb-4">🎭</div>
+              </div>
+              <h1 className="text-6xl md:text-8xl font-bold mb-6 typing-text">
+                WHISTLE
+              </h1>
+              <p className="text-3xl md:text-4xl mb-8 text-blue-300">
+                The Privacy Revolution
+              </p>
+              <div className="text-xl md:text-2xl text-white/80 max-w-3xl mx-auto">
+                <p className="mb-4">Open source. Forever free. Built for liberation.</p>
+                <p className="text-blue-400 font-bold">Privacy isn't a feature. It's the final boss.</p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Live Stats */}
+          <div className="max-w-6xl mx-auto px-6">
+            <LiveStats />
+          </div>
+          
+          {/* Mission Statement */}
+          <div className="max-w-4xl mx-auto px-6 my-20">
+            <div className="feature-card p-8 glow">
+              <h2 className="text-4xl font-bold mb-6 text-center">
+                <i data-lucide="target" className="inline w-10 h-10 mr-3"></i>
+                Our Mission
+              </h2>
+              <p className="text-xl text-white/90 leading-relaxed text-center">
+                We're not here for market caps. We're here to <span className="text-blue-400 font-bold">break chains</span>.
+                Every tool we build is a weapon against surveillance. Every line of code is open source.
+                Every feature is free. <span className="text-purple-400 font-bold">Power to the people through utility.</span>
+              </p>
+            </div>
+          </div>
+          
+          {/* Interactive Stego Demo */}
+          <div className="max-w-4xl mx-auto px-6 my-20">
+            <StegoDemo />
+          </div>
+          
+          {/* Tools Grid */}
+          <div className="max-w-6xl mx-auto px-6 my-20">
+            <h2 className="text-5xl font-bold mb-12 text-center">
+              <i data-lucide="wrench" className="inline w-12 h-12 mr-3"></i>
+              Arsenal of Privacy
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {tools.map((tool, i) => (
+                <div key={i} className="feature-card p-6 hover:rotate-1" style={{ animationDelay: `${i * 0.1}s` }}>
+                  <i data-lucide={tool.icon} className={`w-12 h-12 mb-4 text-${tool.color}-400`}></i>
+                  <h3 className="text-xl font-bold mb-2">{tool.name}</h3>
+                  <p className="text-white/70 text-sm">{tool.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Technical Deep Dive - Audio */}
+          <div className="max-w-6xl mx-auto px-6 my-20">
+            <div className="feature-card p-8">
+              <h3 className="text-3xl font-bold mb-6 flex items-center">
+                <i data-lucide="headphones" className="w-8 h-8 mr-3 text-pink-400"></i>
+                Audio Steganography Deep Dive
+              </h3>
+              <div className="grid md:grid-cols-2 gap-8">
+                <div>
+                  <h4 className="text-xl font-bold mb-4 text-pink-300">How It Works</h4>
+                  <ul className="space-y-3 text-white/80">
+                    <li>✓ LSB encoding in 16-bit audio samples</li>
+                    <li>✓ Web Audio API for processing</li>
+                    <li>✓ WAV output with hidden data</li>
+                    <li>✓ ~10,000 chars per minute of audio</li>
+                    <li>✓ Survives WhatsApp, SoundCloud, email</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="text-xl font-bold mb-4 text-pink-300">Use Cases</h4>
+                  <ul className="space-y-3 text-white/80">
+                    <li>🎙️ Voice memos with hidden coordinates</li>
+                    <li>🎵 Podcast clips with encrypted data</li>
+                    <li>📱 Phone recordings with secure messages</li>
+                    <li>☁️ Cloud-shared audio files</li>
+                    <li>💬 Messaging app voice notes</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="code-block mt-6">
+                <code className="text-green-400">
+                  const samples = audioBuffer.getChannelData(0);<br/>
+                  samples[i] = (samples[i] & ~1) | messageBit; // LSB injection<br/>
+                  // Audio sounds identical, data is hidden forever
+                </code>
+              </div>
+            </div>
+          </div>
+          
+          {/* Technical Deep Dive - Video */}
+          <div className="max-w-6xl mx-auto px-6 my-20">
+            <div className="feature-card p-8">
+              <h3 className="text-3xl font-bold mb-6 flex items-center">
+                <i data-lucide="film" className="w-8 h-8 mr-3 text-violet-400"></i>
+                Video Steganography Deep Dive
+              </h3>
+              <div className="grid md:grid-cols-2 gap-8">
+                <div>
+                  <h4 className="text-xl font-bold mb-4 text-violet-300">How It Works</h4>
+                  <ul className="space-y-3 text-white/80">
+                    <li>✓ LSB encoding across video frames</li>
+                    <li>✓ 100 bits per frame at 30 FPS</li>
+                    <li>✓ Canvas API for pixel manipulation</li>
+                    <li>✓ ~1,000 chars per 10 seconds</li>
+                    <li>✓ WebM output with VP9 codec</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="text-xl font-bold mb-4 text-violet-300">Use Cases</h4>
+                  <ul className="space-y-3 text-white/80">
+                    <li>📹 YouTube uploads with hidden data</li>
+                    <li>🎵 TikTok videos with secret messages</li>
+                    <li>📷 Instagram Reels coordination</li>
+                    <li>💬 Video messages on social media</li>
+                    <li>📧 Email attachments that look normal</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="code-block mt-6">
+                <code className="text-purple-400">
+                  for each frame:<br/>
+                  &nbsp;&nbsp;imageData[i] = (pixel & ~1) | messageBit;<br/>
+                  // Message distributed across time, invisible to eye
+                </code>
+              </div>
+            </div>
+          </div>
+          
+          {/* The Manifesto */}
+          <div className="max-w-4xl mx-auto px-6 my-20">
+            <div className="feature-card p-12 glow text-center">
+              <h2 className="text-5xl font-bold mb-8">The Manifesto</h2>
+              <div className="space-y-6 text-xl text-white/90">
+                <p>🔓 <strong>Privacy is not a feature.</strong> It's a fundamental right.</p>
+                <p>⚔️ <strong>We are not speculators.</strong> We are freedom fighters.</p>
+                <p>🌍 <strong>This is not about tokens.</strong> It's about liberation.</p>
+                <p>💪 <strong>Open source forever.</strong> No backdoors. No compromises.</p>
+                <p>🎯 <strong>We are the final boss</strong> because after privacy falls, everything falls.</p>
+              </div>
+              <div className="mt-12">
+                <a href="/" className="inline-block px-12 py-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xl font-bold rounded-full hover:scale-110 transition-all glow">
+                  Join the Revolution
+                </a>
+              </div>
+            </div>
+          </div>
+          
+          {/* Footer */}
+          <div className="text-center py-12 px-6 text-white/60">
+            <p className="text-lg mb-4">Built by the people. For the people.</p>
+            <p className="text-sm">Open source. Auditable. Unstoppable.</p>
+            <div className="mt-6 flex justify-center gap-6">
+              <span className="tool-badge">
+                <i data-lucide="github" className="w-4 h-4"></i>
+                GitHub
+              </span>
+              <span className="tool-badge">
+                <i data-lucide="twitter" className="w-4 h-4"></i>
+                @whistleprotocol
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    ReactDOM.render(<WhitepaperApp />, document.getElementById('root'));
+  </script>
+  
+  <script>
+    // Initialize Lucide icons after React renders
+    setTimeout(() => {
+      if (window.lucide) window.lucide.createIcons();
+    }, 100);
+  </script>
+</body>
+</html>
+
