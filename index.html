@@ -1154,7 +1154,17 @@
       </div>
       </div>
     </div>
-          <WalletConnectButton />
+          <div className="flex items-center gap-2">
+            <a 
+              href="whitepaper.html" 
+              target="_blank"
+              className="rounded-xl bg-purple-500/80 hover:bg-purple-400 text-white font-semibold px-4 py-2 transition-colors btn-ripple active:scale-[.98] flex items-center gap-2"
+            >
+              <i data-lucide="book-open" className="w-4 h-4"></i>
+              <span className="hidden sm:inline">Whitepaper</span>
+            </a>
+            <WalletConnectButton />
+          </div>
 </header>
       );
     }
