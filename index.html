@@ -4209,11 +4209,17 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
               </h3>
               
               {/* World Map with clickable countries */}
-              <div className="relative bg-gradient-to-br from-blue-900/20 to-purple-900/20 rounded-xl p-4 overflow-x-auto">
-                <svg viewBox="0 0 1000 500" className="w-full h-auto" style={{minHeight: '300px'}}>
-                  {/* Background */}
-                  <rect width="1000" height="500" fill="rgba(0,0,0,0.2)" rx="12" />
-                  
+              <div className="relative rounded-xl overflow-hidden" style={{minHeight: '400px'}}>
+                {/* Background world map image */}
+                <img 
+                  src="a6b925d6-cecd-40e2-9a01-0e1bad4366a9.png" 
+                  alt="World Map" 
+                  className="absolute inset-0 w-full h-full object-cover opacity-60"
+                  style={{filter: 'brightness(0.7) contrast(1.2)'}}
+                />
+                
+                {/* SVG overlay for interactive markers */}
+                <svg viewBox="0 0 1000 500" className="relative w-full h-auto" style={{minHeight: '400px'}}>
                   {/* Simplified country markers (dots on map) */}
                   {censoredCountries.map((country) => {
                     // Approximate positions (longitude/latitude to SVG coordinates)
