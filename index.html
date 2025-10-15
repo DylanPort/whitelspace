@@ -4208,101 +4208,110 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 Interactive Censorship Map
               </h3>
               
-              {/* World Map with clickable country shapes */}
-              <div className="relative bg-gradient-to-br from-slate-900/50 to-blue-900/30 rounded-xl p-4 overflow-hidden" style={{minHeight: '400px'}}>
-                <svg viewBox="0 0 2000 1000" className="w-full h-auto">
-                  {/* Ocean background */}
-                  <rect width="2000" height="1000" fill="#0f172a" opacity="0.5"/>
-                  
-                  {/* Simplified world map - major countries as paths */}
-                  {/* Default countries (gray) */}
-                  <g id="world-base" fill="#1e293b" stroke="#334155" strokeWidth="1" opacity="0.6">
-                    {/* North America */}
-                    <path d="M 100,150 L 400,120 L 450,200 L 350,350 L 200,320 Z" />
-                    {/* South America */}
-                    <path d="M 300,450 L 350,350 L 400,500 L 350,650 L 250,600 Z" />
-                    {/* Europe */}
-                    <path d="M 900,150 L 1050,120 L 1050,250 L 950,280 L 900,220 Z" />
-                    {/* Africa */}
-                    <path d="M 950,350 L 1100,320 L 1150,550 L 1050,650 L 950,600 Z" />
-                    {/* Australia */}
-                    <path d="M 1600,650 L 1750,650 L 1750,750 L 1600,750 Z" />
-                  </g>
-                  
-                  {/* Censored countries - clickable with colors */}
+              {/* World Map with PNG background and interactive markers */}
+              <div className="relative bg-black/20 rounded-xl overflow-hidden" style={{minHeight: '400px'}}>
+                {/* Map Image Background */}
+                <img 
+                  src="a6b925d6-cecd-40e2-9a01-0e1bad4366a9.png" 
+                  alt="World Map" 
+                  className="w-full h-auto opacity-60"
+                  style={{minHeight: '400px', objectFit: 'cover'}}
+                />
+                
+                {/* SVG Overlay with interactive markers */}
+                <svg viewBox="0 0 2000 1000" className="absolute inset-0 w-full h-full">
+                  {/* Interactive country markers */}
                   {censoredCountries.map((country) => {
-                    const countryPaths = {
-                      'CN': 'M 1400,250 L 1600,220 L 1650,300 L 1600,400 L 1400,380 Z',
-                      'RU': 'M 1050,120 L 1700,100 L 1700,250 L 1100,280 L 1050,200 Z',
-                      'IR': 'M 1150,320 L 1280,300 L 1300,380 L 1200,400 Z',
-                      'TR': 'M 1020,280 L 1120,270 L 1130,320 L 1050,330 Z',
-                      'EG': 'M 1000,380 L 1080,370 L 1090,430 L 1010,440 Z',
-                      'SA': 'M 1100,400 L 1200,390 L 1220,480 L 1120,490 Z',
-                      'IN': 'M 1320,400 L 1450,380 L 1480,530 L 1340,550 Z',
-                      'VN': 'M 1500,450 L 1560,440 L 1570,530 L 1520,540 Z',
-                      'TH': 'M 1480,460 L 1520,455 L 1525,510 L 1490,515 Z',
-                      'PK': 'M 1280,370 L 1340,360 L 1350,420 L 1290,430 Z',
-                      'KP': 'M 1650,280 L 1690,275 L 1695,310 L 1655,315 Z',
-                      'SY': 'M 1090,310 L 1130,305 L 1135,340 L 1095,345 Z',
-                      'VE': 'M 380,450 L 450,440 L 460,510 L 390,520 Z',
-                      'CU': 'M 320,360 L 380,355 L 385,385 L 325,390 Z',
-                      'BY': 'M 1050,200 L 1100,195 L 1105,230 L 1055,235 Z',
-                      'TM': 'M 1220,300 L 1280,295 L 1285,335 L 1225,340 Z',
-                      'UZ': 'M 1240,285 L 1290,280 L 1295,315 L 1245,320 Z',
-                      'KZ': 'M 1180,240 L 1320,230 L 1325,290 L 1185,300 Z',
-                      'ET': 'M 1090,510 L 1150,505 L 1155,560 L 1095,565 Z',
-                      'AE': 'M 1160,420 L 1200,417 L 1203,445 L 1163,448 Z'
+                    // Positions adjusted for the map image (approximate coordinates)
+                    const positions = {
+                      'CN': {x: 1450, y: 320},
+                      'IR': {x: 1150, y: 360},
+                      'RU': {x: 1300, y: 200},
+                      'TR': {x: 1050, y: 350},
+                      'EG': {x: 1030, y: 400},
+                      'VE': {x: 380, y: 520},
+                      'TM': {x: 1180, y: 340},
+                      'KP': {x: 1600, y: 340},
+                      'SY': {x: 1080, y: 370},
+                      'SA': {x: 1120, y: 420},
+                      'AE': {x: 1160, y: 430},
+                      'IN': {x: 1300, y: 450},
+                      'PK': {x: 1230, y: 380},
+                      'TH': {x: 1420, y: 480},
+                      'VN': {x: 1480, y: 480},
+                      'BY': {x: 1040, y: 260},
+                      'KZ': {x: 1240, y: 300},
+                      'UZ': {x: 1210, y: 340},
+                      'ET': {x: 1090, y: 520},
+                      'CU': {x: 330, y: 440}
                     };
                     
-                    const path = countryPaths[country.code];
-                    if (!path) return null;
-                    
+                    const pos = positions[country.code] || {x: 1000, y: 500};
                     const fillColor = country.level === 'extreme' ? '#ef4444' : 
                                      country.level === 'high' ? '#f97316' : '#eab308';
                     
                     return (
-                      <g key={country.code}>
-                        {/* Country shape */}
-                        <path
-                          d={path}
-                          fill={fillColor}
-                          fillOpacity="0.7"
-                          stroke="white"
-                          strokeWidth="2"
-                          onClick={() => loadCountryData(country.code)}
-                          style={{cursor: 'pointer'}}
-                          className="hover:fill-opacity-100 transition-all"
-                        />
-                        
-                        {/* Pulsing effect for extreme censorship */}
+                      <g key={country.code} 
+                         onClick={() => loadCountryData(country.code)}
+                         style={{cursor: 'pointer'}}
+                         className="hover:opacity-90 transition-opacity">
+                        {/* Pulsing circle for extreme censorship */}
                         {country.level === 'extreme' && (
-                          <path
-                            d={path}
-                            fill={fillColor}
-                            fillOpacity="0.3"
-                            stroke="none"
-                            style={{pointerEvents: 'none'}}
-                          >
-                            <animate attributeName="fill-opacity" from="0.3" to="0" dur="2s" repeatCount="indefinite" />
-                          </path>
+                          <circle cx={pos.x} cy={pos.y} r="35" fill={fillColor} opacity="0.3">
+                            <animate attributeName="r" from="30" to="50" dur="2s" repeatCount="indefinite" />
+                            <animate attributeName="opacity" from="0.5" to="0" dur="2s" repeatCount="indefinite" />
+                          </circle>
                         )}
+                        
+                        {/* Outer glow ring */}
+                        <circle cx={pos.x} cy={pos.y} r="22" fill={fillColor} opacity="0.4" />
+                        
+                        {/* Main marker circle */}
+                        <circle cx={pos.x} cy={pos.y} r="14" fill={fillColor} stroke="white" strokeWidth="3" opacity="0.95"/>
+                        
+                        {/* Flag emoji on top */}
+                        <text x={pos.x} y={pos.y - 25} 
+                              textAnchor="middle" 
+                              fill="white" 
+                              fontSize="24" 
+                              fontWeight="bold"
+                              style={{pointerEvents: 'none', textShadow: '0 0 4px rgba(0,0,0,0.8)'}}>
+                          {country.flag}
+                        </text>
+                        
+                        {/* Country name label on hover */}
+                        <g className="opacity-0 hover:opacity-100 transition-opacity">
+                          <rect x={pos.x - 60} y={pos.y + 20} width="120" height="30" 
+                                fill="black" opacity="0.8" rx="6"/>
+                          <text x={pos.x} y={pos.y + 40} 
+                                textAnchor="middle" 
+                                fill="white" 
+                                fontSize="14" 
+                                fontWeight="bold"
+                                style={{pointerEvents: 'none'}}>
+                            {country.name}
+                          </text>
+                        </g>
                       </g>
                     );
                   })}
                   
                   {/* Legend */}
-                  <g transform="translate(50, 900)">
-                    <rect x="-10" y="-10" width="350" height="80" fill="#000" opacity="0.7" rx="8"/>
-                    <text x="0" y="10" fill="white" fontSize="18" fontWeight="bold">Censorship Levels:</text>
-                    <rect x="10" y="25" width="30" height="20" fill="#ef4444" rx="4"/>
-                    <text x="50" y="42" fill="white" fontSize="16">Extreme (5)</text>
-                    <rect x="180" y="25" width="30" height="20" fill="#f97316" rx="4"/>
-                    <text x="220" y="42" fill="white" fontSize="16">High (10)</text>
-                    <rect x="10" y="55" width="30" height="20" fill="#eab308" rx="4"/>
-                    <text x="50" y="72" fill="white" fontSize="16">Moderate (5)</text>
+                  <g transform="translate(50, 880)">
+                    <rect x="-15" y="-15" width="380" height="100" fill="#000" opacity="0.85" rx="12"/>
+                    <text x="0" y="5" fill="white" fontSize="20" fontWeight="bold">Censorship Levels:</text>
+                    <circle cx="15" cy="35" r="10" fill="#ef4444"/>
+                    <text x="35" y="42" fill="white" fontSize="18">Extreme (5)</text>
+                    <circle cx="200" cy="35" r="10" fill="#f97316"/>
+                    <text x="220" y="42" fill="white" fontSize="18">High (10)</text>
+                    <circle cx="15" cy="70" r="10" fill="#eab308"/>
+                    <text x="35" y="77" fill="white" fontSize="18">Moderate (5)</text>
                   </g>
                 </svg>
-                <p className="text-xs text-white/50 text-center mt-4">🌍 Click on any colored country to view censorship details</p>
+                
+                <p className="absolute bottom-4 left-0 right-0 text-xs text-white/70 text-center font-semibold" style={{textShadow: '0 0 8px rgba(0,0,0,0.8)'}}>
+                  🌍 Click on any country marker to view detailed censorship data
+                </p>
               </div>
             </div>
 
