@@ -4222,28 +4222,28 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 <svg viewBox="0 0 2000 1000" className="absolute inset-0 w-full h-full">
                   {/* Interactive country markers */}
                   {censoredCountries.map((country) => {
-                    // Positions matched to the actual map image (adjusted lower and right)
+                    // Positions matched to the actual map image (adjusted more to the right)
                     const positions = {
-                      'CN': {x: 1380, y: 500},      // China - East Asia
-                      'IR': {x: 1120, y: 560},      // Iran - Middle East
-                      'RU': {x: 1240, y: 380},      // Russia - Northern Eurasia
-                      'TR': {x: 1020, y: 540},      // Turkey - Asia/Europe
-                      'EG': {x: 1060, y: 660},      // Egypt - North Africa
-                      'VE': {x: 380, y: 620},       // Venezuela - South America
-                      'TM': {x: 1180, y: 540},      // Turkmenistan - Central Asia
-                      'KP': {x: 1520, y: 500},      // North Korea - Korean Peninsula
-                      'SY': {x: 1080, y: 580},      // Syria - Middle East
-                      'SA': {x: 1120, y: 620},      // Saudi Arabia - Arabian Peninsula
-                      'AE': {x: 1160, y: 620},      // UAE - Arabian Peninsula
-                      'IN': {x: 1300, y: 620},      // India - South Asia
-                      'PK': {x: 1240, y: 580},      // Pakistan - South Asia
-                      'TH': {x: 1360, y: 640},      // Thailand - Southeast Asia
-                      'VN': {x: 1400, y: 640},      // Vietnam - Southeast Asia
-                      'BY': {x: 1020, y: 460},      // Belarus - Eastern Europe
-                      'KZ': {x: 1220, y: 520},      // Kazakhstan - Central Asia
-                      'UZ': {x: 1200, y: 540},      // Uzbekistan - Central Asia
-                      'ET': {x: 1100, y: 700},      // Ethiopia - East Africa
-                      'CU': {x: 340, y: 620}        // Cuba - Caribbean
+                      'CN': {x: 1420, y: 500},      // China - East Asia
+                      'IR': {x: 1160, y: 560},      // Iran - Middle East
+                      'RU': {x: 1280, y: 380},      // Russia - Northern Eurasia
+                      'TR': {x: 1060, y: 540},      // Turkey - Asia/Europe
+                      'EG': {x: 1100, y: 660},      // Egypt - North Africa
+                      'VE': {x: 420, y: 620},       // Venezuela - South America
+                      'TM': {x: 1220, y: 540},      // Turkmenistan - Central Asia
+                      'KP': {x: 1560, y: 500},      // North Korea - Korean Peninsula
+                      'SY': {x: 1120, y: 580},      // Syria - Middle East
+                      'SA': {x: 1160, y: 620},      // Saudi Arabia - Arabian Peninsula
+                      'AE': {x: 1200, y: 620},      // UAE - Arabian Peninsula
+                      'IN': {x: 1340, y: 620},      // India - South Asia
+                      'PK': {x: 1280, y: 580},      // Pakistan - South Asia
+                      'TH': {x: 1400, y: 640},      // Thailand - Southeast Asia
+                      'VN': {x: 1440, y: 640},      // Vietnam - Southeast Asia
+                      'BY': {x: 1060, y: 460},      // Belarus - Eastern Europe
+                      'KZ': {x: 1260, y: 520},      // Kazakhstan - Central Asia
+                      'UZ': {x: 1240, y: 540},      // Uzbekistan - Central Asia
+                      'ET': {x: 1140, y: 700},      // Ethiopia - East Africa
+                      'CU': {x: 380, y: 620}        // Cuba - Caribbean
                     };
                     
                     const pos = positions[country.code] || {x: 1000, y: 500};
