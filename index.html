@@ -100,6 +100,20 @@
     @keyframes progressShine{0%{background-position:-100% 0}100%{background-position:200% 0}}
     .progress-shine{background:linear-gradient(90deg,#67e8f9 0%,#a78bfa 50%,#67e8f9 100%);background-size:200% 100%;animation:progressShine 2s linear infinite}
     
+    /* Premium Button Animations */
+    @keyframes gradient-shift{
+      0%{background-position:0% 50%}
+      50%{background-position:100% 50%}
+      100%{background-position:0% 50%}
+    }
+    @keyframes shine{
+      0%{transform:translateX(-100%)}
+      100%{transform:translateX(100%)}
+    }
+    .delay-0{animation-delay:0s}
+    .delay-100{animation-delay:0.1s}
+    .delay-200{animation-delay:0.2s}
+    
     /* Button press effect */
     .btn-press{transition:all .15s ease}
     .btn-press:active{transform:scale(.96)}
@@ -3749,16 +3763,62 @@
       return (
         <GlassCard title="Privacy Checkup" subtitle="Test your browser's privacy & anonymity">
           <div className="space-y-6">
-            {/* Run Checkup Button */}
+            {/* Run Checkup Button - Premium Dynamic */}
             <div className="text-center">
               <button
                 onClick={runCheckup}
                 disabled={checking}
-                className="btn-primary flex items-center gap-2 mx-auto"
+                className="group relative mx-auto px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-300 overflow-hidden disabled:opacity-70 disabled:cursor-not-allowed"
+                style={{
+                  background: checking 
+                    ? 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)' 
+                    : 'linear-gradient(135deg, #10b981 0%, #06b6d4 50%, #3b82f6 100%)',
+                  backgroundSize: '200% 200%',
+                  animation: checking ? 'none' : 'gradient-shift 3s ease infinite',
+                  boxShadow: checking 
+                    ? '0 10px 40px rgba(6, 182, 212, 0.4), 0 0 20px rgba(6, 182, 212, 0.3)' 
+                    : '0 10px 40px rgba(16, 185, 129, 0.4), 0 0 20px rgba(6, 182, 212, 0.3)',
+                  color: 'white',
+                  border: '2px solid rgba(255, 255, 255, 0.2)'
+                }}
               >
-                <i data-lucide={checking ? "loader" : "shield-check"} className={`w-5 h-5 ${checking ? 'animate-spin' : ''}`}></i>
-                {checking ? 'Running Checkup...' : 'Run Privacy Checkup'}
+                {/* Shine effect */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                     style={{
+                       background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                       animation: 'shine 2s infinite'
+                     }}>
+                </div>
+                
+                {/* Button content */}
+                <div className="relative flex items-center gap-3">
+                  <div className={`transition-transform duration-300 ${checking ? '' : 'group-hover:scale-110 group-hover:rotate-12'}`}>
+                    <i data-lucide={checking ? "loader" : "shield-check"} className={`w-6 h-6 ${checking ? 'animate-spin' : ''}`}></i>
+                  </div>
+                  <span className="relative">
+                    {checking ? 'Running Checkup...' : 'Run Privacy Checkup'}
+                    {/* Pulse dots when checking */}
+                    {checking && (
+                      <span className="inline-flex ml-1">
+                        <span className="animate-pulse delay-0">.</span>
+                        <span className="animate-pulse delay-100">.</span>
+                        <span className="animate-pulse delay-200">.</span>
+                      </span>
+                    )}
+                  </span>
+                  {!checking && (
+                    <i data-lucide="arrow-right" className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1"></i>
+                  )}
+                </div>
+                
+                {/* Glow effect on hover */}
+                <div className="absolute -inset-1 bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-500 rounded-2xl opacity-0 group-hover:opacity-30 blur-xl transition-opacity duration-500 -z-10"></div>
               </button>
+              
+              {/* Subtext */}
+              {!checking && !results && (
+                <p className="text-sm text-white/60 mt-3 animate-pulse">Click to analyze your privacy in real-time</p>
+              )}
             </div>
 
             {/* Results */}
