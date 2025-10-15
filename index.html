@@ -336,7 +336,9 @@
       const [value, setValue] = React.useState(() => {
         try{
           const raw = localStorage.getItem(key);
-          return raw != null ? JSON.parse(raw) : defaultValue;
+          const parsed = raw != null ? JSON.parse(raw) : defaultValue;
+          // Ensure we always have a valid value
+          return parsed || defaultValue;
         }catch{ return defaultValue; }
       });
       React.useEffect(()=>{
@@ -1226,7 +1228,7 @@
             <div className="flex items-center gap-3">
               <i data-lucide={currentTab.icon} className="w-5 h-5 text-cyan-400"></i>
               <span className="font-semibold">{currentTab.label}</span>
-            </div>
+      </div>
             <i data-lucide={isOpen ? "chevron-up" : "chevron-down"} className="w-5 h-5 text-white/60"></i>
           </button>
           
@@ -1250,9 +1252,9 @@
                   <span className="font-medium">{t.label}</span>
                 </button>
               ))}
-            </div>
+      </div>
           )}
-        </div>
+    </div>
       );
     }
 
@@ -1286,7 +1288,7 @@
                 </button>
               ))}
             </nav>
-      </div>
+    </div>
         </aside>
       );
     }
@@ -1309,7 +1311,7 @@
               <div className="flex items-center gap-2 text-gray-900 font-semibold mb-3">
                 <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600">
                   <i data-lucide="send" className="w-6 h-6 text-white"></i>
-                </div>
+    </div>
                 <span>Sender — real example</span>
               </div>
               <ul className="text-sm text-gray-800 space-y-1 list-disc list-inside">
@@ -1399,7 +1401,7 @@
                   <li>Paste Answer • Connect • Send</li>
                 </ul>
                 <button onClick={() => { setStep('send'); setOpen(false); }} className="mt-3 w-full rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold px-4 py-2 border border-white/10">I'm the Sender</button>
-    </div>
+</div>
       </div>
       </div>
     </div>
@@ -3456,6 +3458,11 @@
       const { toasts, push } = useToasts();
       const [step, setStep] = usePersistentState('uiStep', "home");
       const [hashFromFlow, setHashFromFlow] = useState("");
+      
+      // Ensure step is always valid, default to 'home' if not
+      const validSteps = ['home', 'webrtc', 'image-stego', 'audio-stego', 'video-stego', 'swap'];
+      const currentStep = validSteps.includes(step) ? step : 'home';
+      
       return (
         <div className="relative min-h-screen text-white">
           {/* animated gradient blobs */}
@@ -3475,17 +3482,17 @@
           <div className="max-w-6xl mx-auto p-6 sm:p-4 md:p-6">
             <SectionHeader />
             <div className="mt-5 flex gap-6">
-              <Sidebar step={step} setStep={setStep} />
+              <Sidebar step={currentStep} setStep={setStep} />
               <main className="flex-1 min-w-0">
                 <div className="mb-4 md:hidden">
-                  <StepPills step={step} setStep={setStep} />
+                  <StepPills step={currentStep} setStep={setStep} />
                 </div>
-                {step === 'home' && <Home setStep={setStep} />}
-                {step === 'webrtc' && <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />}
-                {step === 'image-stego' && <ImageStego pushToast={push} />}
-                {step === 'audio-stego' && <AudioStego pushToast={push} />}
-                {step === 'video-stego' && <VideoStego pushToast={push} />}
-                {step === 'swap' && <PrivacySwap />}
+                {currentStep === 'home' && <Home setStep={setStep} />}
+                {currentStep === 'webrtc' && <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />}
+                {currentStep === 'image-stego' && <ImageStego pushToast={push} />}
+                {currentStep === 'audio-stego' && <AudioStego pushToast={push} />}
+                {currentStep === 'video-stego' && <VideoStego pushToast={push} />}
+                {currentStep === 'swap' && <PrivacySwap />}
               </main>
             </div>
           </div>
