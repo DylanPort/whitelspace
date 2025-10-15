@@ -3681,17 +3681,24 @@
       const checkDNS = async () => {
         try {
           // Check if DNS-over-HTTPS is being used
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 3000);
+          
           const response = await fetch('https://cloudflare-dns.com/dns-query?name=example.com&type=A', {
-            headers: { 'accept': 'application/dns-json' }
+            headers: { 'accept': 'application/dns-json' },
+            signal: controller.signal
           });
-          const data = await response.json();
+          
+          clearTimeout(timeoutId);
+          
           return {
             secure: response.ok,
             provider: 'Cloudflare DoH',
             status: response.ok ? 'protected' : 'exposed'
           };
         } catch (e) {
-          return { secure: false, provider: 'Unknown', status: 'exposed' };
+          console.log('DNS check failed:', e);
+          return { secure: false, provider: 'Standard DNS', status: 'exposed' };
         }
       };
 
@@ -3733,12 +3740,28 @@
         setResults(null);
 
         try {
-          // Run all checks
-          const [webrtc, dns, fp] = await Promise.all([
-            checkWebRTCLeak(),
-            checkDNS(),
-            Promise.resolve(calculateFingerprint())
-          ]);
+          // Run all checks with individual error handling
+          let webrtc = [];
+          let dns = { secure: false, provider: 'Unknown', status: 'exposed' };
+          let fp = { uniqueness: 50 };
+
+          try {
+            webrtc = await checkWebRTCLeak();
+          } catch (e) {
+            console.log('WebRTC check failed:', e);
+          }
+
+          try {
+            dns = await checkDNS();
+          } catch (e) {
+            console.log('DNS check failed:', e);
+          }
+
+          try {
+            fp = calculateFingerprint();
+          } catch (e) {
+            console.log('Fingerprint check failed:', e);
+          }
 
           setWebrtcIPs(webrtc);
           setDnsLeak(dns);
@@ -3759,6 +3782,7 @@
 
           pushToast(`Privacy checkup complete! Score: ${Math.round(score)}/100`, 'info');
         } catch (error) {
+          console.error('Privacy checkup error:', error);
           pushToast('Error running privacy checkup', 'bad');
         } finally {
           setChecking(false);
