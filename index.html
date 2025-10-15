@@ -1302,175 +1302,115 @@
       },[]);
       
       return (
-        <div className="space-y-4">
-          <div className="fade-up">
-            <GlassCard title="Welcome to Whistle" subtitle="Private, peer‑to‑peer tips with on‑chain proof">
-              <p className="text-white/70 text-sm">Two roles. One secure hand‑off. Stream the encrypted bundle directly from sender to receiver. Only the bundle hash is posted to Solana as public proof.</p>
-            </GlassCard>
-    </div>
-          <div className="grid lg:grid-cols-2 gap-4 fade-up-2">
-            <div className="step-card hover-lift slide-in-left">
-              <div className="flex items-center gap-2 text-gray-900 font-semibold mb-3">
-                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600">
-                  <i data-lucide="send" className="w-6 h-6 text-white"></i>
-    </div>
-                <span>Sender — real example</span>
+        <div className="space-y-6">
+          {/* Hero Section */}
+          <div className="fade-up text-center py-8">
+            <h1 className="text-5xl font-bold text-white mb-4 tracking-tight">
+              Privacy is a <span className="bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">right</span>, not a privilege
+            </h1>
+            <p className="text-xl text-white/70 max-w-3xl mx-auto mb-8">
+              Military-grade encryption. Zero-knowledge architecture. Open source. Built for activists, journalists, and anyone who values freedom.
+            </p>
+            <div className="flex items-center justify-center gap-4">
+              <button onClick={()=>setStep('webrtc')} className="px-8 py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-white font-bold text-lg shadow-lg shadow-cyan-500/50 transition-all hover:scale-105">
+                <div className="flex items-center gap-2">
+                  <i data-lucide="shield" className="w-5 h-5"></i>
+                  Start Encrypted Transfer
+                </div>
+              </button>
+              <button onClick={()=>setStep('steganography')} className="px-8 py-4 rounded-xl border-2 border-white/20 hover:border-purple-400/50 bg-white/5 hover:bg-white/10 text-white font-bold text-lg transition-all hover:scale-105">
+                <div className="flex items-center gap-2">
+                  <i data-lucide="eye-off" className="w-5 h-5"></i>
+                  Hide Messages
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Core Features - Premium Cards */}
+          <div className="grid md:grid-cols-3 gap-4 fade-up-2">
+            <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 p-6 hover:border-cyan-400/30 transition-all hover:scale-[1.02] cursor-pointer" onClick={()=>setStep('webrtc')}>
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center mb-4 shadow-lg shadow-cyan-500/50">
+                <i data-lucide="lock" className="w-7 h-7 text-white"></i>
               </div>
-              <ul className="text-sm text-gray-800 space-y-1 list-disc list-inside">
-                <li>Write: "Evidence of bid‑rigging in Q3." Attach <em>report.pdf</em> and <em>video.mp4</em>.</li>
-                <li>Click <strong>Generate Offer</strong> → share Offer with the receiver.</li>
-                <li>Paste their Answer → <strong>Connect</strong> → <strong>Send</strong>.</li>
-                <li>App posts memo with hash, e.g. <span className="font-mono">whis.4f2c.abcd…</span></li>
-              </ul>
-              <div className="mt-2">
-                <div className="mini-code font-mono text-xs text-gray-700 shimmer-bg">OFFER: eyJ0eXAiOiJ... (copy, paste to receiver)</div>
-              </div>
-              <div className="mt-3">
-                <button onClick={()=>setStep('webrtc')} className="flex items-center gap-2 rounded-xl bg-cyan-500/80 hover:bg-cyan-400 text-black font-semibold px-4 py-2 btn-press">
-                  <i data-lucide="arrow-right" className="w-5 h-5"></i>
-                  Start Transfer
-                </button>
+              <h3 className="text-xl font-bold text-white mb-2">End-to-End Encrypted</h3>
+              <p className="text-white/60 text-sm mb-4">AES-256-GCM encryption. RSA-OAEP key exchange. Military-grade security for your sensitive data.</p>
+              <div className="flex items-center text-cyan-400 text-sm font-semibold">
+                <span>Learn more</span>
+                <i data-lucide="arrow-right" className="w-4 h-4 ml-1"></i>
               </div>
             </div>
-            <div className="step-card hover-lift slide-in-right">
-              <div className="flex items-center gap-2 text-gray-900 font-semibold mb-3">
-                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-purple-400 to-purple-600">
-                  <i data-lucide="download" className="w-6 h-6 text-white"></i>
-                </div>
-                <span>Receiver — real example</span>
+
+            <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-purple-500/10 to-purple-600/5 p-6 hover:border-purple-400/30 transition-all hover:scale-[1.02] cursor-pointer" onClick={()=>setStep('steganography')}>
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center mb-4 shadow-lg shadow-purple-500/50">
+                <i data-lucide="eye-off" className="w-7 h-7 text-white"></i>
               </div>
-              <ul className="text-sm text-gray-800 space-y-1 list-disc list-inside">
-                <li>Paste Offer → click <strong>Generate Answer</strong> → send it back.</li>
-                <li>When connected, the encrypted bundle streams; it decrypts locally.</li>
-                <li>Download <em>report.pdf</em>, preview <em>video.mp4</em>, view the computed hash.</li>
-                <li>Optionally post your own memo with the same hash.</li>
-              </ul>
-              <div className="mt-2">
-                <div className="mini-code font-mono text-xs text-gray-700 shimmer-bg">ANSWER: eyJhbGciOiJ... (copy, send back to sender)</div>
+              <h3 className="text-xl font-bold text-white mb-2">Steganography</h3>
+              <p className="text-white/60 text-sm mb-4">Hide messages in images, audio, and video. Compression-resistant spread spectrum technology.</p>
+              <div className="flex items-center text-purple-400 text-sm font-semibold">
+                <span>Explore tools</span>
+                <i data-lucide="arrow-right" className="w-4 h-4 ml-1"></i>
               </div>
-              <div className="mt-3">
-                <button onClick={()=>setStep('webrtc')} className="flex items-center gap-2 rounded-xl bg-white/15 hover:bg-white/25 text-gray-900 font-semibold px-4 py-2 border border-white/10 btn-press">
-                  <i data-lucide="arrow-right" className="w-5 h-5"></i>
-                  Start Transfer
-                </button>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 p-6 hover:border-emerald-400/30 transition-all hover:scale-[1.02] cursor-pointer" onClick={()=>setStep('privacy-checkup')}>
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center mb-4 shadow-lg shadow-emerald-500/50">
+                <i data-lucide="shield-check" className="w-7 h-7 text-white"></i>
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Privacy Toolkit</h3>
+              <p className="text-white/60 text-sm mb-4">Browser leak detection, Tor bridges, censorship maps, and anonymous browsing tools.</p>
+              <div className="flex items-center text-emerald-400 text-sm font-semibold">
+                <span>Check privacy</span>
+                <i data-lucide="arrow-right" className="w-4 h-4 ml-1"></i>
               </div>
             </div>
           </div>
+
+
+          {/* All Tools Grid */}
           <div className="fade-up-3">
-            <GlassCard title="Why it's safe" subtitle="Short & direct">
-              <div className="grid md:grid-cols-3 gap-3 text-sm text-white/80">
-                <div className="step-card scale-in stagger-1 flex items-center gap-2">
-                  <i data-lucide="lock" className="w-5 h-5 text-cyan-400"></i>
-                  <span>End‑to‑end: AES‑GCM payload, RSA‑OAEP key wrapping.</span>
+            <h2 className="text-2xl font-bold text-white mb-4 text-center">Complete Privacy Arsenal</h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 hover:border-cyan-400/30 transition-all cursor-pointer" onClick={()=>setStep('censorship-map')}>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center">
+                    <i data-lucide="globe" className="w-5 h-5 text-white"></i>
+                  </div>
+                  <h3 className="text-white font-bold">Censorship Map</h3>
                 </div>
-                <div className="step-card scale-in stagger-2 flex items-center gap-2">
-                  <i data-lucide="share-2" className="w-5 h-5 text-purple-400"></i>
-                  <span>P2P stream: no file uploads; nothing stored server‑side.</span>
-                </div>
-                <div className="step-card scale-in stagger-3 flex items-center gap-2">
-                  <i data-lucide="file-check" className="w-5 h-5 text-emerald-400"></i>
-                  <span>Proof only: Solana memo posts just the SHA‑256 hash.</span>
-                </div>
-      </div>
-            </GlassCard>
-      </div>
+                <p className="text-white/50 text-xs">Live global censorship tracking</p>
+              </div>
 
-          {/* Steganography Section */}
-          <div className="fade-up-4">
-            <div className="step-card hover-lift cursor-pointer" onClick={()=>setStep('steganography')}>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600">
-                  <i data-lucide="eye-off" className="w-7 h-7 text-white"></i>
+              <div className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 hover:border-purple-400/30 transition-all cursor-pointer" onClick={()=>setStep('tor-bridges')}>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
+                    <i data-lucide="shield-alert" className="w-5 h-5 text-white"></i>
+                  </div>
+                  <h3 className="text-white font-bold">Tor Bridges</h3>
                 </div>
-                <h2 className="text-gray-900 text-xl font-bold">Steganography Suite</h2>
+                <p className="text-white/50 text-xs">Access Tor in censored regions</p>
               </div>
-              <p className="text-sm text-gray-700 mb-4">Hide secret messages inside images, audio files, and videos. Three methods in one powerful tool - choose your medium and we'll handle the encryption.</p>
-              <div className="flex items-center gap-4 mb-3">
-                <div className="flex items-center gap-2 text-xs text-purple-600 font-semibold">
-                  <i data-lucide="image" className="w-4 h-4"></i>
-                  <span>Image LSB & Spread Spectrum</span>
+
+              <div className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 hover:border-green-400/30 transition-all cursor-pointer" onClick={()=>setStep('proxy-links')}>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
+                    <i data-lucide="link-2" className="w-5 h-5 text-white"></i>
+                  </div>
+                  <h3 className="text-white font-bold">Proxy Links</h3>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-green-600 font-semibold">
-                  <i data-lucide="music" className="w-4 h-4"></i>
-                  <span>Audio WAV</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-blue-600 font-semibold">
-                  <i data-lucide="video" className="w-4 h-4"></i>
-                  <span>Video Frames</span>
-                </div>
+                <p className="text-white/50 text-xs">Anonymous proxy generation</p>
               </div>
-              <div className="flex items-center gap-2 text-xs text-cyan-600 font-semibold">
-                <i data-lucide="arrow-right" className="w-4 h-4"></i>
-                <span>Open Steganography</span>
+
+              <div className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 hover:border-orange-400/30 transition-all cursor-pointer" onClick={()=>setStep('swap')}>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
+                    <i data-lucide="shuffle" className="w-5 h-5 text-white"></i>
+                  </div>
+                  <h3 className="text-white font-bold">Privacy Swap</h3>
+                </div>
+                <p className="text-white/50 text-xs">Anonymous crypto exchange</p>
               </div>
             </div>
-          </div>
-
-          {/* Privacy Tools Section */}
-          <div className="fade-up-5">
-            <GlassCard title="Privacy Toolkit" subtitle="Advanced tools for maximum anonymity">
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Privacy Checkup */}
-                <div className="step-card hover-lift cursor-pointer" onClick={()=>setStep('privacy-checkup')}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600">
-                      <i data-lucide="shield-check" className="w-6 h-6 text-white"></i>
-                    </div>
-                    <h3 className="text-gray-900 font-bold">Privacy Checkup</h3>
-                  </div>
-                  <p className="text-sm text-gray-700 mb-3">Test your browser for WebRTC leaks, DNS privacy, and fingerprinting. Get a privacy score out of 100.</p>
-                  <div className="flex items-center gap-2 text-xs text-cyan-600 font-semibold">
-                    <i data-lucide="arrow-right" className="w-4 h-4"></i>
-                    <span>Run Checkup</span>
-                  </div>
-                </div>
-
-                {/* Censorship Map */}
-                <div className="step-card hover-lift cursor-pointer" onClick={()=>setStep('censorship-map')}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-red-400 to-red-600">
-                      <i data-lucide="globe" className="w-6 h-6 text-white"></i>
-                    </div>
-                    <h3 className="text-gray-900 font-bold">Censorship Map</h3>
-                  </div>
-                  <p className="text-sm text-gray-700 mb-3">Live data on internet censorship worldwide. See which countries block social media, news sites, and VPNs.</p>
-                  <div className="flex items-center gap-2 text-xs text-red-600 font-semibold">
-                    <i data-lucide="arrow-right" className="w-4 h-4"></i>
-                    <span>View Map</span>
-                  </div>
-                </div>
-
-                {/* Tor Bridge Finder */}
-                <div className="step-card hover-lift cursor-pointer" onClick={()=>setStep('tor-bridges')}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-purple-400 to-purple-600">
-                      <i data-lucide="shield-alert" className="w-6 h-6 text-white"></i>
-                    </div>
-                    <h3 className="text-gray-900 font-bold">Tor Bridges</h3>
-                  </div>
-                  <p className="text-sm text-gray-700 mb-3">Access Tor in censored countries. Get obfs4, snowflake, or meek bridges to bypass blocks.</p>
-                  <div className="flex items-center gap-2 text-xs text-purple-600 font-semibold">
-                    <i data-lucide="arrow-right" className="w-4 h-4"></i>
-                    <span>Get Bridges</span>
-                  </div>
-                </div>
-
-                {/* Proxy Link Generator */}
-                <div className="step-card hover-lift cursor-pointer" onClick={()=>setStep('proxy-links')}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-green-400 to-green-600">
-                      <i data-lucide="link-2" className="w-6 h-6 text-white"></i>
-                    </div>
-                    <h3 className="text-gray-900 font-bold">Proxy Links</h3>
-                  </div>
-                  <p className="text-sm text-gray-700 mb-3">Generate privacy-respecting proxy links. Archive sites, bypass paywalls, use alternative frontends.</p>
-                  <div className="flex items-center gap-2 text-xs text-green-600 font-semibold">
-                    <i data-lucide="arrow-right" className="w-4 h-4"></i>
-                    <span>Generate Links</span>
-                  </div>
-                </div>
-              </div>
-            </GlassCard>
           </div>
     </div>
       );
