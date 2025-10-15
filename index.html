@@ -3412,24 +3412,8 @@
       },[]);
       
       return (
-        <GlassCard title="Privacy Swap" subtitle="Anonymous cryptocurrency swaps powered by 4NON">
+        <GlassCard>
           <div className="space-y-6">
-            {/* Privacy Tips */}
-            <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-4">
-              <div className="flex items-start gap-3">
-                <i data-lucide="shield-check" className="w-5 h-5 text-cyan-400 flex-shrink-0 mt-0.5"></i>
-                <div>
-                  <h3 className="text-white font-semibold mb-2">Privacy-First Swaps</h3>
-                  <ul className="text-sm text-white/70 space-y-1">
-                    <li>• No KYC required - swap anonymously</li>
-                    <li>• No account creation needed</li>
-                    <li>• Decentralized & trustless exchanges</li>
-                    <li>• Your keys, your coins</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
             {/* 4NON Widget */}
             <div className="flex justify-center">
               <iframe 
@@ -3445,9 +3429,13 @@
               ></iframe>
             </div>
 
-            {/* Additional Info */}
-            <div className="text-center text-sm text-white/50">
-              <p>Powered by <a href="https://4nonswap.com" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-cyan-300 underline">4NON</a></p>
+            {/* Powered by with Logo */}
+            <div className="flex items-center justify-center gap-2 text-sm text-white/50">
+              <span>Powered by</span>
+              <a href="https://4nonswap.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-cyan-400 hover:text-cyan-300 transition-colors">
+                <img src="4DqRlDPT_400x400.jpg" alt="4NON Logo" className="w-6 h-6 rounded-full" />
+                <span className="font-semibold">4NON</span>
+              </a>
             </div>
           </div>
         </GlassCard>
