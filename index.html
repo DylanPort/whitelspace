@@ -1263,9 +1263,7 @@
       const items = [
         { id:'home',    label:'Home', icon:'home' },
         { id:'webrtc',    label:'WebRTC Transfer', icon:'radio' },
-        { id:'image-stego', label:'🎭 Image Stego', icon:'image' },
-        { id:'audio-stego', label:'🎵 Audio Stego', icon:'music' },
-        { id:'video-stego', label:'🎥 Video Stego', icon:'video' },
+        { id:'steganography', label:'🎭 Steganography', icon:'eye-off' },
         { id:'privacy-checkup', label:'Privacy Checkup', icon:'shield-check' },
         { id:'censorship-map', label:'Censorship Map', icon:'globe' },
         { id:'tor-bridges', label:'Tor Bridges', icon:'shield-alert' },
@@ -1377,8 +1375,39 @@
             </GlassCard>
       </div>
 
-          {/* Privacy Tools Section */}
+          {/* Steganography Section */}
           <div className="fade-up-4">
+            <div className="step-card hover-lift cursor-pointer" onClick={()=>setStep('steganography')}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600">
+                  <i data-lucide="eye-off" className="w-7 h-7 text-white"></i>
+                </div>
+                <h2 className="text-gray-900 text-xl font-bold">Steganography Suite</h2>
+              </div>
+              <p className="text-sm text-gray-700 mb-4">Hide secret messages inside images, audio files, and videos. Three methods in one powerful tool - choose your medium and we'll handle the encryption.</p>
+              <div className="flex items-center gap-4 mb-3">
+                <div className="flex items-center gap-2 text-xs text-purple-600 font-semibold">
+                  <i data-lucide="image" className="w-4 h-4"></i>
+                  <span>Image LSB & Spread Spectrum</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-green-600 font-semibold">
+                  <i data-lucide="music" className="w-4 h-4"></i>
+                  <span>Audio WAV</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-blue-600 font-semibold">
+                  <i data-lucide="video" className="w-4 h-4"></i>
+                  <span>Video Frames</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-cyan-600 font-semibold">
+                <i data-lucide="arrow-right" className="w-4 h-4"></i>
+                <span>Open Steganography</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Privacy Tools Section */}
+          <div className="fade-up-5">
             <GlassCard title="Privacy Toolkit" subtitle="Advanced tools for maximum anonymity">
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Privacy Checkup */}
@@ -3475,6 +3504,68 @@
       );
     }
     
+    // ===== UNIFIED STEGANOGRAPHY =====
+    
+    function UnifiedSteganography({ pushToast }) {
+      const [stegoType, setStegoType] = useState('image');
+      
+      useEffect(()=>{
+        if(window.lucide) window.lucide.createIcons();
+      },[stegoType]);
+      
+      return (
+        <div className="space-y-4">
+          {/* Stego Type Selector */}
+          <div className="flex gap-2 p-1 rounded-xl bg-white/[0.04] border border-white/10 w-fit mx-auto">
+            <button
+              onClick={() => setStegoType('image')}
+              className={`px-6 py-3 rounded-lg font-semibold text-sm transition-all ${
+                stegoType === 'image'
+                  ? 'bg-purple-500/30 text-purple-100 border border-purple-400/50'
+                  : 'text-white/70 hover:text-white/90'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <i data-lucide="image" className="w-4 h-4"></i>
+                Image
+              </div>
+            </button>
+            <button
+              onClick={() => setStegoType('audio')}
+              className={`px-6 py-3 rounded-lg font-semibold text-sm transition-all ${
+                stegoType === 'audio'
+                  ? 'bg-green-500/30 text-green-100 border border-green-400/50'
+                  : 'text-white/70 hover:text-white/90'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <i data-lucide="music" className="w-4 h-4"></i>
+                Audio
+              </div>
+            </button>
+            <button
+              onClick={() => setStegoType('video')}
+              className={`px-6 py-3 rounded-lg font-semibold text-sm transition-all ${
+                stegoType === 'video'
+                  ? 'bg-blue-500/30 text-blue-100 border border-blue-400/50'
+                  : 'text-white/70 hover:text-white/90'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <i data-lucide="video" className="w-4 h-4"></i>
+                Video
+              </div>
+            </button>
+          </div>
+          
+          {/* Render appropriate stego component */}
+          {stegoType === 'image' && <ImageStego pushToast={pushToast} />}
+          {stegoType === 'audio' && <AudioStego pushToast={pushToast} />}
+          {stegoType === 'video' && <VideoStego pushToast={pushToast} />}
+        </div>
+      );
+    }
+
     // ===== PRIVACY SWAP (4NON Widget Integration) =====
     
     function PrivacySwap() {
@@ -4117,82 +4208,101 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 Interactive Censorship Map
               </h3>
               
-              {/* World Map with clickable countries */}
-              <div className="relative bg-gradient-to-br from-blue-900/20 to-purple-900/20 rounded-xl p-4 overflow-x-auto">
-                <svg viewBox="0 0 1000 500" className="w-full h-auto" style={{minHeight: '300px'}}>
-                  {/* Background */}
-                  <rect width="1000" height="500" fill="rgba(0,0,0,0.2)" rx="12" />
+              {/* World Map with clickable country shapes */}
+              <div className="relative bg-gradient-to-br from-slate-900/50 to-blue-900/30 rounded-xl p-4 overflow-hidden" style={{minHeight: '400px'}}>
+                <svg viewBox="0 0 2000 1000" className="w-full h-auto">
+                  {/* Ocean background */}
+                  <rect width="2000" height="1000" fill="#0f172a" opacity="0.5"/>
                   
-                  {/* Simplified country markers (dots on map) */}
+                  {/* Simplified world map - major countries as paths */}
+                  {/* Default countries (gray) */}
+                  <g id="world-base" fill="#1e293b" stroke="#334155" strokeWidth="1" opacity="0.6">
+                    {/* North America */}
+                    <path d="M 100,150 L 400,120 L 450,200 L 350,350 L 200,320 Z" />
+                    {/* South America */}
+                    <path d="M 300,450 L 350,350 L 400,500 L 350,650 L 250,600 Z" />
+                    {/* Europe */}
+                    <path d="M 900,150 L 1050,120 L 1050,250 L 950,280 L 900,220 Z" />
+                    {/* Africa */}
+                    <path d="M 950,350 L 1100,320 L 1150,550 L 1050,650 L 950,600 Z" />
+                    {/* Australia */}
+                    <path d="M 1600,650 L 1750,650 L 1750,750 L 1600,750 Z" />
+                  </g>
+                  
+                  {/* Censored countries - clickable with colors */}
                   {censoredCountries.map((country) => {
-                    // Approximate positions (longitude/latitude to SVG coordinates)
-                    const positions = {
-                      'CN': {x: 700, y: 180},
-                      'IR': {x: 580, y: 200},
-                      'RU': {x: 650, y: 120},
-                      'TR': {x: 520, y: 190},
-                      'EG': {x: 510, y: 220},
-                      'VE': {x: 250, y: 280},
-                      'TM': {x: 600, y: 190},
-                      'KP': {x: 750, y: 190},
-                      'SY': {x: 540, y: 200},
-                      'SA': {x: 560, y: 230},
-                      'AE': {x: 570, y: 230},
-                      'IN': {x: 650, y: 230},
-                      'PK': {x: 620, y: 210},
-                      'TH': {x: 710, y: 250},
-                      'VN': {x: 720, y: 250},
-                      'BY': {x: 520, y: 140},
-                      'KZ': {x: 620, y: 160},
-                      'UZ': {x: 610, y: 190},
-                      'ET': {x: 540, y: 270},
-                      'CU': {x: 230, y: 230}
+                    const countryPaths = {
+                      'CN': 'M 1400,250 L 1600,220 L 1650,300 L 1600,400 L 1400,380 Z',
+                      'RU': 'M 1050,120 L 1700,100 L 1700,250 L 1100,280 L 1050,200 Z',
+                      'IR': 'M 1150,320 L 1280,300 L 1300,380 L 1200,400 Z',
+                      'TR': 'M 1020,280 L 1120,270 L 1130,320 L 1050,330 Z',
+                      'EG': 'M 1000,380 L 1080,370 L 1090,430 L 1010,440 Z',
+                      'SA': 'M 1100,400 L 1200,390 L 1220,480 L 1120,490 Z',
+                      'IN': 'M 1320,400 L 1450,380 L 1480,530 L 1340,550 Z',
+                      'VN': 'M 1500,450 L 1560,440 L 1570,530 L 1520,540 Z',
+                      'TH': 'M 1480,460 L 1520,455 L 1525,510 L 1490,515 Z',
+                      'PK': 'M 1280,370 L 1340,360 L 1350,420 L 1290,430 Z',
+                      'KP': 'M 1650,280 L 1690,275 L 1695,310 L 1655,315 Z',
+                      'SY': 'M 1090,310 L 1130,305 L 1135,340 L 1095,345 Z',
+                      'VE': 'M 380,450 L 450,440 L 460,510 L 390,520 Z',
+                      'CU': 'M 320,360 L 380,355 L 385,385 L 325,390 Z',
+                      'BY': 'M 1050,200 L 1100,195 L 1105,230 L 1055,235 Z',
+                      'TM': 'M 1220,300 L 1280,295 L 1285,335 L 1225,340 Z',
+                      'UZ': 'M 1240,285 L 1290,280 L 1295,315 L 1245,320 Z',
+                      'KZ': 'M 1180,240 L 1320,230 L 1325,290 L 1185,300 Z',
+                      'ET': 'M 1090,510 L 1150,505 L 1155,560 L 1095,565 Z',
+                      'AE': 'M 1160,420 L 1200,417 L 1203,445 L 1163,448 Z'
                     };
                     
-                    const pos = positions[country.code] || {x: 500, y: 250};
-                    const fillColor = country.level === 'extreme' ? '#ef4444' : country.level === 'high' ? '#f97316' : '#eab308';
+                    const path = countryPaths[country.code];
+                    if (!path) return null;
+                    
+                    const fillColor = country.level === 'extreme' ? '#ef4444' : 
+                                     country.level === 'high' ? '#f97316' : '#eab308';
                     
                     return (
-                      <g key={country.code} 
-                         onClick={() => loadCountryData(country.code)}
-                         style={{cursor: 'pointer'}}
-                         className="hover:opacity-80 transition-opacity">
-                        {/* Pulsing circle animation for extreme censorship */}
+                      <g key={country.code}>
+                        {/* Country shape */}
+                        <path
+                          d={path}
+                          fill={fillColor}
+                          fillOpacity="0.7"
+                          stroke="white"
+                          strokeWidth="2"
+                          onClick={() => loadCountryData(country.code)}
+                          style={{cursor: 'pointer'}}
+                          className="hover:fill-opacity-100 transition-all"
+                        />
+                        
+                        {/* Pulsing effect for extreme censorship */}
                         {country.level === 'extreme' && (
-                          <circle cx={pos.x} cy={pos.y} r="20" fill={fillColor} opacity="0.3">
-                            <animate attributeName="r" from="15" to="25" dur="2s" repeatCount="indefinite" />
-                            <animate attributeName="opacity" from="0.5" to="0" dur="2s" repeatCount="indefinite" />
-                          </circle>
+                          <path
+                            d={path}
+                            fill={fillColor}
+                            fillOpacity="0.3"
+                            stroke="none"
+                            style={{pointerEvents: 'none'}}
+                          >
+                            <animate attributeName="fill-opacity" from="0.3" to="0" dur="2s" repeatCount="indefinite" />
+                          </path>
                         )}
-                        
-                        {/* Main marker */}
-                        <circle cx={pos.x} cy={pos.y} r="8" fill={fillColor} stroke="white" strokeWidth="2" />
-                        
-                        {/* Country code label */}
-                        <text x={pos.x} y={pos.y - 15} 
-                              textAnchor="middle" 
-                              fill="white" 
-                              fontSize="11" 
-                              fontWeight="bold"
-                              style={{pointerEvents: 'none'}}>
-                          {country.flag}
-                        </text>
                       </g>
                     );
                   })}
                   
                   {/* Legend */}
-                  <g transform="translate(20, 430)">
-                    <text x="0" y="0" fill="white" fontSize="12" fontWeight="bold">Legend:</text>
-                    <circle cx="10" cy="20" r="6" fill="#ef4444" />
-                    <text x="22" y="25" fill="white" fontSize="11">Extreme</text>
-                    <circle cx="90" cy="20" r="6" fill="#f97316" />
-                    <text x="102" y="25" fill="white" fontSize="11">High</text>
-                    <circle cx="160" cy="20" r="6" fill="#eab308" />
-                    <text x="172" y="25" fill="white" fontSize="11">Moderate</text>
+                  <g transform="translate(50, 900)">
+                    <rect x="-10" y="-10" width="350" height="80" fill="#000" opacity="0.7" rx="8"/>
+                    <text x="0" y="10" fill="white" fontSize="18" fontWeight="bold">Censorship Levels:</text>
+                    <rect x="10" y="25" width="30" height="20" fill="#ef4444" rx="4"/>
+                    <text x="50" y="42" fill="white" fontSize="16">Extreme (5)</text>
+                    <rect x="180" y="25" width="30" height="20" fill="#f97316" rx="4"/>
+                    <text x="220" y="42" fill="white" fontSize="16">High (10)</text>
+                    <rect x="10" y="55" width="30" height="20" fill="#eab308" rx="4"/>
+                    <text x="50" y="72" fill="white" fontSize="16">Moderate (5)</text>
                   </g>
                 </svg>
-                <p className="text-xs text-white/50 text-center mt-2">Click on any country marker to view details</p>
+                <p className="text-xs text-white/50 text-center mt-4">🌍 Click on any colored country to view censorship details</p>
               </div>
             </div>
 
@@ -4542,7 +4652,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'image-stego', 'audio-stego', 'video-stego', 'privacy-checkup', 'censorship-map', 'tor-bridges', 'proxy-links', 'swap'];
+      const validSteps = ['home', 'webrtc', 'steganography', 'privacy-checkup', 'censorship-map', 'tor-bridges', 'proxy-links', 'swap'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -4571,9 +4681,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 </div>
                 {currentStep === 'home' && <Home setStep={setStep} />}
                 {currentStep === 'webrtc' && <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />}
-                {currentStep === 'image-stego' && <ImageStego pushToast={push} />}
-                {currentStep === 'audio-stego' && <AudioStego pushToast={push} />}
-                {currentStep === 'video-stego' && <VideoStego pushToast={push} />}
+                {currentStep === 'steganography' && <UnifiedSteganography pushToast={push} />}
                 {currentStep === 'privacy-checkup' && <PrivacyCheckup pushToast={push} />}
                 {currentStep === 'censorship-map' && <CensorshipMap pushToast={push} />}
                 {currentStep === 'tor-bridges' && <TorBridgeFinder pushToast={push} />}
