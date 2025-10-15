@@ -4004,26 +4004,26 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
 
       // Countries with known censorship (based on OONI data)
       const censoredCountries = [
-        { code: 'CN', name: 'China', level: 'extreme', color: 'red' },
-        { code: 'IR', name: 'Iran', level: 'extreme', color: 'red' },
-        { code: 'RU', name: 'Russia', level: 'high', color: 'orange' },
-        { code: 'TR', name: 'Turkey', level: 'high', color: 'orange' },
-        { code: 'EG', name: 'Egypt', level: 'high', color: 'orange' },
-        { code: 'VE', name: 'Venezuela', level: 'high', color: 'orange' },
-        { code: 'TM', name: 'Turkmenistan', level: 'extreme', color: 'red' },
-        { code: 'KP', name: 'North Korea', level: 'extreme', color: 'red' },
-        { code: 'SY', name: 'Syria', level: 'extreme', color: 'red' },
-        { code: 'SA', name: 'Saudi Arabia', level: 'high', color: 'orange' },
-        { code: 'AE', name: 'UAE', level: 'moderate', color: 'yellow' },
-        { code: 'IN', name: 'India', level: 'moderate', color: 'yellow' },
-        { code: 'PK', name: 'Pakistan', level: 'moderate', color: 'yellow' },
-        { code: 'TH', name: 'Thailand', level: 'moderate', color: 'yellow' },
-        { code: 'VN', name: 'Vietnam', level: 'high', color: 'orange' },
-        { code: 'BY', name: 'Belarus', level: 'high', color: 'orange' },
-        { code: 'KZ', name: 'Kazakhstan', level: 'moderate', color: 'yellow' },
-        { code: 'UZ', name: 'Uzbekistan', level: 'high', color: 'orange' },
-        { code: 'ET', name: 'Ethiopia', level: 'high', color: 'orange' },
-        { code: 'CU', name: 'Cuba', level: 'high', color: 'orange' },
+        { code: 'CN', name: 'China', level: 'extreme', color: 'red', flag: '🇨🇳' },
+        { code: 'IR', name: 'Iran', level: 'extreme', color: 'red', flag: '🇮🇷' },
+        { code: 'RU', name: 'Russia', level: 'high', color: 'orange', flag: '🇷🇺' },
+        { code: 'TR', name: 'Turkey', level: 'high', color: 'orange', flag: '🇹🇷' },
+        { code: 'EG', name: 'Egypt', level: 'high', color: 'orange', flag: '🇪🇬' },
+        { code: 'VE', name: 'Venezuela', level: 'high', color: 'orange', flag: '🇻🇪' },
+        { code: 'TM', name: 'Turkmenistan', level: 'extreme', color: 'red', flag: '🇹🇲' },
+        { code: 'KP', name: 'North Korea', level: 'extreme', color: 'red', flag: '🇰🇵' },
+        { code: 'SY', name: 'Syria', level: 'extreme', color: 'red', flag: '🇸🇾' },
+        { code: 'SA', name: 'Saudi Arabia', level: 'high', color: 'orange', flag: '🇸🇦' },
+        { code: 'AE', name: 'UAE', level: 'moderate', color: 'yellow', flag: '🇦🇪' },
+        { code: 'IN', name: 'India', level: 'moderate', color: 'yellow', flag: '🇮🇳' },
+        { code: 'PK', name: 'Pakistan', level: 'moderate', color: 'yellow', flag: '🇵🇰' },
+        { code: 'TH', name: 'Thailand', level: 'moderate', color: 'yellow', flag: '🇹🇭' },
+        { code: 'VN', name: 'Vietnam', level: 'high', color: 'orange', flag: '🇻🇳' },
+        { code: 'BY', name: 'Belarus', level: 'high', color: 'orange', flag: '🇧🇾' },
+        { code: 'KZ', name: 'Kazakhstan', level: 'moderate', color: 'yellow', flag: '🇰🇿' },
+        { code: 'UZ', name: 'Uzbekistan', level: 'high', color: 'orange', flag: '🇺🇿' },
+        { code: 'ET', name: 'Ethiopia', level: 'high', color: 'orange', flag: '🇪🇹' },
+        { code: 'CU', name: 'Cuba', level: 'high', color: 'orange', flag: '🇨🇺' },
       ];
 
       const loadGlobalStats = () => {
@@ -4110,6 +4110,92 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
               </div>
             </div>
 
+            {/* Interactive World Map */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+              <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+                <i data-lucide="map" className="w-5 h-5 text-cyan-400"></i>
+                Interactive Censorship Map
+              </h3>
+              
+              {/* World Map with clickable countries */}
+              <div className="relative bg-gradient-to-br from-blue-900/20 to-purple-900/20 rounded-xl p-4 overflow-x-auto">
+                <svg viewBox="0 0 1000 500" className="w-full h-auto" style={{minHeight: '300px'}}>
+                  {/* Background */}
+                  <rect width="1000" height="500" fill="rgba(0,0,0,0.2)" rx="12" />
+                  
+                  {/* Simplified country markers (dots on map) */}
+                  {censoredCountries.map((country) => {
+                    // Approximate positions (longitude/latitude to SVG coordinates)
+                    const positions = {
+                      'CN': {x: 700, y: 180},
+                      'IR': {x: 580, y: 200},
+                      'RU': {x: 650, y: 120},
+                      'TR': {x: 520, y: 190},
+                      'EG': {x: 510, y: 220},
+                      'VE': {x: 250, y: 280},
+                      'TM': {x: 600, y: 190},
+                      'KP': {x: 750, y: 190},
+                      'SY': {x: 540, y: 200},
+                      'SA': {x: 560, y: 230},
+                      'AE': {x: 570, y: 230},
+                      'IN': {x: 650, y: 230},
+                      'PK': {x: 620, y: 210},
+                      'TH': {x: 710, y: 250},
+                      'VN': {x: 720, y: 250},
+                      'BY': {x: 520, y: 140},
+                      'KZ': {x: 620, y: 160},
+                      'UZ': {x: 610, y: 190},
+                      'ET': {x: 540, y: 270},
+                      'CU': {x: 230, y: 230}
+                    };
+                    
+                    const pos = positions[country.code] || {x: 500, y: 250};
+                    const fillColor = country.level === 'extreme' ? '#ef4444' : country.level === 'high' ? '#f97316' : '#eab308';
+                    
+                    return (
+                      <g key={country.code} 
+                         onClick={() => loadCountryData(country.code)}
+                         style={{cursor: 'pointer'}}
+                         className="hover:opacity-80 transition-opacity">
+                        {/* Pulsing circle animation for extreme censorship */}
+                        {country.level === 'extreme' && (
+                          <circle cx={pos.x} cy={pos.y} r="20" fill={fillColor} opacity="0.3">
+                            <animate attributeName="r" from="15" to="25" dur="2s" repeatCount="indefinite" />
+                            <animate attributeName="opacity" from="0.5" to="0" dur="2s" repeatCount="indefinite" />
+                          </circle>
+                        )}
+                        
+                        {/* Main marker */}
+                        <circle cx={pos.x} cy={pos.y} r="8" fill={fillColor} stroke="white" strokeWidth="2" />
+                        
+                        {/* Country code label */}
+                        <text x={pos.x} y={pos.y - 15} 
+                              textAnchor="middle" 
+                              fill="white" 
+                              fontSize="11" 
+                              fontWeight="bold"
+                              style={{pointerEvents: 'none'}}>
+                          {country.flag}
+                        </text>
+                      </g>
+                    );
+                  })}
+                  
+                  {/* Legend */}
+                  <g transform="translate(20, 430)">
+                    <text x="0" y="0" fill="white" fontSize="12" fontWeight="bold">Legend:</text>
+                    <circle cx="10" cy="20" r="6" fill="#ef4444" />
+                    <text x="22" y="25" fill="white" fontSize="11">Extreme</text>
+                    <circle cx="90" cy="20" r="6" fill="#f97316" />
+                    <text x="102" y="25" fill="white" fontSize="11">High</text>
+                    <circle cx="160" cy="20" r="6" fill="#eab308" />
+                    <text x="172" y="25" fill="white" fontSize="11">Moderate</text>
+                  </g>
+                </svg>
+                <p className="text-xs text-white/50 text-center mt-2">Click on any country marker to view details</p>
+              </div>
+            </div>
+
             {/* Global Stats */}
             {globalStats && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -4143,7 +4229,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 <option value="">-- Choose a country --</option>
                 {censoredCountries.sort((a, b) => a.name.localeCompare(b.name)).map(country => (
                   <option key={country.code} value={country.code}>
-                    {country.name} ({country.level})
+                    {country.flag} {country.name} ({country.level})
                   </option>
                 ))}
               </select>
@@ -4163,7 +4249,10 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 {/* Country Header */}
                 <div className={`rounded-xl p-4 border ${getLevelColor(censorshipData.level)}`}>
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-xl font-bold text-white">{censorshipData.country}</h3>
+                    <div className="flex items-center gap-3">
+                      <span className="text-4xl">{censoredCountries.find(c => c.name === censorshipData.country)?.flag || '🌍'}</span>
+                      <h3 className="text-xl font-bold text-white">{censorshipData.country}</h3>
+                    </div>
                     <div className="flex items-center gap-2">
                       <i data-lucide={getLevelBadge(censorshipData.level).icon} className="w-5 h-5"></i>
                       <span className="font-semibold">{getLevelBadge(censorshipData.level).text} Censorship</span>
