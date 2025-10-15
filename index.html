@@ -1399,22 +1399,22 @@
       },[]);
       
       return (
-        <header className="flex items-center justify-between border-b border-white/10 pb-3 fade-up flex-wrap gap-3">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
+        <header className="flex items-center justify-between border-b border-white/10 pb-3 fade-up gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <div className="relative h-9 w-9 shrink-0 rounded-xl overflow-hidden border border-white/20 float-slow bg-white/5 hover:scale-110 transition-transform">
               <img src="whistel_logo_top_right_2048.png" alt="Whistle" className="absolute inset-0 h-full w-full object-contain"/>
                {!walletStore.pubkey && <span className="absolute inset-0 rounded-xl bg-cyan-400/20 animate-ping pulse-glow" />}
     </div>
       <div className="min-w-0 flex-1">
-              <div className="text-white font-semibold text-base sm:text-lg">Whistle</div>
-              <div className="text-xs text-white/50 hidden sm:block">P2P encrypted tips • Solana proof</div>
-              <div className="mt-1 flex items-center gap-2 text-[11px] text-white/60 hidden md:flex">
-                <span className="font-mono truncate max-w-[28ch] sm:max-w-[42ch]" title={CONTRACT_ADDRESS}>{CONTRACT_ADDRESS}</span>
-                <button onClick={async()=>{ try{ await navigator.clipboard.writeText(CONTRACT_ADDRESS); alert('CA copied'); }catch{} }} className="rounded-md bg-white/10 hover:bg-white/20 border border-white/10 px-2 py-[2px] text-white/80 btn-press shrink-0">Copy</button>
+              <div className="text-white font-semibold text-sm sm:text-base md:text-lg">Whistle</div>
+              <div className="text-[10px] sm:text-xs text-white/50 hidden sm:block">P2P encrypted tips • Solana proof</div>
+              <div className="flex items-center gap-1 sm:gap-2 text-[9px] sm:text-[11px] text-white/60">
+                <span className="font-mono truncate max-w-[18ch] sm:max-w-[28ch] md:max-w-[42ch]" title={CONTRACT_ADDRESS}>{CONTRACT_ADDRESS}</span>
+                <button onClick={async()=>{ try{ await navigator.clipboard.writeText(CONTRACT_ADDRESS); alert('CA copied'); }catch{} }} className="rounded-md bg-white/10 hover:bg-white/20 border border-white/10 px-1 sm:px-2 py-[2px] text-white/80 btn-press shrink-0 text-[9px] sm:text-[11px]">Copy</button>
       </div>
       </div>
     </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {/* Whitepaper icon link */}
             <a 
               href="whitepaper.html" 
@@ -1422,7 +1422,7 @@
               title="Whitepaper"
               className="text-blue-400 hover:text-blue-300 transition-colors"
             >
-              <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
             </a>
