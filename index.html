@@ -217,32 +217,86 @@
     @media (max-width: 768px) {
       /* Make hero text responsive */
       .text-5xl {
-        font-size: 2rem !important;
+        font-size: 1.75rem !important;
         line-height: 1.2 !important;
       }
       
       .text-xl {
+        font-size: 0.95rem !important;
+      }
+      
+      /* Reduce all icon sizes on mobile */
+      i[data-lucide], svg.lucide {
+        width: 1rem !important;
+        height: 1rem !important;
+      }
+      
+      /* Reduce icon container sizes */
+      .w-14 {
+        width: 2.5rem !important;
+        height: 2.5rem !important;
+      }
+      
+      .w-12 {
+        width: 2.25rem !important;
+        height: 2.25rem !important;
+      }
+      
+      .w-10 {
+        width: 2rem !important;
+        height: 2rem !important;
+      }
+      
+      /* Reduce padding on cards */
+      .p-6 {
+        padding: 1rem !important;
+      }
+      
+      .p-4 {
+        padding: 0.75rem !important;
+      }
+      
+      /* Smaller card titles */
+      .text-xl {
         font-size: 1rem !important;
+      }
+      
+      .text-2xl {
+        font-size: 1.25rem !important;
       }
       
       /* Responsive hero buttons */
       .px-8 {
-        padding-left: 1.5rem !important;
-        padding-right: 1.5rem !important;
+        padding-left: 1.25rem !important;
+        padding-right: 1.25rem !important;
       }
       
       .py-4 {
-        padding-top: 0.75rem !important;
-        padding-bottom: 0.75rem !important;
+        padding-top: 0.65rem !important;
+        padding-bottom: 0.65rem !important;
       }
       
       .text-lg {
-        font-size: 0.95rem !important;
+        font-size: 0.9rem !important;
       }
       
       /* Card grid responsive */
       .grid {
-        gap: 0.75rem !important;
+        gap: 0.5rem !important;
+      }
+      
+      /* Reduce section spacing */
+      .space-y-6 > * + * {
+        margin-top: 1rem !important;
+      }
+      
+      .space-y-4 > * + * {
+        margin-top: 0.75rem !important;
+      }
+      
+      .py-8 {
+        padding-top: 1.5rem !important;
+        padding-bottom: 1.5rem !important;
       }
       
       /* SVG maps - ensure they scale properly */
@@ -260,15 +314,6 @@
         font-size: 10px !important;
       }
       
-      /* Privacy checkup cards */
-      .space-y-6 > * + * {
-        margin-top: 1rem !important;
-      }
-      
-      .space-y-4 > * + * {
-        margin-top: 0.75rem !important;
-      }
-      
       /* Ensure iframes are responsive */
       iframe {
         max-width: 100% !important;
@@ -284,24 +329,85 @@
       textarea, input[type="text"], input[type="file"] {
         font-size: 16px !important; /* Prevents zoom on iOS */
       }
+      
+      /* Compact section headers */
+      .mb-4 {
+        margin-bottom: 0.75rem !important;
+      }
+      
+      .mb-8 {
+        margin-bottom: 1.5rem !important;
+      }
     }
     
     @media (max-width: 640px) {
       /* Extra small screens */
+      .text-5xl {
+        font-size: 1.5rem !important;
+      }
+      
       .text-2xl {
-        font-size: 1.25rem !important;
+        font-size: 1.1rem !important;
+      }
+      
+      .text-xl {
+        font-size: 0.875rem !important;
+      }
+      
+      /* Even smaller icons on phones */
+      i[data-lucide], svg.lucide {
+        width: 0.875rem !important;
+        height: 0.875rem !important;
+      }
+      
+      /* Smaller icon containers */
+      .w-14 {
+        width: 2rem !important;
+        height: 2rem !important;
+      }
+      
+      .w-12 {
+        width: 1.875rem !important;
+        height: 1.875rem !important;
+      }
+      
+      .w-10 {
+        width: 1.75rem !important;
+        height: 1.75rem !important;
+      }
+      
+      /* Tighter padding */
+      .p-6 {
+        padding: 0.75rem !important;
+      }
+      
+      .p-4 {
+        padding: 0.5rem !important;
       }
       
       /* Hero section padding */
       .py-8 {
-        padding-top: 2rem !important;
-        padding-bottom: 2rem !important;
+        padding-top: 1.25rem !important;
+        padding-bottom: 1.25rem !important;
+      }
+      
+      /* Tighter spacing */
+      .space-y-6 > * + * {
+        margin-top: 0.75rem !important;
+      }
+      
+      .mb-8 {
+        margin-bottom: 1rem !important;
+      }
+      
+      .mb-4 {
+        margin-bottom: 0.5rem !important;
       }
       
       /* Button stacking on very small screens */
       .flex.gap-4 {
         flex-direction: column !important;
-        gap: 0.75rem !important;
+        gap: 0.5rem !important;
       }
       
       .flex.gap-4 button {
