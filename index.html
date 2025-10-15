@@ -114,6 +114,24 @@
     .delay-100{animation-delay:0.1s}
     .delay-200{animation-delay:0.2s}
     
+    /* Premium Button Styles */
+    .premium-btn-default{
+      background:linear-gradient(135deg, #10b981 0%, #06b6d4 50%, #3b82f6 100%);
+      background-size:200% 200%;
+      animation:gradient-shift 3s ease infinite;
+      box-shadow:0 10px 40px rgba(16, 185, 129, 0.4), 0 0 20px rgba(6, 182, 212, 0.3);
+      border:2px solid rgba(255, 255, 255, 0.2);
+    }
+    .premium-btn-checking{
+      background:linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+      box-shadow:0 10px 40px rgba(6, 182, 212, 0.4), 0 0 20px rgba(6, 182, 212, 0.3);
+      border:2px solid rgba(255, 255, 255, 0.2);
+    }
+    .shine-effect{
+      background:linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      animation:shine 2s infinite;
+    }
+    
     /* Button press effect */
     .btn-press{transition:all .15s ease}
     .btn-press:active{transform:scale(.96)}
@@ -1242,7 +1260,7 @@
             <div className="flex items-center gap-3">
               <i data-lucide={currentTab.icon} className="w-5 h-5 text-cyan-400"></i>
               <span className="font-semibold">{currentTab.label}</span>
-      </div>
+  </div>
             <i data-lucide={isOpen ? "chevron-up" : "chevron-down"} className="w-5 h-5 text-white/60"></i>
           </button>
           
@@ -1266,9 +1284,9 @@
                   <span className="font-medium">{t.label}</span>
                 </button>
               ))}
-      </div>
-          )}
     </div>
+          )}
+      </div>
       );
     }
 
@@ -1890,10 +1908,10 @@
             </div>
             
             <div className="grid md:grid-cols-2 gap-4">
-              <div>
+      <div>
                 <label className="text-xs text-white/60">Message (text)</label>
                 <textarea value={tipText} onChange={(e) => setTipText(e.target.value)} rows={8} className="mt-1 w-full rounded-xl bg-white/[0.06] border border-white/10 p-3 outline-none focus:ring-2 focus:ring-cyan-400/40" placeholder="Describe the issue with verifiable details." />
-              </div>
+      </div>
             <div onDragOver={(e)=>{e.preventDefault(); setIsDrag(true);}} onDragLeave={()=>setIsDrag(false)} onDrop={(e)=>{ e.preventDefault(); setIsDrag(false); const files = Array.from(e.dataTransfer.files||[]); setDroppedFiles(files); pushToast(files.length?`Added ${files.length} file(s)`:'No files', files.length?'ok':'err'); }} className={"rounded-xl p-2 "+(isDrag?"border-2 border-dashed border-cyan-400 bg-white/10":"")}>
               <label className="text-xs text-white/60">Attach evidence (≤ 5 GB total)</label>
               <input ref={fileRef} type="file" multiple className="mt-1 w-full rounded-xl bg-white/[0.06] border border-white/10 p-2" />
@@ -1905,7 +1923,7 @@
                     {droppedFiles.map((f,i)=> <li key={i}>{f.name} ({Math.round(f.size/1024)} KB)</li>)}
                   </ul>
                   <button onClick={(e)=>{ ripple(e); setDroppedFiles([]); }} className="mt-2 rounded-xl bg-white/10 hover:bg-white/20 text-white px-3 py-1 border border-white/10 btn-ripple text-xs">Clear dropped</button>
-                </div>
+    </div>
               )}
       </div>
     </div>
@@ -1926,7 +1944,7 @@
           )}
 
           <div className="grid md:grid-cols-2 gap-4">
-            <div>
+      <div>
               <h4 className="flex items-center gap-2 text-white/90 font-semibold mb-1">
                 <i data-lucide="key" className="w-5 h-5 text-cyan-400"></i>
                 Step A — Create Offer {stegoMode && '(for Stego Image)'}
@@ -1961,8 +1979,8 @@
                   <span className="pulse-glow">Waiting for newsroom Answer…</span>
                 </div>
               )}
-    </div>
-            <div>
+      </div>
+      <div>
               <h4 className="flex items-center gap-2 text-white/90 font-semibold mb-1">
                 <i data-lucide="message-square" className="w-5 h-5 text-purple-400"></i>
                 Step B — Paste Answer
@@ -1992,8 +2010,8 @@
                   <span className="pulse-glow">Connecting to newsroom…</span>
     </div>
               )}
+      </div>
     </div>
-</div>
 
           <div className="mt-4">
             <button onClick={(e)=>{ ripple(e); sendNow(); }} className="flex items-center gap-2 justify-center rounded-xl bg-gradient-to-r from-cyan-400 to-purple-400 hover:from-cyan-300 hover:to-purple-300 text-black font-semibold px-6 py-3 disabled:opacity-60 btn-ripple btn-press shadow-lg hover:shadow-xl transition-all" disabled={connStatus !== "Connected" || sending}>
@@ -2003,7 +2021,7 @@
             {sending && (
               <div className="mt-2 h-2 w-full rounded-full bg-white/10 overflow-hidden scale-in">
                 <div className="h-2 progress-shine rounded-full transition-all" style={{ width: `${prog}%` }} />
-              </div>
+    </div>
             )}
           </div>
           <div className="text-xs text-white/60 mt-2 space-y-1">
@@ -2168,12 +2186,12 @@
             <div className="flex items-center gap-2 mb-2">
               <i data-lucide="image-plus" className="w-5 h-5 text-purple-400"></i>
               <h4 className="text-white/90 font-semibold text-sm">Extract Offer from Image</h4>
-            </div>
+    </div>
             <p className="text-xs text-white/60 mb-2">If sender used steganography, upload the image to extract the hidden Offer.</p>
             <div className="flex gap-2 items-end">
               <div className="flex-1">
                 <input ref={stegoExtractRef} type="file" accept="image/*" className="w-full rounded-lg bg-white/[0.06] border border-white/10 p-2 text-xs" />
-              </div>
+    </div>
               <button onClick={(e)=>{ ripple(e); extractFromStegoImage(); }} disabled={extractingStegoImage} className="flex items-center gap-2 rounded-lg bg-purple-500/30 hover:bg-purple-400/40 text-purple-100 text-xs font-semibold px-3 py-2 border border-purple-400/30 btn-ripple">
                 <i data-lucide={extractingStegoImage ? "loader" : "scan"} className={`w-3 h-3 ${extractingStegoImage ? 'animate-spin' : ''}`}></i>
                 {extractingStegoImage ? 'Extracting...' : 'Extract Offer'}
@@ -2186,7 +2204,7 @@
             <div className="flex items-center gap-2 mb-2">
               <i data-lucide="timer" className="w-5 h-5 text-orange-400"></i>
               <h4 className="text-white/90 font-semibold text-sm">Self-Destruct Timer</h4>
-            </div>
+    </div>
             <p className="text-xs text-white/60 mb-2">Messages will automatically delete after this time. No trace left.</p>
             <div className="flex items-center gap-3">
               <select value={selfDestructTime} onChange={(e)=>setSelfDestructTime(Number(e.target.value))} className="rounded-lg bg-white/[0.06] border border-white/10 p-2 text-xs text-white">
@@ -2204,8 +2222,8 @@
                 </span>
               )}
             </div>
-          </div>
-          
+</div>
+
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <h4 className="flex items-center gap-2 text-white/90 font-semibold mb-1">
@@ -3765,55 +3783,44 @@
           <div className="space-y-6">
             {/* Run Checkup Button - Premium Dynamic */}
             <div className="text-center">
-              <button
-                onClick={runCheckup}
-                disabled={checking}
-                className="group relative mx-auto px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-300 overflow-hidden disabled:opacity-70 disabled:cursor-not-allowed"
-                style={{
-                  background: checking 
-                    ? 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)' 
-                    : 'linear-gradient(135deg, #10b981 0%, #06b6d4 50%, #3b82f6 100%)',
-                  backgroundSize: '200% 200%',
-                  animation: checking ? 'none' : 'gradient-shift 3s ease infinite',
-                  boxShadow: checking 
-                    ? '0 10px 40px rgba(6, 182, 212, 0.4), 0 0 20px rgba(6, 182, 212, 0.3)' 
-                    : '0 10px 40px rgba(16, 185, 129, 0.4), 0 0 20px rgba(6, 182, 212, 0.3)',
-                  color: 'white',
-                  border: '2px solid rgba(255, 255, 255, 0.2)'
-                }}
-              >
-                {/* Shine effect */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                     style={{
-                       background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
-                       animation: 'shine 2s infinite'
-                     }}>
-                </div>
-                
-                {/* Button content */}
-                <div className="relative flex items-center gap-3">
-                  <div className={`transition-transform duration-300 ${checking ? '' : 'group-hover:scale-110 group-hover:rotate-12'}`}>
-                    <i data-lucide={checking ? "loader" : "shield-check"} className={`w-6 h-6 ${checking ? 'animate-spin' : ''}`}></i>
-                  </div>
-                  <span className="relative">
-                    {checking ? 'Running Checkup...' : 'Run Privacy Checkup'}
-                    {/* Pulse dots when checking */}
-                    {checking && (
-                      <span className="inline-flex ml-1">
-                        <span className="animate-pulse delay-0">.</span>
-                        <span className="animate-pulse delay-100">.</span>
-                        <span className="animate-pulse delay-200">.</span>
-                      </span>
-                    )}
-                  </span>
-                  {!checking && (
-                    <i data-lucide="arrow-right" className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1"></i>
-                  )}
-                </div>
-                
+              <div className="relative inline-block">
                 {/* Glow effect on hover */}
-                <div className="absolute -inset-1 bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-500 rounded-2xl opacity-0 group-hover:opacity-30 blur-xl transition-opacity duration-500 -z-10"></div>
-              </button>
+                <div className="absolute -inset-1 bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-500 rounded-2xl opacity-0 group-hover:opacity-30 blur-xl transition-opacity duration-500"></div>
+                
+                <button
+                  onClick={runCheckup}
+                  disabled={checking}
+                  className={`group relative px-8 py-4 rounded-2xl font-bold text-lg text-white transition-all duration-300 overflow-hidden disabled:opacity-70 disabled:cursor-not-allowed ${
+                    checking ? 'premium-btn-checking' : 'premium-btn-default'
+                  }`}
+                >
+                  {/* Shine effect */}
+                  {!checking && (
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 shine-effect"></div>
+                  )}
+                  
+                  {/* Button content */}
+                  <div className="relative flex items-center gap-3 z-10">
+                    <div className={`transition-transform duration-300 ${checking ? '' : 'group-hover:scale-110 group-hover:rotate-12'}`}>
+                      <i data-lucide={checking ? "loader" : "shield-check"} className={`w-6 h-6 ${checking ? 'animate-spin' : ''}`}></i>
+                    </div>
+                    <span className="relative">
+                      {checking ? 'Running Checkup...' : 'Run Privacy Checkup'}
+                      {/* Pulse dots when checking */}
+                      {checking && (
+                        <span className="inline-flex ml-1">
+                          <span className="animate-pulse delay-0">.</span>
+                          <span className="animate-pulse delay-100">.</span>
+                          <span className="animate-pulse delay-200">.</span>
+                        </span>
+                      )}
+                    </span>
+                    {!checking && (
+                      <i data-lucide="arrow-right" className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1"></i>
+                    )}
+                  </div>
+                </button>
+              </div>
               
               {/* Subtext */}
               {!checking && !results && (
