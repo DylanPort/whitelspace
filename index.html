@@ -231,6 +231,19 @@
         height: 1rem !important;
       }
       
+      /* Exception: Keep header button icons larger */
+      header i[data-lucide] {
+        width: 1.25rem !important;
+        height: 1.25rem !important;
+      }
+      
+      /* Exception: Keep censorship map SVG full size */
+      svg[viewBox="0 0 1000 500"] {
+        width: 100% !important;
+        height: auto !important;
+        min-height: 300px !important;
+      }
+      
       /* Reduce icon container sizes */
       .w-14 {
         width: 2.5rem !important;
@@ -358,6 +371,19 @@
       i[data-lucide], svg.lucide {
         width: 0.875rem !important;
         height: 0.875rem !important;
+      }
+      
+      /* Exception: Keep header button icons larger on phones */
+      header i[data-lucide] {
+        width: 1.25rem !important;
+        height: 1.25rem !important;
+      }
+      
+      /* Exception: Keep censorship map SVG full size on phones */
+      svg[viewBox="0 0 1000 500"] {
+        width: 100% !important;
+        height: auto !important;
+        min-height: 250px !important;
       }
       
       /* Smaller icon containers */
@@ -1377,9 +1403,9 @@
               href="whitepaper.html" 
               target="_blank"
               title="Whitepaper"
-              className="w-11 h-11 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-400 hover:to-purple-500 text-white shadow-lg shadow-purple-500/30 transition-all hover:scale-110 active:scale-95 flex items-center justify-center"
+              className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 hover:from-blue-500 hover:to-blue-700 text-white shadow-lg shadow-blue-600/30 transition-all hover:scale-110 active:scale-95 flex items-center justify-center"
             >
-              <i data-lucide="book-open" className="w-5 h-5"></i>
+              <i data-lucide="book-open" className="w-6 h-6"></i>
             </a>
             <WalletConnectButton />
           </div>
@@ -1419,7 +1445,7 @@
             } catch (e) {}
           }}
         >
-          <i data-lucide={isConnected ? "check-circle" : "wallet"} className="w-5 h-5 text-white"></i>
+          <i data-lucide={isConnected ? "check-circle" : "wallet"} className="w-6 h-6 text-white"></i>
         </button>
       );
     }
