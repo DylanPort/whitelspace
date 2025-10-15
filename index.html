@@ -212,6 +212,116 @@
         transform:none!important;
       }
     }
+    
+    /* Mobile-specific improvements for all sections */
+    @media (max-width: 768px) {
+      /* Make hero text responsive */
+      .text-5xl {
+        font-size: 2rem !important;
+        line-height: 1.2 !important;
+      }
+      
+      .text-xl {
+        font-size: 1rem !important;
+      }
+      
+      /* Responsive hero buttons */
+      .px-8 {
+        padding-left: 1.5rem !important;
+        padding-right: 1.5rem !important;
+      }
+      
+      .py-4 {
+        padding-top: 0.75rem !important;
+        padding-bottom: 0.75rem !important;
+      }
+      
+      .text-lg {
+        font-size: 0.95rem !important;
+      }
+      
+      /* Card grid responsive */
+      .grid {
+        gap: 0.75rem !important;
+      }
+      
+      /* SVG maps - ensure they scale properly */
+      svg {
+        width: 100% !important;
+        height: auto !important;
+      }
+      
+      /* Censorship map dots - maintain visibility on mobile */
+      svg circle {
+        r: 6 !important;
+      }
+      
+      svg text {
+        font-size: 10px !important;
+      }
+      
+      /* Privacy checkup cards */
+      .space-y-6 > * + * {
+        margin-top: 1rem !important;
+      }
+      
+      .space-y-4 > * + * {
+        margin-top: 0.75rem !important;
+      }
+      
+      /* Ensure iframes are responsive */
+      iframe {
+        max-width: 100% !important;
+        height: 700px !important;
+      }
+      
+      /* Steganography tabs */
+      .gap-2 {
+        gap: 0.25rem !important;
+      }
+      
+      /* Form inputs */
+      textarea, input[type="text"], input[type="file"] {
+        font-size: 16px !important; /* Prevents zoom on iOS */
+      }
+    }
+    
+    @media (max-width: 640px) {
+      /* Extra small screens */
+      .text-2xl {
+        font-size: 1.25rem !important;
+      }
+      
+      /* Hero section padding */
+      .py-8 {
+        padding-top: 2rem !important;
+        padding-bottom: 2rem !important;
+      }
+      
+      /* Button stacking on very small screens */
+      .flex.gap-4 {
+        flex-direction: column !important;
+        gap: 0.75rem !important;
+      }
+      
+      .flex.gap-4 button {
+        width: 100% !important;
+      }
+      
+      /* Censorship map - smaller dots for small screens */
+      svg circle {
+        r: 5 !important;
+      }
+      
+      svg text {
+        font-size: 9px !important;
+      }
+      
+      /* Privacy Swap iframe */
+      iframe {
+        height: 600px !important;
+      }
+    }
 </style>
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="preconnect" href="https://cdn.tailwindcss.com">
@@ -1214,20 +1324,22 @@
       const tabs = [
         { id: "home", label: "Home", icon: "home" },
         { id: "webrtc", label: "WebRTC Transfer", icon: "radio" },
-        { id: "image-stego", label: "🎭 Image Stego", icon: "image" },
-        { id: "audio-stego", label: "🎵 Audio Stego", icon: "music" },
-        { id: "video-stego", label: "🎥 Video Stego", icon: "video" },
         { id: "swap", label: "Privacy Swap", icon: "shuffle" },
+        { id: "steganography", label: "🎭 Steganography", icon: "eye-off" },
+        { id: "privacy-checkup", label: "Privacy Checkup", icon: "shield-check" },
+        { id: "censorship-map", label: "Censorship Map", icon: "globe" },
+        { id: "tor-bridges", label: "Tor Bridges", icon: "shield-alert" },
+        { id: "proxy-links", label: "Proxy Links", icon: "link-2" },
       ];
       
       const currentTab = tabs.find(t => t.id === step) || tabs[0];
       
       useEffect(() => {
         if (window.lucide) window.lucide.createIcons();
-      }, [isOpen]);
+      }, [isOpen, step]);
       
       return (
-        <div className="relative md:hidden">
+        <div className="relative md:hidden mb-4">
           {/* Dropdown Button */}
           <button
             onClick={() => setIsOpen(!isOpen)}
@@ -1235,14 +1347,14 @@
           >
             <div className="flex items-center gap-3">
               <i data-lucide={currentTab.icon} className="w-5 h-5 text-cyan-400"></i>
-              <span className="font-semibold">{currentTab.label}</span>
+              <span className="font-semibold text-sm sm:text-base">{currentTab.label}</span>
       </div>
             <i data-lucide={isOpen ? "chevron-up" : "chevron-down"} className="w-5 h-5 text-white/60"></i>
           </button>
           
           {/* Dropdown Menu */}
           {isOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 rounded-xl bg-slate-900/95 backdrop-blur-xl border border-white/10 shadow-2xl z-50 overflow-hidden">
+            <div className="absolute top-full left-0 right-0 mt-2 rounded-xl bg-slate-900/95 backdrop-blur-xl border border-white/10 shadow-2xl z-50 overflow-hidden max-h-[70vh] overflow-y-auto">
               {tabs.map((t) => (
                 <button
                   key={t.id}
@@ -1257,7 +1369,7 @@
                   }`}
                 >
                   <i data-lucide={t.icon} className="w-5 h-5"></i>
-                  <span className="font-medium">{t.label}</span>
+                  <span className="font-medium text-sm">{t.label}</span>
                 </button>
               ))}
       </div>
@@ -1271,12 +1383,12 @@
       const items = [
         { id:'home',    label:'Home', icon:'home' },
         { id:'webrtc',    label:'WebRTC Transfer', icon:'radio' },
+        { id:'swap', label:'Privacy Swap', icon:'shuffle' },
         { id:'steganography', label:'🎭 Steganography', icon:'eye-off' },
         { id:'privacy-checkup', label:'Privacy Checkup', icon:'shield-check' },
         { id:'censorship-map', label:'Censorship Map', icon:'globe' },
         { id:'tor-bridges', label:'Tor Bridges', icon:'shield-alert' },
         { id:'proxy-links', label:'Proxy Links', icon:'link-2' },
-        { id:'swap', label:'Privacy Swap', icon:'shuffle' },
       ];
       
       useEffect(()=>{
@@ -1312,24 +1424,24 @@
       return (
         <div className="space-y-6">
           {/* Hero Section */}
-          <div className="fade-up text-center py-8">
-            <h1 className="text-5xl font-bold text-white mb-4 tracking-tight">
+          <div className="fade-up text-center py-8 px-4">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 tracking-tight">
               Privacy is a <span className="bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">right</span>, not a privilege
             </h1>
-            <p className="text-xl text-white/70 max-w-3xl mx-auto mb-8">
+            <p className="text-base sm:text-lg md:text-xl text-white/70 max-w-3xl mx-auto mb-8">
               Military-grade encryption. Zero-knowledge architecture. Open source. Built for activists, journalists, and anyone who values freedom.
             </p>
-            <div className="flex items-center justify-center gap-4">
-              <button onClick={()=>setStep('webrtc')} className="px-8 py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-white font-bold text-lg shadow-lg shadow-cyan-500/50 transition-all hover:scale-105">
-                <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 max-w-2xl mx-auto">
+              <button onClick={()=>setStep('webrtc')} className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-white font-bold text-base sm:text-lg shadow-lg shadow-cyan-500/50 transition-all hover:scale-105">
+                <div className="flex items-center justify-center gap-2">
                   <i data-lucide="shield" className="w-5 h-5"></i>
-                  Start Encrypted Transfer
+                  <span>Start Encrypted Transfer</span>
                 </div>
               </button>
-              <button onClick={()=>setStep('steganography')} className="px-8 py-4 rounded-xl border-2 border-white/20 hover:border-purple-400/50 bg-white/5 hover:bg-white/10 text-white font-bold text-lg transition-all hover:scale-105">
-                <div className="flex items-center gap-2">
+              <button onClick={()=>setStep('steganography')} className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-xl border-2 border-white/20 hover:border-purple-400/50 bg-white/5 hover:bg-white/10 text-white font-bold text-base sm:text-lg transition-all hover:scale-105">
+                <div className="flex items-center justify-center gap-2">
                   <i data-lucide="eye-off" className="w-5 h-5"></i>
-                  Hide Messages
+                  <span>Hide Messages</span>
                 </div>
               </button>
             </div>
