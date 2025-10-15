@@ -232,9 +232,15 @@
       }
       
       /* Exception: Keep header button icons larger */
-      header i[data-lucide] {
+      header i[data-lucide], header svg {
         width: 1.5rem !important;
         height: 1.5rem !important;
+      }
+      
+      /* Exception: Keep whitepaper icon larger on mobile */
+      header a svg {
+        width: 1.75rem !important;
+        height: 1.75rem !important;
       }
       
       /* Exception: Keep censorship map SVG full size */
@@ -374,9 +380,15 @@
       }
       
       /* Exception: Keep header button icons larger on phones */
-      header i[data-lucide] {
+      header i[data-lucide], header svg {
         width: 1.5rem !important;
         height: 1.5rem !important;
+      }
+      
+      /* Exception: Keep whitepaper icon larger on phones */
+      header a svg {
+        width: 1.75rem !important;
+        height: 1.75rem !important;
       }
       
       /* Exception: Keep censorship map SVG full size on phones */
@@ -1382,6 +1394,10 @@
     }
 
     function SectionHeader() {
+      useEffect(()=>{
+        if(window.lucide) window.lucide.createIcons();
+      },[]);
+      
       return (
         <header className="flex items-center justify-between border-b border-white/10 pb-3 fade-up flex-wrap gap-3">
           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -1392,13 +1408,24 @@
       <div className="min-w-0 flex-1">
               <div className="text-white font-semibold text-base sm:text-lg">Whistle</div>
               <div className="text-xs text-white/50 hidden sm:block">P2P encrypted tips • Solana proof</div>
-              <div className="mt-1 flex items-center gap-2 text-[11px] text-white/60">
+              <div className="mt-1 flex items-center gap-2 text-[11px] text-white/60 hidden md:flex">
                 <span className="font-mono truncate max-w-[28ch] sm:max-w-[42ch]" title={CONTRACT_ADDRESS}>{CONTRACT_ADDRESS}</span>
                 <button onClick={async()=>{ try{ await navigator.clipboard.writeText(CONTRACT_ADDRESS); alert('CA copied'); }catch{} }} className="rounded-md bg-white/10 hover:bg-white/20 border border-white/10 px-2 py-[2px] text-white/80 btn-press shrink-0">Copy</button>
       </div>
       </div>
     </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
+            {/* Whitepaper icon link */}
+            <a 
+              href="whitepaper.html" 
+              target="_blank"
+              title="Whitepaper"
+              className="text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+            </a>
             <WalletConnectButton />
           </div>
 </header>
