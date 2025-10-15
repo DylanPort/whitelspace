@@ -4222,28 +4222,28 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 <svg viewBox="0 0 1000 500" className="relative w-full h-auto" style={{minHeight: '400px'}}>
                   {/* Simplified country markers (dots on map) */}
                   {censoredCountries.map((country) => {
-                    // Approximate positions (longitude/latitude to SVG coordinates)
+                    // Adjusted positions to align with actual world map
                     const positions = {
-                      'CN': {x: 700, y: 180},
-                      'IR': {x: 580, y: 200},
-                      'RU': {x: 650, y: 120},
-                      'TR': {x: 520, y: 190},
-                      'EG': {x: 510, y: 220},
-                      'VE': {x: 250, y: 280},
-                      'TM': {x: 600, y: 190},
-                      'KP': {x: 750, y: 190},
-                      'SY': {x: 540, y: 200},
-                      'SA': {x: 560, y: 230},
-                      'AE': {x: 570, y: 230},
-                      'IN': {x: 650, y: 230},
-                      'PK': {x: 620, y: 210},
-                      'TH': {x: 710, y: 250},
-                      'VN': {x: 720, y: 250},
-                      'BY': {x: 520, y: 140},
-                      'KZ': {x: 620, y: 160},
-                      'UZ': {x: 610, y: 190},
-                      'ET': {x: 540, y: 270},
-                      'CU': {x: 230, y: 230}
+                      'CN': {x: 750, y: 220},
+                      'IR': {x: 620, y: 240},
+                      'RU': {x: 700, y: 160},
+                      'TR': {x: 560, y: 230},
+                      'EG': {x: 550, y: 260},
+                      'VE': {x: 290, y: 320},
+                      'TM': {x: 640, y: 230},
+                      'KP': {x: 800, y: 230},
+                      'SY': {x: 580, y: 240},
+                      'SA': {x: 600, y: 270},
+                      'AE': {x: 610, y: 270},
+                      'IN': {x: 690, y: 270},
+                      'PK': {x: 660, y: 250},
+                      'TH': {x: 750, y: 290},
+                      'VN': {x: 760, y: 290},
+                      'BY': {x: 560, y: 180},
+                      'KZ': {x: 660, y: 200},
+                      'UZ': {x: 650, y: 230},
+                      'ET': {x: 580, y: 310},
+                      'CU': {x: 270, y: 270}
                     };
                     
                     const pos = positions[country.code] || {x: 500, y: 250};
