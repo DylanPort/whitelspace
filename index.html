@@ -1156,14 +1156,14 @@
       </div>
       </div>
     </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <a 
               href="whitepaper.html" 
               target="_blank"
-              className="rounded-xl bg-purple-500/80 hover:bg-purple-400 text-white font-semibold px-4 py-2 transition-colors btn-ripple active:scale-[.98] flex items-center gap-2"
+              title="Whitepaper"
+              className="w-11 h-11 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-400 hover:to-purple-500 text-white shadow-lg shadow-purple-500/30 transition-all hover:scale-110 active:scale-95 flex items-center justify-center"
             >
-              <i data-lucide="book-open" className="w-4 h-4"></i>
-              <span className="hidden sm:inline">Whitepaper</span>
+              <i data-lucide="book-open" className="w-5 h-5"></i>
             </a>
             <WalletConnectButton />
           </div>
@@ -1175,13 +1175,21 @@
     const walletStore = { pubkey: null, setPub: () => {} };
 
     function WalletConnectButton() {
-      const [label, setLabel] = useState("Connect Phantom");
+      const [isConnected, setIsConnected] = useState(false);
       useEffect(() => {
-        walletStore.setPub = (pk) => setLabel(pk ? `Connected: ${pk.slice(0, 4)}…` : "Connect Phantom");
+        walletStore.setPub = (pk) => setIsConnected(!!pk);
       }, []);
+      
+      const buttonTitle = isConnected ? "Wallet Connected" : "Connect Phantom Wallet";
+      
       return (
         <button
-          className="rounded-xl bg-cyan-500/80 hover:bg-cyan-400 text-black font-semibold px-4 py-2 transition-colors btn-ripple active:scale-[.98]"
+          title={buttonTitle}
+          className={`w-11 h-11 rounded-full transition-all hover:scale-110 active:scale-95 flex items-center justify-center shadow-lg ${
+            isConnected 
+              ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 shadow-emerald-500/30' 
+              : 'bg-gradient-to-br from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 shadow-cyan-500/30'
+          }`}
           onClick={async (e) => {
             ripple(e);
             if (!window?.solana?.isPhantom) {
@@ -1195,7 +1203,7 @@
             } catch (e) {}
           }}
         >
-          {label}
+          <i data-lucide={isConnected ? "check-circle" : "wallet"} className="w-5 h-5 text-white"></i>
         </button>
       );
     }
