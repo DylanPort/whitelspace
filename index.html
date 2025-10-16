@@ -1683,12 +1683,12 @@
       const tabs = [
         { id: "home", label: "Home", icon: "home" },
         { id: "webrtc", label: "WebRTC Transfer", icon: "radio" },
-        { id: "swap", label: "Privacy Swap", icon: "shuffle" },
-        { id: "solana-privacy", label: "Solana Privacy", icon: "shield" },
+        { id: "swap", label: "Privacy Swap", iconImg: "4DqRlDPT_400x400.png.png" },
+        { id: "solana-privacy", label: "Solana Privacy", iconImg: "solana.png" },
         { id: "steganography", label: "🎭 Steganography", icon: "eye-off" },
         { id: "privacy-checkup", label: "Privacy Checkup", icon: "shield-check" },
         { id: "censorship-map", label: "Censorship Map", icon: "globe" },
-        { id: "tor-bridges", label: "Tor Bridges", icon: "shield-alert" },
+        { id: "tor-bridges", label: "Tor Bridges", iconImg: "Tor_logo1.png" },
         { id: "proxy-links", label: "Proxy Links", icon: "link-2" },
       ];
       
@@ -1706,7 +1706,11 @@
             className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-white/[0.04] border border-white/10 text-white hover:bg-white/[0.08] transition-all"
           >
             <div className="flex items-center gap-3">
-              <i data-lucide={currentTab.icon} className="w-5 h-5 text-cyan-400"></i>
+              {currentTab.iconImg ? (
+                <img src={currentTab.iconImg} alt={currentTab.label} className="w-5 h-5 object-contain" />
+              ) : (
+                <i data-lucide={currentTab.icon} className="w-5 h-5 text-cyan-400"></i>
+              )}
               <span className="font-semibold text-sm sm:text-base">{currentTab.label}</span>
   </div>
             <i data-lucide={isOpen ? "chevron-up" : "chevron-down"} className="w-5 h-5 text-white/60"></i>
@@ -1728,7 +1732,11 @@
                       : "text-white/80 hover:bg-white/[0.08] border-l-4 border-transparent"
                   }`}
                 >
-                  <i data-lucide={t.icon} className="w-5 h-5"></i>
+                  {t.iconImg ? (
+                    <img src={t.iconImg} alt={t.label} className="w-5 h-5 object-contain" />
+                  ) : (
+                    <i data-lucide={t.icon} className="w-5 h-5"></i>
+                  )}
                   <span className="font-medium text-sm">{t.label}</span>
                 </button>
               ))}
