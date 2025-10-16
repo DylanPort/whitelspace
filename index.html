@@ -59,17 +59,33 @@
       useEffect(()=>{ if(window.lucide) window.lucide.createIcons(); },[tab]);
       const conn = useMemo(()=> new Connection(rpc, 'confirmed'), [rpc]);
       const toLamports = (sol)=> Math.round(parseFloat(sol||'0') * 1e9);
-      const b58 = (u8)=> (window.bs58 ? bs58.encode(u8) : btoa(String.fromCharCode(...u8)));
+      const toB58 = (u8)=> (window.bs58 ? window.bs58.encode(u8) : btoa(String.fromCharCode(...u8)));
+      const fromB58 = (str)=> (window.bs58 ? new Uint8Array(window.bs58.decode(str)) : Uint8Array.from(atob(str), c=>c.charCodeAt(0)));
       async function getWallet(){ if(!window?.solana){ alert('Install Phantom'); throw new Error('wallet'); } const r=await window.solana.connect(); return new PublicKey(r.publicKey.toString()); }
-      async function signAndSend(tx, feePayer){ tx.feePayer=feePayer; tx.recentBlockhash=(await conn.getLatestBlockhash()).blockhash; const s=await window.solana.signTransaction(tx); const sig=await conn.sendRawTransaction(s.serialize()); await conn.confirmTransaction(sig,'confirmed'); pushToast?.('ok','Sent'); return sig; }
+      async function signAndSend(tx, feePayer){
+        tx.feePayer = feePayer;
+        const { blockhash } = await conn.getLatestBlockhash();
+        tx.recentBlockhash = blockhash;
+        try{
+          const s = await window.solana.signTransaction(tx);
+          const sig = await conn.sendRawTransaction(s.serialize(), { skipPreflight:false });
+          await conn.confirmTransaction(sig, 'confirmed');
+          pushToast?.('ok','Sent');
+          return sig;
+        }catch(e){
+          console.error(e);
+          pushToast?.('err', e?.message || 'Transaction failed');
+          throw e;
+        }
+      }
       const MEMO_PROGRAM_ID = new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
       function memoIx(text, signer){ return new solanaWeb3.TransactionInstruction({ keys:[{pubkey:signer,isSigner:true,isWritable:false}], programId: MEMO_PROGRAM_ID, data: new TextEncoder().encode(text||'') }); }
       async function genKey(){ const k=await crypto.subtle.generateKey({name:'AES-GCM',length:256},true,['encrypt','decrypt']); const raw=new Uint8Array(await crypto.subtle.exportKey('raw',k)); return { key:k, rawB64:btoa(String.fromCharCode(...raw)) }; }
       async function encryptAES(text, base64){ const raw=Uint8Array.from(atob(base64),c=>c.charCodeAt(0)); const key=await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt']); const iv=crypto.getRandomValues(new Uint8Array(12)); const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(text)); return btoa(String.fromCharCode(...iv,...new Uint8Array(ct))); }
       async function decryptAES(b64, base64){ const rk=Uint8Array.from(atob(base64),c=>c.charCodeAt(0)); const key=await crypto.subtle.importKey('raw',rk,'AES-GCM',false,['decrypt']); const bytes=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)); const iv=bytes.slice(0,12), ct=bytes.slice(12); const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv},key,ct); return new TextDecoder().decode(pt); }
-      async function createClaimLink(){ const ephem=solanaWeb3.Keypair.generate(); const url=`${location.origin}${location.pathname}#claim=${b58(ephem.secretKey)}`; setClaimLink(url); pushToast?.('info','Link created. Fund it, then share.'); }
-      async function fundClaim(){ if(!claimLink) return; const secB64=claimLink.split('#claim=')[1]; const sec=Uint8Array.from(atob(secB64),c=>c.charCodeAt(0)); const ephem=solanaWeb3.Keypair.fromSecretKey(sec); const payer=await getWallet(); const tx=new Transaction().add(SystemProgram.transfer({fromPubkey:payer,toPubkey:ephem.publicKey,lamports:toLamports(amount)})); await signAndSend(tx,payer); }
-      async function sweepClaim(){ const hash=location.hash||''; const i=hash.indexOf('#claim='); if(i===-1) return alert('No claim in URL'); const secB64=hash.slice(i+7); const sk=Uint8Array.from(atob(secB64),c=>c.charCodeAt(0)); const ephem=solanaWeb3.Keypair.fromSecretKey(sk); const dest=await getWallet(); const bal=await conn.getBalance(ephem.publicKey); if(bal<=5000) return alert('Nothing to sweep'); const tx=new Transaction().add(SystemProgram.transfer({fromPubkey:ephem.publicKey,toPubkey:dest,lamports:bal-5000})); tx.feePayer=ephem.publicKey; tx.recentBlockhash=(await conn.getLatestBlockhash()).blockhash; tx.partialSign(ephem); const sig=await conn.sendRawTransaction(tx.serialize()); await conn.confirmTransaction(sig,'confirmed'); pushToast?.('ok','Swept'); }
+      async function createClaimLink(){ const ephem=solanaWeb3.Keypair.generate(); const url=`${location.origin}${location.pathname}#claim=${toB58(ephem.secretKey)}`; setClaimLink(url); pushToast?.('info','Link created. Fund it, then share.'); }
+      async function fundClaim(){ if(!claimLink) return; const enc=claimLink.split('#claim=')[1]; const sec=fromB58(enc); const ephem=solanaWeb3.Keypair.fromSecretKey(sec); const payer=await getWallet(); const tx=new Transaction().add(SystemProgram.transfer({fromPubkey:payer,toPubkey:ephem.publicKey,lamports:toLamports(amount)})); await signAndSend(tx,payer); }
+      async function sweepClaim(){ const hash=location.hash||''; const i=hash.indexOf('#claim='); if(i===-1) return alert('No claim in URL'); const enc=hash.slice(i+7); const sk=fromB58(enc); const ephem=solanaWeb3.Keypair.fromSecretKey(sk); const dest=await getWallet(); const bal=await conn.getBalance(ephem.publicKey); if(bal<=5000) return alert('Nothing to sweep'); const tx=new Transaction().add(SystemProgram.transfer({fromPubkey:ephem.publicKey,toPubkey:dest,lamports:bal-5000})); tx.feePayer=ephem.publicKey; tx.recentBlockhash=(await conn.getLatestBlockhash()).blockhash; tx.partialSign(ephem); const sig=await conn.sendRawTransaction(tx.serialize()); await conn.confirmTransaction(sig,'confirmed'); pushToast?.('ok','Swept'); }
       async function makeEncMemo(){ const {rawB64}=await genKey(); const ct=await encryptAES(memoPlain,rawB64); setMemoKey(rawB64); setEncMemo(ct); }
       async function sendEncMemo(){ const payer=await getWallet(); const tx=new Transaction().add(memoIx(`ENC:${encMemo}`,payer)); await signAndSend(tx,payer); }
       async function viewEncMemo(){ if(!encMemo||!memoKey) return; alert(await decryptAES(encMemo,memoKey)); }
