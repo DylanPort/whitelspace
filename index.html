@@ -5986,6 +5986,28 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
     function App() {
       const { toasts, push } = useToasts();
       const [step, setStep] = usePersistentState('uiStep', "home");
+      const lastNavRef = React.useRef(0);
+      const pendingNavRef = React.useRef(null);
+
+      // Guarded setter to debounce rapid section changes
+      const setStepGuarded = React.useCallback((next) => {
+        const now = Date.now();
+        const minGapMs = 250; // throttle interval
+        if (now - lastNavRef.current < minGapMs) {
+          // schedule the latest desired step after the gap
+          pendingNavRef.current = next;
+          clearTimeout(setStepGuarded._t);
+          setStepGuarded._t = setTimeout(() => {
+            lastNavRef.current = Date.now();
+            const target = typeof pendingNavRef.current === 'function' ? pendingNavRef.current(step) : pendingNavRef.current;
+            pendingNavRef.current = null;
+            setStep(target);
+          }, minGapMs - (now - lastNavRef.current));
+          return;
+        }
+        lastNavRef.current = now;
+        setStep(next);
+      }, [step, setStep]);
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
@@ -6011,16 +6033,16 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           <div className="max-w-6xl mx-auto p-6 sm:p-4 md:p-6">
             <SectionHeader />
             <div className="mt-5 flex gap-6">
-              <Sidebar step={currentStep} setStep={setStep} />
+              <Sidebar step={currentStep} setStep={setStepGuarded} />
               <main className="flex-1 min-w-0">
                 <div className="mb-4 md:hidden">
-                  <StepPills step={currentStep} setStep={setStep} />
+                  <StepPills step={currentStep} setStep={setStepGuarded} />
                 </div>
                 <ErrorBoundary key={currentStep}>
                   {(() => {
                     console.log('Rendering step:', currentStep);
                     switch(currentStep) {
-                      case 'home': return <Home setStep={setStep} />;
+                      case 'home': return <Home setStep={setStepGuarded} />;
                       case 'webrtc': return <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />;
                       case 'steganography': return <UnifiedSteganography pushToast={push} />;
                       case 'privacy-checkup': return <PrivacyCheckup pushToast={push} />;
