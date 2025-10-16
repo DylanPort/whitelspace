@@ -1678,19 +1678,10 @@
 
     // Solana Privacy Toolkit - 5 Production Tools
     function SolanaPrivacyToolkit({ pushToast }) {
-      // Safety check for Solana library
-      if (typeof solanaWeb3 === 'undefined') {
-        return (
-          <GlassCard title="Solana Privacy Toolkit" subtitle="Solana Web3.js library not loaded">
-            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6">
-              <h3 className="text-white font-semibold mb-2">⚠️ Library Not Loaded</h3>
-              <p className="text-white/70 text-sm">The Solana Web3.js library failed to load. Please refresh the page.</p>
-            </div>
-          </GlassCard>
-        );
-      }
+      // Check if library is available
+      const libAvailable = typeof solanaWeb3 !== 'undefined';
       
-      const { Connection, PublicKey, SystemProgram, Transaction } = solanaWeb3;
+      // Always call hooks in the same order
       const [rpc, setRpc] = useState('https://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0');
       const [showRpcInput, setShowRpcInput] = useState(false);
       const [tool, setTool] = useState('deadman');
@@ -1730,6 +1721,26 @@
       
       useEffect(()=>{ if(window.lucide) window.lucide.createIcons(); },[tool, showRpcInput, isFlipping, flipResult]);
       
+      // Early return if library not available (after all hooks)
+      if (!libAvailable) {
+        return (
+          <GlassCard title="Solana Privacy Toolkit" subtitle="Solana Web3.js library not loaded">
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6">
+              <h3 className="text-white font-semibold mb-2">⚠️ Library Not Loaded</h3>
+              <p className="text-white/70 text-sm">The Solana Web3.js library failed to load. Please refresh the page.</p>
+              <button 
+                onClick={() => window.location.reload()} 
+                className="mt-4 px-4 py-2 bg-red-500 hover:bg-red-400 text-white rounded-lg transition-all"
+              >
+                Refresh Page
+              </button>
+            </div>
+          </GlassCard>
+        );
+      }
+      
+      // Safe to use solanaWeb3 now
+      const { Connection, PublicKey, SystemProgram, Transaction } = solanaWeb3;
       const conn = useMemo(()=> new Connection(rpc, 'confirmed'), [rpc]);
       const toLamports = (sol)=> Math.round(parseFloat(sol||'0') * 1e9);
       const toSOL = (lam)=> (lam / 1e9).toFixed(4);
