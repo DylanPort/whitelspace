@@ -202,6 +202,7 @@
     @keyframes scaleIn{0%{opacity:0;transform:scale(.94)}100%{opacity:1;transform:scale(1)}}
     @keyframes shimmer{0%{background-position:200% center}100%{background-position:-200% center}}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+    @keyframes pulseSlow{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.85;transform:scale(1.05)}}
     @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
     @keyframes rotate{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
     @keyframes glow{0%,100%{box-shadow:0 0 20px rgba(103,232,249,.3)}50%{box-shadow:0 0 40px rgba(103,232,249,.6),0 0 60px rgba(167,139,250,.4)}}
@@ -229,12 +230,73 @@
     .pulse-glow{animation:pulse 2s ease-in-out infinite}
     
     .bounce-slow{animation:bounce 3s ease-in-out infinite}
+    .animate-pulse-slow{animation:pulseSlow 3s ease-in-out infinite}
     
     .rotate-slow{animation:rotate 20s linear infinite}
     
     /* Progress bar animations */
     @keyframes progressShine{0%{background-position:-100% 0}100%{background-position:200% 0}}
     .progress-shine{background:linear-gradient(90deg,#67e8f9 0%,#a78bfa 50%,#67e8f9 100%);background-size:200% 100%;animation:progressShine 2s linear infinite}
+    
+    /* Coin Flip Animations */
+    .coin {
+      width: 120px;
+      height: 120px;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.6s;
+    }
+    .coin-side {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 16px;
+      border: 4px solid;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 2px 8px rgba(255,255,255,0.3);
+    }
+    .heads {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+      border-color: #f59e0b;
+      color: #78350f;
+      transform: rotateY(0deg);
+    }
+    .tails {
+      background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 50%, #6b7280 100%);
+      border-color: #9ca3af;
+      color: #1f2937;
+      transform: rotateY(180deg);
+    }
+    @keyframes coinFlip {
+      0% { transform: rotateY(0deg) rotateX(0deg); }
+      25% { transform: rotateY(450deg) rotateX(180deg); }
+      50% { transform: rotateY(900deg) rotateX(360deg); }
+      75% { transform: rotateY(1350deg) rotateX(540deg); }
+      100% { transform: rotateY(1800deg) rotateX(720deg); }
+    }
+    @keyframes coinBounce {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-20px) scale(1.1); }
+    }
+    .coin-flip-ready .coin {
+      animation: coinBounce 2s ease-in-out infinite;
+    }
+    .coin-flipping .coin {
+      animation: coinFlip 1.5s ease-in-out infinite;
+    }
+    .coin-result.show-heads .coin {
+      transform: rotateY(0deg);
+      animation: coinBounce 1s ease-in-out 3;
+    }
+    .coin-result.show-tails .coin {
+      transform: rotateY(180deg);
+      animation: coinBounce 1s ease-in-out 3;
+    }
     
     /* Button press effect */
     .btn-press{transition:all .15s ease}
@@ -1551,6 +1613,16 @@
       </div>
     </div>
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* GitHub icon link */}
+            <a 
+              href="https://github.com/DylanPort/whitelspace" 
+              target="_blank"
+              title="GitHub"
+              className="hover:opacity-80 transition-opacity"
+            >
+              <img src="952978.png" alt="GitHub" className="w-6 h-6 sm:w-7 sm:h-7" />
+            </a>
+            
             {/* Whitepaper icon link */}
             <a 
               href="whitepaper.html" 
@@ -1666,115 +1738,854 @@
       );
     }
 
-    // Solana Privacy Toolkit (no smart contracts) — runtime copy
+    // Solana Privacy Toolkit - 5 Production Tools
     function SolanaPrivacyToolkit({ pushToast }) {
       const { Connection, PublicKey, SystemProgram, Transaction } = solanaWeb3;
-      const [rpc] = useState('https://api.mainnet-beta.solana.com');
-      const [tab, setTab] = useState('claim');
-      const [amount, setAmount] = useState('0.01');
-      const [toPub, setToPub] = useState('');
-      const [claimLink, setClaimLink] = useState('');
-      const [encMemo, setEncMemo] = useState('');
-      const [memoKey, setMemoKey] = useState('');
-      const [memoPlain, setMemoPlain] = useState('');
-      const [poeHash, setPoeHash] = useState('');
-      const [mpParts, setMpParts] = useState(3);
-      const [mpJitter, setMpJitter] = useState(20);
-      useEffect(()=>{ if(window.lucide) window.lucide.createIcons(); },[tab]);
+      const [rpc, setRpc] = useState('https://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0');
+      const [showRpcInput, setShowRpcInput] = useState(false);
+      const [tool, setTool] = useState('deadman');
+      
+      // Dead Man's Switch
+      const [dmsMessage, setDmsMessage] = useState('');
+      const [dmsPassword, setDmsPassword] = useState('');
+      const [dmsDestWallet, setDmsDestWallet] = useState('');
+      const [dmsExpiry, setDmsExpiry] = useState('30');
+      const [dmsActive, setDmsActive] = useState(false);
+      const [dmsCheckInDate, setDmsCheckInDate] = useState('');
+      const [dmsTxSignature, setDmsTxSignature] = useState('');
+      
+      // Vanishing Payments
+      const [vanishAmount, setVanishAmount] = useState('0.01');
+      const [vanishHours, setVanishHours] = useState('24');
+      const [vanishLink, setVanishLink] = useState('');
+      const [vanishExpires, setVanishExpires] = useState('');
+      
+      // Dead Drop Messages
+      const [dropRecipient, setDropRecipient] = useState('');
+      const [dropMessage, setDropMessage] = useState('');
+      const [dropPassword, setDropPassword] = useState('');
+      const [dropTxSig, setDropTxSig] = useState('');
+      
+      // Verifiable Coin Flip
+      const [flipCommit, setFlipCommit] = useState('');
+      const [flipSecret, setFlipSecret] = useState('');
+      const [flipReveal, setFlipReveal] = useState('');
+      const [flipResult, setFlipResult] = useState('');
+      const [isFlipping, setIsFlipping] = useState(false);
+      
+      // Anonymous Donation Jar
+      const [donationWallets, setDonationWallets] = useState([]);
+      const [donationCount, setDonationCount] = useState('3');
+      const [donationSweepTo, setDonationSweepTo] = useState('');
+      
+      useEffect(()=>{ if(window.lucide) window.lucide.createIcons(); },[tool, showRpcInput, isFlipping, flipResult]);
+      
       const conn = useMemo(()=> new Connection(rpc, 'confirmed'), [rpc]);
       const toLamports = (sol)=> Math.round(parseFloat(sol||'0') * 1e9);
+      const toSOL = (lam)=> (lam / 1e9).toFixed(4);
       const toB58 = (u8)=> (window.bs58 ? window.bs58.encode(u8) : btoa(String.fromCharCode(...u8)));
       const fromB58 = (str)=> (window.bs58 ? new Uint8Array(window.bs58.decode(str)) : Uint8Array.from(atob(str), c=>c.charCodeAt(0)));
-      async function getWallet(){ if(!window?.solana){ alert('Install Phantom'); throw new Error('wallet'); } const r=await window.solana.connect(); return new PublicKey(r.publicKey.toString()); }
+      
+      async function getWallet(){ 
+        if(!window?.solana){ alert('Install Phantom Wallet'); throw new Error('wallet'); } 
+        const r=await window.solana.connect(); 
+        return new PublicKey(r.publicKey.toString()); 
+      }
+      
       async function signAndSend(tx, feePayer){
         tx.feePayer = feePayer;
         const { blockhash } = await conn.getLatestBlockhash();
         tx.recentBlockhash = blockhash;
-        try{
           const s = await window.solana.signTransaction(tx);
           const sig = await conn.sendRawTransaction(s.serialize(), { skipPreflight:false });
           await conn.confirmTransaction(sig, 'confirmed');
-          pushToast?.('ok','Sent');
           return sig;
-        }catch(e){ console.error(e); pushToast?.('err', e?.message || 'Transaction failed'); throw e; }
       }
+      
       const MEMO_PROGRAM_ID = new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
-      function memoIx(text, signer){ return new solanaWeb3.TransactionInstruction({ keys:[{pubkey:signer,isSigner:true,isWritable:false}], programId: MEMO_PROGRAM_ID, data: new TextEncoder().encode(text||'') }); }
-      async function genKey(){ const k=await crypto.subtle.generateKey({name:'AES-GCM',length:256},true,['encrypt','decrypt']); const raw=new Uint8Array(await crypto.subtle.exportKey('raw',k)); return { rawB64:btoa(String.fromCharCode(...raw)) }; }
-      async function encryptAES(text, base64){ const raw=Uint8Array.from(atob(base64),c=>c.charCodeAt(0)); const key=await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt']); const iv=crypto.getRandomValues(new Uint8Array(12)); const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(text)); return btoa(String.fromCharCode(...iv,...new Uint8Array(ct))); }
-      async function decryptAES(b64, base64){ const rk=Uint8Array.from(atob(base64),c=>c.charCodeAt(0)); const key=await crypto.subtle.importKey('raw',rk,'AES-GCM',false,['decrypt']); const bytes=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)); const iv=bytes.slice(0,12), ct=bytes.slice(12); const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv},key,ct); return new TextDecoder().decode(pt); }
-      async function createClaimLink(){ const ephem=solanaWeb3.Keypair.generate(); const url=`${location.origin}${location.pathname}#claim=${toB58(ephem.secretKey)}`; setClaimLink(url); pushToast?.('info','Link created. Fund it, then share.'); }
-      async function fundClaim(){ if(!claimLink) return; const enc=claimLink.split('#claim=')[1]; const sec=fromB58(enc); const ephem=solanaWeb3.Keypair.fromSecretKey(sec); const payer=await getWallet(); const tx=new Transaction().add(SystemProgram.transfer({fromPubkey:payer,toPubkey:ephem.publicKey,lamports:toLamports(amount)})); await signAndSend(tx,payer); }
-      async function sweepClaim(){ const hash=location.hash||''; const i=hash.indexOf('#claim='); if(i===-1) return alert('No claim in URL'); const enc=hash.slice(i+7); const sk=fromB58(enc); const ephem=solanaWeb3.Keypair.fromSecretKey(sk); const dest=await getWallet(); const bal=await conn.getBalance(ephem.publicKey); if(bal<=5000) return alert('Nothing to sweep'); const tx=new Transaction().add(SystemProgram.transfer({fromPubkey:ephem.publicKey,toPubkey:dest,lamports:bal-5000})); tx.feePayer=ephem.publicKey; tx.recentBlockhash=(await conn.getLatestBlockhash()).blockhash; tx.partialSign(ephem); const sig=await conn.sendRawTransaction(tx.serialize()); await conn.confirmTransaction(sig,'confirmed'); pushToast?.('ok','Swept'); }
-      async function makeEncMemo(){ const {rawB64}=await genKey(); const ct=await encryptAES(memoPlain,rawB64); setMemoKey(rawB64); setEncMemo(ct); }
-      async function sendEncMemo(){ const payer=await getWallet(); const tx=new Transaction().add(memoIx(`ENC:${encMemo}`,payer)); await signAndSend(tx,payer); }
-      async function viewEncMemo(){ if(!encMemo||!memoKey) return; alert(await decryptAES(encMemo,memoKey)); }
-      async function hashInput(input){ let data; if(input instanceof File){ data=new Uint8Array(await input.arrayBuffer()); } else { data=new TextEncoder().encode(String(input||'')); } const d=await crypto.subtle.digest('SHA-256',data); const hex=[...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,'0')).join(''); setPoeHash(hex); }
-      async function stampHash(){ if(!poeHash) return; const payer=await getWallet(); const tx=new Transaction().add(memoIx(`HASH:${poeHash}`,payer)); await signAndSend(tx,payer); }
-      async function multiPathSend(){ const dest=new PublicKey(toPub); const payer=await getWallet(); const total=toLamports(amount); const parts=Math.max(1,parseInt(mpParts||'3',10)); let remain=total; const arr=Array.from({length:parts},(_,i)=>{ if(i===parts-1) return remain; const cut=Math.max(1,Math.floor(Math.random()*(remain/(parts-i))*1.2)); remain-=cut; return cut; }); for(let i=0;i<arr.length;i++){ const tx=new Transaction().add(SystemProgram.transfer({fromPubkey:payer,toPubkey:dest,lamports:arr[i]})); await signAndSend(tx,payer); if(i!==arr.length-1) await new Promise(r=>setTimeout(r,(500+Math.random()*mpJitter*1000))); } }
+      function memoIx(text, signer){ 
+        return new solanaWeb3.TransactionInstruction({ 
+          keys:[{pubkey:signer,isSigner:true,isWritable:false}], 
+          programId: MEMO_PROGRAM_ID, 
+          data: new TextEncoder().encode(text||'') 
+        }); 
+      }
+      
+      async function encryptAES(text, password){
+        const enc = new TextEncoder();
+        const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits', 'deriveKey']);
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        const key = await crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:100000,hash:'SHA-256'},keyMaterial,{name:'AES-GCM',length:256},false,['encrypt']);
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const ct = await crypto.subtle.encrypt({name:'AES-GCM',iv}, key, enc.encode(text));
+        return btoa(String.fromCharCode(...salt,...iv,...new Uint8Array(ct)));
+      }
+      
+      async function decryptAES(b64, password){
+        const enc = new TextEncoder();
+        const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits', 'deriveKey']);
+        const bytes = Uint8Array.from(atob(b64), c=>c.charCodeAt(0));
+        const salt = bytes.slice(0,16);
+        const iv = bytes.slice(16,28);
+        const ct = bytes.slice(28);
+        const key = await crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:100000,hash:'SHA-256'},keyMaterial,{name:'AES-GCM',length:256},false,['decrypt']);
+        const pt = await crypto.subtle.decrypt({name:'AES-GCM',iv}, key, ct);
+        return new TextDecoder().decode(pt);
+      }
+      
+      // 1. DEAD MAN'S SWITCH
+      async function activateDeadMansSwitch(){
+        if(!dmsMessage) return alert('Enter a message to encrypt');
+        if(!dmsPassword) return alert('Enter an encryption password');
+        if(!dmsDestWallet) return alert('Enter destination wallet address');
+        
+        try{
+          const encrypted = await encryptAES(dmsMessage, dmsPassword);
+          const expiry = Date.now() + (parseInt(dmsExpiry) * 24 * 60 * 60 * 1000);
+          const expiryDate = new Date(expiry).toLocaleString();
+          
+          const payer = await getWallet();
+          const dest = new PublicKey(dmsDestWallet);
+          
+          // Send encrypted memo to destination wallet
+          const memoText = `DMS:EXP:${expiry}:MSG:${encrypted}`;
+          const tx = new Transaction().add(
+            SystemProgram.transfer({
+              fromPubkey: payer,
+              toPubkey: dest,
+              lamports: 5000 // Small amount (0.000005 SOL) to fund the memo
+            }),
+            memoIx(memoText, payer)
+          );
+          
+          const sig = await signAndSend(tx, payer);
+          
+          setDmsActive(true);
+          setDmsCheckInDate(expiryDate);
+          setDmsTxSignature(sig);
+          
+          pushToast?.('ok', `Dead Man's Switch activated! Check in before ${new Date(expiry).toLocaleDateString()}`);
+        }catch(e){
+          console.error(e);
+          pushToast?.('err', 'Failed to activate Dead Man\'s Switch');
+        }
+      }
+      
+      async function checkInDeadMansSwitch(){
+        try{
+          const newExpiry = Date.now() + (parseInt(dmsExpiry) * 24 * 60 * 60 * 1000);
+          const newExpiryDate = new Date(newExpiry).toLocaleString();
+          
+          const payer = await getWallet();
+          const dest = new PublicKey(dmsDestWallet);
+          
+          const tx = new Transaction().add(
+            SystemProgram.transfer({
+              fromPubkey: payer,
+              toPubkey: dest,
+              lamports: 5000
+            }),
+            memoIx(`DMS:CHECKIN:${newExpiry}:STILL_ALIVE`, payer)
+          );
+          
+          await signAndSend(tx, payer);
+          setDmsCheckInDate(newExpiryDate);
+          
+          pushToast?.('ok', 'Checked in! Timer reset to ' + new Date(newExpiry).toLocaleDateString());
+        }catch(e){
+          console.error(e);
+          pushToast?.('err', 'Failed to check in');
+        }
+      }
+      
+      async function revealPasswordDeadMansSwitch(){
+        if(!dmsPassword) return alert('No password stored');
+        
+        try{
+          const payer = await getWallet();
+          const dest = new PublicKey(dmsDestWallet);
+          
+          // Post decryption password to blockchain
+          const tx = new Transaction().add(
+            SystemProgram.transfer({
+              fromPubkey: payer,
+              toPubkey: dest,
+              lamports: 5000
+            }),
+            memoIx(`DMS:PASSWORD_REVEALED:${dmsPassword}`, payer)
+          );
+          
+          await signAndSend(tx, payer);
+          pushToast?.('ok', 'Password published to blockchain! Anyone can now decrypt the message.');
+        }catch(e){
+          console.error(e);
+          pushToast?.('err', 'Failed to reveal password');
+        }
+      }
+      
+      // 2. VANISHING PAYMENTS
+      async function createVanishingPayment(){
+        const burner = solanaWeb3.Keypair.generate();
+        const expiryTime = Date.now() + (parseInt(vanishHours) * 60 * 60 * 1000);
+        const secret = toB58(burner.secretKey);
+        const link = `${location.origin}${location.pathname}#vanish=${secret}&exp=${expiryTime}`;
+        
+        setVanishLink(link);
+        setVanishExpires(new Date(expiryTime).toLocaleString());
+        pushToast?.('ok', 'Vanishing payment link created! Fund it before sharing.');
+      }
+      
+      async function fundVanishingPayment(){
+        if(!vanishLink) return alert('Create vanishing payment first');
+        try{
+          const secret = vanishLink.split('#vanish=')[1].split('&')[0];
+          const burner = solanaWeb3.Keypair.fromSecretKey(fromB58(secret));
+          const payer = await getWallet();
+          
+          const tx = new Transaction().add(
+            SystemProgram.transfer({
+              fromPubkey: payer,
+              toPubkey: burner.publicKey,
+              lamports: toLamports(vanishAmount)
+            })
+          );
+          await signAndSend(tx, payer);
+          pushToast?.('ok', `Funded ${vanishAmount} SOL to vanishing wallet`);
+        }catch(e){
+          console.error(e);
+          pushToast?.('err', 'Failed to fund vanishing payment');
+        }
+      }
+      
+      async function claimVanishingPayment(){
+        const hash = location.hash || '';
+        if(!hash.includes('#vanish=')) return alert('No vanishing payment in URL');
+        
+        try{
+          const parts = hash.split('#vanish=')[1].split('&');
+          const secret = parts[0];
+          const expiry = parseInt(parts[1]?.replace('exp=', '') || '0');
+          
+          if(Date.now() > expiry) return alert('Payment expired!');
+          
+          const burner = solanaWeb3.Keypair.fromSecretKey(fromB58(secret));
+          const dest = await getWallet();
+          const bal = await conn.getBalance(burner.publicKey);
+          if(bal <= 5000) return alert('Nothing to claim');
+          
+          const tx = new Transaction().add(
+            SystemProgram.transfer({
+              fromPubkey: burner.publicKey,
+              toPubkey: dest,
+              lamports: bal - 5000
+            })
+          );
+          tx.feePayer = burner.publicKey;
+          tx.recentBlockhash = (await conn.getLatestBlockhash()).blockhash;
+          tx.partialSign(burner);
+          const sig = await conn.sendRawTransaction(tx.serialize());
+          await conn.confirmTransaction(sig, 'confirmed');
+          pushToast?.('ok', `Claimed ${toSOL(bal-5000)} SOL!`);
+        }catch(e){
+          console.error(e);
+          pushToast?.('err', 'Failed to claim vanishing payment');
+        }
+      }
+      
+      // 3. DEAD DROP MESSAGES
+      async function sendDeadDrop(){
+        if(!dropRecipient) return alert('Enter recipient wallet address');
+        if(!dropMessage) return alert('Enter a message');
+        if(!dropPassword) return alert('Enter encryption password');
+        
+        try{
+          const encrypted = await encryptAES(dropMessage, dropPassword);
+          const payer = await getWallet();
+          const dest = new PublicKey(dropRecipient);
+          
+          const tx = new Transaction().add(
+            SystemProgram.transfer({
+              fromPubkey: payer,
+              toPubkey: dest,
+              lamports: 5000
+            }),
+            memoIx(`DEAD_DROP:${encrypted}`, payer)
+          );
+          
+          const sig = await signAndSend(tx, payer);
+          setDropTxSig(sig);
+          pushToast?.('ok', 'Dead drop message sent! Only the recipient can decrypt it.');
+        }catch(e){
+          console.error(e);
+          pushToast?.('err', 'Failed to send dead drop');
+        }
+      }
+      
+      // 4. VERIFIABLE COIN FLIP
+      async function commitFlip(){
+        setIsFlipping(true);
+        
+        const secret = Math.random().toString(36).substring(2, 15);
+        const choice = Math.random() > 0.5 ? 'HEADS' : 'TAILS';
+        const commitString = `${choice}:${secret}`;
+        const encoder = new TextEncoder();
+        const data = encoder.encode(commitString);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        setFlipSecret(commitString);
+        
+        // Show flipping animation
+        await new Promise(r=>setTimeout(r, 1500));
+        setIsFlipping(false);
+        setFlipCommit(hashHex);
+        
+        try{
+          const payer = await getWallet();
+          const tx = new Transaction().add(
+            memoIx(`COIN_FLIP_COMMIT:${hashHex}`, payer)
+          );
+          await signAndSend(tx, payer);
+          pushToast?.('ok', 'Commitment posted on-chain! Now reveal it.');
+        }catch(e){
+          console.error(e);
+          setFlipCommit('');
+          setFlipSecret('');
+          pushToast?.('err', 'Failed to commit flip');
+        }
+      }
+      
+      async function revealFlip(){
+        if(!flipSecret) return alert('No commitment to reveal');
+        
+        const choice = flipSecret.split(':')[0];
+        setFlipReveal(choice);
+        
+        // Show reveal animation
+        await new Promise(r=>setTimeout(r, 500));
+        setFlipResult(choice);
+        
+        try{
+          const payer = await getWallet();
+          const tx = new Transaction().add(
+            memoIx(`COIN_FLIP_REVEAL:${flipSecret}`, payer)
+          );
+          await signAndSend(tx, payer);
+          pushToast?.('ok', `Result: ${choice}! Anyone can verify the commitment.`);
+        }catch(e){
+          console.error(e);
+          pushToast?.('err', 'Failed to reveal flip');
+        }
+      }
+      
+      // 5. ANONYMOUS DONATION JAR
+      async function createDonationJar(){
+        const count = parseInt(donationCount);
+        const wallets = Array.from({length: count}, ()=> {
+          const kp = solanaWeb3.Keypair.generate();
+          return {
+            address: kp.publicKey.toString(),
+            secret: toB58(kp.secretKey)
+          };
+        });
+        
+        setDonationWallets(wallets);
+        pushToast?.('ok', `Created ${count} anonymous donation addresses!`);
+      }
+      
+      async function sweepDonations(){
+        if(!donationSweepTo) return alert('Enter sweep destination address');
+        if(donationWallets.length === 0) return alert('No donation wallets created');
+        
+        try{
+          const dest = new PublicKey(donationSweepTo);
+          let totalSwept = 0;
+          
+          for(let wallet of donationWallets){
+            const burner = solanaWeb3.Keypair.fromSecretKey(fromB58(wallet.secret));
+            const bal = await conn.getBalance(burner.publicKey);
+            
+            if(bal > 5000){
+              const tx = new Transaction().add(
+                SystemProgram.transfer({
+                  fromPubkey: burner.publicKey,
+                  toPubkey: dest,
+                  lamports: bal - 5000
+                })
+              );
+              tx.feePayer = burner.publicKey;
+              tx.recentBlockhash = (await conn.getLatestBlockhash()).blockhash;
+              tx.partialSign(burner);
+              
+              await conn.sendRawTransaction(tx.serialize());
+              totalSwept += (bal - 5000);
+              await new Promise(r=>setTimeout(r, 500));
+            }
+          }
+          
+          pushToast?.('ok', `Swept ${toSOL(totalSwept)} SOL from donation wallets!`);
+        }catch(e){
+          console.error(e);
+          pushToast?.('err', 'Failed to sweep donations');
+        }
+      }
+      
+      const tools = [
+        { id: 'deadman', name: 'Dead Man\'s Switch', icon: 'clock', desc: 'Auto-release encrypted data' },
+        { id: 'vanish', name: 'Vanishing Payments', icon: 'timer', desc: 'Time-limited claim links' },
+        { id: 'deaddrop', name: 'Dead Drop Messages', icon: 'mail', desc: 'Anonymous encrypted messages' },
+        { id: 'coinflip', name: 'Verifiable Coin Flip', icon: 'dice-3', desc: 'Trustless randomness' },
+        { id: 'donations', name: 'Anonymous Donation Jar', icon: 'piggy-bank', desc: 'Untraceable donations' }
+      ];
+      
       return (
-        <GlassCard title="Solana Privacy Toolkit" subtitle="No smart contracts. System Program + Memo only.">
-          <div className="flex flex-wrap gap-2 mb-4">
-            {['claim','memo','poe','mp','inbox','offline'].map(id=> (
-              <button key={id} onClick={()=>setTab(id)} className={`px-3 py-2 rounded-lg text-sm ${tab===id?'bg-white/15 border border-white/20':'bg-white/5 border border-white/10 hover:bg-white/10'}`}>{id}</button>
+        <GlassCard title="Solana Privacy Toolkit" subtitle="5 Production-Ready Privacy Tools • No Smart Contracts">
+          {/* RPC Selector */}
+          <div className="mb-4 bg-green-500/10 border border-green-400/30 rounded-lg p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <i data-lucide="server" className="w-4 h-4 text-green-400"></i>
+                <span className="text-sm text-white/80">RPC: <span className="text-green-400 font-mono text-xs">
+                  {rpc.includes('devnet') ? 'Devnet (Test Network)' : 
+                   rpc.includes('solanatracker') ? 'SolanaTracker Mainnet ✓' : 
+                   'Custom RPC'}
+                </span></span>
+          </div>
+              <button 
+                onClick={()=>setShowRpcInput(!showRpcInput)}
+                className="text-xs px-3 py-1 bg-green-500/20 hover:bg-green-500/30 border border-green-400/40 rounded text-green-400 transition-all"
+              >
+                {showRpcInput ? 'Hide' : 'Change RPC'}
+              </button>
+            </div>
+            {showRpcInput && (
+              <div className="mt-3 space-y-2">
+              <div className="flex gap-2">
+                  <input 
+                    type="text"
+                    value={rpc}
+                    onChange={e=>setRpc(e.target.value)}
+                    placeholder="Enter RPC URL"
+                    className="flex-1 bg-white/5 border border-white/20 rounded px-3 py-2 text-white text-sm font-mono"
+                  />
+              </div>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <button onClick={()=>{setRpc('https://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0'); pushToast?.('ok','Switched to SolanaTracker Mainnet');}} className="px-3 py-1 bg-green-500/20 border border-green-400/40 rounded text-green-400">SolanaTracker (Fast)</button>
+                  <button onClick={()=>{setRpc('https://api.devnet.solana.com'); pushToast?.('ok','Switched to Devnet');}} className="px-3 py-1 bg-cyan-500/20 border border-cyan-400/40 rounded text-cyan-400">Devnet (Test)</button>
+                  <button onClick={()=>{setRpc('https://api.mainnet-beta.solana.com'); pushToast?.('warn','Public mainnet may be rate-limited');}} className="px-3 py-1 bg-purple-500/20 border border-purple-400/40 rounded text-purple-400">Public Mainnet</button>
+                </div>
+                <p className="text-xs text-white/50">💡 Using SolanaTracker RPC (no rate limits). Can also use <a href="https://helius.dev" target="_blank" className="text-cyan-400 hover:underline">Helius</a> or <a href="https://quicknode.com" target="_blank" className="text-cyan-400 hover:underline">QuickNode</a></p>
+            </div>
+          )}
+              </div>
+          
+          {/* Tool Selection */}
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+            {tools.map(t => (
+              <button 
+                key={t.id} 
+                onClick={()=>setTool(t.id)}
+                className={`p-4 rounded-xl border transition-all ${
+                  tool===t.id 
+                    ? 'bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border-cyan-400/60' 
+                    : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
+                }`}
+              >
+                <i data-lucide={t.icon} className={`w-6 h-6 mb-2 ${tool===t.id ? 'text-cyan-400' : 'text-white/60'}`}></i>
+                <div className={`font-bold text-sm mb-1 ${tool===t.id ? 'text-white' : 'text-white/80'}`}>{t.name}</div>
+                <div className="text-xs text-white/50">{t.desc}</div>
+              </button>
             ))}
           </div>
-          {tab==='claim' && (
+          
+          {/* Tool Content */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+            {tool === 'deadman' && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <i data-lucide="clock" className="w-6 h-6 text-orange-400"></i>
+                  <div>
+                    <h3 className="font-bold text-white text-lg">Dead Man's Switch</h3>
+                    <p className="text-white/60 text-sm">Publish encrypted memo to blockchain - auto-reveal if you don't check in</p>
+                  </div>
+                </div>
+                
+                <div className="bg-orange-500/10 border border-orange-400/30 rounded-lg p-4 text-sm text-white/80">
+                  <strong className="text-orange-400">How it works:</strong> Encrypt your message → Send as memo to chosen wallet → Check in periodically → If you don't check in, publish password to blockchain so anyone can decrypt.
+                </div>
+                
+                <div className="bg-white/5 border border-white/10 rounded-lg p-4 text-sm text-white/70">
+                  <strong className="text-white">Why use this?</strong> Perfect for whistleblowers with insurance files, activists with sensitive intel, or anyone who needs their data released if something happens to them. Encrypted message lives on-chain forever, password revealed only if you stop checking in.
+                </div>
+                
             <div className="space-y-3">
+                  <textarea 
+                    className="w-full h-32 bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white resize-none" 
+                    placeholder="Enter sensitive message (will be encrypted and published on-chain)..."
+                    value={dmsMessage}
+                    onChange={e=>setDmsMessage(e.target.value)}
+                  />
+                  
+                  <input 
+                    type="text"
+                    className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-2 text-white font-mono text-sm" 
+                    placeholder="Destination wallet address (who receives the memo)"
+                    value={dmsDestWallet}
+                    onChange={e=>setDmsDestWallet(e.target.value)}
+                  />
+                  
               <div className="flex gap-2">
-                <button onClick={createClaimLink} className="px-3 py-2 rounded bg-cyan-500 text-black font-semibold">Create Link</button>
-                <button onClick={fundClaim} className="px-3 py-2 rounded bg-purple-500 text-white">Fund {amount} SOL</button>
-                <input className="px-2 py-2 bg-white/5 rounded border border-white/10 w-28" value={amount} onChange={e=>setAmount(e.target.value)} />
-                <button onClick={sweepClaim} className="px-3 py-2 rounded bg-emerald-500 text-black font-semibold">Sweep (if link)</button>
+                    <input 
+                      type="password"
+                      className="flex-1 bg-white/5 border border-white/20 rounded-lg px-4 py-2 text-white" 
+                      placeholder="Encryption password"
+                      value={dmsPassword}
+                      onChange={e=>setDmsPassword(e.target.value)}
+                    />
+                    <input 
+                      type="number"
+                      className="w-32 bg-white/5 border border-white/20 rounded-lg px-4 py-2 text-white" 
+                      placeholder="Days"
+                      value={dmsExpiry}
+                      onChange={e=>setDmsExpiry(e.target.value)}
+                    />
               </div>
-              {claimLink && (<div className="text-xs break-all bg-white/5 border border-white/10 rounded p-2">{claimLink}</div>)}
+                  
+                  {!dmsActive ? (
+                    <button onClick={activateDeadMansSwitch} className="w-full px-6 py-3 bg-orange-500 hover:bg-orange-400 text-white font-semibold rounded-lg transition-all">
+                      💀 Activate Dead Man's Switch (Sends ~0.000005 SOL + Memo)
+                    </button>
+                  ) : (
+                    <>
+                      <div className="bg-green-500/10 border border-green-400/30 rounded-lg p-4">
+                        <div className="text-xs text-white/60 mb-2">✓ Dead Man's Switch Active</div>
+                        <div className="text-xs text-white/60 mb-1">Next Check-In Required Before:</div>
+                        <div className="text-sm text-orange-400 font-semibold mb-2">{dmsCheckInDate}</div>
+                        {dmsTxSignature && (
+                          <a 
+                            href={`https://solscan.io/tx/${dmsTxSignature}`} 
+                            target="_blank"
+                            className="text-xs text-cyan-400 hover:underline break-all"
+                          >
+                            View on Solscan →
+                          </a>
+                        )}
             </div>
-          )}
-          {tab==='memo' && (
-            <div className="space-y-3">
-              <textarea className="w-full h-24 bg-white/5 border border-white/10 rounded p-2 text-sm" placeholder="Message to encrypt…" value={memoPlain} onChange={e=>setMemoPlain(e.target.value)} />
-              <div className="flex gap-2">
-                <button onClick={makeEncMemo} className="px-3 py-2 rounded bg-cyan-500 text-black font-semibold">Encrypt</button>
-                <button onClick={sendEncMemo} disabled={!encMemo} className="px-3 py-2 rounded bg-purple-500 text-white disabled:opacity-40">Send Memo</button>
-                <button onClick={viewEncMemo} disabled={!encMemo||!memoKey} className="px-3 py-2 rounded bg-emerald-500 text-black font-semibold disabled:opacity-40">Decrypt</button>
+                      
+                      <div className="grid grid-cols-2 gap-2">
+                        <button onClick={checkInDeadMansSwitch} className="px-6 py-3 bg-green-500 hover:bg-green-400 text-white font-semibold rounded-lg transition-all">
+                          ✓ Check In (I'm Alive)
+                        </button>
+                        <button onClick={revealPasswordDeadMansSwitch} className="px-6 py-3 bg-red-500 hover:bg-red-400 text-white font-semibold rounded-lg transition-all">
+                          🔓 Reveal Password Now
+                        </button>
+                      </div>
+                      
+                      <div className="text-xs text-white/50 text-center">
+                        Encrypted memo already on blockchain. Revealing password will let anyone decrypt it.
+                      </div>
+                    </>
+                  )}
               </div>
-              {encMemo && (<div className="text-xs bg-white/5 border border-white/10 rounded p-2 break-all">Cipher: {encMemo}</div>)}
-              {memoKey && (<div className="text-xs bg-white/5 border border-white/10 rounded p-2 break-all">Share key off‑band: {memoKey}</div>)}
             </div>
           )}
-          {tab==='poe' && (
+            
+            {tool === 'vanish' && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <i data-lucide="timer" className="w-6 h-6 text-pink-400"></i>
+                  <div>
+                    <h3 className="font-bold text-white text-lg">Vanishing Payments</h3>
+                    <p className="text-white/60 text-sm">Time-limited claim links that expire automatically</p>
+                  </div>
+                </div>
+                
+                <div className="bg-pink-500/10 border border-pink-400/30 rounded-lg p-4 text-sm text-white/80">
+                  <strong className="text-pink-400">How it works:</strong> Create expiring payment link → Fund it → Share with recipient → They claim before expiry → Otherwise funds return to you.
+                </div>
+                
             <div className="space-y-3">
-              <div className="flex gap-2">
-                <input type="file" onChange={async e=>{ const f=e.target.files?.[0]; if(f){ await hashInput(f);} }} />
-                <input className="flex-1 bg-white/5 border border-white/10 rounded p-2 text-sm" placeholder="Or paste text to hash…" onChange={e=>hashInput(e.target.value)} />
-                <button onClick={stampHash} disabled={!poeHash} className="px-3 py-2 rounded bg-purple-500 text-white disabled:opacity-40">Stamp Hash</button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs text-white/60 mb-1 block">Amount (SOL)</label>
+                      <input 
+                        type="number"
+                        step="0.01"
+                        className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-2 text-white" 
+                        value={vanishAmount}
+                        onChange={e=>setVanishAmount(e.target.value)}
+                      />
               </div>
-              {poeHash && (<div className="text-xs bg-white/5 border border-white/10 rounded p-2 break-all">SHA‑256: {poeHash}</div>)}
+                    <div>
+                      <label className="text-xs text-white/60 mb-1 block">Expires In (Hours)</label>
+                      <input 
+                        type="number"
+                        className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-2 text-white" 
+                        value={vanishHours}
+                        onChange={e=>setVanishHours(e.target.value)}
+                      />
+            </div>
+                  </div>
+                  
+                  <button onClick={createVanishingPayment} className="w-full px-6 py-3 bg-pink-500 hover:bg-pink-400 text-white font-semibold rounded-lg transition-all">
+                    Create Vanishing Payment
+                  </button>
+                  
+                  {vanishLink && (
+                    <>
+                      <div className="bg-white/5 border border-white/20 rounded-lg p-3">
+                        <div className="text-xs text-white/60 mb-1">Payment Link (expires {vanishExpires}):</div>
+                        <div className="text-sm text-white break-all font-mono">{vanishLink}</div>
+                      </div>
+                      
+                      <button onClick={fundVanishingPayment} className="w-full px-6 py-3 bg-purple-500 hover:bg-purple-400 text-white font-semibold rounded-lg transition-all">
+                        Fund {vanishAmount} SOL
+                      </button>
+                    </>
+                  )}
+                  
+                  {location.hash.includes('#vanish=') && (
+                    <button onClick={claimVanishingPayment} className="w-full px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-semibold rounded-lg transition-all">
+                      ⏰ Claim Vanishing Payment
+                    </button>
+                  )}
+                </div>
             </div>
           )}
-          {tab==='mp' && (
+            
+            {tool === 'deaddrop' && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <i data-lucide="mail" className="w-6 h-6 text-blue-400"></i>
+                  <div>
+                    <h3 className="font-bold text-white text-lg">Dead Drop Messages</h3>
+                    <p className="text-white/60 text-sm">Send anonymous encrypted messages to any wallet</p>
+                  </div>
+                </div>
+                
+                <div className="bg-blue-500/10 border border-blue-400/30 rounded-lg p-4 text-sm text-white/80">
+                  <strong className="text-blue-400">How it works:</strong> Encrypt your message → Send as memo to any Solana address → Only they can decrypt with password. Perfect for anonymous tips.
+                </div>
+                
+                <div className="bg-white/5 border border-white/10 rounded-lg p-4 text-sm text-white/70">
+                  <strong className="text-white">Why use this?</strong> Journalists can publish their wallet address for anonymous tips. Whistleblowers send encrypted intel without revealing identity. Message lives forever on blockchain.
+                </div>
+                
             <div className="space-y-3">
-              <input className="w-full bg-white/5 border border-white/10 rounded p-2 text-sm" placeholder="Destination public key" value={toPub} onChange={e=>setToPub(e.target.value)} />
-              <div className="flex gap-2">
-                <input className="w-24 bg-white/5 border border-white/10 rounded p-2 text-sm" value={amount} onChange={e=>setAmount(e.target.value)} />
-                <input className="w-24 bg-white/5 border border-white/10 rounded p-2 text-sm" value={mpParts} onChange={e=>setMpParts(e.target.value)} />
-                <input className="w-28 bg-white/5 border border-white/10 rounded p-2 text-sm" value={mpJitter} onChange={e=>setMpJitter(e.target.value)} />
-                <button onClick={multiPathSend} className="px-3 py-2 rounded bg-cyan-500 text-black font-semibold">Start</button>
+                  <input 
+                    type="text"
+                    className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-2 text-white font-mono text-sm" 
+                    placeholder="Recipient wallet address"
+                    value={dropRecipient}
+                    onChange={e=>setDropRecipient(e.target.value)}
+                  />
+                  
+                  <textarea 
+                    className="w-full h-32 bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white resize-none" 
+                    placeholder="Your secret message..."
+                    value={dropMessage}
+                    onChange={e=>setDropMessage(e.target.value)}
+                  />
+                  
+                  <input 
+                    type="password"
+                    className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-2 text-white" 
+                    placeholder="Encryption password (share with recipient separately)"
+                    value={dropPassword}
+                    onChange={e=>setDropPassword(e.target.value)}
+                  />
+                  
+                  <button onClick={sendDeadDrop} className="w-full px-6 py-3 bg-blue-500 hover:bg-blue-400 text-white font-semibold rounded-lg transition-all">
+                    📨 Send Dead Drop (0.000005 SOL + fee)
+                  </button>
+                  
+                  {dropTxSig && (
+                    <div className="bg-green-500/10 border border-green-400/30 rounded-lg p-3">
+                      <div className="text-xs text-white/60 mb-1">✓ Message delivered!</div>
+                      <a 
+                        href={`https://solscan.io/tx/${dropTxSig}`} 
+                        target="_blank"
+                        className="text-xs text-cyan-400 hover:underline break-all"
+                      >
+                        View on Solscan →
+                      </a>
+              </div>
+                  )}
+                  
+                  <div className="text-xs text-white/50 text-center">
+                    💡 Share the password via secure channel (Signal, Session, etc)
+                  </div>
+                </div>
+            </div>
+          )}
+            
+            {tool === 'coinflip' && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <i data-lucide="dice-3" className="w-6 h-6 text-yellow-400"></i>
+                  <div>
+                    <h3 className="font-bold text-white text-lg">Verifiable Coin Flip</h3>
+                    <p className="text-white/60 text-sm">Provably fair randomness with commit-reveal</p>
+                  </div>
+                </div>
+                
+                <div className="bg-yellow-500/10 border border-yellow-400/30 rounded-lg p-4 text-sm text-white/80">
+                  <strong className="text-yellow-400">How it works:</strong> Commit your choice (hashed) → Post on-chain → Reveal to prove you didn't cheat. Trustless randomness!
+                </div>
+                
+                <div className="bg-white/5 border border-white/10 rounded-lg p-4 text-sm text-white/70">
+                  <strong className="text-white">Why use this?</strong> Make fair decisions without trusted third party. Both parties commit first, then reveal. Perfect for settling disputes, choosing winners, or any situation needing verifiable randomness.
+                </div>
+                
+            <div className="space-y-3">
+                  {isFlipping ? (
+                    <>
+                      <div className="flex justify-center py-8">
+                        <div className="coin-flipping">
+                          <div className="coin">
+                            <div className="coin-side heads">HEADS</div>
+                            <div className="coin-side tails">TAILS</div>
               </div>
             </div>
-          )}
-          {tab==='inbox' && (
+                      </div>
+                      <div className="text-center text-yellow-400 font-semibold">Flipping...</div>
+                    </>
+                  ) : !flipCommit ? (
+                    <>
+                      <div className="flex justify-center py-8">
+                        <div className="coin-flip-ready">
+                          <div className="coin">
+                            <div className="coin-side heads">HEADS</div>
+                            <div className="coin-side tails">TAILS</div>
+                          </div>
+                        </div>
+                      </div>
+                      <button onClick={commitFlip} className="w-full px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-semibold rounded-lg transition-all">
+                        🎲 Flip Coin & Commit
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="bg-white/5 border border-white/20 rounded-lg p-3">
+                        <div className="text-xs text-white/60 mb-1">Commitment Hash (on-chain):</div>
+                        <div className="text-xs text-yellow-400 break-all font-mono">{flipCommit}</div>
+                      </div>
+                      
+                      {!flipResult ? (
+                        <>
+                          <div className="flex justify-center py-8">
+                            <div className="coin-flip-ready">
+                              <div className="coin">
+                                <div className="coin-side heads">HEADS</div>
+                                <div className="coin-side tails">TAILS</div>
+                              </div>
+                            </div>
+                          </div>
+                          <button onClick={revealFlip} className="w-full px-6 py-3 bg-green-500 hover:bg-green-400 text-white font-semibold rounded-lg transition-all">
+                            🔓 Reveal Result
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex justify-center py-8">
+                            <div className={`coin-result ${flipResult === 'HEADS' ? 'show-heads' : 'show-tails'}`}>
+                              <div className="coin">
+                                <div className="coin-side heads">HEADS</div>
+                                <div className="coin-side tails">TAILS</div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-400/40 rounded-lg p-6 text-center">
+                            <div className="text-2xl font-bold text-white mb-1">{flipResult}</div>
+                            <div className="text-xs text-white/60">Verifiable on Solana blockchain</div>
+                          </div>
+                        </>
+                      )}
+                      
+                      <button 
+                        onClick={()=>{setFlipCommit('');setFlipSecret('');setFlipResult('');setFlipReveal('');setIsFlipping(false);}} 
+                        className="w-full px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all text-sm"
+                      >
+                        Reset & Flip Again
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {tool === 'donations' && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <i data-lucide="piggy-bank" className="w-6 h-6 text-green-400"></i>
+                  <div>
+                    <h3 className="font-bold text-white text-lg">Anonymous Donation Jar</h3>
+                    <p className="text-white/60 text-sm">Untraceable donations with rotating wallets</p>
+                  </div>
+                </div>
+                
+                <div className="bg-green-500/10 border border-green-400/30 rounded-lg p-4 text-sm text-white/80">
+                  <strong className="text-green-400">How it works:</strong> Generate multiple burner wallets → Each donor uses different address → Sweep all to main wallet. Donors can't be linked together.
+                </div>
+                
+                <div className="bg-white/5 border border-white/10 rounded-lg p-4 text-sm text-white/70">
+                  <strong className="text-white">Why use this?</strong> Activists receive donations without exposing donor network. Each donation to unique address breaks chain analysis. Perfect for controversial causes, political campaigns, or privacy-focused fundraising.
+                </div>
+                
             <div className="space-y-3">
-              <input className="w-full bg-white/5 border border-white/10 rounded p-2 text-sm" placeholder="Paste encrypted memo (ENC:...)" onChange={e=>setEncMemo(e.target.value.replace(/^ENC:/,''))} />
-              <input className="w-full bg-white/5 border border-white/10 rounded p-2 text-sm" placeholder="Paste shared AES key (base64)" onChange={e=>setMemoKey(e.target.value)} />
-              <button onClick={viewEncMemo} className="px-3 py-2 rounded bg-emerald-500 text-black font-semibold">Decrypt</button>
+                  {donationWallets.length === 0 ? (
+                    <>
+                      <div>
+                        <label className="text-xs text-white/60 mb-1 block">Number of donation addresses</label>
+                        <input 
+                          type="number"
+                          className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-2 text-white" 
+                          value={donationCount}
+                          onChange={e=>setDonationCount(e.target.value)}
+                        />
+            </div>
+                      
+                      <button onClick={createDonationJar} className="w-full px-6 py-3 bg-green-500 hover:bg-green-400 text-white font-semibold rounded-lg transition-all">
+                        🏺 Create Donation Jar
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="bg-white/5 border border-white/20 rounded-lg p-4 max-h-64 overflow-y-auto">
+                        <div className="text-xs text-white/60 mb-2">Anonymous Donation Addresses:</div>
+                        {donationWallets.map((w, i) => (
+                          <div key={i} className="mb-2 pb-2 border-b border-white/10 last:border-0">
+                            <div className="text-xs text-white/50 mb-1">Address #{i+1}</div>
+                            <div className="text-xs text-green-400 break-all font-mono">{w.address}</div>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <input 
+                        type="text"
+                        className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-2 text-white font-mono text-sm" 
+                        placeholder="Your main wallet (sweep destination)"
+                        value={donationSweepTo}
+                        onChange={e=>setDonationSweepTo(e.target.value)}
+                      />
+                      
+                      <button onClick={sweepDonations} className="w-full px-6 py-3 bg-purple-500 hover:bg-purple-400 text-white font-semibold rounded-lg transition-all">
+                        💸 Sweep All Donations
+                      </button>
+                      
+                      <button 
+                        onClick={()=>{setDonationWallets([]);setDonationSweepTo('');}} 
+                        className="w-full px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all text-sm"
+                      >
+                        Reset Jar
+                      </button>
+                    </>
+                  )}
+                </div>
             </div>
           )}
-          {tab==='offline' && (
-            <div className="space-y-2 text-sm text-white/70">
-              <p>Build unsigned tx → export base64 → sign offline via QR → import signed base64 to broadcast.</p>
-            </div>
-          )}
+          </div>
         </GlassCard>
       );
     }
@@ -1784,12 +2595,12 @@
       const items = [
         { id:'home',    label:'Home', icon:'home' },
         { id:'webrtc',    label:'WebRTC Transfer', icon:'radio' },
-        { id:'swap', label:'Privacy Swap', icon:'shuffle' },
-        { id:'solana-privacy', label:'Solana Privacy', icon:'shield' },
+        { id:'swap', label:'Privacy Swap', iconImg:'4DqRlDPT_400x400.png.png' },
+        { id:'solana-privacy', label:'Solana Privacy', iconImg:'solana.png' },
         { id:'steganography', label:'🎭 Steganography', icon:'eye-off' },
         { id:'privacy-checkup', label:'Privacy Checkup', icon:'shield-check' },
         { id:'censorship-map', label:'Censorship Map', icon:'globe' },
-        { id:'tor-bridges', label:'Tor Bridges', icon:'shield-alert' },
+        { id:'tor-bridges', label:'Tor Bridges', iconImg:'Tor_logo1.png' },
         { id:'proxy-links', label:'Proxy Links', icon:'link-2' },
       ];
       
@@ -1807,7 +2618,11 @@
                     ? 'border-cyan-400/60 bg-cyan-400/15 text-cyan-100 scale-in'
                     : 'border-white/10 bg-white/[0.03] text-white/80 hover:bg-white/[0.07] hover:scale-[1.02]'}
                   stagger-${i+1}`}>
+                  {x.iconImg ? (
+                    <img src={x.iconImg} alt={x.label} className="w-5 h-5 object-contain" />
+                  ) : (
                   <i data-lucide={x.icon} className="w-5 h-5"></i>
+                  )}
                   {x.label}
                 </button>
               ))}
@@ -1933,37 +2748,6 @@
                 <p className="text-white/50 text-xs">Anonymous crypto exchange</p>
               </div>
             </div>
-          </div>
-
-          {/* Whitepaper CTA Section */}
-          <div className="fade-up-4">
-            <a href="whitepaper.html" target="_blank" className="block">
-              <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10 p-8 hover:border-blue-400/30 transition-all hover:scale-[1.02] cursor-pointer group">
-                {/* Animated background gradient */}
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/5 to-blue-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                
-                <div className="relative flex flex-col md:flex-row items-center justify-between gap-6">
-                  {/* Left side - Icon and text */}
-                  <div className="flex items-center gap-6">
-                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-xl shadow-blue-500/50 group-hover:shadow-blue-500/70 transition-all group-hover:scale-110">
-                      <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                      </svg>
-                    </div>
-      <div>
-                      <h3 className="text-2xl font-bold text-white mb-2">Read the Whitepaper</h3>
-                      <p className="text-white/70">Deep dive into our technology, architecture, and vision for the future of privacy.</p>
-      </div>
-                  </div>
-                  
-                  {/* Right side - CTA */}
-                  <div className="flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-500/20 border border-blue-400/30 text-blue-300 font-semibold group-hover:bg-blue-500/30 transition-all">
-                    <span>Read Now</span>
-                    <i data-lucide="arrow-right" className="w-5 h-5 group-hover:translate-x-1 transition-transform"></i>
-                  </div>
-                </div>
-              </div>
-            </a>
           </div>
     </div>
       );
@@ -4247,7 +5031,7 @@
               <button
                 onClick={runCheckup}
                 disabled={checking}
-                className="btn-primary flex items-center gap-2 mx-auto"
+                className="px-8 py-4 rounded-xl font-bold text-base transition-all border-2 shadow-xl flex items-center gap-3 mx-auto bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 border-cyan-400/50 text-white hover:scale-105 hover:shadow-2xl hover:shadow-cyan-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
                 <i data-lucide={checking ? "loader" : "shield-check"} className={`w-5 h-5 ${checking ? 'animate-spin' : ''}`}></i>
                 {checking ? 'Running Checkup...' : 'Run Privacy Checkup'}

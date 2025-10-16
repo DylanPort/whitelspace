@@ -209,6 +209,273 @@
       );
     }
     
+    // Solana Privacy Section with Tabs
+    function SolanaPrivacySection() {
+      const [activeTab, setActiveTab] = useState(0);
+      
+      useEffect(() => {
+        if (window.lucide) window.lucide.createIcons();
+      }, [activeTab]);
+      
+      const tabs = [
+        { id: 0, name: 'Proof of Existence', icon: 'shield-check' },
+        { id: 1, name: 'How It Works', icon: 'cpu' },
+        { id: 2, name: 'Use Cases', icon: 'lightbulb' },
+        { id: 3, name: 'Privacy Guarantees', icon: 'lock' }
+      ];
+      
+      const tabContent = {
+        0: {
+          title: 'Blockchain Proof of Existence',
+          content: (
+            <div className="space-y-6">
+              <p className="text-lg text-white/90">
+                After sending an encrypted bundle, Whistle posts a SHA-256 hash to the Solana blockchain. This creates an immutable, publicly verifiable timestamp without revealing any content.
+              </p>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="bg-white/[0.03] p-6 rounded-xl border border-yellow-400/20">
+                  <h4 className="text-xl font-bold text-yellow-300 mb-4 flex items-center gap-2">
+                    <i data-lucide="zap" className="w-5 h-5"></i>
+                    Lightning Fast
+                  </h4>
+                  <ul className="space-y-2 text-white/80">
+                    <li>✓ Confirms in under 1 second</li>
+                    <li>✓ 400ms average confirmation time</li>
+                    <li>✓ Real-time verification</li>
+                  </ul>
+                </div>
+                <div className="bg-white/[0.03] p-6 rounded-xl border border-yellow-400/20">
+                  <h4 className="text-xl font-bold text-yellow-300 mb-4 flex items-center gap-2">
+                    <i data-lucide="coins" className="w-5 h-5"></i>
+                    Ultra Cheap
+                  </h4>
+                  <ul className="space-y-2 text-white/80">
+                    <li>✓ ~$0.0001 per transaction</li>
+                    <li>✓ Accessible to everyone</li>
+                    <li>✓ No barriers to entry</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="code-block">
+                <code className="text-yellow-400">
+                  const hash = await sha256(encryptedBundle);<br/>
+                  await postToSolana(hash); // Immutable proof created!<br/>
+                  // Content private, timestamp public and verifiable
+                </code>
+              </div>
+            </div>
+          )
+        },
+        1: {
+          title: 'How Solana Privacy Works',
+          content: (
+            <div className="space-y-6">
+              <div className="grid gap-6">
+                <div className="bg-gradient-to-r from-yellow-500/10 to-amber-500/10 p-6 rounded-xl border border-yellow-400/30">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-xl flex items-center justify-center shrink-0">
+                      <span className="text-2xl font-bold text-white">1</span>
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-bold text-white mb-2">Bundle Encryption</h4>
+                      <p className="text-white/80">Your message and files are encrypted using AES-256-GCM before any transmission occurs.</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-gradient-to-r from-yellow-500/10 to-amber-500/10 p-6 rounded-xl border border-yellow-400/30">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-xl flex items-center justify-center shrink-0">
+                      <span className="text-2xl font-bold text-white">2</span>
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-bold text-white mb-2">Hash Generation</h4>
+                      <p className="text-white/80">A unique SHA-256 hash (fingerprint) is computed from the encrypted bundle. This hash is 64 characters long.</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-gradient-to-r from-yellow-500/10 to-amber-500/10 p-6 rounded-xl border border-yellow-400/30">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-xl flex items-center justify-center shrink-0">
+                      <span className="text-2xl font-bold text-white">3</span>
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-bold text-white mb-2">Blockchain Posting</h4>
+                      <p className="text-white/80">Only the hash is posted to Solana using a Memo transaction. The actual content never touches the blockchain.</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-gradient-to-r from-yellow-500/10 to-amber-500/10 p-6 rounded-xl border border-yellow-400/30">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-xl flex items-center justify-center shrink-0">
+                      <span className="text-2xl font-bold text-white">4</span>
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-bold text-white mb-2">Immutable Timestamp</h4>
+                      <p className="text-white/80">The transaction is permanently recorded with a timestamp that anyone can verify but no one can alter.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        },
+        2: {
+          title: 'Real-World Use Cases',
+          content: (
+            <div className="space-y-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="bg-white/[0.03] p-6 rounded-xl border border-yellow-400/20 hover:border-yellow-400/40 transition-all">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mb-4">
+                    <i data-lucide="briefcase" className="w-6 h-6 text-white"></i>
+                  </div>
+                  <h4 className="text-xl font-bold text-white mb-3">Corporate Whistleblower</h4>
+                  <p className="text-white/80 text-sm">
+                    Send documents on January 1st. Story breaks January 5th. Company claims fraud on January 10th? 
+                    Your Solana timestamp proves the documents existed before the accusation.
+                  </p>
+                </div>
+                
+                <div className="bg-white/[0.03] p-6 rounded-xl border border-yellow-400/20 hover:border-yellow-400/40 transition-all">
+                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-4">
+                    <i data-lucide="newspaper" className="w-6 h-6 text-white"></i>
+                  </div>
+                  <h4 className="text-xl font-bold text-white mb-3">Investigative Journalism</h4>
+                  <p className="text-white/80 text-sm">
+                    Receive a tip with blockchain proof. Verify the timeline. Protect your source's credibility. 
+                    The timestamp proves authenticity without revealing identity.
+                  </p>
+                </div>
+                
+                <div className="bg-white/[0.03] p-6 rounded-xl border border-yellow-400/20 hover:border-yellow-400/40 transition-all">
+                  <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mb-4">
+                    <i data-lucide="scale" className="w-6 h-6 text-white"></i>
+                  </div>
+                  <h4 className="text-xl font-bold text-white mb-3">Legal Protection</h4>
+                  <p className="text-white/80 text-sm">
+                    Prove you possessed evidence at a specific time. Defend against fabrication claims. 
+                    Blockchain timestamps are admissible in legal proceedings.
+                  </p>
+                </div>
+                
+                <div className="bg-white/[0.03] p-6 rounded-xl border border-yellow-400/20 hover:border-yellow-400/40 transition-all">
+                  <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-orange-500 rounded-xl flex items-center justify-center mb-4">
+                    <i data-lucide="users" className="w-6 h-6 text-white"></i>
+                  </div>
+                  <h4 className="text-xl font-bold text-white mb-3">Human Rights Documentation</h4>
+                  <p className="text-white/80 text-sm">
+                    Document abuses with immutable timestamps. Share evidence internationally. 
+                    Prove events occurred when claimed, preventing historical revisionism.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )
+        },
+        3: {
+          title: 'Privacy & Security Guarantees',
+          content: (
+            <div className="space-y-6">
+              <div className="grid gap-4">
+                <div className="flex items-start gap-4 p-6 rounded-xl bg-white/[0.03] border border-green-400/30">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shrink-0">
+                    <i data-lucide="check" className="w-5 h-5 text-white"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-white mb-2">Content Privacy</h4>
+                    <p className="text-white/70">Only the hash is stored on-chain. Your actual message content never touches the blockchain. Impossible to reverse engineer content from hash.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-4 p-6 rounded-xl bg-white/[0.03] border border-green-400/30">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shrink-0">
+                    <i data-lucide="check" className="w-5 h-5 text-white"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-white mb-2">Identity Protection</h4>
+                    <p className="text-white/70">Use any Solana wallet. No KYC required. Wallet addresses don't reveal real-world identity. Complete pseudonymity maintained.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-4 p-6 rounded-xl bg-white/[0.03] border border-green-400/30">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shrink-0">
+                    <i data-lucide="check" className="w-5 h-5 text-white"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-white mb-2">Immutability</h4>
+                    <p className="text-white/70">Once posted, the timestamp cannot be altered or deleted. Provides permanent proof. Protected by Solana's network security.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-4 p-6 rounded-xl bg-white/[0.03] border border-green-400/30">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shrink-0">
+                    <i data-lucide="check" className="w-5 h-5 text-white"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-white mb-2">Public Verifiability</h4>
+                    <p className="text-white/70">Anyone can verify the timestamp using Solana explorers. No special access required. Transparency without compromising privacy.</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-r from-yellow-500/20 to-amber-500/20 border border-yellow-400/40 rounded-xl p-6 mt-6">
+                <div className="flex items-start gap-4">
+                  <i data-lucide="info" className="w-6 h-6 text-yellow-400 shrink-0 mt-1"></i>
+                  <div>
+                    <h4 className="text-lg font-bold text-white mb-2">What This Means</h4>
+                    <p className="text-white/90">
+                      You get the best of both worlds: <span className="text-yellow-400 font-bold">complete content privacy</span> from encryption, 
+                      and <span className="text-yellow-400 font-bold">verifiable proof</span> from blockchain. No one can see your message, 
+                      but everyone can verify it existed at a specific time.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        }
+      };
+      
+      return (
+        <div className="max-w-6xl mx-auto px-6 my-20">
+          <div className="feature-card p-8">
+            <h3 className="text-3xl font-bold mb-8 text-center flex items-center justify-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-500 to-amber-500 flex items-center justify-center">
+                <i data-lucide="link-2" className="w-6 h-6 text-white"></i>
+              </div>
+              Solana Blockchain Privacy
+            </h3>
+            
+            {/* Tabs */}
+            <div className="flex flex-wrap gap-3 mb-8 justify-center">
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 ${
+                    activeTab === tab.id
+                      ? 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-lg shadow-yellow-500/30'
+                      : 'bg-white/[0.05] text-white/70 hover:bg-white/[0.1] hover:text-white'
+                  }`}
+                >
+                  <i data-lucide={tab.icon} className="w-4 h-4"></i>
+                  {tab.name}
+                </button>
+              ))}
+            </div>
+            
+            {/* Tab Content */}
+            <div className="mt-8">
+              <h4 className="text-2xl font-bold text-white mb-6">{tabContent[activeTab].title}</h4>
+              {tabContent[activeTab].content}
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
     // Main App
     function WhitepaperApp() {
       useEffect(() => {
@@ -381,6 +648,9 @@
               </div>
             </div>
           </div>
+          
+          {/* Solana Privacy Section with Tabs */}
+          <SolanaPrivacySection />
           
           {/* The Manifesto */}
           <div className="max-w-4xl mx-auto px-6 my-20">
