@@ -1619,7 +1619,6 @@
         { id: "steganography", label: "🎭 Steganography", icon: "eye-off" },
         { id: "privacy-checkup", label: "Privacy Checkup", icon: "shield-check" },
         { id: "censorship-map", label: "Censorship Map", icon: "globe" },
-        { id: "tor-bridges", label: "Tor Bridges", iconImg: "Tor_logo1.png" },
         { id: "proxy-links", label: "Proxy Links", icon: "link-2" },
       ];
       
@@ -2552,7 +2551,6 @@
         { id:'steganography', label:'🎭 Steganography', icon:'eye-off' },
         { id:'privacy-checkup', label:'Privacy Checkup', icon:'shield-check' },
         { id:'censorship-map', label:'Censorship Map', icon:'globe' },
-        { id:'tor-bridges', label:'Tor Bridges', iconImg:'Tor_logo1.png' },
         { id:'proxy-links', label:'Proxy Links', icon:'link-2' },
       ];
       
@@ -5980,7 +5978,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'steganography', 'privacy-checkup', 'censorship-map', 'tor-bridges', 'proxy-links', 'swap', 'solana-privacy', 'zolana'];
+      const validSteps = ['home', 'webrtc', 'steganography', 'privacy-checkup', 'censorship-map', 'proxy-links', 'swap', 'solana-privacy', 'zolana'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -6016,7 +6014,6 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                       case 'steganography': return <UnifiedSteganography pushToast={push} />;
                       case 'privacy-checkup': return <PrivacyCheckup pushToast={push} />;
                       case 'censorship-map': return <CensorshipMap pushToast={push} />;
-                      case 'tor-bridges': return <TorBridgeFinder pushToast={push} />;
                       case 'proxy-links': return <ProxyLinkGenerator pushToast={push} />;
                       case 'swap': return <PrivacySwap />;
                       case 'solana-privacy': return <SolanaPrivacyToolkit pushToast={push} />;
