@@ -1615,7 +1615,7 @@
         { id: "webrtc", label: "WebRTC Transfer", icon: "radio" },
         { id: "swap", label: "Privacy Swap", iconImg: "4DqRlDPT_400x400.png.png" },
         { id: "solana-privacy", label: "Solana Privacy", iconImg: "solana.png" },
-        { id: "zolana", label: "Zolana Exchange", icon: "repeat" },
+        { id: "zolana", label: "Zolana Exchange", iconImg: "zcash-3d-icon-png-download-10372070.png" },
         { id: "steganography", label: "🎭 Steganography", icon: "eye-off" },
         { id: "privacy-checkup", label: "Privacy Checkup", icon: "shield-check" },
         { id: "censorship-map", label: "Censorship Map", icon: "globe" },
@@ -2558,7 +2558,7 @@
         { id:'webrtc',    label:'WebRTC Transfer', icon:'radio' },
         { id:'swap', label:'Privacy Swap', iconImg:'4DqRlDPT_400x400.png.png' },
         { id:'solana-privacy', label:'Solana Privacy', iconImg:'solana.png' },
-        { id:'zolana', label:'Zolana Exchange', icon:'repeat' },
+        { id:'zolana', label:'Zolana Exchange', iconImg:'zcash-3d-icon-png-download-10372070.png' },
         { id:'steganography', label:'🎭 Steganography', icon:'eye-off' },
         { id:'privacy-checkup', label:'Privacy Checkup', icon:'shield-check' },
         { id:'censorship-map', label:'Censorship Map', icon:'globe' },
@@ -5704,6 +5704,20 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       return (
         <GlassCard title="Zolana Exchange" subtitle="Swap cryptocurrencies privately with ChangeNow">
           <div className="space-y-6">
+            {/* Highlight Banner */}
+            <div className="bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border border-cyan-400/40 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <i data-lucide="zap" className="w-6 h-6 text-cyan-400 flex-shrink-0 mt-0.5"></i>
+                <div>
+                  <h3 className="text-white font-bold mb-1 text-lg">Exchange ZEC with Any Currency</h3>
+                  <p className="text-sm text-white/80">
+                    Swap Zcash (ZEC) to and from 400+ cryptocurrencies including SOL, BTC, ETH, and more. 
+                    You can even exchange ZEC to ZEC for privacy mixing!
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* ChangeNow Widget */}
             <div className="flex items-center justify-center">
               <iframe 
