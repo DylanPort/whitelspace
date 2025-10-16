@@ -1679,6 +1679,18 @@
 
     // Solana Privacy Toolkit - 5 Production Tools
     function SolanaPrivacyToolkit({ pushToast }) {
+      // Safety check for Solana library
+      if (typeof solanaWeb3 === 'undefined') {
+        return (
+          <GlassCard title="Solana Privacy Toolkit" subtitle="Solana Web3.js library not loaded">
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6">
+              <h3 className="text-white font-semibold mb-2">⚠️ Library Not Loaded</h3>
+              <p className="text-white/70 text-sm">The Solana Web3.js library failed to load. Please refresh the page.</p>
+            </div>
+          </GlassCard>
+        );
+      }
+      
       const { Connection, PublicKey, SystemProgram, Transaction } = solanaWeb3;
       const [rpc, setRpc] = useState('https://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0');
       const [showRpcInput, setShowRpcInput] = useState(false);
@@ -4791,7 +4803,7 @@
       },[]);
       
       return (
-        <GlassCard>
+        <GlassCard title="Privacy Swap" subtitle="Anonymous cryptocurrency exchange powered by 4NON">
           <div className="space-y-6">
             {/* 4NON Widget */}
             <div className="flex justify-center">
