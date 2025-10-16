@@ -1685,6 +1685,7 @@
         { id: "webrtc", label: "WebRTC Transfer", icon: "radio" },
         { id: "swap", label: "Privacy Swap", iconImg: "4DqRlDPT_400x400.png.png" },
         { id: "solana-privacy", label: "Solana Privacy", iconImg: "solana.png" },
+        { id: "zolana", label: "Zolana Exchange", icon: "repeat" },
         { id: "steganography", label: "🎭 Steganography", icon: "eye-off" },
         { id: "privacy-checkup", label: "Privacy Checkup", icon: "shield-check" },
         { id: "censorship-map", label: "Censorship Map", icon: "globe" },
@@ -2605,6 +2606,7 @@
         { id:'webrtc',    label:'WebRTC Transfer', icon:'radio' },
         { id:'swap', label:'Privacy Swap', iconImg:'4DqRlDPT_400x400.png.png' },
         { id:'solana-privacy', label:'Solana Privacy', iconImg:'solana.png' },
+        { id:'zolana', label:'Zolana Exchange', icon:'repeat' },
         { id:'steganography', label:'🎭 Steganography', icon:'eye-off' },
         { id:'privacy-checkup', label:'Privacy Checkup', icon:'shield-check' },
         { id:'censorship-map', label:'Censorship Map', icon:'globe' },
@@ -5741,6 +5743,118 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       );
     }
 
+    // ===== ZOLANA EXCHANGE =====
+    
+    function ZolanaExchange({ pushToast }) {
+      useEffect(()=>{
+        if(window.lucide) window.lucide.createIcons();
+      },[]);
+
+      return (
+        <GlassCard title="Zolana Exchange" subtitle="Swap cryptocurrencies privately with ChangeNow">
+          <div className="space-y-6">
+            {/* Info Banner */}
+            <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <i data-lucide="repeat" className="w-5 h-5 text-cyan-400 flex-shrink-0 mt-0.5"></i>
+                <div>
+                  <h3 className="text-white font-semibold mb-2">Private Crypto Exchange</h3>
+                  <p className="text-sm text-white/70">
+                    Exchange cryptocurrencies quickly and securely without KYC. Powered by ChangeNow for instant, anonymous swaps.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* ChangeNow Widget */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-6 hover:border-cyan-400/30 transition-colors">
+              <div className="flex items-center justify-center">
+                <iframe 
+                  id='iframe-widget' 
+                  src='https://changenow.io/embeds/exchange-widget/v2/widget.html?FAQ=false&amount=30&amountFiat&backgroundColor=939393&darkMode=true&from=sol&horizontal=false&isFiat=false&lang=en-US&link_id=5c7404893366e3&locales=false&logo=false&primaryColor=6a6f6f&to=zec&toTheMoon=false' 
+                  style={{height: '356px', width: '100%', border: 'none', maxWidth: '500px'}}
+                  title="ChangeNow Exchange Widget"
+                ></iframe>
+              </div>
+            </div>
+
+            {/* Features */}
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-400/20 to-cyan-600/20 flex items-center justify-center">
+                    <i data-lucide="shield-check" className="w-5 h-5 text-cyan-400"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-white font-semibold mb-1">No KYC Required</h4>
+                    <p className="text-sm text-white/60">Exchange without identity verification</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-purple-400/20 to-purple-600/20 flex items-center justify-center">
+                    <i data-lucide="zap" className="w-5 h-5 text-purple-400"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-white font-semibold mb-1">Instant Swaps</h4>
+                    <p className="text-sm text-white/60">Fast transactions with competitive rates</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-400/20 to-emerald-600/20 flex items-center justify-center">
+                    <i data-lucide="coins" className="w-5 h-5 text-emerald-400"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-white font-semibold mb-1">400+ Currencies</h4>
+                    <p className="text-sm text-white/60">Wide selection of cryptocurrencies</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-pink-400/20 to-pink-600/20 flex items-center justify-center">
+                    <i data-lucide="lock" className="w-5 h-5 text-pink-400"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-white font-semibold mb-1">Secure & Private</h4>
+                    <p className="text-sm text-white/60">Non-custodial exchange service</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Educational Info */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <i data-lucide="info" className="w-5 h-5 text-cyan-400 flex-shrink-0 mt-0.5"></i>
+                <div>
+                  <h3 className="text-white font-semibold mb-2">How It Works</h3>
+                  <ul className="text-sm text-white/70 space-y-1">
+                    <li>• <strong>Select currencies:</strong> Choose what you want to exchange</li>
+                    <li>• <strong>Enter amount:</strong> Specify how much you want to swap</li>
+                    <li>• <strong>Provide addresses:</strong> Enter your receiving wallet address</li>
+                    <li>• <strong>Complete swap:</strong> Send funds and receive your exchange automatically</li>
+                    <li>• <strong>Track transaction:</strong> Monitor your swap status in real-time</li>
+                  </ul>
+                  <div className="mt-3 pt-3 border-t border-white/10">
+                    <p className="text-xs text-white/50">
+                      Service provided by ChangeNow. Always verify addresses carefully before sending funds.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </GlassCard>
+      );
+    }
+
     // ===== PROXY LINK GENERATOR =====
     
     function ProxyLinkGenerator({ pushToast }) {
@@ -5924,7 +6038,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'steganography', 'privacy-checkup', 'censorship-map', 'tor-bridges', 'proxy-links', 'swap', 'solana-privacy'];
+      const validSteps = ['home', 'webrtc', 'steganography', 'privacy-checkup', 'censorship-map', 'tor-bridges', 'proxy-links', 'swap', 'solana-privacy', 'zolana'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -5960,6 +6074,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 {currentStep === 'proxy-links' && <ProxyLinkGenerator pushToast={push} />}
                 {currentStep === 'swap' && <PrivacySwap />}
                 {currentStep === 'solana-privacy' && <SolanaPrivacyToolkit pushToast={push} />}
+                {currentStep === 'zolana' && <ZolanaExchange pushToast={push} />}
               </main>
             </div>
           </div>
@@ -5990,6 +6105,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
 </script>
+<script defer type='text/javascript' src='https://changenow.io/embeds/exchange-widget/v2/stepper-connector.js'></script>
 </body>
 </html>
 
