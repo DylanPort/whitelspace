@@ -552,6 +552,39 @@
 
   <script type="text/babel">
     const { useEffect, useMemo, useRef, useState } = React;
+    
+    // Error Boundary Component
+    class ErrorBoundary extends React.Component {
+      constructor(props) {
+        super(props);
+        this.state = { hasError: false, error: null };
+      }
+      
+      static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+      }
+      
+      componentDidCatch(error, errorInfo) {
+        console.error('Component Error:', error, errorInfo);
+      }
+      
+      render() {
+        if (this.state.hasError) {
+          return (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 m-4">
+              <h2 className="text-white text-xl font-bold mb-2">⚠️ Something went wrong</h2>
+              <p className="text-white/70 text-sm mb-3">This component encountered an error. Please refresh the page or try another section.</p>
+              <details className="text-white/50 text-xs">
+                <summary className="cursor-pointer hover:text-white/70">Error Details</summary>
+                <pre className="mt-2 p-2 bg-black/30 rounded overflow-auto">{this.state.error?.toString()}</pre>
+              </details>
+            </div>
+          );
+        }
+        return this.props.children;
+      }
+    }
+    
     // Project constants
     const CONTRACT_ADDRESS = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';
 
@@ -5939,16 +5972,18 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 <div className="mb-4 md:hidden">
                   <StepPills step={currentStep} setStep={setStep} />
                 </div>
-                {currentStep === 'home' && <Home setStep={setStep} />}
-                {currentStep === 'webrtc' && <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />}
-                {currentStep === 'steganography' && <UnifiedSteganography pushToast={push} />}
-                {currentStep === 'privacy-checkup' && <PrivacyCheckup pushToast={push} />}
-                {currentStep === 'censorship-map' && <CensorshipMap pushToast={push} />}
-                {currentStep === 'tor-bridges' && <TorBridgeFinder pushToast={push} />}
-                {currentStep === 'proxy-links' && <ProxyLinkGenerator pushToast={push} />}
-                {currentStep === 'swap' && <PrivacySwap />}
-                {currentStep === 'solana-privacy' && <SolanaPrivacyToolkit pushToast={push} />}
-                {currentStep === 'zolana' && <ZolanaExchange pushToast={push} />}
+                <ErrorBoundary key={currentStep}>
+                  {currentStep === 'home' && <Home setStep={setStep} />}
+                  {currentStep === 'webrtc' && <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />}
+                  {currentStep === 'steganography' && <UnifiedSteganography pushToast={push} />}
+                  {currentStep === 'privacy-checkup' && <PrivacyCheckup pushToast={push} />}
+                  {currentStep === 'censorship-map' && <CensorshipMap pushToast={push} />}
+                  {currentStep === 'tor-bridges' && <TorBridgeFinder pushToast={push} />}
+                  {currentStep === 'proxy-links' && <ProxyLinkGenerator pushToast={push} />}
+                  {currentStep === 'swap' && <PrivacySwap />}
+                  {currentStep === 'solana-privacy' && <SolanaPrivacyToolkit pushToast={push} />}
+                  {currentStep === 'zolana' && <ZolanaExchange pushToast={push} />}
+                </ErrorBoundary>
               </main>
             </div>
           </div>
