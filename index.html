@@ -5719,13 +5719,29 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             </div>
 
             {/* ChangeNow Widget */}
-            <div className="flex items-center justify-center">
-              <iframe 
-                id='iframe-widget' 
-                src='https://changenow.io/embeds/exchange-widget/v2/widget.html?FAQ=false&amount=30&amountFiat=1500&backgroundColor=0b0f14&darkMode=true&from=btc&fromFiat=eur&horizontal=false&isFiat=false&lang=en-US&link_id=5c7404893366e3&locales=false&logo=false&primaryColor=67e8f9&to=eth&toFiat=eth&toTheMoon=false' 
-                style={{height: '356px', width: '100%', border: 'none'}}
-                title="ChangeNow Exchange Widget"
-              ></iframe>
+            <div className="space-y-3">
+              <div className="flex items-center justify-center">
+                <iframe 
+                  id='iframe-widget' 
+                  src='https://changenow.io/embeds/exchange-widget/v2/widget.html?FAQ=false&amount=30&amountFiat&backgroundColor=0b0f14&darkMode=true&from=sol&horizontal=false&isFiat=false&lang=en-US&link_id=5c7404893366e3&locales=false&logo=false&primaryColor=67e8f9&to=zec&toTheMoon=false' 
+                  style={{height: '356px', width: '100%', border: 'none'}}
+                  title="ChangeNow Exchange Widget"
+                ></iframe>
+              </div>
+              
+              {/* Powered by ChangeNow */}
+              <div className="flex items-center justify-center gap-2 text-sm text-white/50">
+                <span>Powered by</span>
+                <a 
+                  href="https://changenow.io" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-cyan-400 hover:text-cyan-300 font-semibold transition-colors flex items-center gap-1"
+                >
+                  ChangeNow
+                  <i data-lucide="external-link" className="w-3.5 h-3.5"></i>
+                </a>
+              </div>
             </div>
           </div>
         </GlassCard>
