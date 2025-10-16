@@ -585,6 +585,29 @@
       }
     }
     
+    // Loading Wrapper Component
+    function ComponentLoader({ children, name }) {
+      const [isLoading, setIsLoading] = React.useState(true);
+      
+      React.useEffect(() => {
+        console.log(`Loading component: ${name}`);
+        setIsLoading(false);
+      }, [name]);
+      
+      if (isLoading) {
+        return (
+          <div className="flex items-center justify-center p-12">
+            <div className="text-white/70">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto mb-4"></div>
+              <p>Loading {name}...</p>
+            </div>
+          </div>
+        );
+      }
+      
+      return children;
+    }
+    
     // Project constants
     const CONTRACT_ADDRESS = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';
 
@@ -5973,16 +5996,27 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   <StepPills step={currentStep} setStep={setStep} />
                 </div>
                 <ErrorBoundary key={currentStep}>
-                  {currentStep === 'home' && <Home setStep={setStep} />}
-                  {currentStep === 'webrtc' && <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />}
-                  {currentStep === 'steganography' && <UnifiedSteganography pushToast={push} />}
-                  {currentStep === 'privacy-checkup' && <PrivacyCheckup pushToast={push} />}
-                  {currentStep === 'censorship-map' && <CensorshipMap pushToast={push} />}
-                  {currentStep === 'tor-bridges' && <TorBridgeFinder pushToast={push} />}
-                  {currentStep === 'proxy-links' && <ProxyLinkGenerator pushToast={push} />}
-                  {currentStep === 'swap' && <PrivacySwap />}
-                  {currentStep === 'solana-privacy' && <SolanaPrivacyToolkit pushToast={push} />}
-                  {currentStep === 'zolana' && <ZolanaExchange pushToast={push} />}
+                  {(() => {
+                    console.log('Rendering step:', currentStep);
+                    switch(currentStep) {
+                      case 'home': return <Home setStep={setStep} />;
+                      case 'webrtc': return <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />;
+                      case 'steganography': return <UnifiedSteganography pushToast={push} />;
+                      case 'privacy-checkup': return <PrivacyCheckup pushToast={push} />;
+                      case 'censorship-map': return <CensorshipMap pushToast={push} />;
+                      case 'tor-bridges': return <TorBridgeFinder pushToast={push} />;
+                      case 'proxy-links': return <ProxyLinkGenerator pushToast={push} />;
+                      case 'swap': return <PrivacySwap />;
+                      case 'solana-privacy': return <SolanaPrivacyToolkit pushToast={push} />;
+                      case 'zolana': return <ZolanaExchange pushToast={push} />;
+                      default: return (
+                        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6">
+                          <h2 className="text-white text-xl font-bold mb-2">Section Not Found</h2>
+                          <p className="text-white/70">The section "{currentStep}" could not be loaded.</p>
+                        </div>
+                      );
+                    }
+                  })()}
                 </ErrorBoundary>
               </main>
             </div>
