@@ -108,6 +108,10 @@
                 <button onClick={sweepClaim} className="px-3 py-2 rounded bg-emerald-500 text-black font-semibold">Sweep (if link)</button>
               </div>
               {claimLink && (<div className="text-xs break-all bg-white/5 border border-white/10 rounded p-2">{claimLink}</div>)}
+              <div className="text-xs text-white/60">
+                <p><span className="font-semibold text-white/80">What:</span> Send SOL privately using a one‑time wallet link.</p>
+                <p><span className="font-semibold text-white/80">How:</span> We create an ephemeral key, you fund it, receiver opens the link and sweeps to their wallet.</p>
+              </div>
             </div>
           )}
           {tab==='memo' && (
@@ -120,6 +124,10 @@
               </div>
               {encMemo && (<div className="text-xs bg-white/5 border border-white/10 rounded p-2 break-all">Cipher: {encMemo}</div>)}
               {memoKey && (<div className="text-xs bg-white/5 border border-white/10 rounded p-2 break-all">Share key off‑band: {memoKey}</div>)}
+              <div className="text-xs text-white/60">
+                <p><span className="font-semibold text-white/80">What:</span> Hide a message inside the transaction Memo.</p>
+                <p><span className="font-semibold text-white/80">How:</span> Text is encrypted locally (AES‑GCM) and stored as ENC:…; only people with the shared key can read it.</p>
+              </div>
             </div>
           )}
           {tab==='poe' && (
@@ -130,6 +138,10 @@
                 <button onClick={stampHash} disabled={!poeHash} className="px-3 py-2 rounded bg-purple-500 text-white disabled:opacity-40">Stamp Hash</button>
               </div>
               {poeHash && (<div className="text-xs bg-white/5 border border-white/10 rounded p-2 break-all">SHA‑256: {poeHash}</div>)}
+              <div className="text-xs text-white/60">
+                <p><span className="font-semibold text-white/80">What:</span> Prove a file or text existed at a time, without uploading it.</p>
+                <p><span className="font-semibold text-white/80">How:</span> We hash it (SHA‑256) and store HASH:… in Memo; anyone can verify later by hashing the original.</p>
+              </div>
             </div>
           )}
           {tab==='mp' && (
@@ -141,6 +153,10 @@
                 <input className="w-28 bg-white/5 border border-white/10 rounded p-2 text-sm" value={mpJitter} onChange={e=>setMpJitter(e.target.value)} />
                 <button onClick={multiPathSend} className="px-3 py-2 rounded bg-cyan-500 text-black font-semibold">Start</button>
               </div>
+              <div className="text-xs text-white/60">
+                <p><span className="font-semibold text-white/80">What:</span> Make payments harder to link.</p>
+                <p><span className="font-semibold text-white/80">How:</span> Split into random parts and send with timing jitter to reduce heuristics.</p>
+              </div>
             </div>
           )}
           {tab==='inbox' && (
@@ -148,11 +164,16 @@
               <input className="w-full bg-white/5 border border-white/10 rounded p-2 text-sm" placeholder="Paste encrypted memo (ENC:...)" onChange={e=>setEncMemo(e.target.value.replace(/^ENC:/,''))} />
               <input className="w-full bg-white/5 border border-white/10 rounded p-2 text-sm" placeholder="Paste shared AES key (base64)" onChange={e=>setMemoKey(e.target.value)} />
               <button onClick={viewEncMemo} className="px-3 py-2 rounded bg-emerald-500 text-black font-semibold">Decrypt</button>
+              <div className="text-xs text-white/60">
+                <p><span className="font-semibold text-white/80">What:</span> Read encrypted memos you were given access to.</p>
+                <p><span className="font-semibold text-white/80">How:</span> Paste the ENC:… memo and the shared key; everything decrypts locally in your browser.</p>
+              </div>
             </div>
           )}
           {tab==='offline' && (
             <div className="space-y-2 text-sm text-white/70">
               <p>Build unsigned tx → export base64 → sign offline via QR → import signed base64 to broadcast.</p>
+              <p className="text-white/60 text-xs"><span className="font-semibold text-white/80">What:</span> Keep keys off the internet when signing. <span className="font-semibold text-white/80">How:</span> Use an air‑gapped device to sign; only the signature is brought online.</p>
             </div>
           )}
         </GlassCard>
