@@ -5697,9 +5697,82 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
     // ===== ZOLANA EXCHANGE =====
     
     function ZolanaExchange({ pushToast }) {
+      const [checkAddress, setCheckAddress] = useState('');
+      const [privacyResult, setPrivacyResult] = useState(null);
+      
       useEffect(()=>{
         if(window.lucide) window.lucide.createIcons();
-      },[]);
+      },[checkAddress, privacyResult]);
+      
+      function checkPrivacy() {
+        if (!checkAddress.trim()) {
+          pushToast('Please enter a ZEC address', 'err');
+          return;
+        }
+        
+        const addr = checkAddress.trim();
+        let result = {};
+        
+        // Check address type
+        if (addr.startsWith('t1') || addr.startsWith('t3')) {
+          result = {
+            type: 'Transparent',
+            privacy: 0,
+            color: 'red',
+            icon: 'eye',
+            description: 'This is a transparent address. All transactions are visible on the blockchain.',
+            recommendation: 'Upgrade to a shielded z-address for maximum privacy!',
+            features: ['❌ Address visible', '❌ Amount visible', '❌ No privacy']
+          };
+        } else if (addr.startsWith('zs')) {
+          result = {
+            type: 'Sapling Shielded',
+            privacy: 95,
+            color: 'emerald',
+            icon: 'shield',
+            description: 'This is a Sapling shielded address. Transactions are private.',
+            recommendation: 'Good! Consider upgrading to Orchard (newest protocol) for even better privacy.',
+            features: ['✓ Address hidden', '✓ Amount hidden', '✓ High privacy']
+          };
+        } else if (addr.startsWith('u1')) {
+          result = {
+            type: 'Orchard Unified',
+            privacy: 100,
+            color: 'cyan',
+            icon: 'shield-check',
+            description: 'This is an Orchard unified address—the latest and most private!',
+            recommendation: 'Perfect! You\'re using Zcash\'s newest privacy technology.',
+            features: ['✓ Maximum privacy', '✓ Orchard protocol', '✓ Future-proof']
+          };
+        } else if (addr.startsWith('z')) {
+          result = {
+            type: 'Shielded (Legacy)',
+            privacy: 85,
+            color: 'yellow',
+            icon: 'shield-alert',
+            description: 'This is a legacy shielded address. Still private, but outdated.',
+            recommendation: 'Consider upgrading to Orchard unified addresses.',
+            features: ['✓ Address hidden', '✓ Amount hidden', '⚠️ Old protocol']
+          };
+        } else {
+          result = {
+            type: 'Unknown/Invalid',
+            privacy: 0,
+            color: 'gray',
+            icon: 'help-circle',
+            description: 'This doesn\'t look like a valid ZEC address.',
+            recommendation: 'Please check the address format and try again.',
+            features: ['❓ Cannot verify']
+          };
+        }
+        
+        setPrivacyResult(result);
+      }
+      
+      function resetChecker() {
+        setCheckAddress('');
+        setPrivacyResult(null);
+      }
 
       return (
         <GlassCard title="Zolana Exchange" subtitle="Swap cryptocurrencies privately with ChangeNow">
@@ -5742,6 +5815,129 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   <i data-lucide="external-link" className="w-3.5 h-3.5"></i>
                 </a>
               </div>
+            </div>
+
+            {/* Privacy Address Checker */}
+            <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <i data-lucide="search" className="w-6 h-6 text-purple-400"></i>
+                <div>
+                  <h3 className="text-white font-semibold text-lg">ZEC Privacy Address Checker</h3>
+                  <p className="text-sm text-white/60">Check if your ZEC address is shielded or transparent</p>
+                </div>
+              </div>
+
+              {!privacyResult ? (
+                <div className="space-y-4">
+                  <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-4">
+                    <div className="flex items-start gap-2">
+                      <i data-lucide="info" className="w-5 h-5 text-cyan-400 flex-shrink-0 mt-0.5"></i>
+                      <div className="text-sm text-white/70">
+                        <p className="font-semibold text-white mb-1">What's the difference?</p>
+                        <ul className="space-y-1 text-xs">
+                          <li>• <strong className="text-red-400">Transparent (t-address):</strong> Like Bitcoin - everything visible</li>
+                          <li>• <strong className="text-emerald-400">Shielded (z-address):</strong> Private transactions - amounts & addresses hidden</li>
+                          <li>• <strong className="text-cyan-400">Orchard (u1-address):</strong> Latest protocol - maximum privacy</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-white mb-2">Enter ZEC Address</label>
+                    <div className="flex gap-2">
+                      <input 
+                        type="text"
+                        value={checkAddress}
+                        onChange={(e) => setCheckAddress(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && checkPrivacy()}
+                        placeholder="t1abc... or zs1xyz... or u1..."
+                        className="flex-1 px-4 py-3 rounded-xl border border-white/20 bg-black/30 text-white placeholder-white/40 focus:border-cyan-400 focus:outline-none"
+                      />
+                      <button 
+                        onClick={checkPrivacy}
+                        className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white font-semibold rounded-xl transition-all flex items-center gap-2"
+                      >
+                        <i data-lucide="search" className="w-5 h-5"></i>
+                        Check
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Privacy Score */}
+                  <div className={`bg-${privacyResult.color}-500/10 border border-${privacyResult.color}-500/30 rounded-xl p-6`}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-12 h-12 rounded-full bg-${privacyResult.color}-500/20 flex items-center justify-center`}>
+                          <i data-lucide={privacyResult.icon} className={`w-6 h-6 text-${privacyResult.color}-400`}></i>
+                        </div>
+                        <div>
+                          <h4 className="text-white font-bold text-lg">{privacyResult.type}</h4>
+                          <p className={`text-sm text-${privacyResult.color}-400 font-semibold`}>Privacy Score: {privacyResult.privacy}%</p>
+                        </div>
+                      </div>
+                      
+                      {/* Privacy Score Bar */}
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-white mb-1">{privacyResult.privacy}%</div>
+                        <div className="w-32 h-2 bg-white/10 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full bg-gradient-to-r from-${privacyResult.color}-500 to-${privacyResult.color}-400 transition-all duration-500`}
+                            style={{width: `${privacyResult.privacy}%`}}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    <p className="text-sm text-white/70 mb-3">{privacyResult.description}</p>
+
+                    {/* Features */}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {privacyResult.features.map((feature, i) => (
+                        <span key={i} className={`text-xs px-3 py-1.5 rounded-lg bg-${privacyResult.color}-500/20 text-${privacyResult.color}-300 border border-${privacyResult.color}-500/30`}>
+                          {feature}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Recommendation */}
+                    <div className={`bg-${privacyResult.color}-500/10 border border-${privacyResult.color}-500/20 rounded-lg p-3`}>
+                      <div className="flex items-start gap-2">
+                        <i data-lucide="lightbulb" className={`w-5 h-5 text-${privacyResult.color}-400 flex-shrink-0 mt-0.5`}></i>
+                        <div>
+                          <p className="text-sm font-semibold text-white mb-1">Recommendation:</p>
+                          <p className="text-sm text-white/70">{privacyResult.recommendation}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={resetChecker}
+                      className="flex-1 px-4 py-2.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
+                    >
+                      <i data-lucide="arrow-left" className="w-4 h-4"></i>
+                      Check Another
+                    </button>
+                    {privacyResult.privacy < 100 && (
+                      <a
+                        href="https://z.cash/wallets/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 px-4 py-2.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-400 font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
+                      >
+                        <i data-lucide="shield-check" className="w-4 h-4"></i>
+                        Get Shielded Wallet
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </GlassCard>
