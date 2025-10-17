@@ -6203,9 +6203,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [isCreatingToken, setIsCreatingToken] = useState(false);
       
       useEffect(()=>{
-        if(window.lucide) window.lucide.createIcons();
-        
-        // Load saved wallet
+        // Load saved wallet only once on mount
         const savedWallet = localStorage.getItem('whisper_launch_wallet');
         if (savedWallet) {
           try {
@@ -6216,7 +6214,15 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             console.error('Failed to load wallet:', e);
           }
         }
-      },[view, activeBombs]);
+      }, []);
+      
+      useEffect(()=>{
+        // Initialize icons after render
+        const timer = setTimeout(() => {
+          if(window.lucide) window.lucide.createIcons();
+        }, 100);
+        return () => clearTimeout(timer);
+      },[view, launchWallet, createdBomb]);
       
       // Check wallet balance
       async function checkWalletBalance(publicKey) {
