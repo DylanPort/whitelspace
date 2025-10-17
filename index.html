@@ -1616,6 +1616,7 @@
         { id: "swap", label: "Privacy Swap", iconImg: "4DqRlDPT_400x400.png.png" },
         { id: "solana-privacy", label: "Solana Privacy", iconImg: "solana.png" },
         { id: "zolana", label: "Zolana Exchange", iconImg: "zcash-3d-icon-png-download-10372070.png" },
+        { id: "privacy-vault", label: "Privacy Vault", icon: "vault" },
         { id: "steganography", label: "🎭 Steganography", icon: "eye-off" },
         { id: "privacy-checkup", label: "Privacy Checkup", icon: "shield-check" },
         { id: "censorship-map", label: "Censorship Map", icon: "globe" },
@@ -2559,6 +2560,7 @@
         { id:'swap', label:'Privacy Swap', iconImg:'4DqRlDPT_400x400.png.png' },
         { id:'solana-privacy', label:'Solana Privacy', iconImg:'solana.png' },
         { id:'zolana', label:'Zolana Exchange', iconImg:'zcash-3d-icon-png-download-10372070.png' },
+        { id:'privacy-vault', label:'Privacy Vault', icon:'vault' },
         { id:'steganography', label:'🎭 Steganography', icon:'eye-off' },
         { id:'privacy-checkup', label:'Privacy Checkup', icon:'shield-check' },
         { id:'censorship-map', label:'Censorship Map', icon:'globe' },
@@ -5694,6 +5696,385 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       );
     }
 
+    // ===== PRIVACY VAULT =====
+    
+    function PrivacyVault({ pushToast }) {
+      const [selectedVault, setSelectedVault] = useState(null);
+      const [depositAmount, setDepositAmount] = useState('');
+      const [userDeposit, setUserDeposit] = useState(0);
+      
+      useEffect(()=>{
+        if(window.lucide) window.lucide.createIcons();
+      },[selectedVault, userDeposit]);
+      
+      const vaults = [
+        {
+          id: 'safe',
+          name: 'Safe Vault',
+          icon: 'shield',
+          color: 'emerald',
+          minDeposit: 100,
+          expectedAPY: '10-15%',
+          risk: 'Low',
+          riskPercent: 20,
+          description: 'Conservative strategy with minimal risk',
+          strategies: ['Liquidity Providing', 'Stable Yield Farming'],
+          worstCase: '-5%',
+          bestCase: '+20%',
+          avgReturn: '+12%'
+        },
+        {
+          id: 'balanced',
+          name: 'Balanced Vault',
+          icon: 'trending-up',
+          color: 'cyan',
+          minDeposit: 500,
+          expectedAPY: '15-30%',
+          risk: 'Medium',
+          riskPercent: 50,
+          description: 'Mixed strategies for balanced risk/reward',
+          strategies: ['LP Fees', 'Arbitrage Bot', 'Privacy Challenges'],
+          worstCase: '-15%',
+          bestCase: '+45%',
+          avgReturn: '+22%'
+        },
+        {
+          id: 'aggressive',
+          name: 'Alpha Vault',
+          icon: 'zap',
+          color: 'purple',
+          minDeposit: 1000,
+          expectedAPY: '25-80%',
+          risk: 'High',
+          riskPercent: 80,
+          description: 'Maximum yield with higher volatility',
+          strategies: ['Flash Arbitrage', 'Volatility Trading', 'Privacy Competitions'],
+          worstCase: '-25%',
+          bestCase: '+120%',
+          avgReturn: '+45%'
+        }
+      ];
+      
+      // Mock deposit function (will be smart contract)
+      function handleDeposit() {
+        if (!selectedVault) {
+          pushToast('Please select a vault', 'err');
+          return;
+        }
+        
+        const amount = parseFloat(depositAmount);
+        if (!amount || amount < selectedVault.minDeposit) {
+          pushToast(`Minimum deposit: ${selectedVault.minDeposit} WHISTLE`, 'err');
+          return;
+        }
+        
+        // Simulate deposit
+        setUserDeposit(amount);
+        setDepositAmount('');
+        pushToast(`Deposited ${amount} WHISTLE to ${selectedVault.name}!`, 'ok');
+      }
+      
+      function handleWithdraw() {
+        if (userDeposit === 0) return;
+        
+        // Simulate random weekly performance
+        const variance = (Math.random() - 0.3) * 0.4; // -12% to +28% range
+        const baseReturn = selectedVault.id === 'safe' ? 0.12 : selectedVault.id === 'balanced' ? 0.22 : 0.45;
+        const actualReturn = baseReturn + variance;
+        const finalAmount = userDeposit * (1 + actualReturn);
+        const profit = finalAmount - userDeposit;
+        
+        setUserDeposit(0);
+        
+        if (profit > 0) {
+          pushToast(`Withdrew ${finalAmount.toFixed(2)} WHISTLE! Profit: +${profit.toFixed(2)} (+${(actualReturn*100).toFixed(1)}%)`, 'ok');
+        } else {
+          pushToast(`Withdrew ${finalAmount.toFixed(2)} WHISTLE. Loss: ${profit.toFixed(2)} (${(actualReturn*100).toFixed(1)}%)`, 'err');
+        }
+      }
+
+      return (
+        <GlassCard title="Privacy Vault" subtitle="Collective yield strategies with shared risk">
+          <div className="space-y-6">
+            {/* Info Banner */}
+            <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/40 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <i data-lucide="info" className="w-6 h-6 text-purple-400 flex-shrink-0 mt-0.5"></i>
+                <div>
+                  <h3 className="text-white font-bold mb-1 text-lg">Trustless Collective Earning</h3>
+                  <p className="text-sm text-white/80">
+                    Deposit WHISTLE into shared vaults. Smart contracts execute privacy-focused yield strategies. 
+                    Share profits AND risks with the collective. Withdraw anytime.
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                    <span className="px-2 py-1 rounded-md bg-emerald-500/20 text-emerald-300">✓ Trustless</span>
+                    <span className="px-2 py-1 rounded-md bg-cyan-500/20 text-cyan-300">✓ No Middleman</span>
+                    <span className="px-2 py-1 rounded-md bg-purple-500/20 text-purple-300">✓ Shared Risk</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Vault Selection */}
+            <div className="grid md:grid-cols-3 gap-4">
+              {vaults.map((vault) => (
+                <button
+                  key={vault.id}
+                  onClick={() => setSelectedVault(vault)}
+                  className={`text-left p-5 rounded-xl border-2 transition-all ${
+                    selectedVault?.id === vault.id
+                      ? `border-${vault.color}-400 bg-${vault.color}-500/20`
+                      : `border-white/10 bg-white/5 hover:border-${vault.color}-400/50 hover:bg-white/10`
+                  }`}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`w-12 h-12 rounded-lg bg-gradient-to-br from-${vault.color}-400/20 to-${vault.color}-600/20 flex items-center justify-center`}>
+                      <i data-lucide={vault.icon} className={`w-6 h-6 text-${vault.color}-400`}></i>
+                    </div>
+                    <div>
+                      <h4 className="text-white font-bold">{vault.name}</h4>
+                      <p className={`text-xs text-${vault.color}-400 font-semibold`}>{vault.expectedAPY} APY</p>
+                    </div>
+                  </div>
+                  
+                  <p className="text-sm text-white/60 mb-3">{vault.description}</p>
+                  
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-white/50">Risk Level:</span>
+                      <span className={`text-${vault.color}-400 font-semibold`}>{vault.risk}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/50">Min Deposit:</span>
+                      <span className="text-white">{vault.minDeposit} WHISTLE</span>
+                    </div>
+                  </div>
+                  
+                  {/* Risk Bar */}
+                  <div className="mt-3">
+                    <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full bg-gradient-to-r from-${vault.color}-500 to-${vault.color}-400`}
+                        style={{width: `${vault.riskPercent}%`}}
+                      ></div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Selected Vault Details */}
+            {selectedVault && (
+              <div className={`bg-${selectedVault.color}-500/10 border border-${selectedVault.color}-500/30 rounded-xl p-6`}>
+                <h3 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
+                  <i data-lucide={selectedVault.icon} className={`w-5 h-5 text-${selectedVault.color}-400`}></i>
+                  {selectedVault.name} Details
+                </h3>
+                
+                {/* Strategies */}
+                <div className="mb-4">
+                  <p className="text-sm text-white/60 mb-2">Active Strategies:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedVault.strategies.map((strategy, i) => (
+                      <span key={i} className="text-xs px-3 py-1.5 rounded-lg bg-white/10 text-white/80">
+                        {strategy}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Performance Range */}
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+                    <p className="text-xs text-red-400 mb-1">Worst Case</p>
+                    <p className="text-lg font-bold text-red-300">{selectedVault.worstCase}</p>
+                  </div>
+                  <div className={`bg-${selectedVault.color}-500/10 border border-${selectedVault.color}-500/30 rounded-lg p-3`}>
+                    <p className={`text-xs text-${selectedVault.color}-400 mb-1`}>Average</p>
+                    <p className={`text-lg font-bold text-${selectedVault.color}-300`}>{selectedVault.avgReturn}</p>
+                  </div>
+                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3">
+                    <p className="text-xs text-emerald-400 mb-1">Best Case</p>
+                    <p className="text-lg font-bold text-emerald-300">{selectedVault.bestCase}</p>
+                  </div>
+                </div>
+
+                {/* Deposit Interface */}
+                {userDeposit === 0 ? (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-semibold text-white mb-2">Deposit Amount</label>
+                      <div className="flex gap-2">
+                        <input 
+                          type="number"
+                          value={depositAmount}
+                          onChange={(e) => setDepositAmount(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && handleDeposit()}
+                          placeholder={`Min: ${selectedVault.minDeposit} WHISTLE`}
+                          className="flex-1 px-4 py-3 rounded-xl border border-white/20 bg-black/30 text-white placeholder-white/40 focus:border-cyan-400 focus:outline-none"
+                        />
+                        <button 
+                          onClick={handleDeposit}
+                          className={`px-6 py-3 bg-gradient-to-r from-${selectedVault.color}-500 to-${selectedVault.color}-600 hover:from-${selectedVault.color}-400 hover:to-${selectedVault.color}-500 text-white font-semibold rounded-xl transition-all flex items-center gap-2`}
+                        >
+                          <i data-lucide="arrow-down-circle" className="w-5 h-5"></i>
+                          Deposit
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <i data-lucide="alert-triangle" className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5"></i>
+                        <p className="text-xs text-white/70">
+                          <strong className="text-yellow-400">Risk Disclosure:</strong> Vault returns are variable and not guaranteed. 
+                          You may lose part of your deposit. Past performance doesn't guarantee future results.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Active Deposit */}
+                    <div className="bg-black/30 border border-white/20 rounded-xl p-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <p className="text-sm text-white/60 mb-1">Your Deposit</p>
+                          <p className="text-2xl font-bold text-white">{userDeposit} WHISTLE</p>
+                        </div>
+                        <div className={`px-4 py-2 rounded-lg bg-${selectedVault.color}-500/20 border border-${selectedVault.color}-500/30`}>
+                          <p className="text-xs text-white/60">Status</p>
+                          <p className={`text-sm font-bold text-${selectedVault.color}-400`}>Active</p>
+                        </div>
+                      </div>
+                      
+                      {/* Simulated Performance */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-xs text-white/50 mb-1">Current Value</p>
+                          <p className="text-lg font-semibold text-emerald-400">
+                            {(userDeposit * 1.08).toFixed(2)} WHISTLE
+                          </p>
+                          <p className="text-xs text-emerald-400">+{(userDeposit * 0.08).toFixed(2)} (+8%)</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-white/50 mb-1">Time in Vault</p>
+                          <p className="text-lg font-semibold text-white">Simulated</p>
+                          <p className="text-xs text-white/60">(Demo mode)</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Withdraw Button */}
+                    <button 
+                      onClick={handleWithdraw}
+                      className="w-full px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
+                    >
+                      <i data-lucide="arrow-up-circle" className="w-5 h-5"></i>
+                      Withdraw (Simulate Weekly Return)
+                    </button>
+                    
+                    <p className="text-xs text-center text-white/50">
+                      ⚠️ Demo mode - Connect smart contract for real deposits
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Live Stats (Placeholder) */}
+            <div className="grid md:grid-cols-3 gap-4">
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                <div className="flex items-center gap-3">
+                  <i data-lucide="users" className="w-8 h-8 text-cyan-400"></i>
+                  <div>
+                    <p className="text-sm text-white/60">Total Depositors</p>
+                    <p className="text-2xl font-bold text-white">-</p>
+                    <p className="text-xs text-white/50">Smart contract pending</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                <div className="flex items-center gap-3">
+                  <i data-lucide="lock" className="w-8 h-8 text-purple-400"></i>
+                  <div>
+                    <p className="text-sm text-white/60">Total Value Locked</p>
+                    <p className="text-2xl font-bold text-white">-</p>
+                    <p className="text-xs text-white/50">Smart contract pending</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                <div className="flex items-center gap-3">
+                  <i data-lucide="trending-up" className="w-8 h-8 text-emerald-400"></i>
+                  <div>
+                    <p className="text-sm text-white/60">Avg Weekly Return</p>
+                    <p className="text-2xl font-bold text-white">-</p>
+                    <p className="text-xs text-white/50">Smart contract pending</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* How It Works */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-5">
+              <div className="flex items-start gap-3">
+                <i data-lucide="info" className="w-5 h-5 text-cyan-400 flex-shrink-0 mt-0.5"></i>
+                <div>
+                  <h3 className="text-white font-semibold mb-2">How Privacy Vault Works</h3>
+                  <ul className="text-sm text-white/70 space-y-2">
+                    <li className="flex items-start gap-2">
+                      <span className="text-cyan-400">1.</span>
+                      <span><strong>Choose a vault</strong> based on your risk tolerance (Safe, Balanced, or Alpha)</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-cyan-400">2.</span>
+                      <span><strong>Deposit WHISTLE</strong> - Smart contract pools your tokens with others</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-cyan-400">3.</span>
+                      <span><strong>Earn collectively</strong> - Strategies execute automatically (LP fees, arbitrage, etc.)</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-cyan-400">4.</span>
+                      <span><strong>Claim profits or losses</strong> - Withdraw anytime with your share of performance</span>
+                    </li>
+                  </ul>
+                  <div className="mt-4 pt-4 border-t border-white/10">
+                    <p className="text-xs text-white/50">
+                      <strong>Trustless:</strong> Smart contracts execute strategies on-chain. No one controls your funds. 
+                      All returns based on real DeFi performance. You share risks and rewards with other vault members.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Coming Soon Notice */}
+            <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-5">
+              <div className="flex items-start gap-3">
+                <i data-lucide="code" className="w-6 h-6 text-cyan-400 flex-shrink-0 mt-0.5"></i>
+                <div>
+                  <h3 className="text-white font-bold mb-2">🚀 Smart Contract In Development</h3>
+                  <p className="text-sm text-white/70 mb-3">
+                    Privacy Vault smart contracts are currently being developed and audited. 
+                    The UI above demonstrates the functionality. Real deposits will be enabled soon.
+                  </p>
+                  <div className="flex gap-2 text-xs">
+                    <span className="px-2 py-1 rounded bg-emerald-500/20 text-emerald-300">✓ UI Complete</span>
+                    <span className="px-2 py-1 rounded bg-yellow-500/20 text-yellow-300">⏳ Smart Contract Dev</span>
+                    <span className="px-2 py-1 rounded bg-cyan-500/20 text-cyan-300">⏳ Security Audit</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </GlassCard>
+      );
+    }
+
     // ===== ZOLANA EXCHANGE =====
     
     function ZolanaExchange({ pushToast }) {
@@ -6149,7 +6530,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'steganography', 'privacy-checkup', 'censorship-map', 'proxy-links', 'swap', 'solana-privacy', 'zolana'];
+      const validSteps = ['home', 'webrtc', 'steganography', 'privacy-checkup', 'censorship-map', 'proxy-links', 'swap', 'solana-privacy', 'zolana', 'privacy-vault'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -6189,6 +6570,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                       case 'swap': return <PrivacySwap />;
                       case 'solana-privacy': return <SolanaPrivacyToolkit pushToast={push} />;
                       case 'zolana': return <ZolanaExchange pushToast={push} />;
+                      case 'privacy-vault': return <PrivacyVault pushToast={push} />;
                       default: return (
                         <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6">
                           <h2 className="text-white text-xl font-bold mb-2">Section Not Found</h2>
