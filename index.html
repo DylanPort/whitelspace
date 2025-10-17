@@ -6471,6 +6471,7 @@ SECURITY:
         }
         
         try {
+          setIsCreatingToken(true);
           pushToast('Encrypting secret...', 'info');
           
           // Generate encryption key
@@ -6502,12 +6503,97 @@ When market cap hits threshold, decryption key will be posted to Solana blockcha
 This is a speculative token. Secret may or may not have value.
 Created via Whistle Privacy Tools.`;
 
-          // Note: PumpPortal token creation API requires authentication
-          // For now, use manual creation flow
-          // TODO: Integrate PumpPortal API key when available
+          // If we have a PumpPortal API key from created wallet, attempt programmatic creation
+          if (launchWallet && launchWallet.apiKey && launchWallet.provider === 'PumpPortal') {
+            pushToast('Uploading metadata to IPFS...', 'info');
+            // Build image placeholder from canvas with title initials if no upload yet
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#0b0f14'; ctx.fillRect(0,0,512,512);
+            ctx.fillStyle = '#67e8f9'; ctx.font = 'bold 200px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText((bombTitle[0]||'W').toUpperCase(), 256, 256);
+            const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+
+            const form = new FormData();
+            form.append('file', blob, 'cover.png');
+            form.append('name', tokenName);
+            form.append('symbol', tokenSymbol);
+            form.append('description', tokenDescription);
+            form.append('twitter', '');
+            form.append('telegram', '');
+            form.append('website', location.origin);
+            form.append('showName', 'true');
+
+            const metaRes = await fetch('/api/proxy/ipfs', { method: 'POST', body: form });
+            if (!metaRes.ok) throw new Error('IPFS upload failed');
+            const metaJson = await metaRes.json();
+
+            pushToast('Creating token on Pump.fun...', 'info');
+            // Generate mint keypair from our local env (client-side)
+            const mintKeypair = solanaWeb3.Keypair.generate();
+            const mintSecret58 = (window.bs58 ? window.bs58.encode(mintKeypair.secretKey) : btoa(String.fromCharCode(...mintKeypair.secretKey)));
+
+            const tradeRes = await fetch('/api/proxy/trade', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-pumpportal-api-key': launchWallet.apiKey || ''
+              },
+              body: JSON.stringify({
+                action: 'create',
+                tokenMetadata: {
+                  name: metaJson.metadata?.name || tokenName,
+                  symbol: metaJson.metadata?.symbol || tokenSymbol,
+                  uri: metaJson.metadataUri
+                },
+                mint: mintSecret58,
+                denominatedInSol: 'true',
+                amount: 1,
+                slippage: 10,
+                priorityFee: 0.0005,
+                pool: 'pump'
+              })
+            });
+            if (!tradeRes.ok) throw new Error(await tradeRes.text());
+            const tradeJson = await tradeRes.json();
+            const tokenAddress = tradeJson.mint || tradeJson.tokenAddress || tradeJson.address || null;
+
+            setCreatedBomb({
+              title: bombTitle,
+              threshold,
+              metadata: tokenDescription,
+              tokenName,
+              tokenSymbol,
+              decryptKey: keyHex,
+              encrypted,
+              creator,
+              created: Date.now(),
+              manual: false,
+              tokenAddress,
+              txSig: tradeJson.signature || tradeJson.sig || null
+            });
+
+            // Save for monitoring
+            const existing = JSON.parse(localStorage.getItem('whisper_bombs') || '[]');
+            existing.push({
+              title: bombTitle,
+              threshold,
+              tokenAddress,
+              decryptKey: keyHex,
+              created: Date.now(),
+              revealed: false
+            });
+            localStorage.setItem('whisper_bombs', JSON.stringify(existing));
+
+            pushToast('✅ Token created and live on pump.fun!', 'ok');
+            setView('browse');
+            setIsCreatingToken(false);
+            return;
+          }
           
-          // Fallback to manual mode (working solution)
-          throw new Error('Using manual creation flow');
+          // If no API key available, fallback to manual mode
+          throw new Error('No API key, using manual flow');
           
         } catch (error) {
           // Manual creation mode
@@ -6529,6 +6615,7 @@ Created via Whistle Privacy Tools.`;
           });
           
           pushToast('✅ Secret encrypted! Ready for pump.fun', 'ok');
+          setIsCreatingToken(false);
         }
       }
       

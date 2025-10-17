@@ -41,6 +41,48 @@ app.get('/api/proxy/create-wallet', async (req, res) => {
   }
 });
 
+// Proxy: Pump.fun IPFS metadata upload (multipart form-data)
+app.post('/api/proxy/ipfs', async (req, res) => {
+  try {
+    // Use raw fetch forwarding; rely on express static not parsing body
+    const doFetch = globalThis.fetch ? globalThis.fetch.bind(globalThis) : (await import('node-fetch')).default;
+    const upstream = await doFetch('https://pump.fun/api/ipfs', {
+      method: 'POST',
+      headers: {
+        // Let fetch infer form-data boundaries; we forward the raw body
+      },
+      body: req,
+    });
+    if (!upstream.ok) return res.status(upstream.status).end(await upstream.text());
+    const data = await upstream.text();
+    res.set('Access-Control-Allow-Origin', '*');
+    res.type(upstream.headers.get('content-type') || 'application/json');
+    return res.send(data);
+  } catch (e) {
+    return res.status(500).json({ error: 'proxy_failed', message: e.message });
+  }
+});
+
+// Proxy: PumpPortal trade endpoint (create token)
+app.post('/api/proxy/trade', express.json({ limit: '1mb' }), async (req, res) => {
+  try {
+    const apiKey = req.headers['x-pumpportal-api-key'];
+    const doFetch = globalThis.fetch ? globalThis.fetch.bind(globalThis) : (await import('node-fetch')).default;
+    const upstream = await doFetch(`https://pumpportal.fun/api/trade?api-key=${encodeURIComponent(apiKey||'')}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body),
+    });
+    const text = await upstream.text();
+    res.status(upstream.status);
+    res.set('Access-Control-Allow-Origin', '*');
+    res.type(upstream.headers.get('content-type') || 'application/json');
+    return res.send(text);
+  } catch (e) {
+    return res.status(500).json({ error: 'proxy_failed', message: e.message });
+  }
+});
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
