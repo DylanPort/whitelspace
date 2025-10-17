@@ -83,6 +83,25 @@ app.post('/api/proxy/trade', express.json({ limit: '1mb' }), async (req, res) =>
   }
 });
 
+// Proxy: PumpPortal trade-local endpoint (returns binary tx to sign locally)
+app.post('/api/proxy/trade-local', express.json({ limit: '1mb' }), async (req, res) => {
+  try {
+    const doFetch = globalThis.fetch ? globalThis.fetch.bind(globalThis) : (await import('node-fetch')).default;
+    const upstream = await doFetch('https://pumpportal.fun/api/trade-local', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body),
+    });
+    const buf = Buffer.from(await upstream.arrayBuffer());
+    res.status(upstream.status);
+    res.set('Access-Control-Allow-Origin', '*');
+    res.type(upstream.headers.get('content-type') || 'application/octet-stream');
+    return res.send(buf);
+  } catch (e) {
+    return res.status(500).json({ error: 'proxy_failed', message: e.message });
+  }
+});
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });

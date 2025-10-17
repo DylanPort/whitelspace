@@ -6515,7 +6515,7 @@ When market cap hits threshold, decryption key will be posted to Solana blockcha
 This is a speculative token. Secret may or may not have value.
 Created via Whistle Privacy Tools.`;
 
-          // If we have a PumpPortal API key from created wallet, attempt programmatic creation
+          // If we have a PumpPortal API key from created wallet, attempt programmatic creation (Lightning)
           if (launchWallet && launchWallet.apiKey && launchWallet.provider === 'PumpPortal') {
             pushToast('Uploading metadata to IPFS...', 'info');
             // Build image placeholder from canvas with title initials if no upload yet
@@ -6604,8 +6604,100 @@ Created via Whistle Privacy Tools.`;
             return;
           }
           
-          // If no API key available, fallback to manual mode
-          throw new Error('No API key, using manual flow');
+          // If no API key available, attempt local-signed creation using fallback wallet secret if present
+          if (launchWallet && launchWallet.provider !== 'PumpPortal' && launchWallet.secretKey) {
+            pushToast('Creating token (local sign)...', 'info');
+            // Upload IPFS first
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#0b0f14'; ctx.fillRect(0,0,512,512);
+            ctx.fillStyle = '#67e8f9'; ctx.font = 'bold 200px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText((bombTitle[0]||'W').toUpperCase(), 256, 256);
+            const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+            const form = new FormData();
+            form.append('file', blob, 'cover.png');
+            form.append('name', tokenName);
+            form.append('symbol', tokenSymbol);
+            form.append('description', tokenDescription);
+            form.append('twitter', '');
+            form.append('telegram', '');
+            form.append('website', location.origin);
+            form.append('showName', 'true');
+            const metaRes = await fetch('/api/proxy/ipfs', { method: 'POST', body: form });
+            if (!metaRes.ok) throw new Error('IPFS upload failed');
+            const metaJson = await metaRes.json();
+
+            const mintKeypair = solanaWeb3.Keypair.generate();
+            const reqBody = {
+              publicKey: launchWallet.publicKey,
+              action: 'create',
+              tokenMetadata: {
+                name: metaJson.metadata?.name || tokenName,
+                symbol: metaJson.metadata?.symbol || tokenSymbol,
+                uri: metaJson.metadataUri
+              },
+              mint: mintKeypair.publicKey.toBase58(),
+              denominatedInSol: 'true',
+              amount: 1,
+              slippage: 10,
+              priorityFee: 0.0005,
+              pool: 'pump'
+            };
+            const txBufRes = await fetch('/api/proxy/trade-local', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(reqBody)
+            });
+            if (!txBufRes.ok) throw new Error(await txBufRes.text());
+            const arrBuf = await txBufRes.arrayBuffer();
+            const txBytes = new Uint8Array(arrBuf);
+            const VersionedTransaction = solanaWeb3.VersionedTransaction || solanaWeb3.Transaction; // fallback
+            const tx = VersionedTransaction.deserialize ? VersionedTransaction.deserialize(txBytes) : VersionedTransaction.from(txBytes);
+            
+            // Sign with mint and local wallet (requires private key we only keep in memory)
+            const secretBytes = Uint8Array.from(launchWallet.secretKey.match(/.{1,2}/g).map(b => parseInt(b, 16)));
+            const signerKeypair = solanaWeb3.Keypair.fromSecretKey(secretBytes);
+            tx.sign ? tx.sign([mintKeypair, signerKeypair]) : null;
+            const rpc = 'https://rpc.ankr.com/solana';
+            const connection = new solanaWeb3.Connection(rpc, 'confirmed');
+            const signature = await connection.sendTransaction(tx);
+
+            const tokenAddress = mintKeypair.publicKey.toBase58();
+            setCreatedBomb({
+              title: bombTitle,
+              threshold,
+              metadata: tokenDescription,
+              tokenName,
+              tokenSymbol,
+              decryptKey: keyHex,
+              encrypted,
+              creator,
+              created: Date.now(),
+              manual: false,
+              tokenAddress,
+              txSig: signature
+            });
+
+            const existing = JSON.parse(localStorage.getItem('whisper_bombs') || '[]');
+            existing.push({
+              title: bombTitle,
+              threshold,
+              tokenAddress,
+              decryptKey: keyHex,
+              created: Date.now(),
+              revealed: false
+            });
+            localStorage.setItem('whisper_bombs', JSON.stringify(existing));
+
+            pushToast('✅ Token created (local sign) and live!', 'ok');
+            setView('browse');
+            setIsCreatingToken(false);
+            return;
+          }
+
+          // Otherwise fallback to manual
+          throw new Error('No API key/secret available, using manual flow');
           
         } catch (error) {
           // Manual creation mode
