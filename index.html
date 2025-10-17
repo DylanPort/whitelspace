@@ -6192,16 +6192,122 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
     // ===== WHISPER BOMBS =====
     
     function WhisperBombs({ pushToast }) {
-      const [view, setView] = useState('browse'); // browse, create
+      const [view, setView] = useState('browse'); // browse, create, wallet
       const [secretMessage, setSecretMessage] = useState('');
       const [bombTitle, setBombTitle] = useState('');
       const [threshold, setThreshold] = useState('20000');
       const [activeBombs, setActiveBombs] = useState([]);
       const [createdBomb, setCreatedBomb] = useState(null);
+      const [launchWallet, setLaunchWallet] = useState(null);
+      const [walletBalance, setWalletBalance] = useState(0);
+      const [isCreatingToken, setIsCreatingToken] = useState(false);
       
       useEffect(()=>{
         if(window.lucide) window.lucide.createIcons();
+        
+        // Load saved wallet
+        const savedWallet = localStorage.getItem('whisper_launch_wallet');
+        if (savedWallet) {
+          try {
+            const walletData = JSON.parse(savedWallet);
+            setLaunchWallet(walletData);
+            checkWalletBalance(walletData.publicKey);
+          } catch (e) {
+            console.error('Failed to load wallet:', e);
+          }
+        }
       },[view, activeBombs]);
+      
+      // Check wallet balance
+      async function checkWalletBalance(publicKey) {
+        try {
+          const connection = new solanaWeb3.Connection('https://api.mainnet-beta.solana.com', 'confirmed');
+          const pubkey = new solanaWeb3.PublicKey(publicKey);
+          const balance = await connection.getBalance(pubkey);
+          setWalletBalance(balance / 1e9); // Convert to SOL
+        } catch (e) {
+          console.error('Failed to check balance:', e);
+        }
+      }
+      
+      // Create new launch wallet
+      async function createLaunchWallet() {
+        try {
+          const keypair = solanaWeb3.Keypair.generate();
+          const publicKey = keypair.publicKey.toString();
+          const secretKey = Array.from(keypair.secretKey).map(b => b.toString(16).padStart(2, '0')).join('');
+          
+          const walletData = {
+            publicKey,
+            secretKey,
+            created: Date.now()
+          };
+          
+          setLaunchWallet(walletData);
+          localStorage.setItem('whisper_launch_wallet', JSON.stringify(walletData));
+          
+          pushToast('Launch wallet created!', 'ok');
+          checkWalletBalance(publicKey);
+        } catch (e) {
+          console.error(e);
+          pushToast('Failed to create wallet', 'err');
+        }
+      }
+      
+      // Import existing wallet
+      function importWallet() {
+        const secretKey = prompt('Paste your wallet private key (hex format):');
+        if (!secretKey) return;
+        
+        try {
+          const secretBytes = Uint8Array.from(secretKey.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+          const keypair = solanaWeb3.Keypair.fromSecretKey(secretBytes);
+          
+          const walletData = {
+            publicKey: keypair.publicKey.toString(),
+            secretKey: secretKey,
+            imported: true,
+            created: Date.now()
+          };
+          
+          setLaunchWallet(walletData);
+          localStorage.setItem('whisper_launch_wallet', JSON.stringify(walletData));
+          
+          pushToast('Wallet imported!', 'ok');
+          checkWalletBalance(walletData.publicKey);
+        } catch (e) {
+          pushToast('Invalid private key', 'err');
+        }
+      }
+      
+      // Download wallet backup
+      function downloadWallet() {
+        const data = `WHISPER LAUNCH WALLET
+=====================
+⚠️ KEEP THIS SAFE! Anyone with this key can access your funds.
+
+Public Key: ${launchWallet.publicKey}
+Private Key: ${launchWallet.secretKey}
+
+Created: ${new Date(launchWallet.created).toLocaleString()}
+Purpose: Launching Whisper Bombs on Pump.fun
+
+SECURITY:
+- Never share your private key
+- Store this file securely (encrypted USB, password manager, etc.)
+- Back up to multiple locations
+- Consider using a hardware wallet for large amounts`;
+        
+        const blob = new Blob([data], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `whisper-launch-wallet-${launchWallet.publicKey.substring(0, 8)}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        pushToast('Wallet backup downloaded!', 'ok');
+      }
       
       // Encryption function (reuse existing)
       async function encryptMessage(text, password) {
@@ -6417,33 +6523,225 @@ Created via Whistle Privacy Tools.`;
                 the secret auto-reveals on-chain. Speculation meets privacy!
               </p>
               
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setView('browse')}
-                  className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                    view === 'browse' 
-                      ? 'bg-orange-500 text-white' 
-                      : 'bg-white/10 text-white/70 hover:bg-white/20'
-                  }`}
-                >
-                  Browse Bombs
-                </button>
-                <button
-                  onClick={() => setView('create')}
-                  className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                    view === 'create' 
-                      ? 'bg-orange-500 text-white' 
-                      : 'bg-white/10 text-white/70 hover:bg-white/20'
-                  }`}
-                >
-                  Create Bomb
-                </button>
+              <div className="flex items-center justify-between">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setView('browse')}
+                    className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                      view === 'browse' 
+                        ? 'bg-orange-500 text-white' 
+                        : 'bg-white/10 text-white/70 hover:bg-white/20'
+                    }`}
+                  >
+                    Browse Bombs
+                  </button>
+                  <button
+                    onClick={() => setView('create')}
+                    className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                      view === 'create' 
+                        ? 'bg-orange-500 text-white' 
+                        : 'bg-white/10 text-white/70 hover:bg-white/20'
+                    }`}
+                  >
+                    Create Bomb
+                  </button>
+                  <button
+                    onClick={() => setView('wallet')}
+                    className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                      view === 'wallet' 
+                        ? 'bg-orange-500 text-white' 
+                        : 'bg-white/10 text-white/70 hover:bg-white/20'
+                    }`}
+                  >
+                    <i data-lucide="wallet" className="w-4 h-4 inline mr-1"></i>
+                    Wallet
+                  </button>
+                </div>
+                
+                {/* Wallet Status Badge */}
+                {launchWallet && (
+                  <div className="px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/40 rounded-lg flex items-center gap-2">
+                    <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                    <span className="text-xs text-emerald-400 font-semibold">{walletBalance.toFixed(4)} SOL</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
+          {view === 'wallet' && (
+            <div className="space-y-6">
+              {!launchWallet ? (
+                <div className="bg-gradient-to-br from-black/60 via-purple-900/20 to-black/60 border border-purple-500/30 rounded-2xl p-8 text-center">
+                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center mx-auto mb-6 border-2 border-purple-500/30">
+                    <i data-lucide="wallet" className="w-12 h-12 text-purple-400"></i>
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-3">Create Launch Wallet</h3>
+                  <p className="text-white/60 mb-6 max-w-md mx-auto">
+                    Create a dedicated wallet for launching Whisper Bombs. This keeps your main wallet separate and organized.
+                  </p>
+                  
+                  <div className="flex gap-3 justify-center">
+                    <button
+                      onClick={createLaunchWallet}
+                      className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white font-bold rounded-xl transition-all shadow-lg"
+                    >
+                      <i data-lucide="plus-circle" className="w-5 h-5 inline mr-2"></i>
+                      Create New Wallet
+                    </button>
+                    <button
+                      onClick={importWallet}
+                      className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold rounded-xl transition-all"
+                    >
+                      <i data-lucide="download" className="w-5 h-5 inline mr-2"></i>
+                      Import Existing
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Wallet Info Card */}
+                  <div className="bg-gradient-to-br from-purple-900/30 via-black/60 to-pink-900/30 border-2 border-purple-500/40 rounded-2xl p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-2xl font-bold text-white flex items-center gap-2">
+                        <i data-lucide="wallet" className="w-6 h-6 text-purple-400"></i>
+                        Launch Wallet
+                      </h3>
+                      <button
+                        onClick={downloadWallet}
+                        className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-400 rounded-lg transition-all flex items-center gap-2"
+                      >
+                        <i data-lucide="download" className="w-4 h-4"></i>
+                        Backup
+                      </button>
+                    </div>
+                    
+                    {/* Balance */}
+                    <div className="mb-6 p-5 bg-black/40 backdrop-blur-sm border border-purple-500/30 rounded-xl">
+                      <p className="text-sm text-purple-300 mb-2 uppercase tracking-wide">Balance</p>
+                      <p className="text-4xl font-bold text-white mb-1">{walletBalance.toFixed(6)}</p>
+                      <p className="text-xl text-purple-300 font-semibold">SOL</p>
+                      <button
+                        onClick={() => checkWalletBalance(launchWallet.publicKey)}
+                        className="mt-3 px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 text-sm rounded-lg transition-all"
+                      >
+                        <i data-lucide="refresh-cw" className="w-3 h-3 inline mr-1"></i>
+                        Refresh Balance
+                      </button>
+                    </div>
+                    
+                    {/* Address */}
+                    <div className="mb-4">
+                      <p className="text-sm text-white/60 mb-2">Public Address:</p>
+                      <div className="flex items-center gap-2 p-3 bg-black/30 border border-white/20 rounded-lg">
+                        <code className="text-sm text-cyan-400 break-all flex-1">{launchWallet.publicKey}</code>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(launchWallet.publicKey);
+                            pushToast('Address copied!', 'ok');
+                          }}
+                          className="px-3 py-1.5 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 rounded-lg transition-all flex-shrink-0"
+                        >
+                          <i data-lucide="copy" className="w-4 h-4"></i>
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Fund Instructions */}
+                    {walletBalance < 0.02 && (
+                      <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
+                        <div className="flex items-start gap-2">
+                          <i data-lucide="alert-circle" className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5"></i>
+                          <div>
+                            <p className="text-sm font-semibold text-yellow-400 mb-1">Fund Your Wallet</p>
+                            <p className="text-xs text-white/70 mb-3">
+                              You need at least 0.02 SOL to create tokens on pump.fun. Send SOL to the address above from your main wallet or exchange.
+                            </p>
+                            <div className="flex gap-2">
+                              <a
+                                href={`https://phantom.app/send?to=${launchWallet.publicKey}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs px-3 py-1.5 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg transition-all"
+                              >
+                                Send via Phantom
+                              </a>
+                              <button
+                                onClick={() => checkWalletBalance(launchWallet.publicKey)}
+                                className="text-xs px-3 py-1.5 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg transition-all"
+                              >
+                                Check Again
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Danger Zone */}
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-5">
+                    <h4 className="text-white font-bold mb-3 flex items-center gap-2">
+                      <i data-lucide="alert-triangle" className="w-5 h-5 text-red-400"></i>
+                      Danger Zone
+                    </h4>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          if (confirm('Delete wallet? Make sure you have backed up your private key!')) {
+                            localStorage.removeItem('whisper_launch_wallet');
+                            setLaunchWallet(null);
+                            setWalletBalance(0);
+                            pushToast('Wallet removed', 'info');
+                          }
+                        }}
+                        className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 rounded-lg transition-all text-sm"
+                      >
+                        Delete Wallet
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm('Show private key? Make sure no one is watching!')) {
+                            alert(`Private Key:\n\n${launchWallet.secretKey}\n\n⚠️ Never share this with anyone!`);
+                          }
+                        }}
+                        className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 rounded-lg transition-all text-sm"
+                      >
+                        Show Private Key
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {view === 'create' && (
             <div className="space-y-6">
+              {/* Check if wallet exists and has balance */}
+              {(!launchWallet || walletBalance < 0.02) && (
+                <div className="bg-red-500/10 border-2 border-red-500/40 rounded-xl p-6">
+                  <div className="flex items-start gap-3">
+                    <i data-lucide="alert-circle" className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5"></i>
+                    <div>
+                      <h4 className="text-white font-bold mb-2">Wallet Required</h4>
+                      <p className="text-sm text-white/70 mb-3">
+                        {!launchWallet 
+                          ? 'You need a launch wallet to create bombs. Create one in the Wallet tab.'
+                          : `Your wallet needs at least 0.02 SOL (current: ${walletBalance.toFixed(4)} SOL). Fund it in the Wallet tab.`}
+                      </p>
+                      <button
+                        onClick={() => setView('wallet')}
+                        className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-all flex items-center gap-2"
+                      >
+                        <i data-lucide="arrow-right" className="w-4 h-4"></i>
+                        Go to Wallet
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               {!createdBomb ? (
                 <div className="bg-gradient-to-br from-black/60 via-orange-900/20 to-black/60 border border-orange-500/30 rounded-2xl p-6">
                   <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
