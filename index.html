@@ -6537,7 +6537,11 @@ Created via Whistle Privacy Tools.`;
             form.append('website', location.origin);
             form.append('showName', 'true');
 
-            const metaRes = await fetch('/api/proxy/ipfs', { method: 'POST', body: form });
+            let metaRes = await fetch('/api/proxy/ipfs', { method: 'POST', body: form });
+            if (!metaRes.ok) {
+              // Fallback to direct endpoint if proxy not available
+              metaRes = await fetch('https://pump.fun/api/ipfs', { method: 'POST', body: form });
+            }
             if (!metaRes.ok) throw new Error('IPFS upload failed');
             const metaJson = await metaRes.json();
 
@@ -6546,7 +6550,7 @@ Created via Whistle Privacy Tools.`;
             const mintKeypair = solanaWeb3.Keypair.generate();
             const mintSecret58 = (window.bs58 ? window.bs58.encode(mintKeypair.secretKey) : btoa(String.fromCharCode(...mintKeypair.secretKey)));
 
-            const tradeRes = await fetch('/api/proxy/trade', {
+            let tradeRes = await fetch('/api/proxy/trade', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -6567,6 +6571,26 @@ Created via Whistle Privacy Tools.`;
                 pool: 'pump'
               })
             });
+            if (!tradeRes.ok) {
+              tradeRes = await fetch(`https://pumpportal.fun/api/trade?api-key=${encodeURIComponent(launchWallet.apiKey||'')}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'create',
+                  tokenMetadata: {
+                    name: metaJson.metadata?.name || tokenName,
+                    symbol: metaJson.metadata?.symbol || tokenSymbol,
+                    uri: metaJson.metadataUri
+                  },
+                  mint: mintSecret58,
+                  denominatedInSol: 'true',
+                  amount: 1,
+                  slippage: 10,
+                  priorityFee: 0.0005,
+                  pool: 'pump'
+                })
+              });
+            }
             if (!tradeRes.ok) throw new Error(await tradeRes.text());
             const tradeJson = await tradeRes.json();
             const tokenAddress = tradeJson.mint || tradeJson.tokenAddress || tradeJson.address || null;
@@ -6624,7 +6648,10 @@ Created via Whistle Privacy Tools.`;
             form.append('telegram', '');
             form.append('website', location.origin);
             form.append('showName', 'true');
-            const metaRes = await fetch('/api/proxy/ipfs', { method: 'POST', body: form });
+            let metaRes = await fetch('/api/proxy/ipfs', { method: 'POST', body: form });
+            if (!metaRes.ok) {
+              metaRes = await fetch('https://pump.fun/api/ipfs', { method: 'POST', body: form });
+            }
             if (!metaRes.ok) throw new Error('IPFS upload failed');
             const metaJson = await metaRes.json();
 
@@ -6644,11 +6671,18 @@ Created via Whistle Privacy Tools.`;
               priorityFee: 0.0005,
               pool: 'pump'
             };
-            const txBufRes = await fetch('/api/proxy/trade-local', {
+            let txBufRes = await fetch('/api/proxy/trade-local', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(reqBody)
             });
+            if (!txBufRes.ok) {
+              txBufRes = await fetch('https://pumpportal.fun/api/trade-local', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(reqBody)
+              });
+            }
             if (!txBufRes.ok) throw new Error(await txBufRes.text());
             const arrBuf = await txBufRes.arrayBuffer();
             const txBytes = new Uint8Array(arrBuf);
