@@ -6205,15 +6205,35 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [isCreatingToken, setIsCreatingToken] = useState(false);
       
       useEffect(()=>{
+        // Clear old large storage first
+        try {
+          const existing = localStorage.getItem('whisper_launch_wallet');
+          if (existing && existing.length > 1000) {
+            // Old format with private key - clear it
+            localStorage.removeItem('whisper_launch_wallet');
+            pushToast('Cleared old wallet data for security', 'info');
+          }
+        } catch (e) {
+          // Quota exceeded on read - clear everything
+          localStorage.clear();
+        }
+        
         // Load saved wallet only once on mount
-        const savedWallet = localStorage.getItem('whisper_launch_wallet');
+        const savedWallet = localStorage.getItem('wlw');
         if (savedWallet) {
           try {
-            const walletData = JSON.parse(savedWallet);
+            const minimal = JSON.parse(savedWallet);
+            const walletData = {
+              publicKey: minimal.pub,
+              apiKey: minimal.api,
+              created: minimal.ts,
+              provider: minimal.src === 'PP' ? 'PumpPortal' : 'Local'
+            };
             setLaunchWallet(walletData);
             checkWalletBalance(walletData.publicKey);
           } catch (e) {
             console.error('Failed to load wallet:', e);
+            localStorage.removeItem('wlw');
           }
         }
       }, []);
@@ -6264,13 +6284,20 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           };
           
           setLaunchWallet(walletData);
-          // Store only essential data to avoid quota issues
-          localStorage.setItem('whisper_launch_wallet', JSON.stringify({
-            publicKey: walletData.publicKey,
-            apiKey: walletData.apiKey,
-            created: walletData.created,
-            provider: walletData.provider
-          }));
+          
+          // Store minimal data (no private key!)
+          try {
+            const minimalData = {
+              pub: walletData.publicKey,
+              api: walletData.apiKey,
+              ts: walletData.created,
+              src: 'PP'
+            };
+            localStorage.setItem('wlw', JSON.stringify(minimalData)); // Shortened key
+          } catch (storageError) {
+            console.warn('Could not save to localStorage:', storageError);
+            // Continue anyway - wallet is in memory
+          }
           
           // Prompt user to download full backup immediately
           setTimeout(() => {
@@ -6326,12 +6353,18 @@ SECURITY:
           };
           
           setLaunchWallet(walletData);
-          // Store only public key to save space
-          localStorage.setItem('whisper_launch_wallet', JSON.stringify({
-            publicKey: walletData.publicKey,
-            created: walletData.created,
-            provider: walletData.provider
-          }));
+          
+          // Store minimal data
+          try {
+            const minimalData = {
+              pub: walletData.publicKey,
+              ts: walletData.created,
+              src: 'LOC'
+            };
+            localStorage.setItem('wlw', JSON.stringify(minimalData));
+          } catch (storageError) {
+            console.warn('Could not save to localStorage:', storageError);
+          }
           
           pushToast('Wallet created locally', 'ok');
           checkWalletBalance(publicKey);
@@ -6351,11 +6384,23 @@ SECURITY:
             publicKey: keypair.publicKey.toString(),
             secretKey: secretKey,
             imported: true,
-            created: Date.now()
+            created: Date.now(),
+            provider: 'Imported'
           };
           
           setLaunchWallet(walletData);
-          localStorage.setItem('whisper_launch_wallet', JSON.stringify(walletData));
+          
+          // Store minimal data
+          try {
+            const minimalData = {
+              pub: walletData.publicKey,
+              ts: walletData.created,
+              src: 'IMP'
+            };
+            localStorage.setItem('wlw', JSON.stringify(minimalData));
+          } catch (storageError) {
+            console.warn('Could not save to localStorage:', storageError);
+          }
           
           pushToast('Wallet imported!', 'ok');
           checkWalletBalance(walletData.publicKey);
@@ -6677,7 +6722,7 @@ Created via Whistle Privacy Tools.`;
                     Create a dedicated wallet for launching Whisper Bombs. This keeps your main wallet separate and organized.
                   </p>
                   
-                  <div className="flex gap-3 justify-center">
+                  <div className="flex gap-3 justify-center flex-wrap">
                     <button
                       onClick={createLaunchWallet}
                       className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white font-bold rounded-xl transition-all shadow-lg"
@@ -6691,6 +6736,22 @@ Created via Whistle Privacy Tools.`;
                     >
                       <i data-lucide="download" className="w-5 h-5 inline mr-2"></i>
                       Import Existing
+                    </button>
+                  </div>
+                  
+                  {/* Troubleshooting */}
+                  <div className="mt-4 text-center">
+                    <button
+                      onClick={() => {
+                        if (confirm('Clear all browser storage? This will reset the app but may fix errors.')) {
+                          localStorage.clear();
+                          sessionStorage.clear();
+                          window.location.reload();
+                        }
+                      }}
+                      className="text-xs text-white/50 hover:text-white/70 underline"
+                    >
+                      Having issues? Clear storage
                     </button>
                   </div>
                 </div>
@@ -6812,7 +6873,8 @@ Created via Whistle Privacy Tools.`;
                       <button
                         onClick={() => {
                           if (confirm('Delete wallet? Make sure you have backed up your private key!')) {
-                            localStorage.removeItem('whisper_launch_wallet');
+                            localStorage.removeItem('wlw');
+                            localStorage.removeItem('whisper_launch_wallet'); // Remove old key too
                             setLaunchWallet(null);
                             setWalletBalance(0);
                             pushToast('Wallet removed', 'info');
