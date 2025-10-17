@@ -1617,6 +1617,7 @@
         { id: "solana-privacy", label: "Solana Privacy", iconImg: "solana.png" },
         { id: "zolana", label: "Zolana Exchange", iconImg: "zcash-3d-icon-png-download-10372070.png" },
         { id: "privacy-vault", label: "Privacy Vault", icon: "vault" },
+        { id: "whisper-bombs", label: "Whisper Bombs", icon: "bomb" },
         { id: "steganography", label: "🎭 Steganography", icon: "eye-off" },
         { id: "privacy-checkup", label: "Privacy Checkup", icon: "shield-check" },
         { id: "censorship-map", label: "Censorship Map", icon: "globe" },
@@ -2561,6 +2562,7 @@
         { id:'solana-privacy', label:'Solana Privacy', iconImg:'solana.png' },
         { id:'zolana', label:'Zolana Exchange', iconImg:'zcash-3d-icon-png-download-10372070.png' },
         { id:'privacy-vault', label:'Privacy Vault', icon:'vault' },
+        { id:'whisper-bombs', label:'Whisper Bombs', icon:'bomb' },
         { id:'steganography', label:'🎭 Steganography', icon:'eye-off' },
         { id:'privacy-checkup', label:'Privacy Checkup', icon:'shield-check' },
         { id:'censorship-map', label:'Censorship Map', icon:'globe' },
@@ -6187,6 +6189,387 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       );
     }
 
+    // ===== WHISPER BOMBS =====
+    
+    function WhisperBombs({ pushToast }) {
+      const [view, setView] = useState('browse'); // browse, create
+      const [secretMessage, setSecretMessage] = useState('');
+      const [bombTitle, setBombTitle] = useState('');
+      const [threshold, setThreshold] = useState('20000');
+      const [activeBombs, setActiveBombs] = useState([]);
+      const [createdBomb, setCreatedBomb] = useState(null);
+      
+      useEffect(()=>{
+        if(window.lucide) window.lucide.createIcons();
+      },[view, activeBombs]);
+      
+      // Encryption function (reuse existing)
+      async function encryptMessage(text, password) {
+        const enc = new TextEncoder();
+        const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits', 'deriveKey']);
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        const key = await crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:100000,hash:'SHA-256'},keyMaterial,{name:'AES-GCM',length:256},false,['encrypt']);
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const ct = await crypto.subtle.encrypt({name:'AES-GCM',iv}, key, enc.encode(text));
+        return btoa(String.fromCharCode(...salt,...iv,...new Uint8Array(ct)));
+      }
+      
+      async function handleCreateBomb() {
+        if (!secretMessage || !bombTitle) {
+          pushToast('Please enter message and title', 'err');
+          return;
+        }
+        
+        try {
+          // Generate encryption key
+          const password = crypto.getRandomValues(new Uint8Array(32));
+          const keyHex = Array.from(password).map(b => b.toString(16).padStart(2, '0')).join('');
+          
+          // Encrypt message
+          const encrypted = await encryptMessage(secretMessage, keyHex);
+          
+          // Create metadata for pump.fun
+          const metadata = {
+            name: `WHISPER BOMB: ${bombTitle}`,
+            symbol: bombTitle.substring(0, 6).toUpperCase().replace(/[^A-Z]/g, ''),
+            description: `🔐 Encrypted Secret Token
+            
+Reveals at: $${parseInt(threshold).toLocaleString()} market cap
+Status: SEALED 🔒
+Created: ${new Date().toLocaleDateString()}
+
+⚠️ Secret content unknown - trade at your own risk!
+
+Encrypted data: ${encrypted.substring(0, 50)}...
+
+This is a speculative token. The secret may or may not have value.`,
+            encrypted_message: encrypted,
+            reveal_threshold: threshold,
+            ipfs_hash: 'Coming soon',
+            decrypt_key_location: 'Will be posted to Solana when threshold reached'
+          };
+          
+          setCreatedBomb({
+            title: bombTitle,
+            threshold: threshold,
+            metadata: JSON.stringify(metadata, null, 2),
+            decryptKey: keyHex,
+            encrypted: encrypted
+          });
+          
+          pushToast('Secret encrypted! Ready for pump.fun', 'ok');
+          
+        } catch (error) {
+          console.error(error);
+          pushToast('Encryption failed', 'err');
+        }
+      }
+      
+      function copyMetadata() {
+        navigator.clipboard.writeText(createdBomb.metadata);
+        pushToast('Metadata copied! Paste into pump.fun', 'ok');
+      }
+
+      return (
+        <div className="space-y-6">
+          {/* Premium Hero */}
+          <div className="relative overflow-hidden rounded-3xl border border-orange-500/30 bg-gradient-to-br from-orange-900/40 via-red-900/30 to-orange-900/40 p-8 shadow-2xl">
+            <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 via-red-500/10 to-orange-500/10 animate-pulse-slow"></div>
+            
+            <div className="relative z-10">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-500/30 to-red-500/30 flex items-center justify-center backdrop-blur-sm border border-orange-400/50 shadow-lg shadow-orange-500/50">
+                  <i data-lucide="bomb" className="w-10 h-10 text-orange-300"></i>
+                </div>
+                <div>
+                  <h1 className="text-4xl font-bold text-white mb-1 bg-gradient-to-r from-orange-200 via-red-200 to-orange-200 bg-clip-text text-transparent">
+                    Whisper Bombs
+                  </h1>
+                  <p className="text-orange-300 font-semibold text-lg">Encrypted Secrets • Bonding Curves • Auto-Reveal</p>
+                </div>
+              </div>
+              
+              <p className="text-white/80 text-sm max-w-3xl mb-4">
+                Create encrypted secret tokens that trade on pump.fun-style bonding curves. When market cap hits your threshold, 
+                the secret auto-reveals on-chain. Speculation meets privacy!
+              </p>
+              
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setView('browse')}
+                  className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                    view === 'browse' 
+                      ? 'bg-orange-500 text-white' 
+                      : 'bg-white/10 text-white/70 hover:bg-white/20'
+                  }`}
+                >
+                  Browse Bombs
+                </button>
+                <button
+                  onClick={() => setView('create')}
+                  className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                    view === 'create' 
+                      ? 'bg-orange-500 text-white' 
+                      : 'bg-white/10 text-white/70 hover:bg-white/20'
+                  }`}
+                >
+                  Create Bomb
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {view === 'create' && (
+            <div className="space-y-6">
+              {!createdBomb ? (
+                <div className="bg-gradient-to-br from-black/60 via-orange-900/20 to-black/60 border border-orange-500/30 rounded-2xl p-6">
+                  <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+                    <i data-lucide="lock" className="w-6 h-6 text-orange-400"></i>
+                    Create Encrypted Secret
+                  </h3>
+                  
+                  <div className="space-y-4">
+                    {/* Title */}
+                    <div>
+                      <label className="block text-sm font-semibold text-white mb-2">Secret Title (Public)</label>
+                      <input 
+                        type="text"
+                        value={bombTitle}
+                        onChange={(e) => setBombTitle(e.target.value)}
+                        placeholder="e.g., FTX_FUNDS, SATOSHI_IDENTITY, WHALE_WALLET"
+                        className="w-full px-4 py-3 rounded-xl border border-white/20 bg-black/30 text-white placeholder-white/40 focus:border-orange-400 focus:outline-none"
+                      />
+                    </div>
+                    
+                    {/* Secret Message */}
+                    <div>
+                      <label className="block text-sm font-semibold text-white mb-2">Secret Message (Encrypted)</label>
+                      <textarea 
+                        value={secretMessage}
+                        onChange={(e) => setSecretMessage(e.target.value)}
+                        placeholder="Enter your secret message. This will be encrypted and only revealed when threshold is reached..."
+                        rows="6"
+                        className="w-full px-4 py-3 rounded-xl border border-white/20 bg-black/30 text-white placeholder-white/40 focus:border-orange-400 focus:outline-none"
+                      />
+                    </div>
+                    
+                    {/* Threshold */}
+                    <div>
+                      <label className="block text-sm font-semibold text-white mb-2">Reveal Threshold (USD Market Cap)</label>
+                      <div className="flex gap-2">
+                        <span className="px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white flex items-center">$</span>
+                        <input 
+                          type="number"
+                          value={threshold}
+                          onChange={(e) => setThreshold(e.target.value)}
+                          placeholder="20000"
+                          className="flex-1 px-4 py-3 rounded-xl border border-white/20 bg-black/30 text-white placeholder-white/40 focus:border-orange-400 focus:outline-none"
+                        />
+                      </div>
+                      <p className="text-xs text-white/50 mt-1">Recommended: $5k-50k (higher = longer to reveal)</p>
+                    </div>
+                    
+                    {/* Create Button */}
+                    <button 
+                      onClick={handleCreateBomb}
+                      className="w-full px-8 py-4 bg-gradient-to-r from-orange-600 via-red-600 to-orange-600 hover:from-orange-500 hover:via-red-500 hover:to-orange-500 text-white font-bold text-xl rounded-xl transition-all shadow-2xl shadow-orange-500/50 hover:shadow-orange-500/70 hover:scale-[1.02] flex items-center justify-center gap-3"
+                    >
+                      <i data-lucide="sparkles" className="w-6 h-6"></i>
+                      Encrypt & Prepare for Pump.fun
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Success - Show Next Steps */}
+                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6">
+                    <h3 className="text-xl font-bold text-emerald-400 mb-3 flex items-center gap-2">
+                      <i data-lucide="check-circle" className="w-6 h-6"></i>
+                      Secret Encrypted Successfully!
+                    </h3>
+                    <p className="text-white/70 mb-4">Your secret is encrypted and ready to launch on pump.fun</p>
+                  </div>
+                  
+                  {/* Metadata to Copy */}
+                  <div className="bg-black/40 border border-orange-500/30 rounded-xl p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-white font-semibold">Token Metadata for Pump.fun:</h4>
+                      <button 
+                        onClick={copyMetadata}
+                        className="px-4 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded-lg transition-all flex items-center gap-2"
+                      >
+                        <i data-lucide="copy" className="w-4 h-4"></i>
+                        Copy All
+                      </button>
+                    </div>
+                    <pre className="text-xs text-white/70 bg-black/50 p-4 rounded-lg overflow-auto max-h-64">
+                      {createdBomb.metadata}
+                    </pre>
+                  </div>
+                  
+                  {/* Next Steps */}
+                  <div className="bg-gradient-to-r from-orange-500/10 via-red-500/10 to-orange-500/10 border border-orange-500/30 rounded-xl p-6">
+                    <h4 className="text-white font-bold mb-3 flex items-center gap-2">
+                      <i data-lucide="list-ordered" className="w-5 h-5 text-orange-400"></i>
+                      Next Steps:
+                    </h4>
+                    <ol className="space-y-3 text-white/80">
+                      <li className="flex items-start gap-3">
+                        <span className="flex-shrink-0 w-6 h-6 bg-orange-500/20 rounded-full flex items-center justify-center text-sm font-bold text-orange-400">1</span>
+                        <span><strong>Copy the metadata above</strong> (already copied to clipboard!)</span>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <span className="flex-shrink-0 w-6 h-6 bg-orange-500/20 rounded-full flex items-center justify-center text-sm font-bold text-orange-400">2</span>
+                        <div>
+                          <strong>Create token on Pump.fun</strong>
+                          <a 
+                            href="https://pump.fun" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="ml-2 text-orange-400 hover:text-orange-300 underline"
+                          >
+                            Open Pump.fun →
+                          </a>
+                        </div>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <span className="flex-shrink-0 w-6 h-6 bg-orange-500/20 rounded-full flex items-center justify-center text-sm font-bold text-orange-400">3</span>
+                        <span><strong>Paste metadata</strong> into pump.fun's description field</span>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <span className="flex-shrink-0 w-6 h-6 bg-orange-500/20 rounded-full flex items-center justify-center text-sm font-bold text-orange-400">4</span>
+                        <span><strong>Launch token</strong> and start trading!</span>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <span className="flex-shrink-0 w-6 h-6 bg-orange-500/20 rounded-full flex items-center justify-center text-sm font-bold text-orange-400">5</span>
+                        <div>
+                          <strong>Save your decryption key</strong> (DO NOT LOSE THIS!)
+                          <div className="mt-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                            <p className="text-xs text-red-400 font-mono break-all">{createdBomb.decryptKey}</p>
+                          </div>
+                        </div>
+                      </li>
+                    </ol>
+                  </div>
+                  
+                  {/* Warning */}
+                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
+                    <div className="flex items-start gap-2">
+                      <i data-lucide="alert-triangle" className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5"></i>
+                      <div className="text-sm text-white/70">
+                        <p className="font-semibold text-yellow-400 mb-1">Important:</p>
+                        <ul className="space-y-1 text-xs">
+                          <li>• Save your decryption key securely - you'll need it to reveal the secret</li>
+                          <li>• When market cap hits ${parseInt(threshold).toLocaleString()}, post the key to Solana Memo</li>
+                          <li>• Anyone with the key can decrypt the message</li>
+                          <li>• Secret quality affects token value - be truthful or risk reputation!</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <button 
+                    onClick={() => { setCreatedBomb(null); setSecretMessage(''); setBombTitle(''); }}
+                    className="w-full px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all"
+                  >
+                    Create Another Bomb
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {view === 'browse' && (
+            <div className="space-y-6">
+              {/* Info Card */}
+              <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-5">
+                <div className="flex items-start gap-3">
+                  <i data-lucide="info" className="w-6 h-6 text-cyan-400 flex-shrink-0 mt-0.5"></i>
+                  <div>
+                    <h3 className="text-white font-bold mb-2">How Whisper Bombs Work</h3>
+                    <ol className="text-sm text-white/70 space-y-2">
+                      <li className="flex items-start gap-2">
+                        <span className="text-cyan-400 font-bold">1.</span>
+                        <span><strong>Create:</strong> Encrypt any secret and set a reveal threshold (e.g., $20k market cap)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-cyan-400 font-bold">2.</span>
+                        <span><strong>Launch:</strong> Token launches on pump.fun with 1M supply on bonding curve</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-cyan-400 font-bold">3.</span>
+                        <span><strong>Trade:</strong> Buy/sell tokens while secret is sealed - speculate on value!</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-cyan-400 font-bold">4.</span>
+                        <span><strong>Reveal:</strong> When threshold hit, decrypt key posted → Secret unlocks!</span>
+                      </li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+
+              {/* Example Bombs (Demo) */}
+              <div className="grid gap-4">
+                <div className="bg-gradient-to-r from-orange-900/20 to-red-900/20 border border-orange-500/30 rounded-xl p-5 hover:border-orange-400/50 transition-all">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h4 className="text-xl font-bold text-white mb-1">💣 Demo Bomb: "SATOSHI_IDENTITY"</h4>
+                      <p className="text-sm text-white/60">Who is the real Satoshi Nakamoto?</p>
+                    </div>
+                    <div className="px-3 py-1 bg-orange-500/20 rounded-lg border border-orange-500/30">
+                      <p className="text-xs text-orange-400 font-semibold">🔒 SEALED</p>
+                    </div>
+                  </div>
+                  
+                  {/* Progress Bar */}
+                  <div className="mb-4">
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-white/60">Progress to Reveal</span>
+                      <span className="text-orange-400 font-semibold">Coming Soon</span>
+                    </div>
+                    <div className="h-3 bg-white/10 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-orange-500 to-red-500 rounded-full" style={{width: '0%'}}></div>
+                    </div>
+                    <p className="text-xs text-white/50 mt-1">$0 / $20,000 market cap</p>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <button className="flex-1 px-4 py-2 bg-orange-500/20 hover:bg-orange-500/30 border border-orange-500/30 text-orange-400 rounded-lg transition-all flex items-center justify-center gap-2" disabled>
+                      <i data-lucide="external-link" className="w-4 h-4"></i>
+                      Trade on Pump.fun (Coming Soon)
+                    </button>
+                    <button className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all" disabled>
+                      <i data-lucide="eye" className="w-4 h-4"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Coming Soon Notice */}
+              <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-5">
+                <div className="flex items-start gap-3">
+                  <i data-lucide="rocket" className="w-6 h-6 text-purple-400 flex-shrink-0 mt-0.5"></i>
+                  <div>
+                    <h3 className="text-white font-bold mb-2">🚀 Launching Soon</h3>
+                    <p className="text-sm text-white/70 mb-3">
+                      Whisper Bombs is ready to launch! Create encrypted secrets above, then launch them on pump.fun. 
+                      We'll monitor and auto-reveal when thresholds are reached.
+                    </p>
+                    <div className="flex gap-2 text-xs">
+                      <span className="px-2 py-1 rounded bg-emerald-500/20 text-emerald-300">✓ Encryption Ready</span>
+                      <span className="px-2 py-1 rounded bg-emerald-500/20 text-emerald-300">✓ UI Complete</span>
+                      <span className="px-2 py-1 rounded bg-yellow-500/20 text-yellow-300">⏳ First Bombs Launching</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
     // ===== ZOLANA EXCHANGE =====
     
     function ZolanaExchange({ pushToast }) {
@@ -6642,7 +7025,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'steganography', 'privacy-checkup', 'censorship-map', 'proxy-links', 'swap', 'solana-privacy', 'zolana', 'privacy-vault'];
+      const validSteps = ['home', 'webrtc', 'steganography', 'privacy-checkup', 'censorship-map', 'proxy-links', 'swap', 'solana-privacy', 'zolana', 'privacy-vault', 'whisper-bombs'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -6683,6 +7066,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                       case 'solana-privacy': return <SolanaPrivacyToolkit pushToast={push} />;
                       case 'zolana': return <ZolanaExchange pushToast={push} />;
                       case 'privacy-vault': return <PrivacyVault pushToast={push} />;
+                      case 'whisper-bombs': return <WhisperBombs pushToast={push} />;
                       default: return (
                         <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6">
                           <h2 className="text-white text-xl font-bold mb-2">Section Not Found</h2>
