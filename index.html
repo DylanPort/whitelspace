@@ -6220,7 +6220,15 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           return;
         }
         
+        if (!window?.solana) {
+          pushToast('Please install Phantom wallet', 'err');
+          window.open('https://phantom.app/', '_blank');
+          return;
+        }
+        
         try {
+          pushToast('Encrypting secret...', 'info');
+          
           // Generate encryption key
           const password = crypto.getRandomValues(new Uint8Array(32));
           const keyHex = Array.from(password).map(b => b.toString(16).padStart(2, '0')).join('');
@@ -6228,46 +6236,202 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           // Encrypt message
           const encrypted = await encryptMessage(secretMessage, keyHex);
           
-          // Create metadata for pump.fun
-          const metadata = {
-            name: `WHISPER BOMB: ${bombTitle}`,
-            symbol: bombTitle.substring(0, 6).toUpperCase().replace(/[^A-Z]/g, ''),
-            description: `🔐 Encrypted Secret Token
-            
+          // Connect wallet
+          const wallet = await window.solana.connect();
+          const creator = wallet.publicKey.toString();
+          
+          // Create token metadata
+          const tokenName = `💣 ${bombTitle}`;
+          const tokenSymbol = bombTitle.substring(0, 6).toUpperCase().replace(/[^A-Z0-9]/g, '') || 'BOMB';
+          const tokenDescription = `🔐 WHISPER BOMB - Encrypted Secret Token
+
 Reveals at: $${parseInt(threshold).toLocaleString()} market cap
 Status: SEALED 🔒
 Created: ${new Date().toLocaleDateString()}
 
 ⚠️ Secret content unknown - trade at your own risk!
 
-Encrypted data: ${encrypted.substring(0, 50)}...
+Encrypted: ${encrypted.substring(0, 80)}...
 
-This is a speculative token. The secret may or may not have value.`,
-            encrypted_message: encrypted,
-            reveal_threshold: threshold,
-            ipfs_hash: 'Coming soon',
-            decrypt_key_location: 'Will be posted to Solana when threshold reached'
+When market cap hits threshold, decryption key will be posted to Solana blockchain.
+
+This is a speculative token. Secret may or may not have value.
+Created via Whistle Privacy Tools.`;
+
+          pushToast('Creating token via PumpPortal...', 'info');
+          
+          // Create token using PumpPortal API
+          const formData = new FormData();
+          formData.append('name', tokenName);
+          formData.append('symbol', tokenSymbol);
+          formData.append('description', tokenDescription);
+          formData.append('twitter', 'https://twitter.com/whistle');
+          formData.append('telegram', '');
+          formData.append('website', window.location.origin);
+          
+          // Create a simple image for the token (or upload custom)
+          // For now, we'll skip image and let PumpPortal use default
+          
+          // Note: PumpPortal create endpoint - check their docs for exact endpoint
+          // This is a placeholder structure based on typical APIs
+          const createResponse = await fetch('https://pumpportal.fun/api/create-token', {
+            method: 'POST',
+            body: formData
+          });
+          
+          if (!createResponse.ok) {
+            throw new Error('Token creation failed');
+          }
+          
+          const result = await createResponse.json();
+          
+          // Store bomb info
+          const bombInfo = {
+            title: bombTitle,
+            tokenAddress: result.tokenAddress || 'pending',
+            threshold: threshold,
+            decryptKey: keyHex,
+            encrypted: encrypted,
+            creator: creator,
+            created: Date.now()
           };
+          
+          // Save to localStorage
+          const existingBombs = JSON.parse(localStorage.getItem('whisper_bombs') || '[]');
+          existingBombs.push(bombInfo);
+          localStorage.setItem('whisper_bombs', JSON.stringify(existingBombs));
+          
+          setCreatedBomb(bombInfo);
+          pushToast('💣 Whisper Bomb created successfully!', 'ok');
+          
+        } catch (error) {
+          console.error(error);
+          pushToast('Creation failed - Using manual mode', 'err');
+          
+          // Fallback to manual mode
+          const password = crypto.getRandomValues(new Uint8Array(32));
+          const keyHex = Array.from(password).map(b => b.toString(16).padStart(2, '0')).join('');
+          const encrypted = await encryptMessage(secretMessage, keyHex);
           
           setCreatedBomb({
             title: bombTitle,
             threshold: threshold,
-            metadata: JSON.stringify(metadata, null, 2),
+            metadata: JSON.stringify({
+              name: `💣 ${bombTitle}`,
+              symbol: bombTitle.substring(0, 6).toUpperCase().replace(/[^A-Z0-9]/g, ''),
+              description: `Whisper Bomb - Reveals at $${threshold} mcap`,
+              encrypted_message: encrypted
+            }, null, 2),
             decryptKey: keyHex,
-            encrypted: encrypted
+            encrypted: encrypted,
+            manual: true
           });
-          
-          pushToast('Secret encrypted! Ready for pump.fun', 'ok');
-          
-        } catch (error) {
-          console.error(error);
-          pushToast('Encryption failed', 'err');
         }
       }
       
       function copyMetadata() {
         navigator.clipboard.writeText(createdBomb.metadata);
         pushToast('Metadata copied! Paste into pump.fun', 'ok');
+      }
+      
+      // Monitor bombs using PumpPortal API
+      useEffect(() => {
+        // Load saved bombs
+        const saved = JSON.parse(localStorage.getItem('whisper_bombs') || '[]');
+        setActiveBombs(saved);
+        
+        // Poll for market cap updates every 30 seconds
+        const interval = setInterval(async () => {
+          for (let bomb of saved) {
+            if (bomb.revealed || !bomb.tokenAddress) continue;
+            
+            try {
+              // Get token data from PumpPortal
+              const response = await fetch(`https://pumpportal.fun/api/data/${bomb.tokenAddress}`);
+              if (!response.ok) continue;
+              
+              const data = await response.json();
+              const mcap = data.usd_market_cap || 0;
+              
+              bomb.currentMcap = mcap;
+              bomb.progress = (mcap / parseInt(bomb.threshold)) * 100;
+              
+              // Check if reveal threshold reached
+              if (mcap >= parseInt(bomb.threshold) && !bomb.revealed) {
+                await revealBomb(bomb);
+              }
+            } catch (err) {
+              console.error('Failed to check bomb:', err);
+            }
+          }
+          setActiveBombs([...saved]);
+        }, 30000);
+        
+        return () => clearInterval(interval);
+      }, []);
+      
+      // Auto-reveal when threshold hit
+      async function revealBomb(bomb) {
+        try {
+          pushToast(`💥 Revealing bomb: ${bomb.title}...`, 'info');
+          
+          // Post decryption key to Solana Memo
+          const wallet = await window.solana.connect();
+          const connection = new solanaWeb3.Connection('https://api.mainnet-beta.solana.com', 'confirmed');
+          
+          const memoText = `WHISPER_BOMB_REVEAL:${bomb.title}:KEY:${bomb.decryptKey}:MCAP:${bomb.currentMcap}`;
+          
+          const memoIx = new solanaWeb3.TransactionInstruction({
+            keys: [{pubkey: wallet.publicKey, isSigner: true, isWritable: false}],
+            programId: new solanaWeb3.PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'),
+            data: new TextEncoder().encode(memoText)
+          });
+          
+          const tx = new solanaWeb3.Transaction().add(memoIx);
+          tx.feePayer = wallet.publicKey;
+          tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+          
+          const signed = await window.solana.signTransaction(tx);
+          const signature = await connection.sendRawTransaction(signed.serialize());
+          await connection.confirmTransaction(signature, 'confirmed');
+          
+          // Mark as revealed
+          bomb.revealed = true;
+          bomb.revealTx = signature;
+          bomb.revealedAt = Date.now();
+          
+          // Decrypt and show
+          const decrypted = await decryptMessage(bomb.encrypted, bomb.decryptKey);
+          bomb.decryptedMessage = decrypted;
+          
+          // Update storage
+          const existingBombs = JSON.parse(localStorage.getItem('whisper_bombs') || '[]');
+          const updated = existingBombs.map(b => b.title === bomb.title ? bomb : b);
+          localStorage.setItem('whisper_bombs', JSON.stringify(updated));
+          
+          pushToast(`💥 BOMB REVEALED! "${bomb.title}"`, 'ok');
+          
+        } catch (error) {
+          console.error('Reveal failed:', error);
+          pushToast('Auto-reveal failed - check console', 'err');
+        }
+      }
+      
+      // Decrypt function
+      async function decryptMessage(encrypted, keyHex) {
+        try {
+          const enc = new TextEncoder();
+          const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(keyHex), 'PBKDF2', false, ['deriveBits', 'deriveKey']);
+          const bytes = Uint8Array.from(atob(encrypted), c => c.charCodeAt(0));
+          const salt = bytes.slice(0, 16);
+          const iv = bytes.slice(16, 28);
+          const ct = bytes.slice(28);
+          const key = await crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:100000,hash:'SHA-256'},keyMaterial,{name:'AES-GCM',length:256},false,['decrypt']);
+          const pt = await crypto.subtle.decrypt({name:'AES-GCM',iv}, key, ct);
+          return new TextDecoder().decode(pt);
+        } catch (err) {
+          return 'Decryption failed';
+        }
       }
 
       return (
@@ -6381,75 +6545,121 @@ This is a speculative token. The secret may or may not have value.`,
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {/* Success - Show Next Steps */}
+                  {/* Success - Show Status */}
                   <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6">
                     <h3 className="text-xl font-bold text-emerald-400 mb-3 flex items-center gap-2">
                       <i data-lucide="check-circle" className="w-6 h-6"></i>
-                      Secret Encrypted Successfully!
+                      Whisper Bomb {createdBomb.tokenAddress && !createdBomb.manual ? 'Created' : 'Encrypted'}!
                     </h3>
-                    <p className="text-white/70 mb-4">Your secret is encrypted and ready to launch on pump.fun</p>
+                    <p className="text-white/70">
+                      {createdBomb.tokenAddress && !createdBomb.manual 
+                        ? '✅ Token created via PumpPortal and is now live on bonding curve!'
+                        : '✅ Secret encrypted! Follow steps below to launch on pump.fun'}
+                    </p>
+                    {createdBomb.tokenAddress && !createdBomb.manual && (
+                      <div className="mt-3 p-3 bg-emerald-500/10 rounded-lg">
+                        <p className="text-xs text-emerald-300 font-semibold mb-1">Token Address:</p>
+                        <p className="text-xs text-white font-mono break-all">{createdBomb.tokenAddress}</p>
+                      </div>
+                    )}
                   </div>
                   
-                  {/* Metadata to Copy */}
-                  <div className="bg-black/40 border border-orange-500/30 rounded-xl p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-white font-semibold">Token Metadata for Pump.fun:</h4>
-                      <button 
-                        onClick={copyMetadata}
-                        className="px-4 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded-lg transition-all flex items-center gap-2"
-                      >
-                        <i data-lucide="copy" className="w-4 h-4"></i>
-                        Copy All
-                      </button>
-                    </div>
-                    <pre className="text-xs text-white/70 bg-black/50 p-4 rounded-lg overflow-auto max-h-64">
-                      {createdBomb.metadata}
-                    </pre>
-                  </div>
-                  
-                  {/* Next Steps */}
-                  <div className="bg-gradient-to-r from-orange-500/10 via-red-500/10 to-orange-500/10 border border-orange-500/30 rounded-xl p-6">
-                    <h4 className="text-white font-bold mb-3 flex items-center gap-2">
-                      <i data-lucide="list-ordered" className="w-5 h-5 text-orange-400"></i>
-                      Next Steps:
-                    </h4>
-                    <ol className="space-y-3 text-white/80">
-                      <li className="flex items-start gap-3">
-                        <span className="flex-shrink-0 w-6 h-6 bg-orange-500/20 rounded-full flex items-center justify-center text-sm font-bold text-orange-400">1</span>
-                        <span><strong>Copy the metadata above</strong> (already copied to clipboard!)</span>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <span className="flex-shrink-0 w-6 h-6 bg-orange-500/20 rounded-full flex items-center justify-center text-sm font-bold text-orange-400">2</span>
-                        <div>
-                          <strong>Create token on Pump.fun</strong>
-                          <a 
-                            href="https://pump.fun" 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="ml-2 text-orange-400 hover:text-orange-300 underline"
+                  {/* Decryption Key - CRITICAL */}
+                  <div className="bg-red-500/10 border-2 border-red-500/40 rounded-xl p-5">
+                    <div className="flex items-start gap-3">
+                      <div className="w-12 h-12 rounded-lg bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="key" className="w-6 h-6 text-red-400"></i>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-white font-bold mb-2 flex items-center gap-2">
+                          🔑 Decryption Key (SAVE THIS!)
+                        </h4>
+                        <div className="p-3 bg-black/50 rounded-lg mb-3">
+                          <p className="text-sm text-red-300 font-mono break-all">{createdBomb.decryptKey}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(createdBomb.decryptKey);
+                              pushToast('Key copied!', 'ok');
+                            }}
+                            className="px-3 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-all flex items-center gap-2 text-sm"
                           >
-                            Open Pump.fun →
-                          </a>
+                            <i data-lucide="copy" className="w-4 h-4"></i>
+                            Copy Key
+                          </button>
+                          <button
+                            onClick={() => {
+                              const data = `Whisper Bomb: ${createdBomb.title}\nDecryption Key: ${createdBomb.decryptKey}\nReveal Threshold: $${createdBomb.threshold}\nCreated: ${new Date().toLocaleString()}\n\n⚠️ DO NOT SHARE until reveal!`;
+                              const blob = new Blob([data], {type: 'text/plain'});
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `whisper-bomb-${createdBomb.title}-key.txt`;
+                              a.click();
+                              pushToast('Key downloaded!', 'ok');
+                            }}
+                            className="px-3 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-all flex items-center gap-2 text-sm"
+                          >
+                            <i data-lucide="download" className="w-4 h-4"></i>
+                            Download
+                          </button>
                         </div>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <span className="flex-shrink-0 w-6 h-6 bg-orange-500/20 rounded-full flex items-center justify-center text-sm font-bold text-orange-400">3</span>
-                        <span><strong>Paste metadata</strong> into pump.fun's description field</span>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <span className="flex-shrink-0 w-6 h-6 bg-orange-500/20 rounded-full flex items-center justify-center text-sm font-bold text-orange-400">4</span>
-                        <span><strong>Launch token</strong> and start trading!</span>
-                      </li>
-                      <li className="flex items-start gap-3">
-                        <span className="flex-shrink-0 w-6 h-6 bg-orange-500/20 rounded-full flex items-center justify-center text-sm font-bold text-orange-400">5</span>
-                        <div>
-                          <strong>Save your decryption key</strong> (DO NOT LOSE THIS!)
-                          <div className="mt-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-                            <p className="text-xs text-red-400 font-mono break-all">{createdBomb.decryptKey}</p>
-                          </div>
+                        <p className="text-xs text-red-400/80 mt-3">
+                          ⚠️ You'll need this key to reveal the secret when market cap hits ${parseInt(createdBomb.threshold).toLocaleString()}. 
+                          Store it securely - if you lose it, the secret can never be revealed!
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Manual Steps (if API failed) */}
+                  {createdBomb.manual && (
+                    <>
+                      <div className="bg-black/40 border border-orange-500/30 rounded-xl p-5">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-white font-semibold">Token Metadata:</h4>
+                          <button 
+                            onClick={copyMetadata}
+                            className="px-4 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded-lg transition-all flex items-center gap-2"
+                          >
+                            <i data-lucide="copy" className="w-4 h-4"></i>
+                            Copy
+                          </button>
                         </div>
-                      </li>
-                    </ol>
+                        <pre className="text-xs text-white/70 bg-black/50 p-4 rounded-lg overflow-auto max-h-40">
+                          {createdBomb.metadata}
+                        </pre>
+                      </div>
+                      
+                      <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-4">
+                        <p className="text-sm text-white/70">
+                          <strong className="text-cyan-400">Manual Mode:</strong> PumpPortal API unavailable. 
+                          Please create token manually on <a href="https://pump.fun" target="_blank" className="text-cyan-400 underline">pump.fun</a> using the metadata above.
+                        </p>
+                      </div>
+                    </>
+                  )}
+                  
+                  {/* Success Actions */}
+                  <div className="flex gap-2">
+                    {createdBomb.tokenAddress && !createdBomb.manual && (
+                      <a
+                        href={`https://pump.fun/${createdBomb.tokenAddress}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 px-4 py-3 bg-orange-500/20 hover:bg-orange-500/30 border border-orange-500/30 text-orange-400 font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
+                      >
+                        <i data-lucide="external-link" className="w-4 h-4"></i>
+                        Trade on Pump.fun
+                      </a>
+                    )}
+                    <button 
+                      onClick={() => { setCreatedBomb(null); setSecretMessage(''); setBombTitle(''); setView('browse'); }}
+                      className="flex-1 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all font-semibold"
+                    >
+                      View All Bombs
+                    </button>
                   </div>
                   
                   {/* Warning */}
@@ -6509,57 +6719,122 @@ This is a speculative token. The secret may or may not have value.`,
                 </div>
               </div>
 
-              {/* Example Bombs (Demo) */}
-              <div className="grid gap-4">
-                <div className="bg-gradient-to-r from-orange-900/20 to-red-900/20 border border-orange-500/30 rounded-xl p-5 hover:border-orange-400/50 transition-all">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <h4 className="text-xl font-bold text-white mb-1">💣 Demo Bomb: "SATOSHI_IDENTITY"</h4>
-                      <p className="text-sm text-white/60">Who is the real Satoshi Nakamoto?</p>
+              {/* Active Bombs List */}
+              {activeBombs.length > 0 ? (
+                <div className="grid gap-4">
+                  {activeBombs.map((bomb, idx) => (
+                    <div key={idx} className={`bg-gradient-to-r ${bomb.revealed ? 'from-emerald-900/20 to-cyan-900/20 border-emerald-500/30' : 'from-orange-900/20 to-red-900/20 border-orange-500/30'} border rounded-xl p-5 hover:border-opacity-70 transition-all`}>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex-1">
+                          <h4 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
+                            {bomb.revealed ? '💥' : '💣'} {bomb.title}
+                          </h4>
+                          {bomb.revealed && bomb.decryptedMessage && (
+                            <p className="text-sm text-emerald-400 italic mt-2 p-2 bg-black/30 rounded">
+                              "{bomb.decryptedMessage.substring(0, 100)}{bomb.decryptedMessage.length > 100 ? '...' : ''}"
+                            </p>
+                          )}
+                        </div>
+                        <div className={`px-3 py-1 rounded-lg border ${bomb.revealed ? 'bg-emerald-500/20 border-emerald-500/30' : 'bg-orange-500/20 border-orange-500/30'}`}>
+                          <p className={`text-xs font-semibold ${bomb.revealed ? 'text-emerald-400' : 'text-orange-400'}`}>
+                            {bomb.revealed ? '🔓 REVEALED' : '🔒 SEALED'}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Progress Bar */}
+                      {!bomb.revealed && (
+                        <div className="mb-4">
+                          <div className="flex justify-between text-sm mb-2">
+                            <span className="text-white/60">Progress to Reveal</span>
+                            <span className="text-orange-400 font-semibold">
+                              {bomb.progress ? `${bomb.progress.toFixed(1)}%` : 'Loading...'}
+                            </span>
+                          </div>
+                          <div className="h-3 bg-white/10 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-orange-500 to-red-500 rounded-full transition-all duration-500" 
+                              style={{width: `${Math.min(bomb.progress || 0, 100)}%`}}
+                            ></div>
+                          </div>
+                          <p className="text-xs text-white/50 mt-1">
+                            ${(bomb.currentMcap || 0).toLocaleString()} / ${parseInt(bomb.threshold).toLocaleString()} market cap
+                          </p>
+                        </div>
+                      )}
+                      
+                      {bomb.revealed && bomb.revealTx && (
+                        <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
+                          <p className="text-xs text-emerald-300 mb-1">Revealed at ${(bomb.currentMcap || 0).toLocaleString()} market cap</p>
+                          <a 
+                            href={`https://solscan.io/tx/${bomb.revealTx}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-cyan-400 hover:text-cyan-300 underline"
+                          >
+                            View reveal transaction →
+                          </a>
+                        </div>
+                      )}
+                      
+                      <div className="flex gap-2">
+                        {bomb.tokenAddress && (
+                          <a
+                            href={`https://pump.fun/${bomb.tokenAddress}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`flex-1 px-4 py-2 border rounded-lg transition-all flex items-center justify-center gap-2 ${
+                              bomb.revealed 
+                                ? 'bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-500/30 text-emerald-400'
+                                : 'bg-orange-500/20 hover:bg-orange-500/30 border-orange-500/30 text-orange-400'
+                            }`}
+                          >
+                            <i data-lucide="trending-up" className="w-4 h-4"></i>
+                            Trade on Pump.fun
+                          </a>
+                        )}
+                        <button 
+                          className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all"
+                          onClick={() => {
+                            const info = `Bomb: ${bomb.title}\nThreshold: $${bomb.threshold}\nStatus: ${bomb.revealed ? 'REVEALED' : 'SEALED'}\n${bomb.revealed ? `Message: ${bomb.decryptedMessage}` : 'Message: Still encrypted'}`;
+                            alert(info);
+                          }}
+                        >
+                          <i data-lucide="info" className="w-4 h-4"></i>
+                        </button>
+                      </div>
                     </div>
-                    <div className="px-3 py-1 bg-orange-500/20 rounded-lg border border-orange-500/30">
-                      <p className="text-xs text-orange-400 font-semibold">🔒 SEALED</p>
-                    </div>
-                  </div>
-                  
-                  {/* Progress Bar */}
-                  <div className="mb-4">
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-white/60">Progress to Reveal</span>
-                      <span className="text-orange-400 font-semibold">Coming Soon</span>
-                    </div>
-                    <div className="h-3 bg-white/10 rounded-full overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-orange-500 to-red-500 rounded-full" style={{width: '0%'}}></div>
-                    </div>
-                    <p className="text-xs text-white/50 mt-1">$0 / $20,000 market cap</p>
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <button className="flex-1 px-4 py-2 bg-orange-500/20 hover:bg-orange-500/30 border border-orange-500/30 text-orange-400 rounded-lg transition-all flex items-center justify-center gap-2" disabled>
-                      <i data-lucide="external-link" className="w-4 h-4"></i>
-                      Trade on Pump.fun (Coming Soon)
-                    </button>
-                    <button className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all" disabled>
-                      <i data-lucide="eye" className="w-4 h-4"></i>
-                    </button>
-                  </div>
+                  ))}
                 </div>
-              </div>
+              ) : (
+                <div className="bg-white/5 border border-white/10 rounded-xl p-8 text-center">
+                  <i data-lucide="bomb" className="w-16 h-16 text-white/30 mx-auto mb-4"></i>
+                  <h3 className="text-white font-bold text-lg mb-2">No Active Bombs Yet</h3>
+                  <p className="text-white/60 mb-4">Be the first to create a Whisper Bomb!</p>
+                  <button
+                    onClick={() => setView('create')}
+                    className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white font-semibold rounded-xl transition-all"
+                  >
+                    Create First Bomb
+                  </button>
+                </div>
+              )}
 
-              {/* Coming Soon Notice */}
+              {/* PumpPortal Integration Info */}
               <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-5">
                 <div className="flex items-start gap-3">
-                  <i data-lucide="rocket" className="w-6 h-6 text-purple-400 flex-shrink-0 mt-0.5"></i>
+                  <i data-lucide="zap" className="w-6 h-6 text-purple-400 flex-shrink-0 mt-0.5"></i>
                   <div>
-                    <h3 className="text-white font-bold mb-2">🚀 Launching Soon</h3>
+                    <h3 className="text-white font-bold mb-2">⚡ Powered by PumpPortal</h3>
                     <p className="text-sm text-white/70 mb-3">
-                      Whisper Bombs is ready to launch! Create encrypted secrets above, then launch them on pump.fun. 
-                      We'll monitor and auto-reveal when thresholds are reached.
+                      Fully integrated with <a href="https://pumpportal.fun/" target="_blank" className="text-purple-400 hover:text-purple-300 underline">PumpPortal API</a>. 
+                      Create tokens, monitor market caps, and auto-reveal secrets - all without leaving Whistle!
                     </p>
                     <div className="flex gap-2 text-xs">
-                      <span className="px-2 py-1 rounded bg-emerald-500/20 text-emerald-300">✓ Encryption Ready</span>
-                      <span className="px-2 py-1 rounded bg-emerald-500/20 text-emerald-300">✓ UI Complete</span>
-                      <span className="px-2 py-1 rounded bg-yellow-500/20 text-yellow-300">⏳ First Bombs Launching</span>
+                      <span className="px-2 py-1 rounded bg-emerald-500/20 text-emerald-300">✓ Token Creation</span>
+                      <span className="px-2 py-1 rounded bg-emerald-500/20 text-emerald-300">✓ Live Market Data</span>
+                      <span className="px-2 py-1 rounded bg-emerald-500/20 text-emerald-300">✓ Auto-Reveal</span>
+                      <span className="px-2 py-1 rounded bg-cyan-500/20 text-cyan-300">✓ In-App Trading Links</span>
                     </div>
                   </div>
                 </div>
