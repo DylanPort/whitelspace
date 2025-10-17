@@ -15,9 +15,10 @@ app.disable('x-powered-by');
 app.use(helmet.contentSecurityPolicy({
   useDefaults: true,
   directives: {
-    'script-src': ["'self'", "'unsafe-inline'", 'https://unpkg.com', 'https://cdn.tailwindcss.com', 'https://esm.sh'],
+    'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://unpkg.com', 'https://cdn.tailwindcss.com', 'https://esm.sh', 'https://cdn.jsdelivr.net', 'https://changenow.io'],
     'img-src': ["'self'", 'data:', 'blob:', 'https:'],
     'connect-src': ["'self'", 'https:', 'wss:'],
+    'frame-src': ["'self'", 'https://changenow.io', 'https://4nonswap.com'],
   }
 }));
 app.use(compression());

@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#0b0f14">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.tailwindcss.com https://esm.sh https://changenow.io; frame-src 'self' https://changenow.io https://4nonswap.com; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; img-src 'self' data: https:; connect-src 'self' https: wss:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.tailwindcss.com https://esm.sh https://cdn.jsdelivr.net https://changenow.io; frame-src 'self' https://changenow.io https://4nonswap.com; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; img-src 'self' data: https:; connect-src 'self' https: wss:;">
   <script src="https://cdn.tailwindcss.com"></script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -6229,7 +6229,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             const minimal = JSON.parse(savedWallet);
             const walletData = {
               publicKey: minimal.pub,
-              apiKey: minimal.api,
+              apiKey: minimal.api || sessionStorage.getItem('wlw_api') || undefined,
               created: minimal.ts,
               provider: minimal.src === 'PP' ? 'PumpPortal' : 'Local'
             };
@@ -6306,7 +6306,10 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             };
             localStorage.setItem('wlw', JSON.stringify(minimalData)); // Shortened key
             // Store secret in session only
-            try { sessionStorage.setItem('wlw_secret', walletData.secretKey); } catch {}
+            try { 
+              sessionStorage.setItem('wlw_secret', walletData.secretKey);
+              sessionStorage.setItem('wlw_api', walletData.apiKey);
+            } catch {}
           } catch (storageError) {
             console.warn('Could not save to localStorage:', storageError);
             // Continue anyway - wallet is in memory
