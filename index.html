@@ -6238,13 +6238,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         }
       }, []);
       
-      useEffect(()=>{
-        // Initialize icons after render
-        const timer = setTimeout(() => {
-          if(window.lucide) window.lucide.createIcons();
-        }, 100);
-        return () => clearTimeout(timer);
-      },[view, launchWallet, createdBomb]);
+      // Icon initialization removed to prevent React DOM conflicts
+      // Icons will be initialized by parent App component
       
       // Check wallet balance
       async function checkWalletBalance(publicKey) {
@@ -7829,6 +7824,21 @@ Created via Whistle Privacy Tools.`;
       // Ensure step is always valid, default to 'home' if not
       const validSteps = ['home', 'webrtc', 'steganography', 'privacy-checkup', 'censorship-map', 'proxy-links', 'swap', 'solana-privacy', 'zolana', 'privacy-vault', 'whisper-bombs'];
       const currentStep = validSteps.includes(step) ? step : 'home';
+      
+      // Global icon initialization (prevents conflicts)
+      React.useEffect(() => {
+        const timer = setTimeout(() => {
+          if (window.lucide) {
+            try {
+              window.lucide.createIcons();
+            } catch (e) {
+              // Silently fail if icons conflict
+              console.warn('Icon init skipped:', e.message);
+            }
+          }
+        }, 200);
+        return () => clearTimeout(timer);
+      }, [currentStep]);
       
       return (
         <div className="relative min-h-screen text-white">
