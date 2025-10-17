@@ -25,6 +25,22 @@ app.use(morgan('tiny'));
 
 app.use(express.static(__dirname, { extensions: ['html'] }));
 
+// Lightweight proxy for PumpPortal wallet creation to avoid CORS issues
+app.get('/api/proxy/create-wallet', async (req, res) => {
+  try {
+    const doFetch = globalThis.fetch ? globalThis.fetch.bind(globalThis) : (await import('node-fetch')).default;
+    const upstream = await doFetch('https://pumpportal.fun/api/create-wallet');
+    if (!upstream.ok) {
+      return res.status(upstream.status).json({ error: 'upstream_error', status: upstream.status });
+    }
+    const data = await upstream.json();
+    res.set('Access-Control-Allow-Origin', '*');
+    return res.json(data);
+  } catch (e) {
+    return res.status(500).json({ error: 'proxy_failed', message: e.message });
+  }
+});
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });

@@ -773,11 +773,15 @@
     function useToasts() {
       const [toasts, setToasts] = useState([]);
       
+      // Avoid icon re-renders during critical state updates
+      const safeCreateIcons = React.useCallback(() => {
+        if (!window.lucide) return;
+        try { window.lucide.createIcons(); } catch {}
+      }, []);
+      
       useEffect(() => {
-        if (window.lucide && toasts.length > 0) {
-          setTimeout(() => window.lucide.createIcons(), 0);
-        }
-      }, [toasts]);
+        safeCreateIcons();
+      }, [safeCreateIcons]);
       
       function push(msg, tone = "default") {
         const id = Math.random().toString(36).slice(2);
@@ -6253,21 +6257,19 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         }
       }
       
-      // Create new launch wallet via PumpPortal API
+      // Create new launch wallet via PumpPortal API (with same-origin proxy fallback)
       async function createLaunchWallet() {
         try {
           pushToast('Creating wallet via PumpPortal...', 'info');
           
-          // Use PumpPortal's wallet creation API
-          const response = await fetch("https://pumpportal.fun/api/create-wallet", {
-            method: "GET",
-          });
-          
+          // Prefer same-origin proxy to avoid CORS/edge issues
+          let response = await fetch('/api/proxy/create-wallet', { method: 'GET' });
           if (!response.ok) {
-            throw new Error('PumpPortal wallet creation failed');
+            // Fallback to direct PumpPortal if proxy unavailable in static hosting
+            response = await fetch('https://pumpportal.fun/api/create-wallet', { method: 'GET' });
           }
+          if (!response.ok) throw new Error('PumpPortal wallet creation failed');
           
-          // Get wallet data with API key
           const data = await response.json();
           
           const walletData = {
