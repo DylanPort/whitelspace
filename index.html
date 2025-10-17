@@ -6470,6 +6470,65 @@ SECURITY:
         pushToast('Wallet backup downloaded!', 'ok');
       }
       
+      // Withdraw SOL from launch wallet
+      async function withdrawFromWallet() {
+        try {
+          const dest = prompt('Destination address (SOL):');
+          if (!dest) return;
+          const amountStr = prompt('Amount in SOL to send:');
+          if (!amountStr) return;
+          const amount = parseFloat(amountStr);
+          if (!(amount > 0)) { pushToast('Enter a valid amount', 'err'); return; }
+          
+          pushToast('Preparing withdrawal...', 'info');
+          const rpcList = [
+            'https://rpc.ankr.com/solana',
+            'https://api.mainnet-beta.solana.com',
+            'https://solana-mainnet.g.alchemy.com/v2/demo'
+          ];
+          let connection = null;
+          for (let url of rpcList) {
+            try {
+              const conn = new solanaWeb3.Connection(url, 'confirmed');
+              await conn.getLatestBlockhash();
+              connection = conn; break;
+            } catch {}
+          }
+          if (!connection) throw new Error('RPC unavailable');
+          
+          const toPubkey = new solanaWeb3.PublicKey(dest);
+          const lamports = Math.round(amount * 1e9);
+          let signature;
+          
+          if (launchWallet && launchWallet.secretKey) {
+            const secretBytes = parseSecretKeyToBytes(launchWallet.secretKey);
+            const signer = solanaWeb3.Keypair.fromSecretKey(secretBytes);
+            const tx = new solanaWeb3.Transaction().add(
+              solanaWeb3.SystemProgram.transfer({ fromPubkey: signer.publicKey, toPubkey, lamports })
+            );
+            signature = await connection.sendTransaction(tx, [signer]);
+          } else if (window?.solana) {
+            const wallet = await window.solana.connect();
+            const tx = new solanaWeb3.Transaction().add(
+              solanaWeb3.SystemProgram.transfer({ fromPubkey: wallet.publicKey, toPubkey, lamports })
+            );
+            tx.feePayer = wallet.publicKey;
+            tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+            const signed = await window.solana.signTransaction(tx);
+            signature = await connection.sendRawTransaction(signed.serialize());
+          } else {
+            throw new Error('No signing method available');
+          }
+          
+          await connection.confirmTransaction(signature, 'confirmed');
+          pushToast('✅ Withdrawal sent!', 'ok');
+          checkWalletBalance(launchWallet.publicKey);
+        } catch (e) {
+          console.error('Withdrawal failed:', e);
+          pushToast('Withdrawal failed', 'err');
+        }
+      }
+
       // Encryption function (reuse existing)
       async function encryptMessage(text, password) {
         const enc = new TextEncoder();
@@ -7068,7 +7127,7 @@ Created via Whistle Privacy Tools.`;
                       <i data-lucide="alert-triangle" className="w-5 h-5 text-red-400"></i>
                       Danger Zone
                     </h4>
-                    <div className="flex gap-2">
+                  <div className="flex gap-2">
                       <button
                         onClick={() => {
                           if (confirm('Delete wallet? Make sure you have backed up your private key!')) {
@@ -7082,6 +7141,12 @@ Created via Whistle Privacy Tools.`;
                         className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 rounded-lg transition-all text-sm"
                       >
                         Delete Wallet
+                      </button>
+                      <button
+                        onClick={withdrawFromWallet}
+                        className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 rounded-lg transition-all text-sm"
+                      >
+                        Withdraw SOL
                       </button>
                       <button
                         onClick={() => {
