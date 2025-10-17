@@ -6245,16 +6245,25 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       // Icon initialization removed to prevent React DOM conflicts
       // Icons will be initialized by parent App component
       
-      // Check wallet balance
+      // Check wallet balance with RPC fallback rotation
       async function checkWalletBalance(publicKey) {
-        try {
-          const connection = new solanaWeb3.Connection('https://api.mainnet-beta.solana.com', 'confirmed');
-          const pubkey = new solanaWeb3.PublicKey(publicKey);
-          const balance = await connection.getBalance(pubkey);
-          setWalletBalance(balance / 1e9); // Convert to SOL
-        } catch (e) {
-          console.error('Failed to check balance:', e);
+        const rpcList = [
+          'https://rpc.ankr.com/solana',
+          'https://api.mainnet-beta.solana.com',
+          'https://solana-mainnet.g.alchemy.com/v2/demo'
+        ];
+        for (let url of rpcList) {
+          try {
+            const connection = new solanaWeb3.Connection(url, 'confirmed');
+            const pubkey = new solanaWeb3.PublicKey(publicKey);
+            const balance = await connection.getBalance(pubkey);
+            setWalletBalance(balance / 1e9);
+            return;
+          } catch (e) {
+            // try next rpc
+          }
         }
+        console.error('Failed to check balance: all RPCs failed');
       }
       
       // Create new launch wallet via PumpPortal API (with same-origin proxy fallback)
@@ -6464,7 +6473,9 @@ SECURITY:
           return;
         }
         
-        if (!window?.solana) {
+        // Allow programmatic creation without Phantom if using PumpPortal wallet
+        const needsPhantom = !(launchWallet && launchWallet.apiKey && launchWallet.provider === 'PumpPortal');
+        if (needsPhantom && !window?.solana) {
           pushToast('Please install Phantom wallet', 'err');
           window.open('https://phantom.app/', '_blank');
           return;
@@ -6481,9 +6492,8 @@ SECURITY:
           // Encrypt message
           const encrypted = await encryptMessage(secretMessage, keyHex);
           
-          // Connect wallet
-          const wallet = await window.solana.connect();
-          const creator = wallet.publicKey.toString();
+          // Creator public key: use Phantom if present, otherwise PumpPortal wallet pubkey
+          let creator = (needsPhantom ? (await window.solana.connect()).publicKey.toString() : (launchWallet?.publicKey || 'unknown'));
           
           // Create token metadata
           const tokenName = `💣 ${bombTitle}`;

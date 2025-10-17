@@ -49,7 +49,7 @@ app.post('/api/proxy/ipfs', async (req, res) => {
     const upstream = await doFetch('https://pump.fun/api/ipfs', {
       method: 'POST',
       headers: {
-        // Let fetch infer form-data boundaries; we forward the raw body
+        'content-type': req.headers['content-type'] || 'application/octet-stream'
       },
       body: req,
     });
