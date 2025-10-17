@@ -6511,7 +6511,7 @@ This is a speculative token. Secret may or may not have value.
 Created via Whistle Privacy Tools.`;
 
           // If we have a PumpPortal API key from created wallet, attempt programmatic creation (Lightning)
-          if (launchWallet && launchWallet.apiKey && launchWallet.provider === 'PumpPortal') {
+          if (launchWallet && launchWallet.apiKey) {
             pushToast('Uploading metadata to IPFS...', 'info');
             // Build image placeholder from canvas with title initials if no upload yet
             const canvas = document.createElement('canvas');
@@ -6600,7 +6600,7 @@ Created via Whistle Privacy Tools.`;
           }
           
           // If no API key available, attempt local-signed creation using fallback wallet secret if present
-          if (launchWallet && launchWallet.provider !== 'PumpPortal' && launchWallet.secretKey) {
+          if (launchWallet && launchWallet.secretKey) {
             pushToast('Creating token (local sign)...', 'info');
             // Upload IPFS first
             const canvas = document.createElement('canvas');
