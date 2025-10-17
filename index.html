@@ -5,11 +5,10 @@
   <title>Whistle — P2P encrypted tips + Solana memo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="manifest" href="/manifest.webmanifest">
-  <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#0b0f14">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.tailwindcss.com https://esm.sh https://cdn.jsdelivr.net https://changenow.io; frame-src 'self' https://changenow.io https://4nonswap.com; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; img-src 'self' data: https:; connect-src 'self' https: wss:;">
   <script src="https://cdn.tailwindcss.com"></script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -44,7 +43,7 @@
       100%{transform:translateX(0) scale(1);opacity:1}
     }
 
-     /* Animated sky with clouds */
+    /* Animated sky with clouds */
      .sky{position:fixed;inset:0;pointer-events:none;z-index:-9;background:linear-gradient(180deg,#7ec8ff 0%, #bfe4ff 45%, #e8f4ff 100%)}
      .cloud{position:absolute;filter:blur(0px);opacity:.95}
     .cloud::before{content:"";position:absolute;inset:0; background:
@@ -715,6 +714,29 @@
       return new Uint8Array(h);
     }
 
+    // ===== Self-contained Encryption (embeds key+iv in blob) =====
+    async function encryptSelfContained(plainText){
+      const enc = new TextEncoder();
+      const keyBytes = crypto.getRandomValues(new Uint8Array(32));
+      const key = await crypto.subtle.importKey('raw', keyBytes, 'AES-GCM', false, ['encrypt']);
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const ct = new Uint8Array(await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, enc.encode(plainText)));
+      // bundle = key(32) | iv(12) | ct
+      const bundle = new Uint8Array(32 + 12 + ct.length);
+      bundle.set(keyBytes, 0); bundle.set(iv, 32); bundle.set(ct, 44);
+      return btoa(String.fromCharCode(...bundle));
+    }
+
+    async function decryptSelfContained(b64){
+      const raw = Uint8Array.from(atob(b64), c=>c.charCodeAt(0));
+      const keyBytes = raw.slice(0,32);
+      const iv = raw.slice(32,44);
+      const ct = raw.slice(44);
+      const key = await crypto.subtle.importKey('raw', keyBytes, 'AES-GCM', false, ['decrypt']);
+      const pt = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, ct);
+      return new TextDecoder().decode(pt);
+    }
+
     // ---------- persistence helpers ----------
     function usePersistentState(key, defaultValue){
       const [value, setValue] = React.useState(() => {
@@ -773,15 +795,11 @@
     function useToasts() {
       const [toasts, setToasts] = useState([]);
       
-      // Avoid icon re-renders during critical state updates
-      const safeCreateIcons = React.useCallback(() => {
-        if (!window.lucide) return;
-        try { window.lucide.createIcons(); } catch {}
-      }, []);
-      
       useEffect(() => {
-        safeCreateIcons();
-      }, [safeCreateIcons]);
+        if (window.lucide && toasts.length > 0) {
+          setTimeout(() => window.lucide.createIcons(), 0);
+        }
+      }, [toasts]);
       
       function push(msg, tone = "default") {
         const id = Math.random().toString(36).slice(2);
@@ -1203,7 +1221,6 @@
         reader.readAsArrayBuffer(audioFile);
       });
     }
-    
     // Extract hidden message from audio file
     async function extractDataFromAudio(audioFile) {
       return new Promise((resolve, reject) => {
@@ -1621,13 +1638,11 @@
         { id: "webrtc", label: "WebRTC Transfer", icon: "radio" },
         { id: "swap", label: "Privacy Swap", iconImg: "4DqRlDPT_400x400.png.png" },
         { id: "solana-privacy", label: "Solana Privacy", iconImg: "solana.png" },
+        { id: "pump-portal", label: "Pump Privacy", iconImg: "idrs8cZ-zg_logos.png" },
         { id: "zolana", label: "Zolana Exchange", iconImg: "zcash-3d-icon-png-download-10372070.png" },
-        { id: "privacy-vault", label: "Privacy Vault", icon: "vault" },
-        { id: "whisper-bombs", label: "Whisper Bombs", icon: "bomb" },
         { id: "steganography", label: "🎭 Steganography", icon: "eye-off" },
         { id: "privacy-checkup", label: "Privacy Checkup", icon: "shield-check" },
         { id: "censorship-map", label: "Censorship Map", icon: "globe" },
-        { id: "proxy-links", label: "Proxy Links", icon: "link-2" },
       ];
       
       const currentTab = tabs.find(t => t.id === step) || tabs[0];
@@ -1833,10 +1848,10 @@
           setDmsCheckInDate(expiryDate);
           setDmsTxSignature(sig);
           
-          pushToast?.('ok', `Dead Man's Switch activated! Check in before ${new Date(expiry).toLocaleDateString()}`);
+          pushToast?.('Dead Man\'s Switch activated! Check in before ' + new Date(expiry).toLocaleDateString(), 'ok');
         }catch(e){
           console.error(e);
-          pushToast?.('err', 'Failed to activate Dead Man\'s Switch');
+          pushToast?.('Failed to activate Dead Man\'s Switch', 'err');
         }
       }
       
@@ -1860,10 +1875,10 @@
           await signAndSend(tx, payer);
           setDmsCheckInDate(newExpiryDate);
           
-          pushToast?.('ok', 'Checked in! Timer reset to ' + new Date(newExpiry).toLocaleDateString());
+          pushToast?.('Checked in! Timer reset to ' + new Date(newExpiry).toLocaleDateString(), 'ok');
         }catch(e){
           console.error(e);
-          pushToast?.('err', 'Failed to check in');
+          pushToast?.('Failed to check in', 'err');
         }
       }
       
@@ -1885,10 +1900,10 @@
           );
           
           await signAndSend(tx, payer);
-          pushToast?.('ok', 'Password published to blockchain! Anyone can now decrypt the message.');
+          pushToast?.('Password published to blockchain! Anyone can now decrypt the message.', 'ok');
         }catch(e){
           console.error(e);
-          pushToast?.('err', 'Failed to reveal password');
+          pushToast?.('Failed to reveal password', 'err');
         }
       }
       
@@ -1901,7 +1916,7 @@
         
         setVanishLink(link);
         setVanishExpires(new Date(expiryTime).toLocaleString());
-        pushToast?.('ok', 'Vanishing payment link created! Fund it before sharing.');
+        pushToast?.('Vanishing payment link created! Fund it before sharing.', 'ok');
       }
       
       async function fundVanishingPayment(){
@@ -1919,10 +1934,10 @@
             })
           );
           await signAndSend(tx, payer);
-          pushToast?.('ok', `Funded ${vanishAmount} SOL to vanishing wallet`);
+          pushToast?.(`Funded ${vanishAmount} SOL to vanishing wallet`, 'ok');
         }catch(e){
           console.error(e);
-          pushToast?.('err', 'Failed to fund vanishing payment');
+          pushToast?.('Failed to fund vanishing payment', 'err');
         }
       }
       
@@ -1954,10 +1969,10 @@
           tx.partialSign(burner);
           const sig = await conn.sendRawTransaction(tx.serialize());
           await conn.confirmTransaction(sig, 'confirmed');
-          pushToast?.('ok', `Claimed ${toSOL(bal-5000)} SOL!`);
+          pushToast?.(`Claimed ${toSOL(bal-5000)} SOL!`, 'ok');
         }catch(e){
           console.error(e);
-          pushToast?.('err', 'Failed to claim vanishing payment');
+          pushToast?.('Failed to claim vanishing payment', 'err');
         }
       }
       
@@ -1983,10 +1998,10 @@
           
           const sig = await signAndSend(tx, payer);
           setDropTxSig(sig);
-          pushToast?.('ok', 'Dead drop message sent! Only the recipient can decrypt it.');
+          pushToast?.('Dead drop message sent! Only the recipient can decrypt it.', 'ok');
         }catch(e){
           console.error(e);
-          pushToast?.('err', 'Failed to send dead drop');
+          pushToast?.('Failed to send dead drop', 'err');
         }
       }
       
@@ -2016,12 +2031,12 @@
             memoIx(`COIN_FLIP_COMMIT:${hashHex}`, payer)
           );
           await signAndSend(tx, payer);
-          pushToast?.('ok', 'Commitment posted on-chain! Now reveal it.');
+          pushToast?.('Commitment posted on-chain! Now reveal it.', 'ok');
         }catch(e){
           console.error(e);
           setFlipCommit('');
           setFlipSecret('');
-          pushToast?.('err', 'Failed to commit flip');
+          pushToast?.('Failed to commit flip', 'err');
         }
       }
       
@@ -2041,10 +2056,10 @@
             memoIx(`COIN_FLIP_REVEAL:${flipSecret}`, payer)
           );
           await signAndSend(tx, payer);
-          pushToast?.('ok', `Result: ${choice}! Anyone can verify the commitment.`);
+          pushToast?.(`Result: ${choice}! Anyone can verify the commitment.`, 'ok');
         }catch(e){
           console.error(e);
-          pushToast?.('err', 'Failed to reveal flip');
+          pushToast?.('Failed to reveal flip', 'err');
         }
       }
       
@@ -2060,7 +2075,7 @@
         });
         
         setDonationWallets(wallets);
-        pushToast?.('ok', `Created ${count} anonymous donation addresses!`);
+        pushToast?.(`Created ${count} anonymous donation addresses!`, 'ok');
       }
       
       async function sweepDonations(){
@@ -2093,10 +2108,10 @@
             }
           }
           
-          pushToast?.('ok', `Swept ${toSOL(totalSwept)} SOL from donation wallets!`);
+          pushToast?.(`Swept ${toSOL(totalSwept)} SOL from donation wallets!`, 'ok');
         }catch(e){
           console.error(e);
-          pushToast?.('err', 'Failed to sweep donations');
+          pushToast?.('Failed to sweep donations', 'err');
         }
       }
       
@@ -2107,7 +2122,6 @@
         { id: 'coinflip', name: 'Verifiable Coin Flip', icon: 'dice-3', desc: 'Trustless randomness' },
         { id: 'donations', name: 'Anonymous Donation Jar', icon: 'piggy-bank', desc: 'Untraceable donations' }
       ];
-      
       return (
         <GlassCard title="Solana Privacy Toolkit" subtitle="5 Production-Ready Privacy Tools • No Smart Contracts">
           {/* RPC Selector */}
@@ -2140,9 +2154,9 @@
                   />
               </div>
                 <div className="flex flex-wrap gap-2 text-xs">
-                  <button onClick={()=>{setRpc('https://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0'); pushToast?.('ok','Switched to SolanaTracker Mainnet');}} className="px-3 py-1 bg-green-500/20 border border-green-400/40 rounded text-green-400">SolanaTracker (Fast)</button>
-                  <button onClick={()=>{setRpc('https://api.devnet.solana.com'); pushToast?.('ok','Switched to Devnet');}} className="px-3 py-1 bg-cyan-500/20 border border-cyan-400/40 rounded text-cyan-400">Devnet (Test)</button>
-                  <button onClick={()=>{setRpc('https://api.mainnet-beta.solana.com'); pushToast?.('warn','Public mainnet may be rate-limited');}} className="px-3 py-1 bg-purple-500/20 border border-purple-400/40 rounded text-purple-400">Public Mainnet</button>
+                  <button onClick={()=>{setRpc('https://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0'); pushToast?.('Switched to SolanaTracker Mainnet', 'ok');}} className="px-3 py-1 bg-green-500/20 border border-green-400/40 rounded text-green-400">SolanaTracker (Fast)</button>
+                  <button onClick={()=>{setRpc('https://api.devnet.solana.com'); pushToast?.('Switched to Devnet', 'ok');}} className="px-3 py-1 bg-cyan-500/20 border border-cyan-400/40 rounded text-cyan-400">Devnet (Test)</button>
+                  <button onClick={()=>{setRpc('https://api.mainnet-beta.solana.com'); pushToast?.('Public mainnet may be rate-limited', 'warn');}} className="px-3 py-1 bg-purple-500/20 border border-purple-400/40 rounded text-purple-400">Public Mainnet</button>
                 </div>
                 <p className="text-xs text-white/50">💡 Using SolanaTracker RPC (no rate limits). Can also use <a href="https://helius.dev" target="_blank" className="text-cyan-400 hover:underline">Helius</a> or <a href="https://quicknode.com" target="_blank" className="text-cyan-400 hover:underline">QuickNode</a></p>
             </div>
@@ -2566,13 +2580,11 @@
         { id:'webrtc',    label:'WebRTC Transfer', icon:'radio' },
         { id:'swap', label:'Privacy Swap', iconImg:'4DqRlDPT_400x400.png.png' },
         { id:'solana-privacy', label:'Solana Privacy', iconImg:'solana.png' },
+        { id:'pump-portal', label:'Pump Privacy', iconImg:'idrs8cZ-zg_logos.png' },
         { id:'zolana', label:'Zolana Exchange', iconImg:'zcash-3d-icon-png-download-10372070.png' },
-        { id:'privacy-vault', label:'Privacy Vault', icon:'vault' },
-        { id:'whisper-bombs', label:'Whisper Bombs', icon:'bomb' },
         { id:'steganography', label:'🎭 Steganography', icon:'eye-off' },
         { id:'privacy-checkup', label:'Privacy Checkup', icon:'shield-check' },
         { id:'censorship-map', label:'Censorship Map', icon:'globe' },
-        { id:'proxy-links', label:'Proxy Links', icon:'link-2' },
       ];
       
       useEffect(()=>{
@@ -2697,16 +2709,6 @@
                   <h3 className="text-white font-bold">Tor Bridges</h3>
                 </div>
                 <p className="text-white/50 text-xs">Access Tor in censored regions</p>
-              </div>
-
-              <div className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 hover:border-green-400/30 transition-all cursor-pointer" onClick={()=>setStep('proxy-links')}>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
-                    <i data-lucide="link-2" className="w-5 h-5 text-white"></i>
-                  </div>
-                  <h3 className="text-white font-bold">Proxy Links</h3>
-                </div>
-                <p className="text-white/50 text-xs">Anonymous proxy generation</p>
               </div>
 
               <div className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 hover:border-orange-400/30 transition-all cursor-pointer" onClick={()=>setStep('swap')}>
@@ -3250,7 +3252,6 @@
         </>
       );
     }
-
     function Receiver({ pushToast, onHashReady, setVerifyHash }) {
       const [offerIn, setOfferIn] = useState("");
       const [answerOut, setAnswerOut] = useState("");
@@ -3608,8 +3609,50 @@
                 <button onClick={()=>{ setHistory([]); setHistory([]); }} className="hidden" />
                 <button onClick={()=>{ setHistory([]); setHistory([]); }} className="hidden" />
                 <button onClick={()=>{ storageSetHistory([]); setHist([]); }} className="rounded-md bg-rose-500/20 hover:bg-rose-500/30 text-rose-100 text-[11px] px-2 py-1 border border-rose-400/30">Clear (local)</button>
-              </div>
             </div>
+          </div>
+
+          {/* Decrypt Pump */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-white/80 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="font-semibold text-white">Decrypt Pump</div>
+              <button onClick={()=>setShowDecrypt(s=>!s)} className="text-xs px-2 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/40 rounded text-emerald-300">{showDecrypt? 'Hide' : 'Open'}</button>
+            </div>
+            {showDecrypt && (
+              <>
+                <input
+                  value={decryptInput}
+                  onChange={e=>setDecryptInput(e.target.value)}
+                  placeholder="Paste [ENCRYPTED:...] or ciphertext"
+                  className="w-full bg-white/5 border border-white/20 rounded px-3 py-2 text-white text-sm font-mono"
+                />
+            <div className="flex gap-2 justify-end">
+              <button
+                    onClick={async ()=>{
+                      try{
+                        const raw = (decryptInput||'').trim();
+                        const m = raw.match(/^\[ENCRYPTED:(.*)\]$/s);
+                        const ct = m ? m[1] : raw;
+                    const pt = await decryptSelfContained(ct);
+                        setDecryptResult(pt);
+                        pushToast?.('Decrypted ✓','ok');
+                      }catch(e){
+                        setDecryptResult('');
+                        pushToast?.('Decryption failed','err');
+                      }
+                    }}
+                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white rounded-lg transition-all"
+                  >Decrypt</button>
+                </div>
+                {decryptResult && (
+                  <div className="mt-1 p-2 rounded-lg bg-black/30 border border-white/10">
+                    <div className="text-white/70 text-xs mb-1">Result</div>
+                    <pre className="text-sm text-white whitespace-pre-wrap">{decryptResult}</pre>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
           </div>
         </GlassCard>
       );
@@ -3844,7 +3887,6 @@
         </GlassCard>
       );
     }
-    
     function StegoReceiver({ pushToast }) {
       const [extractedMessage, setExtractedMessage] = useState("");
       const [extracting, setExtracting] = useState(false);
@@ -4468,7 +4510,6 @@
         </GlassCard>
       );
     }
-    
     // ===== VIDEO STEGANOGRAPHY COMPONENTS =====
     
     function VideoStegoSender({ pushToast }) {
@@ -4852,6 +4893,486 @@
       );
     }
 
+    // ===== PUMP PORTAL: Create Wallet + Launch Token =====
+    function PumpPortalLaunch({ pushToast }){
+      const [creating, setCreating] = useState(false);
+      const [apiKey, setApiKey] = usePersistentState('pumpApiKey','');
+      const [walletPubkey, setWalletPubkey] = usePersistentState('pumpWalletPub','');
+      const [privateKey, setPrivateKey] = usePersistentState('pumpPrivKey','');
+
+      const [name, setName] = useState('MyToken');
+      const [symbol, setSymbol] = useState('MTK');
+      const [description, setDescription] = useState('');
+      const [twitter, setTwitter] = useState('');
+      const [telegram, setTelegram] = useState('');
+      const [website, setWebsite] = useState('');
+      const [imageFile, setImageFile] = useState(null);
+      const [metadataUri, setMetadataUri] = useState('');
+      const [amountSol, setAmountSol] = useState('0.01');
+      const [priorityFee, setPriorityFee] = useState('0.0005');
+      const [slippagePct, setSlippagePct] = useState('10');
+      const [txSig, setTxSig] = useState('');
+      const [mintAddress, setMintAddress] = useState('');
+      const [lastHttpStatus, setLastHttpStatus] = useState(null);
+      const [lastHttpText, setLastHttpText] = useState('');
+      // Encrypt/Decrypt UI state
+      const [showEncModal, setShowEncModal] = useState(false);
+      const [showDecrypt, setShowDecrypt] = useState(false);
+      const [encMessage, setEncMessage] = useState('');
+      const [decryptInput, setDecryptInput] = useState('');
+      const [decryptResult, setDecryptResult] = useState('');
+      // Wallet balance
+      const [walletBalance, setWalletBalance] = useState(null);
+      const [loadingBalance, setLoadingBalance] = useState(false);
+
+      useEffect(()=>{ if(window.lucide) window.lucide.createIcons(); },[apiKey, walletPubkey, txSig, showDecrypt, walletBalance]);
+
+      // Fetch wallet balance when wallet is created
+      useEffect(() => {
+        async function fetchBalance() {
+          if (!walletPubkey) {
+            setWalletBalance(null);
+            return;
+          }
+          
+          setLoadingBalance(true);
+          try {
+            const rpc = 'https://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0';
+            const response = await fetch(rpc, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                jsonrpc: '2.0',
+                id: 1,
+                method: 'getBalance',
+                params: [walletPubkey]
+              })
+            });
+            const data = await response.json();
+            if (data.result && typeof data.result.value === 'number') {
+              const balanceSOL = data.result.value / 1e9;
+              setWalletBalance(balanceSOL);
+            } else {
+              setWalletBalance(0);
+            }
+          } catch (e) {
+            console.error('Failed to fetch balance:', e);
+            setWalletBalance(null);
+          } finally {
+            setLoadingBalance(false);
+          }
+        }
+        
+        fetchBalance();
+        // Refresh balance every 10 seconds
+        const interval = setInterval(fetchBalance, 10000);
+        return () => clearInterval(interval);
+      }, [walletPubkey]);
+
+      // Small helper: fetch then safely parse JSON (falls back to text)
+      async function fetchJson(url, init){
+        const resp = await fetch(url, init);
+        const status = resp.status;
+        const contentType = resp.headers ? (resp.headers.get('content-type')||'') : '';
+        let text = '';
+        try{ text = await resp.text(); }catch{ text = ''; }
+        let json = null;
+        if (text && contentType.includes('application/json')){
+          try{ json = JSON.parse(text); }catch{ json = null; }
+        }
+        return { ok: resp.ok, status, contentType, text, json };
+      }
+
+      async function createWallet(){
+        try{
+          setCreating(true);
+          const { ok, status, json, text } = await fetchJson('https://pumpportal.fun/api/create-wallet', { method: 'GET', headers: { 'accept': 'application/json' } });
+          setLastHttpStatus(status);
+          setLastHttpText(text||'');
+          if(!ok){ throw new Error(`HTTP ${status} ${text||''}`.trim()); }
+          const data = json || {};
+          // Expected keys: apiKey, walletPublicKey, privateKey (per docs)
+          const kApi = data.apiKey || data.apikey || data.key || '';
+          const kPub = data.walletPublicKey || data.publicKey || data.pubkey || '';
+          const kPriv = data.privateKey || data.secretKey || data.private || '';
+          if(!kApi || !kPub || !kPriv) throw new Error('Unexpected response');
+          setApiKey(kApi);
+          setWalletPubkey(kPub);
+          setPrivateKey(kPriv);
+          pushToast?.('Pump wallet created. Fund with SOL before launch.', 'ok');
+        }catch(e){
+          console.error(e);
+          pushToast?.('Failed to create wallet', 'err');
+        }finally{
+          setCreating(false);
+        }
+      }
+
+      async function uploadMetadata(){
+        try{
+          if(!imageFile && !name) return alert('Add at least a name or an image');
+          const fd = new FormData();
+          if(imageFile) fd.append('file', imageFile);
+          if(name) fd.append('name', name);
+          if(symbol) fd.append('symbol', symbol);
+          if(description) fd.append('description', description);
+          if(twitter) fd.append('twitter', twitter);
+          if(telegram) fd.append('telegram', telegram);
+          if(website) fd.append('website', website);
+          fd.append('showName','true');
+          const { ok, status, json, text } = await fetchJson('https://pump.fun/api/ipfs', { method: 'POST', body: fd });
+          setLastHttpStatus(status);
+          setLastHttpText(text||'');
+          if(!ok){ throw new Error(`HTTP ${status} ${text||''}`.trim()); }
+          const j = json || {};
+          if(!j?.metadataUri) throw new Error('No metadataUri');
+          setMetadataUri(j.metadataUri);
+          pushToast?.('Metadata uploaded to IPFS', 'ok');
+        }catch(e){
+          console.error(e);
+          pushToast?.(`Failed to upload metadata: ${e.message||e}`, 'err');
+        }
+      }
+
+      async function launchToken(){
+        try{
+          if(!apiKey) return alert('Create wallet first');
+          if(!metadataUri) return alert('Upload metadata first');
+          
+          // Check if wallet has sufficient balance
+          if (walletBalance === null || walletBalance === undefined) {
+            pushToast?.('Unable to check wallet balance. Please try again.', 'err');
+            return;
+          }
+          if (walletBalance < 0.02) {
+            pushToast?.(`Insufficient balance: ${walletBalance.toFixed(4)} SOL. Need at least 0.02 SOL to launch.`, 'err');
+            return;
+          }
+          // Provide mint secret key (base58-encoded 64 bytes) as required by Pump Portal
+          const mint = solanaWeb3.Keypair.generate();
+          // Persist the mint public key so we can show contract address even if API doesn't echo it back
+          setMintAddress(mint.publicKey.toString());
+          // Use bs58 from window or fallback to creating base58 from scratch
+          let mintSecretB58;
+          if(window.bs58){
+            mintSecretB58 = window.bs58.encode(mint.secretKey);
+          } else {
+            // Fallback: use the base58 encoder built into Solana keypair
+            // Export as JSON array then convert to base58 string manually
+            const secretArray = Array.from(mint.secretKey);
+            // Use a simple base58 alphabet encoding
+            const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+            let num = BigInt('0x' + secretArray.map(b => b.toString(16).padStart(2,'0')).join(''));
+            let encoded = '';
+            while(num > 0n){
+              encoded = ALPHABET[Number(num % 58n)] + encoded;
+              num = num / 58n;
+            }
+            // Add leading '1's for leading zero bytes
+            for(let i=0; i<secretArray.length && secretArray[i]===0; i++) encoded = '1' + encoded;
+            mintSecretB58 = encoded;
+          }
+          const body = {
+            action: 'create',
+            tokenMetadata: { name, symbol, uri: metadataUri },
+            mint: mintSecretB58,
+            denominatedInSol: true,
+            amount: parseFloat(amountSol),
+            slippage: parseFloat(slippagePct),
+            priorityFee: parseFloat(priorityFee),
+            pool: 'pump',
+          };
+          const { ok, status, json, text } = await fetchJson(`https://pumpportal.fun/api/trade?api-key=${encodeURIComponent(apiKey)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'accept': 'application/json', 'x-api-key': apiKey },
+            body: JSON.stringify(body)
+          });
+          setLastHttpStatus(status);
+          setLastHttpText(text||'');
+          if(!ok){ throw new Error(`HTTP ${status} ${text||''}`.trim()); }
+          const j = json || {};
+          // Check for signature (success) even if errors array is present but empty
+          if(j?.signature){
+            setTxSig(j.signature);
+            // Also capture mint address if returned
+            if(j.mint) setMintAddress(j.mint);
+            pushToast?.(`Token created! Tx: ${j.signature.slice(0,8)}...`, 'ok');
+          } else {
+            const errMsg = (j && (j.error || (Array.isArray(j.errors) && j.errors.length > 0 ? j.errors.join(', ') : ''))) || '';
+            throw new Error(errMsg || text || 'Unknown error');
+          }
+        }catch(e){
+          console.error(e);
+          pushToast?.(`Failed to launch token: ${e.message||e}`, 'err');
+        }
+      }
+
+      function resetAll(){
+        setApiKey(''); setWalletPubkey(''); setPrivateKey(''); setMetadataUri(''); setTxSig(''); setMintAddress('');
+        pushToast?.('Cleared local Pump Portal data', 'ok');
+      }
+
+      return (
+        <>
+        <GlassCard title="Pump Privacy" subtitle="Create wallet, upload metadata, and launch a token on Pump">
+          <div className="space-y-4">
+            {/* Decrypt Section - iOS Premium Style */}
+            <div className="bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-indigo-500/10 border border-cyan-400/30 rounded-2xl p-5 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center shadow-lg">
+                    <i data-lucide="unlock" className="w-5 h-5 text-white"></i>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-base">Decrypt Secret Message</h3>
+                    <p className="text-xs text-cyan-300/80">Reveal encrypted content from token metadata</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={()=>setShowDecrypt(s=>!s)} 
+                  className="px-4 py-2 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 hover:from-cyan-500/30 hover:to-blue-500/30 border border-cyan-400/40 rounded-xl text-cyan-300 font-semibold text-sm transition-all shadow-sm"
+                >
+                  {showDecrypt ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              
+              {showDecrypt && (
+                <div className="space-y-4 animate-in fade-in duration-300">
+                  <div className="p-3 rounded-xl bg-white/5 border border-cyan-400/20">
+                    <p className="text-xs text-white/70 flex items-start gap-2">
+                      <i data-lucide="info" className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5"></i>
+                      Paste an encrypted message from token metadata to reveal its content
+                    </p>
+                  </div>
+                  
+                  <input
+                    value={decryptInput}
+                    onChange={e=>setDecryptInput(e.target.value)}
+                    placeholder="Paste [ENCRYPTED:...] or ciphertext"
+                    className="w-full bg-white/5 border border-cyan-400/20 rounded-xl px-4 py-3 text-white text-sm font-mono placeholder-white/40 focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/20 outline-none transition-all"
+                  />
+                  
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      onClick={async ()=>{
+                        try{
+                          const raw = (decryptInput||'').trim();
+                          const m = raw.match(/^\[ENCRYPTED:(.*)\]$/s);
+                          const ct = m ? m[1] : raw;
+                          const pt = await decryptSelfContained(ct);
+                          setDecryptResult(pt);
+                          pushToast?.('Decrypted successfully!','ok');
+                        }catch(e){
+                          setDecryptResult('');
+                          pushToast?.('Decryption failed. Invalid or corrupted data.','err');
+                        }
+                      }}
+                      className="px-6 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-semibold rounded-xl transition-all flex items-center gap-2 shadow-lg hover:shadow-cyan-500/50"
+                    >
+                      <i data-lucide="unlock" className="w-4 h-4"></i>
+                      Decrypt
+                    </button>
+                  </div>
+                  
+                  {decryptResult && (
+                    <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 to-green-500/10 border border-emerald-400/30 shadow-lg animate-in fade-in duration-300">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center">
+                          <i data-lucide="check-circle" className="w-5 h-5 text-white"></i>
+                        </div>
+                        <span className="text-emerald-400 font-bold">Decrypted Message:</span>
+                      </div>
+                      <pre className="text-sm text-white whitespace-pre-wrap break-words bg-black/40 rounded-xl p-4 border border-emerald-400/20">{decryptResult}</pre>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-white/80 text-sm">API Key</div>
+                  <button onClick={()=>{ navigator.clipboard.writeText(apiKey||''); }} className="text-xs px-2 py-1 bg-white/10 border border-white/20 rounded text-white/70">Copy</button>
+                </div>
+                <input value={apiKey} onChange={e=>setApiKey(e.target.value)} placeholder="Will auto-fill after Create Wallet" className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm font-mono" />
+                <div className="flex items-center justify-between">
+                  <div className="text-white/80 text-sm">Wallet (Public)</div>
+                  <button onClick={()=>{ navigator.clipboard.writeText(walletPubkey||''); }} className="text-xs px-2 py-1 bg-white/10 border border-white/20 rounded text-white/70">Copy</button>
+                </div>
+                <input value={walletPubkey} onChange={e=>setWalletPubkey(e.target.value)} placeholder="Will auto-fill after Create Wallet" className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm font-mono" />
+                
+                {/* Wallet Balance Display */}
+                {walletPubkey && (
+                  <div className={`p-3 rounded-lg border ${walletBalance !== null && walletBalance < 0.02 ? 'bg-red-500/10 border-red-500/30' : 'bg-emerald-500/10 border-emerald-500/30'}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <i data-lucide="wallet" className={`w-4 h-4 ${walletBalance !== null && walletBalance < 0.02 ? 'text-red-400' : 'text-emerald-400'}`}></i>
+                        <span className="text-sm font-semibold text-white/90">Balance:</span>
+                      </div>
+                      {loadingBalance ? (
+                        <div className="flex items-center gap-2">
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-cyan-400"></div>
+                          <span className="text-xs text-white/60">Loading...</span>
+                        </div>
+                      ) : walletBalance !== null ? (
+                        <div className="flex items-center gap-2">
+                          <span className={`text-lg font-bold ${walletBalance < 0.02 ? 'text-red-400' : 'text-emerald-400'}`}>
+                            {walletBalance.toFixed(4)} SOL
+                          </span>
+                          {walletBalance < 0.02 && (
+                            <span className="text-xs text-red-400 font-semibold">⚠️ Low</span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-white/60">Unable to fetch</span>
+                      )}
+                    </div>
+                    {walletBalance !== null && walletBalance < 0.02 && (
+                      <p className="text-xs text-red-300 mt-2">
+                        Need at least 0.02 SOL to launch a token. Please fund this wallet.
+                      </p>
+                    )}
+                    <p className="text-[10px] text-white/40 mt-1">Auto-refreshes every 10 seconds</p>
+                  </div>
+                )}
+                
+                <div className="flex items-center justify-between">
+                  <div className="text-white/80 text-sm">Private Key</div>
+                  <button onClick={()=>{ navigator.clipboard.writeText(privateKey||''); }} className="text-xs px-2 py-1 bg-white/10 border border-white/20 rounded text-white/70">Copy</button>
+                </div>
+                <input type="password" value={privateKey} onChange={e=>setPrivateKey(e.target.value)} placeholder="Will auto-fill after Create Wallet" className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm font-mono" />
+                <div className="flex gap-2">
+                  <button onClick={createWallet} disabled={creating} className="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-white rounded-lg transition-all">
+                    {creating ? 'Creating…' : 'Create Wallet'}
+                  </button>
+                  <button onClick={resetAll} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all">Reset</button>
+                </div>
+                <p className="text-xs text-white/60">Fund this wallet with SOL to cover creation and initial buy.</p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <input value={name} onChange={e=>setName(e.target.value)} placeholder="Token Name" className="bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm" />
+                  <input value={symbol} onChange={e=>setSymbol(e.target.value)} placeholder="Symbol" className="bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm" />
+                </div>
+                <input value={website} onChange={e=>setWebsite(e.target.value)} placeholder="Website (optional)" className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm" />
+                <div className="grid grid-cols-2 gap-2">
+                  <input value={twitter} onChange={e=>setTwitter(e.target.value)} placeholder="Twitter URL (optional)" className="bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm" />
+                  <input value={telegram} onChange={e=>setTelegram(e.target.value)} placeholder="Telegram URL (optional)" className="bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm" />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-white/80 text-sm">Description</label>
+                    <button type="button" onClick={(e)=>{ try{ ripple(e);}catch{} setEncMessage(''); setShowEncModal(true); }} className="text-xs px-2 py-1 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 rounded text-cyan-300">Encrypt message</button>
+                  </div>
+                  <textarea value={description} onChange={e=>setDescription(e.target.value)} placeholder="Description" rows={3} className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm"></textarea>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="file" accept="image/*" onChange={e=>setImageFile(e.target.files?.[0]||null)} className="text-white/70 text-xs" />
+                  <button onClick={uploadMetadata} className="px-3 py-2 bg-purple-500 hover:bg-purple-400 text-white rounded-lg transition-all">Upload Metadata</button>
+                </div>
+                {metadataUri && (
+                  <div className="text-xs text-white/70 break-all">IPFS metadata: <a href={metadataUri} target="_blank" className="text-cyan-400 underline">{metadataUri}</a></div>
+                )}
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <div className="text-xs text-white/60 mb-1">Initial Buy (SOL)</div>
+                    <input value={amountSol} onChange={e=>setAmountSol(e.target.value)} className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm" />
+                  </div>
+                  <div>
+                    <div className="text-xs text-white/60 mb-1">Priority Fee (SOL)</div>
+                    <input value={priorityFee} onChange={e=>setPriorityFee(e.target.value)} className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm" />
+                  </div>
+                  <div>
+                    <div className="text-xs text-white/60 mb-1">Slippage (%)</div>
+                    <input value={slippagePct} onChange={e=>setSlippagePct(e.target.value)} className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm" />
+                  </div>
+                </div>
+                <button 
+                  onClick={launchToken} 
+                  disabled={walletBalance !== null && walletBalance < 0.02}
+                  className="w-full px-6 py-3 bg-emerald-500 hover:bg-emerald-400 disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all"
+                >
+                  Launch Token
+                </button>
+                {walletBalance !== null && walletBalance < 0.02 && (
+                  <p className="text-xs text-red-400 text-center">⚠️ Insufficient balance. Need at least 0.02 SOL</p>
+                )}
+                {txSig && (
+                  <div className="space-y-1">
+                    <div className="text-xs text-white/70 break-all">Tx: <a href={`https://solscan.io/tx/${txSig}`} target="_blank" className="text-cyan-400 underline">{txSig}</a></div>
+                    {mintAddress && (
+                      <>
+                        <div className="text-xs text-white/70 break-all">Mint: <a href={`https://solscan.io/token/${mintAddress}`} target="_blank" className="text-emerald-400 underline">{mintAddress}</a></div>
+                        <div className="text-xs text-white/70 break-all">Pump.fun: <a href={`https://pump.fun/coin/${mintAddress}`} target="_blank" className="text-emerald-300 underline">https://pump.fun/coin/{mintAddress}</a></div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-white/80">
+                <div className="font-semibold text-white mb-2">How it works</div>
+                <ol className="list-decimal list-inside space-y-1 text-white/70">
+                  <li><strong className="text-white/90">Create Wallet:</strong> Generate a new wallet with API key for Pump Portal.</li>
+                  <li><strong className="text-white/90">Check Balance:</strong> Live balance updates every 10 seconds. Need minimum 0.02 SOL to launch.</li>
+                  <li><strong className="text-white/90">Fund Wallet:</strong> Transfer SOL to the generated wallet address.</li>
+                  <li><strong className="text-white/90">Add Metadata:</strong> Upload token image, name, symbol, and description to IPFS.</li>
+                  <li><strong className="text-white/90">Encrypt Secrets:</strong> Optionally encrypt messages in description. Others can decrypt on whistle.ninja</li>
+                  <li><strong className="text-white/90">Launch Token:</strong> Click Launch (disabled if balance &lt; 0.02 SOL).</li>
+                  <li><strong className="text-white/90">Decrypt Messages:</strong> Use the Decrypt section below to reveal encrypted secrets.</li>
+                </ol>
+                <div className="mt-3 p-2 rounded-lg bg-cyan-500/10 border border-cyan-400/20">
+                  <p className="text-xs text-cyan-300"><strong>💡 Privacy Tip:</strong> Encrypted messages are self-contained - no separate key needed. Share the encrypted text and anyone can decrypt it here or at whistle.ninja</p>
+                </div>
+                <div className="mt-2 text-xs text-white/50">Never share your private key. Stored only in this browser via localStorage.</div>
+                {lastHttpStatus != null && (
+                  <div className="mt-3 p-2 rounded-lg bg-black/30 border border-white/10">
+                    <div className="text-white/70 text-xs">Last HTTP status: <span className="font-mono">{String(lastHttpStatus)}</span></div>
+                    {lastHttpText && (<pre className="mt-1 text-[11px] leading-snug text-white/70 whitespace-pre-wrap break-words">{lastHttpText}</pre>)}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </GlassCard>
+        {showEncModal && (
+          <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 backdrop-blur">
+            <div className="max-w-md w-[92%] rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.08] to-white/[0.03] p-5 text-white shadow-2xl">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-white font-semibold">Encrypt Secret</h3>
+                <button onClick={()=>setShowEncModal(false)} className="text-white/70 hover:text-white"><i data-lucide="x" className="w-5 h-5"></i></button>
+              </div>
+              <div className="space-y-3">
+                <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-400/20">
+                  <div className="flex items-start gap-2">
+                    <i data-lucide="info" className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5"></i>
+                    <p className="text-xs text-white/70">
+                      Your message will be encrypted and inserted into the description. 
+                      <strong className="text-purple-300"> Anyone can decrypt it on whistle.ninja</strong> or use the Decrypt section below.
+                    </p>
+                  </div>
+                </div>
+                
+                <textarea value={encMessage} onChange={e=>setEncMessage(e.target.value)} placeholder="Write your secret..." rows={4} className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm"></textarea>
+                
+                <div className="flex gap-2 justify-end">
+                  <button onClick={async()=>{ try{ if(!(encMessage||'').trim()){ pushToast?.('Enter a message','err'); return; } const ct = await encryptSelfContained(encMessage||''); setDescription(prev => (prev? prev+"\n\n": '')+`[ENCRYPTED:${ct}]\n\nDecrypt at whistle.ninja`); pushToast?.('Encrypted text inserted into description','ok'); setShowEncModal(false); }catch(e){ pushToast?.(`Encryption failed: ${e?.message||e}`,'err'); } }} className="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-white rounded-lg transition-all">Encrypt & Insert</button>
+                  <button onClick={()=>setShowEncModal(false)} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all">Cancel</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        </>
+      );
+    }
     // ===== PRIVACY CHECKUP DASHBOARD =====
     
     function PrivacyCheckup({ pushToast }) {
@@ -5129,7 +5650,6 @@
         </GlassCard>
       );
     }
-
     // ===== TOR BRIDGE FINDER =====
     
     function TorBridgeFinder({ pushToast }) {
@@ -5182,7 +5702,6 @@
         const config = `# Tor Bridge Configuration
 # Generated by Whistle Privacy Tools
 # Add these lines to your torrc file
-
 UseBridges 1
 ${bridges.map(b => `Bridge ${b}`).join('\n')}
 `;
@@ -5650,7 +6169,6 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                         <li>• <strong>Use Tor Bridges:</strong> Access our Tor Bridge Finder tool</li>
                         <li>• <strong>VPN Services:</strong> Use VPNs with obfuscation (Mullvad, ProtonVPN)</li>
                         <li>• <strong>Encrypted DNS:</strong> Enable DNS-over-HTTPS to bypass DNS blocking</li>
-                        <li>• <strong>Proxy Services:</strong> Use our Proxy Link Generator for specific sites</li>
                         <li>• <strong>Steganography:</strong> Hide messages in images to avoid detection</li>
                       </ul>
                     </div>
@@ -5703,1939 +6221,6 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         </GlassCard>
       );
     }
-
-    // ===== PRIVACY VAULT =====
-    
-    function PrivacyVault({ pushToast }) {
-      const [depositAmount, setDepositAmount] = useState('');
-      const [userDeposit, setUserDeposit] = useState(0);
-      const [walletConnected, setWalletConnected] = useState(false);
-      const [walletAddress, setWalletAddress] = useState('');
-      const [currentValue, setCurrentValue] = useState(0);
-      const [isLoading, setIsLoading] = useState(false);
-      
-      useEffect(()=>{
-        if(window.lucide) window.lucide.createIcons();
-      },[userDeposit]);
-      
-      // Simulate live value updates
-      useEffect(() => {
-        if (userDeposit > 0) {
-          const interval = setInterval(() => {
-            const fluctuation = (Math.random() - 0.5) * 0.02; // +/- 1% fluctuation
-            const newValue = userDeposit * (1.08 + fluctuation);
-            setCurrentValue(newValue);
-          }, 3000);
-          return () => clearInterval(interval);
-        }
-      }, [userDeposit]);
-      
-      // Alpha Vault only - high risk, high reward
-      const vault = {
-        id: 'alpha',
-        name: 'Alpha Privacy Vault',
-        icon: 'zap',
-        color: 'purple',
-        minDeposit: 100,
-        expectedAPY: '25-80%',
-        risk: 'High',
-        riskPercent: 80,
-        description: 'Elite yield strategies for privacy maximalists',
-        strategies: ['Flash Arbitrage', 'Volatility Capture', 'Privacy Competitions', 'Cross-Chain Yield'],
-        worstCase: '-25%',
-        bestCase: '+120%',
-        avgReturn: '+45%'
-      };
-      
-      // Connect Phantom Wallet
-      async function connectWallet() {
-        if (!window?.solana) {
-          pushToast('Please install Phantom wallet', 'err');
-          window.open('https://phantom.app/', '_blank');
-          return;
-        }
-        
-        try {
-          setIsLoading(true);
-          const resp = await window.solana.connect();
-          setWalletAddress(resp.publicKey.toString());
-          setWalletConnected(true);
-          pushToast('Wallet connected!', 'ok');
-        } catch (err) {
-          console.error(err);
-          pushToast('Failed to connect wallet', 'err');
-        } finally {
-          setIsLoading(false);
-        }
-      }
-      
-      function disconnectWallet() {
-        setWalletConnected(false);
-        setWalletAddress('');
-        setUserDeposit(0);
-        pushToast('Wallet disconnected', 'info');
-      }
-      
-      // Mock deposit function (will be smart contract)
-      function handleDeposit() {
-        const amount = parseFloat(depositAmount);
-        if (!amount || amount < vault.minDeposit) {
-          pushToast(`Minimum deposit: ${vault.minDeposit} WHISTLE`, 'err');
-          return;
-        }
-        
-        // Simulate deposit
-        setUserDeposit(amount);
-        setDepositAmount('');
-        pushToast(`Deposited ${amount} WHISTLE to ${vault.name}!`, 'ok');
-      }
-      
-      function handleWithdraw() {
-        if (userDeposit === 0) return;
-        
-        // Simulate random weekly performance (Alpha vault - high variance)
-        const variance = (Math.random() - 0.3) * 0.7; // -21% to +49% range
-        const baseReturn = 0.45; // 45% base
-        const actualReturn = baseReturn + variance;
-        const finalAmount = userDeposit * (1 + actualReturn);
-        const profit = finalAmount - userDeposit;
-        
-        setUserDeposit(0);
-        
-        if (profit > 0) {
-          pushToast(`Withdrew ${finalAmount.toFixed(2)} WHISTLE! Profit: +${profit.toFixed(2)} (+${(actualReturn*100).toFixed(1)}%)`, 'ok');
-        } else {
-          pushToast(`Withdrew ${finalAmount.toFixed(2)} WHISTLE. Loss: ${profit.toFixed(2)} (${(actualReturn*100).toFixed(1)}%)`, 'err');
-        }
-      }
-
-      return (
-        <div className="space-y-6">
-          {/* Premium Hero Section */}
-          <div className="relative overflow-hidden rounded-3xl border border-purple-500/30 bg-gradient-to-br from-purple-900/40 via-pink-900/30 to-purple-900/40 p-8 shadow-2xl">
-            {/* Animated background glow */}
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-purple-500/10 animate-pulse-slow"></div>
-            
-            <div className="relative z-10">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500/30 to-pink-500/30 flex items-center justify-center backdrop-blur-sm border border-purple-400/50 shadow-lg shadow-purple-500/50">
-                    <i data-lucide="zap" className="w-10 h-10 text-purple-300"></i>
-                  </div>
-                  <div>
-                    <h1 className="text-3xl font-bold text-white mb-1 bg-gradient-to-r from-purple-200 via-pink-200 to-purple-200 bg-clip-text text-transparent">
-                      Alpha Privacy Vault
-                    </h1>
-                    <p className="text-purple-300 font-semibold text-lg">Elite Yield • Maximum Risk • Trustless</p>
-                  </div>
-                </div>
-                
-                {/* Wallet Connection */}
-                {!walletConnected ? (
-                  <button
-                    onClick={connectWallet}
-                    disabled={isLoading}
-                    className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white font-bold rounded-xl transition-all shadow-lg shadow-purple-500/50 hover:shadow-cyan-500/50 flex items-center gap-2 disabled:opacity-50"
-                  >
-                    {isLoading ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        <span>Connecting...</span>
-                      </>
-                    ) : (
-                      <>
-                        <i data-lucide="wallet" className="w-5 h-5"></i>
-                        <span>Connect Wallet</span>
-                      </>
-                    )}
-                  </button>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <div className="px-4 py-2 bg-emerald-500/20 border border-emerald-500/40 rounded-xl">
-                      <p className="text-xs text-emerald-400 mb-0.5">Connected</p>
-                      <p className="text-sm text-white font-mono">{walletAddress.slice(0, 4)}...{walletAddress.slice(-4)}</p>
-                    </div>
-                    <button
-                      onClick={disconnectWallet}
-                      className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all"
-                    >
-                      <i data-lucide="x" className="w-4 h-4"></i>
-                    </button>
-                  </div>
-                )}
-              </div>
-              
-              {/* Premium Stats Bar */}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="bg-black/40 backdrop-blur-sm border border-purple-500/30 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <i data-lucide="trending-up" className="w-5 h-5 text-purple-400"></i>
-                    <p className="text-xs text-purple-300 font-semibold uppercase tracking-wider">Expected APY</p>
-                  </div>
-                  <p className="text-3xl font-bold bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text text-transparent">
-                    {vault.expectedAPY}
-                  </p>
-                </div>
-                
-                <div className="bg-black/40 backdrop-blur-sm border border-pink-500/30 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <i data-lucide="activity" className="w-5 h-5 text-pink-400"></i>
-                    <p className="text-xs text-pink-300 font-semibold uppercase tracking-wider">Risk Level</p>
-                  </div>
-                  <p className="text-3xl font-bold bg-gradient-to-r from-pink-300 to-red-300 bg-clip-text text-transparent">
-                    {vault.risk}
-                  </p>
-                </div>
-                
-                <div className="bg-black/40 backdrop-blur-sm border border-cyan-500/30 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <i data-lucide="target" className="w-5 h-5 text-cyan-400"></i>
-                    <p className="text-xs text-cyan-300 font-semibold uppercase tracking-wider">Min Deposit</p>
-                  </div>
-                  <p className="text-3xl font-bold bg-gradient-to-r from-cyan-300 to-purple-300 bg-clip-text text-transparent">
-                    {vault.minDeposit}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Performance Ranges - Premium Cards */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-red-600/20 blur-xl group-hover:blur-2xl transition-all"></div>
-              <div className="relative bg-black/60 backdrop-blur-xl border border-red-500/40 rounded-2xl p-6 text-center hover:border-red-400/60 transition-all">
-                <i data-lucide="trending-down" className="w-8 h-8 text-red-400 mx-auto mb-3"></i>
-                <p className="text-sm text-red-400 font-semibold mb-2 uppercase tracking-wide">Worst Case</p>
-                <p className="text-4xl font-bold text-red-300 mb-1">{vault.worstCase}</p>
-                <p className="text-xs text-white/50">Weekly return</p>
-              </div>
-            </div>
-            
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/30 to-pink-500/30 blur-xl group-hover:blur-2xl transition-all"></div>
-              <div className="relative bg-black/60 backdrop-blur-xl border-2 border-purple-500/50 rounded-2xl p-6 text-center hover:border-purple-400/70 transition-all shadow-lg shadow-purple-500/50">
-                <i data-lucide="target" className="w-8 h-8 text-purple-400 mx-auto mb-3"></i>
-                <p className="text-sm text-purple-400 font-semibold mb-2 uppercase tracking-wide">Expected</p>
-                <p className="text-5xl font-bold bg-gradient-to-r from-purple-300 via-pink-300 to-purple-300 bg-clip-text text-transparent mb-1">
-                  {vault.avgReturn}
-                </p>
-                <p className="text-xs text-white/50">Average weekly</p>
-              </div>
-            </div>
-            
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 blur-xl group-hover:blur-2xl transition-all"></div>
-              <div className="relative bg-black/60 backdrop-blur-xl border border-emerald-500/40 rounded-2xl p-6 text-center hover:border-emerald-400/60 transition-all">
-                <i data-lucide="rocket" className="w-8 h-8 text-emerald-400 mx-auto mb-3"></i>
-                <p className="text-sm text-emerald-400 font-semibold mb-2 uppercase tracking-wide">Best Case</p>
-                <p className="text-4xl font-bold text-emerald-300 mb-1">{vault.bestCase}</p>
-                <p className="text-xs text-white/50">Maximum gain</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Main Vault Interface */}
-          <div className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-br from-black/60 via-purple-900/20 to-black/60 backdrop-blur-xl shadow-2xl">
-            <div className="p-6">
-              {!walletConnected ? (
-                <div className="text-center py-12">
-                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center mx-auto mb-6 border-2 border-purple-500/30">
-                    <i data-lucide="wallet" className="w-12 h-12 text-purple-400"></i>
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">Connect Your Wallet</h3>
-                  <p className="text-white/60 mb-6">Connect Phantom to start earning with Alpha Vault</p>
-                  <button
-                    onClick={connectWallet}
-                    disabled={isLoading}
-                    className="px-8 py-4 bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 hover:from-purple-400 hover:via-pink-400 hover:to-purple-400 text-white font-bold text-lg rounded-xl transition-all shadow-2xl shadow-purple-500/50 hover:shadow-purple-500/70 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
-                  >
-                    {isLoading ? 'Connecting...' : 'Connect Phantom Wallet'}
-                  </button>
-                </div>
-              ) : userDeposit === 0 ? (
-                <div className="space-y-5">
-                  {/* Strategies Showcase */}
-                  <div className="bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-purple-500/10 border border-purple-500/30 rounded-xl p-5">
-                    <p className="text-sm font-semibold text-purple-300 mb-3 uppercase tracking-wide">Active Strategies</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      {vault.strategies.map((strategy, i) => (
-                        <div key={i} className="flex items-center gap-2 bg-black/40 backdrop-blur-sm border border-purple-500/20 rounded-lg p-3">
-                          <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                            <i data-lucide="check-circle" className="w-4 h-4 text-purple-400"></i>
-                          </div>
-                          <span className="text-sm text-white font-medium">{strategy}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  {/* Deposit Interface */}
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-bold text-white mb-3 uppercase tracking-wide">Deposit Amount (WHISTLE)</label>
-                      <div className="relative">
-                        <input 
-                          type="number"
-                          value={depositAmount}
-                          onChange={(e) => setDepositAmount(e.target.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && handleDeposit()}
-                          placeholder={`Minimum ${vault.minDeposit}`}
-                          className="w-full px-6 py-5 rounded-2xl border-2 border-purple-500/40 bg-black/50 backdrop-blur-sm text-white text-xl font-bold placeholder-white/30 focus:border-purple-400 focus:outline-none focus:ring-4 focus:ring-purple-500/20 transition-all"
-                        />
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-purple-400 font-semibold">
-                          WHISTLE
-                        </div>
-                      </div>
-                      <div className="flex gap-2 mt-2">
-                        {[100, 500, 1000, 5000].map(amt => (
-                          <button
-                            key={amt}
-                            onClick={() => setDepositAmount(amt.toString())}
-                            className="flex-1 px-3 py-2 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 hover:border-purple-400/50 text-purple-300 text-sm font-semibold rounded-lg transition-all"
-                          >
-                            {amt}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <button 
-                      onClick={handleDeposit}
-                      className="w-full px-8 py-5 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-500 hover:via-pink-500 hover:to-purple-500 text-white font-bold text-xl rounded-2xl transition-all flex items-center justify-center gap-3 shadow-2xl shadow-purple-500/50 hover:shadow-purple-500/70 hover:scale-[1.02] relative overflow-hidden group"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000"></div>
-                      <i data-lucide="zap" className="w-6 h-6"></i>
-                      <span>Deposit to Alpha Vault</span>
-                    </button>
-                  </div>
-                  
-                  {/* Risk Warning - Premium */}
-                  <div className="relative overflow-hidden bg-gradient-to-r from-red-900/30 via-orange-900/30 to-red-900/30 border-2 border-red-500/40 rounded-xl p-4">
-                    <div className="absolute inset-0 bg-gradient-to-r from-red-500/5 via-orange-500/5 to-red-500/5 animate-pulse"></div>
-                    <div className="relative flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center flex-shrink-0">
-                        <i data-lucide="alert-triangle" className="w-6 h-6 text-red-400"></i>
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-red-300 mb-1">⚠️ HIGH RISK INVESTMENT</p>
-                        <p className="text-xs text-white/70">
-                          Alpha Vault can lose up to 25% in volatile weeks. Only deposit what you can afford to lose. 
-                          This is not financial advice. Returns are variable and based on market performance.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-5">
-                  {/* Premium Active Position Card */}
-                  <div className="relative overflow-hidden bg-gradient-to-br from-purple-900/50 via-black/60 to-pink-900/50 border-2 border-purple-500/50 rounded-2xl p-6 shadow-2xl">
-                    <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-purple-500/10 animate-pulse-slow"></div>
-                    
-                    <div className="relative">
-                      <div className="flex items-center justify-between mb-6">
-                        <div>
-                          <p className="text-sm text-purple-300 font-semibold mb-1 uppercase tracking-wide">Your Position</p>
-                          <p className="text-5xl font-bold text-white mb-2">{userDeposit.toLocaleString()}</p>
-                          <p className="text-xl text-purple-300 font-semibold">WHISTLE</p>
-                        </div>
-                        <div className="text-right">
-                          <div className="inline-block px-4 py-2 bg-emerald-500/20 border-2 border-emerald-500/40 rounded-xl mb-2">
-                            <p className="text-xs text-emerald-400 font-semibold mb-0.5">STATUS</p>
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-                              <p className="text-sm font-bold text-emerald-300">ACTIVE</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Live Value Display */}
-                      <div className="grid grid-cols-2 gap-4 p-5 bg-black/40 backdrop-blur-sm border border-purple-500/30 rounded-xl">
-                        <div>
-                          <p className="text-xs text-white/50 mb-2 uppercase tracking-wide">Current Value</p>
-                          <p className="text-3xl font-bold text-emerald-400 mb-1">
-                            {(currentValue || userDeposit * 1.08).toFixed(2)}
-                          </p>
-                          <p className="text-sm text-emerald-400 font-semibold">
-                            +{((currentValue || userDeposit * 1.08) - userDeposit).toFixed(2)} WHISTLE
-                          </p>
-                          <p className="text-xs text-white/50 mt-1">
-                            ({(((currentValue || userDeposit * 1.08) / userDeposit - 1) * 100).toFixed(2)}% gain)
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-white/50 mb-2 uppercase tracking-wide">Projected (7d)</p>
-                          <p className="text-3xl font-bold text-purple-300 mb-1">
-                            {(userDeposit * 1.45).toFixed(2)}
-                          </p>
-                          <p className="text-sm text-purple-300 font-semibold">
-                            +{(userDeposit * 0.45).toFixed(2)} WHISTLE
-                          </p>
-                          <p className="text-xs text-white/50 mt-1">(+45% average)</p>
-                        </div>
-                      </div>
-                      
-                      {/* Performance Indicator */}
-                      <div className="mt-4 flex items-center gap-2">
-                        <div className="flex-1 h-3 bg-white/10 rounded-full overflow-hidden">
-                          <div className="h-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-purple-500 rounded-full transition-all duration-1000"
-                            style={{width: '78%'}}></div>
-                        </div>
-                        <span className="text-sm font-bold text-emerald-400">+78% Performance</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Premium Withdraw Button */}
-                  <button 
-                    onClick={handleWithdraw}
-                    className="w-full px-8 py-6 bg-gradient-to-r from-emerald-600 via-cyan-600 to-emerald-600 hover:from-emerald-500 hover:via-cyan-500 hover:to-emerald-500 text-white font-bold text-2xl rounded-2xl transition-all flex items-center justify-center gap-3 shadow-2xl shadow-emerald-500/50 hover:shadow-emerald-500/70 hover:scale-[1.02] relative overflow-hidden group"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700"></div>
-                    <i data-lucide="trending-up" className="w-7 h-7"></i>
-                    <span>Claim Your Returns</span>
-                    <i data-lucide="arrow-right" className="w-6 h-6"></i>
-                  </button>
-                  
-                  <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-4">
-                    <p className="text-xs text-center text-cyan-300">
-                      <i data-lucide="info" className="w-3 h-3 inline mr-1"></i>
-                      Demo mode active - Simulates random weekly performance between -25% to +120%
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Premium Global Stats */}
-          <div className="grid md:grid-cols-3 gap-4">
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-cyan-600/10 blur-lg group-hover:blur-xl transition-all"></div>
-              <div className="relative bg-black/60 backdrop-blur-xl border border-cyan-500/30 rounded-2xl p-5 hover:border-cyan-400/50 transition-all">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-xl bg-cyan-500/20 flex items-center justify-center">
-                    <i data-lucide="users" className="w-7 h-7 text-cyan-400"></i>
-                  </div>
-                  <div>
-                    <p className="text-xs text-cyan-300 font-semibold uppercase tracking-wider mb-1">Vault Members</p>
-                    <p className="text-3xl font-bold text-white">Coming Soon</p>
-                    <p className="text-xs text-white/50">Smart contract deploying</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-purple-600/10 blur-lg group-hover:blur-xl transition-all"></div>
-              <div className="relative bg-black/60 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-5 hover:border-purple-400/50 transition-all">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                    <i data-lucide="lock" className="w-7 h-7 text-purple-400"></i>
-                  </div>
-                  <div>
-                    <p className="text-xs text-purple-300 font-semibold uppercase tracking-wider mb-1">Total Locked</p>
-                    <p className="text-3xl font-bold text-white">Coming Soon</p>
-                    <p className="text-xs text-white/50">TVL will display here</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 blur-lg group-hover:blur-xl transition-all"></div>
-              <div className="relative bg-black/60 backdrop-blur-xl border border-emerald-500/30 rounded-2xl p-5 hover:border-emerald-400/50 transition-all">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-                    <i data-lucide="bar-chart-3" className="w-7 h-7 text-emerald-400"></i>
-                  </div>
-                  <div>
-                    <p className="text-xs text-emerald-300 font-semibold uppercase tracking-wider mb-1">This Week</p>
-                    <p className="text-3xl font-bold text-white">Coming Soon</p>
-                    <p className="text-xs text-white/50">Live performance tracking</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Smart Contract Status */}
-          <div className="relative overflow-hidden bg-gradient-to-r from-cyan-900/30 via-purple-900/30 to-pink-900/30 border-2 border-cyan-500/40 rounded-2xl p-6 shadow-xl">
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 via-purple-500/5 to-pink-500/5 animate-pulse-slow"></div>
-            <div className="relative flex items-start gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-purple-500/20 flex items-center justify-center flex-shrink-0 border border-cyan-500/30">
-                <i data-lucide="rocket" className="w-8 h-8 text-cyan-400"></i>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-xl font-bold text-white mb-2">🚀 Production Launch Imminent</h3>
-                <p className="text-sm text-white/80 mb-4">
-                  Alpha Vault smart contract is ready for deployment. Connect your wallet now to be among the first depositors. 
-                  Early members may receive bonus allocations.
-                </p>
-                <div className="flex flex-wrap gap-3">
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/40 rounded-lg">
-                    <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-                    <span className="text-xs font-semibold text-emerald-300">UI Ready</span>
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/40 rounded-lg">
-                    <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-                    <span className="text-xs font-semibold text-emerald-300">Wallet Integration</span>
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500/20 border border-yellow-500/40 rounded-lg">
-                    <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
-                    <span className="text-xs font-semibold text-yellow-300">Smart Contract Deploying</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // ===== WHISPER BOMBS =====
-    
-    function WhisperBombs({ pushToast }) {
-      const [view, setView] = useState('browse'); // browse, create, wallet
-      const [secretMessage, setSecretMessage] = useState('');
-      const [bombTitle, setBombTitle] = useState('');
-      const [threshold, setThreshold] = useState('20000');
-      const [activeBombs, setActiveBombs] = useState([]);
-      const [createdBomb, setCreatedBomb] = useState(null);
-      const [launchWallet, setLaunchWallet] = useState(null);
-      const [walletBalance, setWalletBalance] = useState(0);
-      const [isCreatingToken, setIsCreatingToken] = useState(false);
-      
-      useEffect(()=>{
-        // Clear old large storage first
-        try {
-          const existing = localStorage.getItem('whisper_launch_wallet');
-          if (existing && existing.length > 1000) {
-            // Old format with private key - clear it
-            localStorage.removeItem('whisper_launch_wallet');
-            pushToast('Cleared old wallet data for security', 'info');
-          }
-        } catch (e) {
-          // Quota exceeded on read - clear everything
-          localStorage.clear();
-        }
-        
-        // Load saved wallet only once on mount
-        const savedWallet = localStorage.getItem('wlw');
-        if (savedWallet) {
-          try {
-            const minimal = JSON.parse(savedWallet);
-            const walletData = {
-              publicKey: minimal.pub,
-              apiKey: minimal.api || sessionStorage.getItem('wlw_api') || undefined,
-              created: minimal.ts,
-              provider: minimal.src === 'PP' ? 'PumpPortal' : 'Local'
-            };
-            // Attach secret key from session storage if present (never stored in localStorage)
-            try {
-              const sessionSecret = sessionStorage.getItem('wlw_secret');
-              if (sessionSecret) walletData.secretKey = sessionSecret;
-            } catch {}
-            setLaunchWallet(walletData);
-            checkWalletBalance(walletData.publicKey);
-          } catch (e) {
-            console.error('Failed to load wallet:', e);
-            localStorage.removeItem('wlw');
-          }
-        }
-      }, []);
-      
-      // Icon initialization removed to prevent React DOM conflicts
-      // Icons will be initialized by parent App component
-      
-      // Check wallet balance with RPC fallback rotation
-      async function checkWalletBalance(publicKey) {
-        const rpcList = [
-          'https://rpc.ankr.com/solana',
-          'https://api.mainnet-beta.solana.com',
-          'https://solana-mainnet.g.alchemy.com/v2/demo'
-        ];
-        for (let url of rpcList) {
-          try {
-            const connection = new solanaWeb3.Connection(url, 'confirmed');
-            const pubkey = new solanaWeb3.PublicKey(publicKey);
-            const balance = await connection.getBalance(pubkey);
-            setWalletBalance(balance / 1e9);
-            return;
-          } catch (e) {
-            // try next rpc
-          }
-        }
-        console.error('Failed to check balance: all RPCs failed');
-      }
-      
-      // Create new launch wallet via PumpPortal API (with same-origin proxy fallback)
-      async function createLaunchWallet() {
-        try {
-          pushToast('Creating wallet via PumpPortal...', 'info');
-          
-          // Prefer same-origin proxy to avoid CORS/edge issues
-          let response = await fetch('/api/proxy/create-wallet', { method: 'GET' });
-          if (!response.ok) {
-            // Fallback to direct PumpPortal if proxy unavailable in static hosting
-            response = await fetch('https://pumpportal.fun/api/create-wallet', { method: 'GET' });
-          }
-          if (!response.ok) throw new Error('PumpPortal wallet creation failed');
-          
-          const data = await response.json();
-          
-          const walletData = {
-            publicKey: data.publicKey,
-            secretKey: data.privateKey,
-            apiKey: data.apiKey, // PumpPortal API key for this wallet!
-            created: Date.now(),
-            provider: 'PumpPortal'
-          };
-          
-          setLaunchWallet(walletData);
-          
-          // Store minimal data (no private key!)
-          try {
-            const minimalData = {
-              pub: walletData.publicKey,
-              api: walletData.apiKey,
-              ts: walletData.created,
-              src: 'PP'
-            };
-            localStorage.setItem('wlw', JSON.stringify(minimalData)); // Shortened key
-            // Store secret in session only
-            try { 
-              sessionStorage.setItem('wlw_secret', walletData.secretKey);
-              sessionStorage.setItem('wlw_api', walletData.apiKey);
-            } catch {}
-          } catch (storageError) {
-            console.warn('Could not save to localStorage:', storageError);
-            // Continue anyway - wallet is in memory
-          }
-          
-          // Prompt user to download full backup immediately
-          setTimeout(() => {
-            if (confirm('Wallet created! Download backup now? (Includes private key)')) {
-              const backupData = `WHISPER LAUNCH WALLET
-=====================
-⚠️ KEEP THIS SAFE! Anyone with this key can access your funds.
-
-Public Key: ${walletData.publicKey}
-Private Key: ${walletData.secretKey}
-PumpPortal API Key: ${walletData.apiKey}
-
-Provider: PumpPortal
-Created: ${new Date(walletData.created).toLocaleString()}
-Purpose: Launching Whisper Bombs on Pump.fun
-
-API USAGE:
-- Use this API key for PumpPortal transactions
-- Create tokens programmatically
-- Lower fees and faster execution
-
-SECURITY:
-- Never share your private key or API key
-- Store this file securely (encrypted USB, password manager, etc.)
-- Back up to multiple locations`;
-              
-              const blob = new Blob([backupData], { type: 'text/plain' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = `whisper-wallet-${walletData.publicKey.substring(0, 8)}-BACKUP.txt`;
-              a.click();
-              URL.revokeObjectURL(url);
-            }
-          }, 500);
-          
-          pushToast('✅ PumpPortal wallet + API key created!', 'ok');
-          checkWalletBalance(walletData.publicKey);
-        } catch (e) {
-          console.error(e);
-          pushToast('PumpPortal failed, using fallback...', 'err');
-          
-          // Fallback to local generation
-          const keypair = solanaWeb3.Keypair.generate();
-          const publicKey = keypair.publicKey.toString();
-          const secretKey = Array.from(keypair.secretKey).map(b => b.toString(16).padStart(2, '0')).join('');
-          
-          const walletData = {
-            publicKey,
-            secretKey,
-            created: Date.now(),
-            provider: 'Local'
-          };
-          
-          setLaunchWallet(walletData);
-          
-          // Store minimal data
-          try {
-            const minimalData = {
-              pub: walletData.publicKey,
-              ts: walletData.created,
-              src: 'LOC'
-            };
-            localStorage.setItem('wlw', JSON.stringify(minimalData));
-            // Store secret in session only
-            try { sessionStorage.setItem('wlw_secret', walletData.secretKey); } catch {}
-          } catch (storageError) {
-            console.warn('Could not save to localStorage:', storageError);
-          }
-          
-          pushToast('Wallet created locally', 'ok');
-          checkWalletBalance(publicKey);
-        }
-      }
-      
-      // Import existing wallet
-      function importWallet() {
-        const secretKey = prompt('Paste your wallet private key (hex format):');
-        if (!secretKey) return;
-        
-        try {
-          const secretBytes = Uint8Array.from(secretKey.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-          const keypair = solanaWeb3.Keypair.fromSecretKey(secretBytes);
-          
-          const walletData = {
-            publicKey: keypair.publicKey.toString(),
-            secretKey: secretKey,
-            imported: true,
-            created: Date.now(),
-            provider: 'Imported'
-          };
-          
-          setLaunchWallet(walletData);
-          
-          // Store minimal data
-          try {
-            const minimalData = {
-              pub: walletData.publicKey,
-              ts: walletData.created,
-              src: 'IMP'
-            };
-            localStorage.setItem('wlw', JSON.stringify(minimalData));
-            // Store secret in session only
-            try { sessionStorage.setItem('wlw_secret', walletData.secretKey); } catch {}
-          } catch (storageError) {
-            console.warn('Could not save to localStorage:', storageError);
-          }
-          
-          pushToast('Wallet imported!', 'ok');
-          checkWalletBalance(walletData.publicKey);
-        } catch (e) {
-          pushToast('Invalid private key', 'err');
-        }
-      }
-      
-      // Download wallet backup
-      function downloadWallet() {
-        if (!launchWallet.secretKey) {
-          pushToast('⚠️ Private key not available. You must have downloaded it when wallet was created.', 'err');
-          return;
-        }
-        
-        const data = `WHISPER LAUNCH WALLET
-=====================
-⚠️ KEEP THIS SAFE! Anyone with this key can access your funds.
-
-Public Key: ${launchWallet.publicKey}
-Private Key: ${launchWallet.secretKey}
-${launchWallet.apiKey ? `PumpPortal API Key: ${launchWallet.apiKey}` : ''}
-
-Provider: ${launchWallet.provider || 'Unknown'}
-Created: ${new Date(launchWallet.created).toLocaleString()}
-Purpose: Launching Whisper Bombs on Pump.fun
-
-${launchWallet.apiKey ? `API USAGE:
-- Use this API key for PumpPortal transactions
-- Create tokens programmatically
-- Lower fees and faster execution
-` : ''}
-SECURITY:
-- Never share your private key or API key
-- Store this file securely (encrypted USB, password manager, etc.)
-- Back up to multiple locations
-- Consider using a hardware wallet for large amounts`;
-        
-        const blob = new Blob([data], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `whisper-launch-wallet-${launchWallet.publicKey.substring(0, 8)}.txt`;
-        a.click();
-        URL.revokeObjectURL(url);
-        
-        pushToast('Wallet backup downloaded!', 'ok');
-      }
-      
-      // Withdraw SOL from launch wallet
-      async function withdrawFromWallet() {
-        try {
-          const dest = prompt('Destination address (SOL):');
-          if (!dest) return;
-          const amountStr = prompt('Amount in SOL to send:');
-          if (!amountStr) return;
-          const amount = parseFloat(amountStr);
-          if (!(amount > 0)) { pushToast('Enter a valid amount', 'err'); return; }
-          
-          pushToast('Preparing withdrawal...', 'info');
-          const rpcList = [
-            'https://rpc.ankr.com/solana',
-            'https://api.mainnet-beta.solana.com',
-            'https://solana-mainnet.g.alchemy.com/v2/demo'
-          ];
-          let connection = null;
-          for (let url of rpcList) {
-            try {
-              const conn = new solanaWeb3.Connection(url, 'confirmed');
-              await conn.getLatestBlockhash();
-              connection = conn; break;
-            } catch {}
-          }
-          if (!connection) throw new Error('RPC unavailable');
-          
-          const toPubkey = new solanaWeb3.PublicKey(dest);
-          const lamports = Math.round(amount * 1e9);
-          let signature;
-          
-          if (launchWallet && launchWallet.secretKey) {
-            const secretBytes = parseSecretKeyToBytes(launchWallet.secretKey);
-            const signer = solanaWeb3.Keypair.fromSecretKey(secretBytes);
-            const tx = new solanaWeb3.Transaction().add(
-              solanaWeb3.SystemProgram.transfer({ fromPubkey: signer.publicKey, toPubkey, lamports })
-            );
-            signature = await connection.sendTransaction(tx, [signer]);
-          } else if (window?.solana) {
-            const wallet = await window.solana.connect();
-            const tx = new solanaWeb3.Transaction().add(
-              solanaWeb3.SystemProgram.transfer({ fromPubkey: wallet.publicKey, toPubkey, lamports })
-            );
-            tx.feePayer = wallet.publicKey;
-            tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-            const signed = await window.solana.signTransaction(tx);
-            signature = await connection.sendRawTransaction(signed.serialize());
-          } else {
-            throw new Error('No signing method available');
-          }
-          
-          await connection.confirmTransaction(signature, 'confirmed');
-          pushToast('✅ Withdrawal sent!', 'ok');
-          checkWalletBalance(launchWallet.publicKey);
-        } catch (e) {
-          console.error('Withdrawal failed:', e);
-          pushToast('Withdrawal failed', 'err');
-        }
-      }
-
-      // Encryption function (reuse existing)
-      async function encryptMessage(text, password) {
-        const enc = new TextEncoder();
-        const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits', 'deriveKey']);
-        const salt = crypto.getRandomValues(new Uint8Array(16));
-        const key = await crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:100000,hash:'SHA-256'},keyMaterial,{name:'AES-GCM',length:256},false,['encrypt']);
-        const iv = crypto.getRandomValues(new Uint8Array(12));
-        const ct = await crypto.subtle.encrypt({name:'AES-GCM',iv}, key, enc.encode(text));
-        return btoa(String.fromCharCode(...salt,...iv,...new Uint8Array(ct)));
-      }
-      
-      // Parse secret key string to bytes (supports hex, base58, base64)
-      function parseSecretKeyToBytes(secretStr) {
-        try {
-          if (typeof secretStr !== 'string') throw new Error('bad secret');
-          const hexMatch = /^[0-9a-fA-F]+$/.test(secretStr) && secretStr.length % 2 === 0;
-          if (hexMatch) {
-            return Uint8Array.from(secretStr.match(/.{1,2}/g).map((b) => parseInt(b, 16)));
-          }
-          if (window.bs58) {
-            return new Uint8Array(window.bs58.decode(secretStr));
-          }
-          // base64 fallback
-          return Uint8Array.from(atob(secretStr), (c) => c.charCodeAt(0));
-        } catch {
-          throw new Error('Invalid secret key format');
-        }
-      }
-      
-      async function handleCreateBomb() {
-        if (!secretMessage || !bombTitle) {
-          pushToast('Please enter message and title', 'err');
-          return;
-        }
-        
-        // Programmatic creation requires either PumpPortal API key or local signing secret
-        if (!launchWallet) { pushToast('Create a launch wallet first', 'err'); return; }
-        
-        // Prepare static token fields independent of flow
-        const tokenName = `💣 ${bombTitle}`;
-        const tokenSymbol = bombTitle.substring(0, 6).toUpperCase().replace(/[^A-Z0-9]/g, '') || 'BOMB';
-        
-        try {
-          setIsCreatingToken(true);
-          pushToast('Encrypting secret...', 'info');
-          
-          // Generate encryption key
-          const password = crypto.getRandomValues(new Uint8Array(32));
-          const keyHex = Array.from(password).map(b => b.toString(16).padStart(2, '0')).join('');
-          
-          // Encrypt message
-          const encrypted = await encryptMessage(secretMessage, keyHex);
-          
-          // Creator public key comes from launch wallet
-          const creator = (launchWallet?.publicKey || 'unknown');
-          
-          // Create token metadata
-          const tokenDescription = `🔐 WHISPER BOMB - Encrypted Secret Token
-
-Reveals at: $${parseInt(threshold).toLocaleString()} market cap
-Status: SEALED 🔒
-Created: ${new Date().toLocaleDateString()}
-
-⚠️ Secret content unknown - trade at your own risk!
-
-Encrypted: ${encrypted.substring(0, 80)}...
-
-When market cap hits threshold, decryption key will be posted to Solana blockchain.
-
-This is a speculative token. Secret may or may not have value.
-Created via Whistle Privacy Tools.`;
-
-          // If we have a PumpPortal API key from created wallet, attempt programmatic creation (Lightning)
-          if (launchWallet && launchWallet.apiKey) {
-            pushToast('Uploading metadata to IPFS...', 'info');
-            // Build image placeholder from canvas with title initials if no upload yet
-            const canvas = document.createElement('canvas');
-            canvas.width = 512; canvas.height = 512;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#0b0f14'; ctx.fillRect(0,0,512,512);
-            ctx.fillStyle = '#67e8f9'; ctx.font = 'bold 200px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText((bombTitle[0]||'W').toUpperCase(), 256, 256);
-            const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-
-            const form = new FormData();
-            form.append('file', blob, 'cover.png');
-            form.append('name', tokenName);
-            form.append('symbol', tokenSymbol);
-            form.append('description', tokenDescription);
-            form.append('twitter', '');
-            form.append('telegram', '');
-            form.append('website', location.origin);
-            form.append('showName', 'true');
-
-            const metaRes = await fetch('/api/proxy/ipfs', { method: 'POST', body: form });
-            if (!metaRes.ok) throw new Error('IPFS upload failed');
-            const metaJson = await metaRes.json();
-
-            pushToast('Creating token on Pump.fun...', 'info');
-            // Generate mint keypair from our local env (client-side)
-            const mintKeypair = solanaWeb3.Keypair.generate();
-            const mintSecret58 = (window.bs58 ? window.bs58.encode(mintKeypair.secretKey) : btoa(String.fromCharCode(...mintKeypair.secretKey)));
-
-            const tradeRes = await fetch('/api/proxy/trade', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-pumpportal-api-key': launchWallet.apiKey || ''
-              },
-              body: JSON.stringify({
-                action: 'create',
-                tokenMetadata: {
-                  name: metaJson.metadata?.name || tokenName,
-                  symbol: metaJson.metadata?.symbol || tokenSymbol,
-                  uri: metaJson.metadataUri
-                },
-                mint: mintSecret58,
-                denominatedInSol: 'true',
-                amount: 1,
-                slippage: 10,
-                priorityFee: 0.0005,
-                pool: 'pump'
-              })
-            });
-            if (!tradeRes.ok) throw new Error(await tradeRes.text());
-            const tradeJson = await tradeRes.json();
-            const tokenAddress = tradeJson.mint || tradeJson.tokenAddress || tradeJson.address || null;
-
-            setCreatedBomb({
-              title: bombTitle,
-              threshold,
-              metadata: tokenDescription,
-              tokenName,
-              tokenSymbol,
-              decryptKey: keyHex,
-              encrypted,
-              creator,
-              created: Date.now(),
-              manual: false,
-              tokenAddress,
-              txSig: tradeJson.signature || tradeJson.sig || null
-            });
-
-            // Save for monitoring
-            const existing = JSON.parse(localStorage.getItem('whisper_bombs') || '[]');
-            existing.push({
-              title: bombTitle,
-              threshold,
-              tokenAddress,
-              decryptKey: keyHex,
-              created: Date.now(),
-              revealed: false
-            });
-            localStorage.setItem('whisper_bombs', JSON.stringify(existing));
-
-            pushToast('✅ Token created and live on pump.fun!', 'ok');
-            setView('browse');
-            setIsCreatingToken(false);
-            return;
-          }
-          
-          // If no API key available, attempt local-signed creation using fallback wallet secret if present
-          if (launchWallet && launchWallet.secretKey) {
-            pushToast('Creating token (local sign)...', 'info');
-            // Upload IPFS first
-            const canvas = document.createElement('canvas');
-            canvas.width = 512; canvas.height = 512;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#0b0f14'; ctx.fillRect(0,0,512,512);
-            ctx.fillStyle = '#67e8f9'; ctx.font = 'bold 200px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText((bombTitle[0]||'W').toUpperCase(), 256, 256);
-            const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-            const form = new FormData();
-            form.append('file', blob, 'cover.png');
-            form.append('name', tokenName);
-            form.append('symbol', tokenSymbol);
-            form.append('description', tokenDescription);
-            form.append('twitter', '');
-            form.append('telegram', '');
-            form.append('website', location.origin);
-            form.append('showName', 'true');
-            const metaRes = await fetch('/api/proxy/ipfs', { method: 'POST', body: form });
-            if (!metaRes.ok) throw new Error('IPFS upload failed');
-            const metaJson = await metaRes.json();
-
-            const mintKeypair = solanaWeb3.Keypair.generate();
-            const reqBody = {
-              publicKey: launchWallet.publicKey,
-              action: 'create',
-              tokenMetadata: {
-                name: metaJson.metadata?.name || tokenName,
-                symbol: metaJson.metadata?.symbol || tokenSymbol,
-                uri: metaJson.metadataUri
-              },
-              mint: mintKeypair.publicKey.toBase58(),
-              denominatedInSol: 'true',
-              amount: 1,
-              slippage: 10,
-              priorityFee: 0.0005,
-              pool: 'pump'
-            };
-            const txBufRes = await fetch('/api/proxy/trade-local', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(reqBody)
-            });
-            if (!txBufRes.ok) throw new Error(await txBufRes.text());
-            const arrBuf = await txBufRes.arrayBuffer();
-            const txBytes = new Uint8Array(arrBuf);
-            const VersionedTransaction = solanaWeb3.VersionedTransaction || solanaWeb3.Transaction; // fallback
-            const tx = VersionedTransaction.deserialize ? VersionedTransaction.deserialize(txBytes) : VersionedTransaction.from(txBytes);
-            
-            // Sign with mint and local wallet (requires private key we only keep in memory)
-            const secretBytes = parseSecretKeyToBytes(launchWallet.secretKey);
-            const signerKeypair = solanaWeb3.Keypair.fromSecretKey(secretBytes);
-            tx.sign ? tx.sign([mintKeypair, signerKeypair]) : null;
-            const rpc = 'https://rpc.ankr.com/solana';
-            const connection = new solanaWeb3.Connection(rpc, 'confirmed');
-            const signature = await connection.sendTransaction(tx);
-
-            const tokenAddress = mintKeypair.publicKey.toBase58();
-            setCreatedBomb({
-              title: bombTitle,
-              threshold,
-              metadata: tokenDescription,
-              tokenName,
-              tokenSymbol,
-              decryptKey: keyHex,
-              encrypted,
-              creator,
-              created: Date.now(),
-              manual: false,
-              tokenAddress,
-              txSig: signature
-            });
-
-            const existing = JSON.parse(localStorage.getItem('whisper_bombs') || '[]');
-            existing.push({
-              title: bombTitle,
-              threshold,
-              tokenAddress,
-              decryptKey: keyHex,
-              created: Date.now(),
-              revealed: false
-            });
-            localStorage.setItem('whisper_bombs', JSON.stringify(existing));
-
-            pushToast('✅ Token created (local sign) and live!', 'ok');
-            setView('browse');
-            setIsCreatingToken(false);
-            return;
-          }
-
-          // No supported method available
-          throw new Error('No API key or signing key available on launch wallet');
-          
-        } catch (error) {
-          console.error('Create failed:', error);
-          pushToast('Creation failed. Please retry.', 'err');
-        } finally {
-          setIsCreatingToken(false);
-        }
-      }
-      
-      function copyMetadata() {
-        navigator.clipboard.writeText(createdBomb.metadata);
-        pushToast('Metadata copied! Paste into pump.fun', 'ok');
-      }
-      
-      // Monitor bombs using PumpPortal API
-      useEffect(() => {
-        // Load saved bombs
-        const saved = JSON.parse(localStorage.getItem('whisper_bombs') || '[]');
-        setActiveBombs(saved);
-        
-        // Poll for market cap updates every 30 seconds
-        const interval = setInterval(async () => {
-          for (let bomb of saved) {
-            if (bomb.revealed || !bomb.tokenAddress) continue;
-            
-            try {
-              // Get token data from PumpPortal
-              const response = await fetch(`https://pumpportal.fun/api/data/${bomb.tokenAddress}`);
-              if (!response.ok) continue;
-              
-              const data = await response.json();
-              const mcap = data.usd_market_cap || 0;
-              
-              bomb.currentMcap = mcap;
-              bomb.progress = (mcap / parseInt(bomb.threshold)) * 100;
-              
-              // Check if reveal threshold reached
-              if (mcap >= parseInt(bomb.threshold) && !bomb.revealed) {
-                await revealBomb(bomb);
-              }
-            } catch (err) {
-              console.error('Failed to check bomb:', err);
-            }
-          }
-          setActiveBombs([...saved]);
-        }, 30000);
-        
-        return () => clearInterval(interval);
-      }, []);
-      
-      // Auto-reveal when threshold hit
-      async function revealBomb(bomb) {
-        try {
-          pushToast(`💥 Revealing bomb: ${bomb.title}...`, 'info');
-          
-          // Post decryption key to Solana Memo
-          const wallet = await window.solana.connect();
-          const connection = new solanaWeb3.Connection('https://api.mainnet-beta.solana.com', 'confirmed');
-          
-          const memoText = `WHISPER_BOMB_REVEAL:${bomb.title}:KEY:${bomb.decryptKey}:MCAP:${bomb.currentMcap}`;
-          
-          const memoIx = new solanaWeb3.TransactionInstruction({
-            keys: [{pubkey: wallet.publicKey, isSigner: true, isWritable: false}],
-            programId: new solanaWeb3.PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'),
-            data: new TextEncoder().encode(memoText)
-          });
-          
-          const tx = new solanaWeb3.Transaction().add(memoIx);
-          tx.feePayer = wallet.publicKey;
-          tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-          
-          const signed = await window.solana.signTransaction(tx);
-          const signature = await connection.sendRawTransaction(signed.serialize());
-          await connection.confirmTransaction(signature, 'confirmed');
-          
-          // Mark as revealed
-          bomb.revealed = true;
-          bomb.revealTx = signature;
-          bomb.revealedAt = Date.now();
-          
-          // Decrypt and show
-          const decrypted = await decryptMessage(bomb.encrypted, bomb.decryptKey);
-          bomb.decryptedMessage = decrypted;
-          
-          // Update storage
-          const existingBombs = JSON.parse(localStorage.getItem('whisper_bombs') || '[]');
-          const updated = existingBombs.map(b => b.title === bomb.title ? bomb : b);
-          localStorage.setItem('whisper_bombs', JSON.stringify(updated));
-          
-          pushToast(`💥 BOMB REVEALED! "${bomb.title}"`, 'ok');
-          
-        } catch (error) {
-          console.error('Reveal failed:', error);
-          pushToast('Auto-reveal failed - check console', 'err');
-        }
-      }
-      
-      // Decrypt function
-      async function decryptMessage(encrypted, keyHex) {
-        try {
-          const enc = new TextEncoder();
-          const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(keyHex), 'PBKDF2', false, ['deriveBits', 'deriveKey']);
-          const bytes = Uint8Array.from(atob(encrypted), c => c.charCodeAt(0));
-          const salt = bytes.slice(0, 16);
-          const iv = bytes.slice(16, 28);
-          const ct = bytes.slice(28);
-          const key = await crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:100000,hash:'SHA-256'},keyMaterial,{name:'AES-GCM',length:256},false,['decrypt']);
-          const pt = await crypto.subtle.decrypt({name:'AES-GCM',iv}, key, ct);
-          return new TextDecoder().decode(pt);
-        } catch (err) {
-          return 'Decryption failed';
-        }
-      }
-
-      return (
-        <div className="space-y-6">
-          {/* Premium Hero */}
-          <div className="relative overflow-hidden rounded-3xl border border-orange-500/30 bg-gradient-to-br from-orange-900/40 via-red-900/30 to-orange-900/40 p-8 shadow-2xl">
-            <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 via-red-500/10 to-orange-500/10 animate-pulse-slow"></div>
-            
-            <div className="relative z-10">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-500/30 to-red-500/30 flex items-center justify-center backdrop-blur-sm border border-orange-400/50 shadow-lg shadow-orange-500/50">
-                  <i data-lucide="bomb" className="w-10 h-10 text-orange-300"></i>
-                </div>
-                <div>
-                  <h1 className="text-4xl font-bold text-white mb-1 bg-gradient-to-r from-orange-200 via-red-200 to-orange-200 bg-clip-text text-transparent">
-                    Whisper Bombs
-                  </h1>
-                  <p className="text-orange-300 font-semibold text-lg">Encrypted Secrets • Bonding Curves • Auto-Reveal</p>
-                </div>
-              </div>
-              
-              <p className="text-white/80 text-sm max-w-3xl mb-4">
-                Create encrypted secret tokens that trade on pump.fun-style bonding curves. When market cap hits your threshold, 
-                the secret auto-reveals on-chain. Speculation meets privacy!
-              </p>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setView('browse')}
-                    className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                      view === 'browse' 
-                        ? 'bg-orange-500 text-white' 
-                        : 'bg-white/10 text-white/70 hover:bg-white/20'
-                    }`}
-                  >
-                    Browse Bombs
-                  </button>
-                  <button
-                    onClick={() => setView('create')}
-                    className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                      view === 'create' 
-                        ? 'bg-orange-500 text-white' 
-                        : 'bg-white/10 text-white/70 hover:bg-white/20'
-                    }`}
-                  >
-                    Create Bomb
-                  </button>
-                  <button
-                    onClick={() => setView('wallet')}
-                    className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                      view === 'wallet' 
-                        ? 'bg-orange-500 text-white' 
-                        : 'bg-white/10 text-white/70 hover:bg-white/20'
-                    }`}
-                  >
-                    <i data-lucide="wallet" className="w-4 h-4 inline mr-1"></i>
-                    Wallet
-                  </button>
-                </div>
-                
-                {/* Wallet Status Badge */}
-                {launchWallet && (
-                  <div className="px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/40 rounded-lg flex items-center gap-2">
-                    <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-                    <span className="text-xs text-emerald-400 font-semibold">{walletBalance.toFixed(4)} SOL</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {view === 'wallet' && (
-            <div className="space-y-6">
-              {!launchWallet ? (
-                <div className="bg-gradient-to-br from-black/60 via-purple-900/20 to-black/60 border border-purple-500/30 rounded-2xl p-8 text-center">
-                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center mx-auto mb-6 border-2 border-purple-500/30">
-                    <i data-lucide="wallet" className="w-12 h-12 text-purple-400"></i>
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-3">Create Launch Wallet</h3>
-                  <p className="text-white/60 mb-6 max-w-md mx-auto">
-                    Create a dedicated wallet for launching Whisper Bombs. This keeps your main wallet separate and organized.
-                  </p>
-                  
-                  <div className="flex gap-3 justify-center flex-wrap">
-                    <button
-                      onClick={createLaunchWallet}
-                      className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white font-bold rounded-xl transition-all shadow-lg"
-                    >
-                      <i data-lucide="plus-circle" className="w-5 h-5 inline mr-2"></i>
-                      Create New Wallet
-                    </button>
-                    <button
-                      onClick={importWallet}
-                      className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold rounded-xl transition-all"
-                    >
-                      <i data-lucide="download" className="w-5 h-5 inline mr-2"></i>
-                      Import Existing
-                    </button>
-                  </div>
-                  
-                  {/* Troubleshooting */}
-                  <div className="mt-4 text-center">
-                    <button
-                      onClick={() => {
-                        if (confirm('Clear all browser storage? This will reset the app but may fix errors.')) {
-                          localStorage.clear();
-                          sessionStorage.clear();
-                          window.location.reload();
-                        }
-                      }}
-                      className="text-xs text-white/50 hover:text-white/70 underline"
-                    >
-                      Having issues? Clear storage
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Wallet Info Card */}
-                  <div className="bg-gradient-to-br from-purple-900/30 via-black/60 to-pink-900/30 border-2 border-purple-500/40 rounded-2xl p-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-2xl font-bold text-white flex items-center gap-2">
-                        <i data-lucide="wallet" className="w-6 h-6 text-purple-400"></i>
-                        Launch Wallet
-                      </h3>
-                      <button
-                        onClick={downloadWallet}
-                        className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-400 rounded-lg transition-all flex items-center gap-2"
-                      >
-                        <i data-lucide="download" className="w-4 h-4"></i>
-                        Backup
-                      </button>
-                    </div>
-                    
-                    {/* Balance */}
-                    <div className="mb-6 p-5 bg-black/40 backdrop-blur-sm border border-purple-500/30 rounded-xl">
-                      <p className="text-sm text-purple-300 mb-2 uppercase tracking-wide">Balance</p>
-                      <p className="text-4xl font-bold text-white mb-1">{walletBalance.toFixed(6)}</p>
-                      <p className="text-xl text-purple-300 font-semibold">SOL</p>
-                      <button
-                        onClick={() => checkWalletBalance(launchWallet.publicKey)}
-                        className="mt-3 px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 text-sm rounded-lg transition-all"
-                      >
-                        <i data-lucide="refresh-cw" className="w-3 h-3 inline mr-1"></i>
-                        Refresh Balance
-                      </button>
-                    </div>
-                    
-                    {/* Address */}
-                    <div className="mb-4">
-                      <p className="text-sm text-white/60 mb-2">Public Address:</p>
-                      <div className="flex items-center gap-2 p-3 bg-black/30 border border-white/20 rounded-lg">
-                        <code className="text-sm text-cyan-400 break-all flex-1">{launchWallet.publicKey}</code>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(launchWallet.publicKey);
-                            pushToast('Address copied!', 'ok');
-                          }}
-                          className="px-3 py-1.5 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 rounded-lg transition-all flex-shrink-0"
-                        >
-                          <i data-lucide="copy" className="w-4 h-4"></i>
-                        </button>
-                      </div>
-                    </div>
-                    
-                    {/* API Key (if PumpPortal wallet) */}
-                    {launchWallet.apiKey && (
-                      <div className="mb-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-sm text-white/60">PumpPortal API Key:</p>
-                          <div className="px-2 py-1 bg-purple-500/20 border border-purple-500/30 rounded text-xs text-purple-400 font-semibold">
-                            ⚡ Lightning API
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 p-3 bg-purple-900/20 border border-purple-500/30 rounded-lg">
-                          <code className="text-sm text-purple-400 break-all flex-1">{launchWallet.apiKey}</code>
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(launchWallet.apiKey);
-                              pushToast('API key copied!', 'ok');
-                            }}
-                            className="px-3 py-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-lg transition-all flex-shrink-0"
-                          >
-                            <i data-lucide="copy" className="w-4 h-4"></i>
-                          </button>
-                        </div>
-                        <p className="text-xs text-purple-400/70 mt-1">
-                          ✓ Use this key for faster, cheaper token creation via PumpPortal Lightning API
-                        </p>
-                      </div>
-                    )}
-                    
-                    {/* Fund Instructions */}
-                    {walletBalance < 0.02 && (
-                      <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
-                        <div className="flex items-start gap-2">
-                          <i data-lucide="alert-circle" className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5"></i>
-                          <div>
-                            <p className="text-sm font-semibold text-yellow-400 mb-1">Fund Your Wallet</p>
-                            <p className="text-xs text-white/70 mb-3">
-                              You need at least 0.02 SOL to create tokens on pump.fun. Send SOL to the address above from your main wallet or exchange.
-                            </p>
-                            <div className="flex gap-2">
-                              <a
-                                href={`https://phantom.app/send?to=${launchWallet.publicKey}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs px-3 py-1.5 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg transition-all"
-                              >
-                                Send via Phantom
-                              </a>
-                              <button
-                                onClick={() => checkWalletBalance(launchWallet.publicKey)}
-                                className="text-xs px-3 py-1.5 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg transition-all"
-                              >
-                                Check Again
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Danger Zone */}
-                  <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-5">
-                    <h4 className="text-white font-bold mb-3 flex items-center gap-2">
-                      <i data-lucide="alert-triangle" className="w-5 h-5 text-red-400"></i>
-                      Danger Zone
-                    </h4>
-                  <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          if (confirm('Delete wallet? Make sure you have backed up your private key!')) {
-                            localStorage.removeItem('wlw');
-                            localStorage.removeItem('whisper_launch_wallet'); // Remove old key too
-                            setLaunchWallet(null);
-                            setWalletBalance(0);
-                            pushToast('Wallet removed', 'info');
-                          }
-                        }}
-                        className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 rounded-lg transition-all text-sm"
-                      >
-                        Delete Wallet
-                      </button>
-                      <button
-                        onClick={withdrawFromWallet}
-                        className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 rounded-lg transition-all text-sm"
-                      >
-                        Withdraw SOL
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (!launchWallet.secretKey) {
-                            alert('Private key not stored for security. Check your backup file.');
-                            return;
-                          }
-                          if (confirm('Show private key? Make sure no one is watching!')) {
-                            alert(`Private Key:\n\n${launchWallet.secretKey}\n\n⚠️ Never share this with anyone!`);
-                          }
-                        }}
-                        className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 rounded-lg transition-all text-sm"
-                      >
-                        Show Private Key
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {view === 'create' && (
-            <div className="space-y-6">
-              {/* Check if wallet exists and has balance */}
-              {(!launchWallet || walletBalance < 0.02) && (
-                <div className="bg-red-500/10 border-2 border-red-500/40 rounded-xl p-6">
-                  <div className="flex items-start gap-3">
-                    <i data-lucide="alert-circle" className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5"></i>
-                    <div>
-                      <h4 className="text-white font-bold mb-2">Wallet Required</h4>
-                      <p className="text-sm text-white/70 mb-3">
-                        {!launchWallet 
-                          ? 'You need a launch wallet to create bombs. Create one in the Wallet tab.'
-                          : `Your wallet needs at least 0.02 SOL (current: ${walletBalance.toFixed(4)} SOL). Fund it in the Wallet tab.`}
-                      </p>
-                      <button
-                        onClick={() => setView('wallet')}
-                        className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-all flex items-center gap-2"
-                      >
-                        <i data-lucide="arrow-right" className="w-4 h-4"></i>
-                        Go to Wallet
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {!createdBomb ? (
-                <div className="bg-gradient-to-br from-black/60 via-orange-900/20 to-black/60 border border-orange-500/30 rounded-2xl p-6">
-                  <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-                    <i data-lucide="lock" className="w-6 h-6 text-orange-400"></i>
-                    Create Encrypted Secret
-                  </h3>
-                  
-                  <div className="space-y-4">
-                    {/* Title */}
-                    <div>
-                      <label className="block text-sm font-semibold text-white mb-2">Secret Title (Public)</label>
-                      <input 
-                        type="text"
-                        value={bombTitle}
-                        onChange={(e) => setBombTitle(e.target.value)}
-                        placeholder="e.g., FTX_FUNDS, SATOSHI_IDENTITY, WHALE_WALLET"
-                        className="w-full px-4 py-3 rounded-xl border border-white/20 bg-black/30 text-white placeholder-white/40 focus:border-orange-400 focus:outline-none"
-                      />
-                    </div>
-                    
-                    {/* Secret Message */}
-                    <div>
-                      <label className="block text-sm font-semibold text-white mb-2">Secret Message (Encrypted)</label>
-                      <textarea 
-                        value={secretMessage}
-                        onChange={(e) => setSecretMessage(e.target.value)}
-                        placeholder="Enter your secret message. This will be encrypted and only revealed when threshold is reached..."
-                        rows="6"
-                        className="w-full px-4 py-3 rounded-xl border border-white/20 bg-black/30 text-white placeholder-white/40 focus:border-orange-400 focus:outline-none"
-                      />
-                    </div>
-                    
-                    {/* Threshold */}
-                    <div>
-                      <label className="block text-sm font-semibold text-white mb-2">Reveal Threshold (USD Market Cap)</label>
-                      <div className="flex gap-2">
-                        <span className="px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white flex items-center">$</span>
-                        <input 
-                          type="number"
-                          value={threshold}
-                          onChange={(e) => setThreshold(e.target.value)}
-                          placeholder="20000"
-                          className="flex-1 px-4 py-3 rounded-xl border border-white/20 bg-black/30 text-white placeholder-white/40 focus:border-orange-400 focus:outline-none"
-                        />
-                      </div>
-                      <p className="text-xs text-white/50 mt-1">Recommended: $5k-50k (higher = longer to reveal)</p>
-                    </div>
-                    
-                    {/* Create Button */}
-                    <button 
-                      onClick={handleCreateBomb}
-                      className="w-full px-8 py-4 bg-gradient-to-r from-orange-600 via-red-600 to-orange-600 hover:from-orange-500 hover:via-red-500 hover:to-orange-500 text-white font-bold text-xl rounded-xl transition-all shadow-2xl shadow-orange-500/50 hover:shadow-orange-500/70 hover:scale-[1.02] flex items-center justify-center gap-3"
-                    >
-                      <i data-lucide="sparkles" className="w-6 h-6"></i>
-                      Encrypt & Prepare for Pump.fun
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Success - Show Status */}
-                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6">
-                    <h3 className="text-xl font-bold text-emerald-400 mb-3 flex items-center gap-2">
-                      <i data-lucide="check-circle" className="w-6 h-6"></i>
-                      Whisper Bomb {createdBomb.tokenAddress && !createdBomb.manual ? 'Created' : 'Encrypted'}!
-                    </h3>
-                    <p className="text-white/70">
-                      {createdBomb.tokenAddress && !createdBomb.manual 
-                        ? '✅ Token created via PumpPortal and is now live on bonding curve!'
-                        : '✅ Secret encrypted! Follow steps below to launch on pump.fun'}
-                    </p>
-                    {createdBomb.tokenAddress && !createdBomb.manual && (
-                      <div className="mt-3 p-3 bg-emerald-500/10 rounded-lg">
-                        <p className="text-xs text-emerald-300 font-semibold mb-1">Token Address:</p>
-                        <p className="text-xs text-white font-mono break-all">{createdBomb.tokenAddress}</p>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Decryption Key - CRITICAL */}
-                  <div className="bg-red-500/10 border-2 border-red-500/40 rounded-xl p-5">
-                    <div className="flex items-start gap-3">
-                      <div className="w-12 h-12 rounded-lg bg-red-500/20 flex items-center justify-center flex-shrink-0">
-                        <i data-lucide="key" className="w-6 h-6 text-red-400"></i>
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="text-white font-bold mb-2 flex items-center gap-2">
-                          🔑 Decryption Key (SAVE THIS!)
-                        </h4>
-                        <div className="p-3 bg-black/50 rounded-lg mb-3">
-                          <p className="text-sm text-red-300 font-mono break-all">{createdBomb.decryptKey}</p>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(createdBomb.decryptKey);
-                              pushToast('Key copied!', 'ok');
-                            }}
-                            className="px-3 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-all flex items-center gap-2 text-sm"
-                          >
-                            <i data-lucide="copy" className="w-4 h-4"></i>
-                            Copy Key
-                          </button>
-                          <button
-                            onClick={() => {
-                              const data = `Whisper Bomb: ${createdBomb.title}\nDecryption Key: ${createdBomb.decryptKey}\nReveal Threshold: $${createdBomb.threshold}\nCreated: ${new Date().toLocaleString()}\n\n⚠️ DO NOT SHARE until reveal!`;
-                              const blob = new Blob([data], {type: 'text/plain'});
-                              const url = URL.createObjectURL(blob);
-                              const a = document.createElement('a');
-                              a.href = url;
-                              a.download = `whisper-bomb-${createdBomb.title}-key.txt`;
-                              a.click();
-                              pushToast('Key downloaded!', 'ok');
-                            }}
-                            className="px-3 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-all flex items-center gap-2 text-sm"
-                          >
-                            <i data-lucide="download" className="w-4 h-4"></i>
-                            Download
-                          </button>
-                        </div>
-                        <p className="text-xs text-red-400/80 mt-3">
-                          ⚠️ You'll need this key to reveal the secret when market cap hits ${parseInt(createdBomb.threshold).toLocaleString()}. 
-                          Store it securely - if you lose it, the secret can never be revealed!
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Manual Creation Steps */}
-                  {createdBomb.manual && (
-                    <div className="bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-cyan-500/10 border border-cyan-500/30 rounded-xl p-6">
-                      <h4 className="text-white font-bold mb-4 flex items-center gap-2">
-                        <i data-lucide="list" className="w-5 h-5 text-cyan-400"></i>
-                        Create Token on Pump.fun (3 Steps)
-                      </h4>
-                      
-                      <div className="space-y-4">
-                        {/* Step 1 */}
-                        <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center flex-shrink-0">
-                            <span className="text-cyan-400 font-bold">1</span>
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-white font-semibold mb-2">Open Pump.fun & Start Token Creation</p>
-                            <a
-                              href="https://pump.fun"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 text-cyan-400 rounded-lg transition-all"
-                            >
-                              <i data-lucide="external-link" className="w-4 h-4"></i>
-                              Open Pump.fun
-                            </a>
-                          </div>
-                        </div>
-                        
-                        {/* Step 2 */}
-                        <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center flex-shrink-0">
-                            <span className="text-cyan-400 font-bold">2</span>
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-white font-semibold mb-2">Enter Token Details</p>
-                            <div className="space-y-2 text-sm">
-                              <div className="flex items-center gap-2">
-                                <span className="text-white/60">Name:</span>
-                                <code className="text-orange-400 bg-black/30 px-2 py-1 rounded">{createdBomb.tokenName}</code>
-                                <button
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(createdBomb.tokenName);
-                                    pushToast('Name copied!', 'ok');
-                                  }}
-                                  className="text-cyan-400 hover:text-cyan-300"
-                                >
-                                  <i data-lucide="copy" className="w-3 h-3"></i>
-                                </button>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-white/60">Symbol:</span>
-                                <code className="text-orange-400 bg-black/30 px-2 py-1 rounded">{createdBomb.tokenSymbol}</code>
-                                <button
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(createdBomb.tokenSymbol);
-                                    pushToast('Symbol copied!', 'ok');
-                                  }}
-                                  className="text-cyan-400 hover:text-cyan-300"
-                                >
-                                  <i data-lucide="copy" className="w-3 h-3"></i>
-                                </button>
-                              </div>
-                              <div>
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-white/60">Description:</span>
-                                  <button
-                                    onClick={copyMetadata}
-                                    className="px-2 py-1 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 rounded text-xs flex items-center gap-1"
-                                  >
-                                    <i data-lucide="copy" className="w-3 h-3"></i>
-                                    Copy Description
-                                  </button>
-                                </div>
-                                <div className="p-3 bg-black/50 rounded-lg max-h-32 overflow-auto">
-                                  <pre className="text-xs text-white/70 whitespace-pre-wrap">{createdBomb.metadata}</pre>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Step 3 */}
-                        <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center flex-shrink-0">
-                            <span className="text-cyan-400 font-bold">3</span>
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-white font-semibold mb-2">After Token Created</p>
-                            <p className="text-sm text-white/60 mb-2">Copy the token address from pump.fun and save it here (optional, for tracking):</p>
-                            <input 
-                              type="text"
-                              placeholder="Paste token address here..."
-                              onBlur={(e) => {
-                                if (e.target.value) {
-                                  createdBomb.tokenAddress = e.target.value;
-                                  const existing = JSON.parse(localStorage.getItem('whisper_bombs') || '[]');
-                                  existing.push(createdBomb);
-                                  localStorage.setItem('whisper_bombs', JSON.stringify(existing));
-                                  pushToast('Bomb saved! We\'ll monitor it.', 'ok');
-                                }
-                              }}
-                              className="w-full px-3 py-2 bg-black/30 border border-white/20 rounded-lg text-white text-sm placeholder-white/40"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Success Actions */}
-                  <div className="flex gap-2">
-                    {createdBomb.tokenAddress && !createdBomb.manual && (
-                      <a
-                        href={`https://pump.fun/${createdBomb.tokenAddress}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 px-4 py-3 bg-orange-500/20 hover:bg-orange-500/30 border border-orange-500/30 text-orange-400 font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
-                      >
-                        <i data-lucide="external-link" className="w-4 h-4"></i>
-                        Trade on Pump.fun
-                      </a>
-                    )}
-                    <button 
-                      onClick={() => { setCreatedBomb(null); setSecretMessage(''); setBombTitle(''); setView('browse'); }}
-                      className="flex-1 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all font-semibold"
-                    >
-                      View All Bombs
-                    </button>
-                  </div>
-                  
-                  {/* Warning */}
-                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
-                    <div className="flex items-start gap-2">
-                      <i data-lucide="alert-triangle" className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5"></i>
-                      <div className="text-sm text-white/70">
-                        <p className="font-semibold text-yellow-400 mb-1">Important:</p>
-                        <ul className="space-y-1 text-xs">
-                          <li>• Save your decryption key securely - you'll need it to reveal the secret</li>
-                          <li>• When market cap hits ${parseInt(threshold).toLocaleString()}, post the key to Solana Memo</li>
-                          <li>• Anyone with the key can decrypt the message</li>
-                          <li>• Secret quality affects token value - be truthful or risk reputation!</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <button 
-                    onClick={() => { setCreatedBomb(null); setSecretMessage(''); setBombTitle(''); }}
-                    className="w-full px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all"
-                  >
-                    Create Another Bomb
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {view === 'browse' && (
-            <div className="space-y-6">
-              {/* Info Card */}
-              <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-5">
-                <div className="flex items-start gap-3">
-                  <i data-lucide="info" className="w-6 h-6 text-cyan-400 flex-shrink-0 mt-0.5"></i>
-                  <div>
-                    <h3 className="text-white font-bold mb-2">How Whisper Bombs Work</h3>
-                    <ol className="text-sm text-white/70 space-y-2">
-                      <li className="flex items-start gap-2">
-                        <span className="text-cyan-400 font-bold">1.</span>
-                        <span><strong>Create:</strong> Encrypt any secret and set a reveal threshold (e.g., $20k market cap)</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-cyan-400 font-bold">2.</span>
-                        <span><strong>Launch:</strong> Token launches on pump.fun with 1M supply on bonding curve</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-cyan-400 font-bold">3.</span>
-                        <span><strong>Trade:</strong> Buy/sell tokens while secret is sealed - speculate on value!</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-cyan-400 font-bold">4.</span>
-                        <span><strong>Reveal:</strong> When threshold hit, decrypt key posted → Secret unlocks!</span>
-                      </li>
-                    </ol>
-                  </div>
-                </div>
-              </div>
-
-              {/* Active Bombs List */}
-              {activeBombs.length > 0 ? (
-                <div className="grid gap-4">
-                  {activeBombs.map((bomb, idx) => (
-                    <div key={idx} className={`bg-gradient-to-r ${bomb.revealed ? 'from-emerald-900/20 to-cyan-900/20 border-emerald-500/30' : 'from-orange-900/20 to-red-900/20 border-orange-500/30'} border rounded-xl p-5 hover:border-opacity-70 transition-all`}>
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex-1">
-                          <h4 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
-                            {bomb.revealed ? '💥' : '💣'} {bomb.title}
-                          </h4>
-                          {bomb.revealed && bomb.decryptedMessage && (
-                            <p className="text-sm text-emerald-400 italic mt-2 p-2 bg-black/30 rounded">
-                              "{bomb.decryptedMessage.substring(0, 100)}{bomb.decryptedMessage.length > 100 ? '...' : ''}"
-                            </p>
-                          )}
-                        </div>
-                        <div className={`px-3 py-1 rounded-lg border ${bomb.revealed ? 'bg-emerald-500/20 border-emerald-500/30' : 'bg-orange-500/20 border-orange-500/30'}`}>
-                          <p className={`text-xs font-semibold ${bomb.revealed ? 'text-emerald-400' : 'text-orange-400'}`}>
-                            {bomb.revealed ? '🔓 REVEALED' : '🔒 SEALED'}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      {/* Progress Bar */}
-                      {!bomb.revealed && (
-                        <div className="mb-4">
-                          <div className="flex justify-between text-sm mb-2">
-                            <span className="text-white/60">Progress to Reveal</span>
-                            <span className="text-orange-400 font-semibold">
-                              {bomb.progress ? `${bomb.progress.toFixed(1)}%` : 'Loading...'}
-                            </span>
-                          </div>
-                          <div className="h-3 bg-white/10 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-gradient-to-r from-orange-500 to-red-500 rounded-full transition-all duration-500" 
-                              style={{width: `${Math.min(bomb.progress || 0, 100)}%`}}
-                            ></div>
-                          </div>
-                          <p className="text-xs text-white/50 mt-1">
-                            ${(bomb.currentMcap || 0).toLocaleString()} / ${parseInt(bomb.threshold).toLocaleString()} market cap
-                          </p>
-                        </div>
-                      )}
-                      
-                      {bomb.revealed && bomb.revealTx && (
-                        <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
-                          <p className="text-xs text-emerald-300 mb-1">Revealed at ${(bomb.currentMcap || 0).toLocaleString()} market cap</p>
-                          <a 
-                            href={`https://solscan.io/tx/${bomb.revealTx}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-cyan-400 hover:text-cyan-300 underline"
-                          >
-                            View reveal transaction →
-                          </a>
-                        </div>
-                      )}
-                      
-                      <div className="flex gap-2">
-                        {bomb.tokenAddress && (
-                          <a
-                            href={`https://pump.fun/${bomb.tokenAddress}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`flex-1 px-4 py-2 border rounded-lg transition-all flex items-center justify-center gap-2 ${
-                              bomb.revealed 
-                                ? 'bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-500/30 text-emerald-400'
-                                : 'bg-orange-500/20 hover:bg-orange-500/30 border-orange-500/30 text-orange-400'
-                            }`}
-                          >
-                            <i data-lucide="trending-up" className="w-4 h-4"></i>
-                            Trade on Pump.fun
-                          </a>
-                        )}
-                        <button 
-                          className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all"
-                          onClick={() => {
-                            const info = `Bomb: ${bomb.title}\nThreshold: $${bomb.threshold}\nStatus: ${bomb.revealed ? 'REVEALED' : 'SEALED'}\n${bomb.revealed ? `Message: ${bomb.decryptedMessage}` : 'Message: Still encrypted'}`;
-                            alert(info);
-                          }}
-                        >
-                          <i data-lucide="info" className="w-4 h-4"></i>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="bg-white/5 border border-white/10 rounded-xl p-8 text-center">
-                  <i data-lucide="bomb" className="w-16 h-16 text-white/30 mx-auto mb-4"></i>
-                  <h3 className="text-white font-bold text-lg mb-2">No Active Bombs Yet</h3>
-                  <p className="text-white/60 mb-4">Be the first to create a Whisper Bomb!</p>
-                  <button
-                    onClick={() => setView('create')}
-                    className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white font-semibold rounded-xl transition-all"
-                  >
-                    Create First Bomb
-                  </button>
-                </div>
-              )}
-
-              {/* PumpPortal Integration Info */}
-              <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-5">
-                <div className="flex items-start gap-3">
-                  <i data-lucide="zap" className="w-6 h-6 text-purple-400 flex-shrink-0 mt-0.5"></i>
-                  <div>
-                    <h3 className="text-white font-bold mb-2">⚡ Powered by PumpPortal</h3>
-                    <p className="text-sm text-white/70 mb-3">
-                      Fully integrated with <a href="https://pumpportal.fun/" target="_blank" className="text-purple-400 hover:text-purple-300 underline">PumpPortal API</a>. 
-                      Create tokens, monitor market caps, and auto-reveal secrets - all without leaving Whistle!
-                    </p>
-                    <div className="flex gap-2 text-xs">
-                      <span className="px-2 py-1 rounded bg-emerald-500/20 text-emerald-300">✓ Token Creation</span>
-                      <span className="px-2 py-1 rounded bg-emerald-500/20 text-emerald-300">✓ Live Market Data</span>
-                      <span className="px-2 py-1 rounded bg-emerald-500/20 text-emerald-300">✓ Auto-Reveal</span>
-                      <span className="px-2 py-1 rounded bg-cyan-500/20 text-cyan-300">✓ In-App Trading Links</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    }
-
     // ===== ZOLANA EXCHANGE =====
     
     function ZolanaExchange({ pushToast }) {
@@ -8091,23 +6676,8 @@ Created via Whistle Privacy Tools.`;
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'steganography', 'privacy-checkup', 'censorship-map', 'proxy-links', 'swap', 'solana-privacy', 'zolana', 'privacy-vault', 'whisper-bombs'];
+      const validSteps = ['home', 'webrtc', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
       const currentStep = validSteps.includes(step) ? step : 'home';
-      
-      // Global icon initialization (prevents conflicts)
-      React.useEffect(() => {
-        const timer = setTimeout(() => {
-          if (window.lucide) {
-            try {
-              window.lucide.createIcons();
-            } catch (e) {
-              // Silently fail if icons conflict
-              console.warn('Icon init skipped:', e.message);
-            }
-          }
-        }, 200);
-        return () => clearTimeout(timer);
-      }, [currentStep]);
       
       return (
         <div className="relative min-h-screen text-white">
@@ -8135,19 +6705,16 @@ Created via Whistle Privacy Tools.`;
                 </div>
                 <ErrorBoundary key={currentStep}>
                   {(() => {
-                    console.log('Rendering step:', currentStep);
                     switch(currentStep) {
                       case 'home': return <Home setStep={setStepGuarded} />;
                       case 'webrtc': return <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />;
                       case 'steganography': return <UnifiedSteganography pushToast={push} />;
                       case 'privacy-checkup': return <PrivacyCheckup pushToast={push} />;
                       case 'censorship-map': return <CensorshipMap pushToast={push} />;
-                      case 'proxy-links': return <ProxyLinkGenerator pushToast={push} />;
                       case 'swap': return <PrivacySwap />;
                       case 'solana-privacy': return <SolanaPrivacyToolkit pushToast={push} />;
+                      case 'pump-portal': return <PumpPortalLaunch pushToast={push} />;
                       case 'zolana': return <ZolanaExchange pushToast={push} />;
-                      case 'privacy-vault': return <PrivacyVault pushToast={push} />;
-                      case 'whisper-bombs': return <WhisperBombs pushToast={push} />;
                       default: return (
                         <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6">
                           <h2 className="text-white text-xl font-bold mb-2">Section Not Found</h2>
@@ -8190,5 +6757,3 @@ Created via Whistle Privacy Tools.`;
 <script defer type='text/javascript' src='https://changenow.io/embeds/exchange-widget/v2/stepper-connector.js'></script>
 </body>
 </html>
-
-
