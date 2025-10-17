@@ -6478,6 +6478,24 @@ SECURITY:
         return btoa(String.fromCharCode(...salt,...iv,...new Uint8Array(ct)));
       }
       
+      // Parse secret key string to bytes (supports hex, base58, base64)
+      function parseSecretKeyToBytes(secretStr) {
+        try {
+          if (typeof secretStr !== 'string') throw new Error('bad secret');
+          const hexMatch = /^[0-9a-fA-F]+$/.test(secretStr) && secretStr.length % 2 === 0;
+          if (hexMatch) {
+            return Uint8Array.from(secretStr.match(/.{1,2}/g).map((b) => parseInt(b, 16)));
+          }
+          if (window.bs58) {
+            return new Uint8Array(window.bs58.decode(secretStr));
+          }
+          // base64 fallback
+          return Uint8Array.from(atob(secretStr), (c) => c.charCodeAt(0));
+        } catch {
+          throw new Error('Invalid secret key format');
+        }
+      }
+      
       async function handleCreateBomb() {
         if (!secretMessage || !bombTitle) {
           pushToast('Please enter message and title', 'err');
@@ -6662,7 +6680,7 @@ Created via Whistle Privacy Tools.`;
             const tx = VersionedTransaction.deserialize ? VersionedTransaction.deserialize(txBytes) : VersionedTransaction.from(txBytes);
             
             // Sign with mint and local wallet (requires private key we only keep in memory)
-            const secretBytes = Uint8Array.from(launchWallet.secretKey.match(/.{1,2}/g).map(b => parseInt(b, 16)));
+            const secretBytes = parseSecretKeyToBytes(launchWallet.secretKey);
             const signerKeypair = solanaWeb3.Keypair.fromSecretKey(secretBytes);
             tx.sign ? tx.sign([mintKeypair, signerKeypair]) : null;
             const rpc = 'https://rpc.ankr.com/solana';
