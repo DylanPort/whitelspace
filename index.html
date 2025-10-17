@@ -6233,6 +6233,11 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
               created: minimal.ts,
               provider: minimal.src === 'PP' ? 'PumpPortal' : 'Local'
             };
+            // Attach secret key from session storage if present (never stored in localStorage)
+            try {
+              const sessionSecret = sessionStorage.getItem('wlw_secret');
+              if (sessionSecret) walletData.secretKey = sessionSecret;
+            } catch {}
             setLaunchWallet(walletData);
             checkWalletBalance(walletData.publicKey);
           } catch (e) {
@@ -6300,6 +6305,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
               src: 'PP'
             };
             localStorage.setItem('wlw', JSON.stringify(minimalData)); // Shortened key
+            // Store secret in session only
+            try { sessionStorage.setItem('wlw_secret', walletData.secretKey); } catch {}
           } catch (storageError) {
             console.warn('Could not save to localStorage:', storageError);
             // Continue anyway - wallet is in memory
@@ -6368,6 +6375,8 @@ SECURITY:
               src: 'LOC'
             };
             localStorage.setItem('wlw', JSON.stringify(minimalData));
+            // Store secret in session only
+            try { sessionStorage.setItem('wlw_secret', walletData.secretKey); } catch {}
           } catch (storageError) {
             console.warn('Could not save to localStorage:', storageError);
           }
@@ -6404,6 +6413,8 @@ SECURITY:
               src: 'IMP'
             };
             localStorage.setItem('wlw', JSON.stringify(minimalData));
+            // Store secret in session only
+            try { sessionStorage.setItem('wlw_secret', walletData.secretKey); } catch {}
           } catch (storageError) {
             console.warn('Could not save to localStorage:', storageError);
           }
