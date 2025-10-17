@@ -6481,6 +6481,10 @@ SECURITY:
           return;
         }
         
+        // Prepare static token fields independent of flow
+        const tokenName = `💣 ${bombTitle}`;
+        const tokenSymbol = bombTitle.substring(0, 6).toUpperCase().replace(/[^A-Z0-9]/g, '') || 'BOMB';
+        
         try {
           setIsCreatingToken(true);
           pushToast('Encrypting secret...', 'info');
@@ -6496,8 +6500,6 @@ SECURITY:
           let creator = (needsPhantom ? (await window.solana.connect()).publicKey.toString() : (launchWallet?.publicKey || 'unknown'));
           
           // Create token metadata
-          const tokenName = `💣 ${bombTitle}`;
-          const tokenSymbol = bombTitle.substring(0, 6).toUpperCase().replace(/[^A-Z0-9]/g, '') || 'BOMB';
           const tokenDescription = `🔐 WHISPER BOMB - Encrypted Secret Token
 
 Reveals at: $${parseInt(threshold).toLocaleString()} market cap
@@ -6610,6 +6612,21 @@ Created via Whistle Privacy Tools.`;
           const password = crypto.getRandomValues(new Uint8Array(32));
           const keyHex = Array.from(password).map(b => b.toString(16).padStart(2, '0')).join('');
           const encrypted = await encryptMessage(secretMessage, keyHex);
+          const tokenDescription = `🔐 WHISPER BOMB - Encrypted Secret Token
+
+Reveals at: $${parseInt(threshold).toLocaleString()} market cap
+Status: SEALED 🔒
+Created: ${new Date().toLocaleDateString()}
+
+⚠️ Secret content unknown - trade at your own risk!
+
+Encrypted: ${encrypted.substring(0, 80)}...
+
+When market cap hits threshold, decryption key will be posted to Solana blockchain.
+
+This is a speculative token. Secret may or may not have value.
+Created via Whistle Privacy Tools.`;
+          const creator = window?.solana ? (await window.solana.connect()).publicKey.toString() : (launchWallet?.publicKey || 'unknown');
           
           setCreatedBomb({
             title: bombTitle,
@@ -6619,12 +6636,13 @@ Created via Whistle Privacy Tools.`;
             tokenSymbol: tokenSymbol,
             decryptKey: keyHex,
             encrypted: encrypted,
-            creator: wallet ? (await window.solana.connect()).publicKey.toString() : 'unknown',
+            creator: creator,
             created: Date.now(),
             manual: true
           });
           
           pushToast('✅ Secret encrypted! Ready for pump.fun', 'ok');
+        } finally {
           setIsCreatingToken(false);
         }
       }
