@@ -8,6 +8,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#0b0f14">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.tailwindcss.com https://esm.sh https://changenow.io; frame-src 'self' https://changenow.io https://4nonswap.com; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; img-src 'self' data: https:; connect-src 'self' https: wss:;">
   <script src="https://cdn.tailwindcss.com"></script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -6262,7 +6264,48 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           };
           
           setLaunchWallet(walletData);
-          localStorage.setItem('whisper_launch_wallet', JSON.stringify(walletData));
+          // Store only essential data to avoid quota issues
+          localStorage.setItem('whisper_launch_wallet', JSON.stringify({
+            publicKey: walletData.publicKey,
+            apiKey: walletData.apiKey,
+            created: walletData.created,
+            provider: walletData.provider
+          }));
+          
+          // Prompt user to download full backup immediately
+          setTimeout(() => {
+            if (confirm('Wallet created! Download backup now? (Includes private key)')) {
+              const backupData = `WHISPER LAUNCH WALLET
+=====================
+⚠️ KEEP THIS SAFE! Anyone with this key can access your funds.
+
+Public Key: ${walletData.publicKey}
+Private Key: ${walletData.secretKey}
+PumpPortal API Key: ${walletData.apiKey}
+
+Provider: PumpPortal
+Created: ${new Date(walletData.created).toLocaleString()}
+Purpose: Launching Whisper Bombs on Pump.fun
+
+API USAGE:
+- Use this API key for PumpPortal transactions
+- Create tokens programmatically
+- Lower fees and faster execution
+
+SECURITY:
+- Never share your private key or API key
+- Store this file securely (encrypted USB, password manager, etc.)
+- Back up to multiple locations`;
+              
+              const blob = new Blob([backupData], { type: 'text/plain' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `whisper-wallet-${walletData.publicKey.substring(0, 8)}-BACKUP.txt`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }
+          }, 500);
           
           pushToast('✅ PumpPortal wallet + API key created!', 'ok');
           checkWalletBalance(walletData.publicKey);
@@ -6283,7 +6326,12 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           };
           
           setLaunchWallet(walletData);
-          localStorage.setItem('whisper_launch_wallet', JSON.stringify(walletData));
+          // Store only public key to save space
+          localStorage.setItem('whisper_launch_wallet', JSON.stringify({
+            publicKey: walletData.publicKey,
+            created: walletData.created,
+            provider: walletData.provider
+          }));
           
           pushToast('Wallet created locally', 'ok');
           checkWalletBalance(publicKey);
@@ -6318,6 +6366,11 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       
       // Download wallet backup
       function downloadWallet() {
+        if (!launchWallet.secretKey) {
+          pushToast('⚠️ Private key not available. You must have downloaded it when wallet was created.', 'err');
+          return;
+        }
+        
         const data = `WHISPER LAUNCH WALLET
 =====================
 ⚠️ KEEP THIS SAFE! Anyone with this key can access your funds.
@@ -6771,6 +6824,10 @@ Created via Whistle Privacy Tools.`;
                       </button>
                       <button
                         onClick={() => {
+                          if (!launchWallet.secretKey) {
+                            alert('Private key not stored for security. Check your backup file.');
+                            return;
+                          }
                           if (confirm('Show private key? Make sure no one is watching!')) {
                             alert(`Private Key:\n\n${launchWallet.secretKey}\n\n⚠️ Never share this with anyone!`);
                           }
