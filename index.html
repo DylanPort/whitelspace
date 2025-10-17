@@ -6473,13 +6473,8 @@ SECURITY:
           return;
         }
         
-        // Allow programmatic creation without Phantom if using PumpPortal wallet
-        const needsPhantom = !(launchWallet && launchWallet.apiKey && launchWallet.provider === 'PumpPortal');
-        if (needsPhantom && !window?.solana) {
-          pushToast('Please install Phantom wallet', 'err');
-          window.open('https://phantom.app/', '_blank');
-          return;
-        }
+        // Programmatic creation requires either PumpPortal API key or local signing secret
+        if (!launchWallet) { pushToast('Create a launch wallet first', 'err'); return; }
         
         // Prepare static token fields independent of flow
         const tokenName = `💣 ${bombTitle}`;
@@ -6496,8 +6491,8 @@ SECURITY:
           // Encrypt message
           const encrypted = await encryptMessage(secretMessage, keyHex);
           
-          // Creator public key: use Phantom if present, otherwise PumpPortal wallet pubkey
-          let creator = (needsPhantom ? (await window.solana.connect()).publicKey.toString() : (launchWallet?.publicKey || 'unknown'));
+          // Creator public key comes from launch wallet
+          const creator = (launchWallet?.publicKey || 'unknown');
           
           // Create token metadata
           const tokenDescription = `🔐 WHISPER BOMB - Encrypted Secret Token
@@ -6537,11 +6532,7 @@ Created via Whistle Privacy Tools.`;
             form.append('website', location.origin);
             form.append('showName', 'true');
 
-            let metaRes = await fetch('/api/proxy/ipfs', { method: 'POST', body: form });
-            if (!metaRes.ok) {
-              // Fallback to direct endpoint if proxy not available
-              metaRes = await fetch('https://pump.fun/api/ipfs', { method: 'POST', body: form });
-            }
+            const metaRes = await fetch('/api/proxy/ipfs', { method: 'POST', body: form });
             if (!metaRes.ok) throw new Error('IPFS upload failed');
             const metaJson = await metaRes.json();
 
@@ -6550,7 +6541,7 @@ Created via Whistle Privacy Tools.`;
             const mintKeypair = solanaWeb3.Keypair.generate();
             const mintSecret58 = (window.bs58 ? window.bs58.encode(mintKeypair.secretKey) : btoa(String.fromCharCode(...mintKeypair.secretKey)));
 
-            let tradeRes = await fetch('/api/proxy/trade', {
+            const tradeRes = await fetch('/api/proxy/trade', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -6571,26 +6562,6 @@ Created via Whistle Privacy Tools.`;
                 pool: 'pump'
               })
             });
-            if (!tradeRes.ok) {
-              tradeRes = await fetch(`https://pumpportal.fun/api/trade?api-key=${encodeURIComponent(launchWallet.apiKey||'')}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  action: 'create',
-                  tokenMetadata: {
-                    name: metaJson.metadata?.name || tokenName,
-                    symbol: metaJson.metadata?.symbol || tokenSymbol,
-                    uri: metaJson.metadataUri
-                  },
-                  mint: mintSecret58,
-                  denominatedInSol: 'true',
-                  amount: 1,
-                  slippage: 10,
-                  priorityFee: 0.0005,
-                  pool: 'pump'
-                })
-              });
-            }
             if (!tradeRes.ok) throw new Error(await tradeRes.text());
             const tradeJson = await tradeRes.json();
             const tokenAddress = tradeJson.mint || tradeJson.tokenAddress || tradeJson.address || null;
@@ -6648,10 +6619,7 @@ Created via Whistle Privacy Tools.`;
             form.append('telegram', '');
             form.append('website', location.origin);
             form.append('showName', 'true');
-            let metaRes = await fetch('/api/proxy/ipfs', { method: 'POST', body: form });
-            if (!metaRes.ok) {
-              metaRes = await fetch('https://pump.fun/api/ipfs', { method: 'POST', body: form });
-            }
+            const metaRes = await fetch('/api/proxy/ipfs', { method: 'POST', body: form });
             if (!metaRes.ok) throw new Error('IPFS upload failed');
             const metaJson = await metaRes.json();
 
@@ -6671,18 +6639,11 @@ Created via Whistle Privacy Tools.`;
               priorityFee: 0.0005,
               pool: 'pump'
             };
-            let txBufRes = await fetch('/api/proxy/trade-local', {
+            const txBufRes = await fetch('/api/proxy/trade-local', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(reqBody)
             });
-            if (!txBufRes.ok) {
-              txBufRes = await fetch('https://pumpportal.fun/api/trade-local', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(reqBody)
-              });
-            }
             if (!txBufRes.ok) throw new Error(await txBufRes.text());
             const arrBuf = await txBufRes.arrayBuffer();
             const txBytes = new Uint8Array(arrBuf);
@@ -6730,44 +6691,12 @@ Created via Whistle Privacy Tools.`;
             return;
           }
 
-          // Otherwise fallback to manual
-          throw new Error('No API key/secret available, using manual flow');
+          // No supported method available
+          throw new Error('No API key or signing key available on launch wallet');
           
         } catch (error) {
-          // Manual creation mode
-          const password = crypto.getRandomValues(new Uint8Array(32));
-          const keyHex = Array.from(password).map(b => b.toString(16).padStart(2, '0')).join('');
-          const encrypted = await encryptMessage(secretMessage, keyHex);
-          const tokenDescription = `🔐 WHISPER BOMB - Encrypted Secret Token
-
-Reveals at: $${parseInt(threshold).toLocaleString()} market cap
-Status: SEALED 🔒
-Created: ${new Date().toLocaleDateString()}
-
-⚠️ Secret content unknown - trade at your own risk!
-
-Encrypted: ${encrypted.substring(0, 80)}...
-
-When market cap hits threshold, decryption key will be posted to Solana blockchain.
-
-This is a speculative token. Secret may or may not have value.
-Created via Whistle Privacy Tools.`;
-          const creator = window?.solana ? (await window.solana.connect()).publicKey.toString() : (launchWallet?.publicKey || 'unknown');
-          
-          setCreatedBomb({
-            title: bombTitle,
-            threshold: threshold,
-            metadata: tokenDescription,
-            tokenName: tokenName,
-            tokenSymbol: tokenSymbol,
-            decryptKey: keyHex,
-            encrypted: encrypted,
-            creator: creator,
-            created: Date.now(),
-            manual: true
-          });
-          
-          pushToast('✅ Secret encrypted! Ready for pump.fun', 'ok');
+          console.error('Create failed:', error);
+          pushToast('Creation failed. Please retry.', 'err');
         } finally {
           setIsCreatingToken(false);
         }
