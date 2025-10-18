@@ -5515,36 +5515,60 @@
             console.log('DexScreener API unavailable, using fallback');
           }
           
-          // Verify ownership: Check if connected wallet is mint authority or metadata update authority
+          // Verify ownership: Check if connected wallet is the creator
           let verified = false;
           let verificationMethod = '';
           const connectedWallet = window.solana.publicKey.toString();
           
           try{
-            // Get mint account info
-            const mintResp = await fetch(rpc, {
-              method: 'POST',
-              headers: {'Content-Type':'application/json'},
-              body: JSON.stringify({
-                jsonrpc:'2.0',
-                id:3,
-                method:'getAccountInfo',
-                params:[addr, {encoding:'jsonParsed'}]
-              })
-            });
-            const mintData = await mintResp.json();
-            const mintAuthority = mintData?.result?.value?.data?.parsed?.info?.mintAuthority;
-            
-            if(mintAuthority === connectedWallet){
-              verified = true;
-              verificationMethod = 'Mint Authority';
+            // Method 1: Use Solana Tracker API to get token creator
+            try{
+              const trackerResp = await fetch(`https://data.solanatracker.io/tokens/${addr}`, {
+                headers: {
+                  'x-api-key': '4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0'
+                }
+              });
+              
+              if(trackerResp.ok){
+                const trackerData = await trackerResp.json();
+                const creator = trackerData?.creator || trackerData?.mint?.creator || trackerData?.token?.creator;
+                
+                console.log('Solana Tracker - Creator:', creator, 'Connected:', connectedWallet);
+                
+                if(creator && creator === connectedWallet){
+                  verified = true;
+                  verificationMethod = 'Creator (Solana Tracker)';
+                }
+              }
+            }catch(e){
+              console.log('Solana Tracker API error:', e);
             }
             
-            // If not mint authority, check metadata update authority
+            // Method 2: Check mint authority (fallback)
             if(!verified){
-              // Derive metadata PDA for this mint
-              const METADATA_PROGRAM_ID = 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s';
-              // For simplicity, we'll check via transaction history as fallback
+              const mintResp = await fetch(rpc, {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({
+                  jsonrpc:'2.0',
+                  id:3,
+                  method:'getAccountInfo',
+                  params:[addr, {encoding:'jsonParsed'}]
+                })
+              });
+              const mintData = await mintResp.json();
+              const mintAuthority = mintData?.result?.value?.data?.parsed?.info?.mintAuthority;
+              
+              console.log('Mint Authority:', mintAuthority, 'Connected:', connectedWallet);
+              
+              if(mintAuthority === connectedWallet){
+                verified = true;
+                verificationMethod = 'Mint Authority';
+              }
+            }
+            
+            // Method 3: Check transaction history (last resort)
+            if(!verified){
               const sigResp = await fetch(rpc, {
                 method: 'POST',
                 headers: {'Content-Type':'application/json'},
@@ -5552,14 +5576,15 @@
                   jsonrpc:'2.0',
                   id:4,
                   method:'getSignaturesForAddress',
-                  params:[addr, {limit:100}]
+                  params:[addr, {limit:50}]
                 })
               });
               const sigData = await sigResp.json();
               const signatures = sigData?.result || [];
               
-              // Check first few transactions to see if connected wallet was the creator
-              for(let sig of signatures.slice(0, 10)){
+              // Check the FIRST transaction (creation transaction)
+              if(signatures.length > 0){
+                const firstSig = signatures[signatures.length - 1]; // Last in array = first chronologically
                 try{
                   const txResp = await fetch(rpc, {
                     method: 'POST',
@@ -5568,47 +5593,32 @@
                       jsonrpc:'2.0',
                       id:5,
                       method:'getTransaction',
-                      params:[sig.signature, {encoding:'jsonParsed', maxSupportedTransactionVersion:0}]
+                      params:[firstSig.signature, {encoding:'jsonParsed', maxSupportedTransactionVersion:0}]
                     })
                   });
                   const txData = await txResp.json();
                   
-                  // Try multiple ways to get the fee payer
+                  // Get fee payer (first account key)
                   let feePayer = null;
-                  
-                  // Method 1: accountKeys array (parsed format)
                   if(txData?.result?.transaction?.message?.accountKeys?.[0]?.pubkey){
                     feePayer = txData.result.transaction.message.accountKeys[0].pubkey;
-                  }
-                  // Method 2: accountKeys array (string format)
-                  else if(Array.isArray(txData?.result?.transaction?.message?.accountKeys) && 
-                          typeof txData.result.transaction.message.accountKeys[0] === 'string'){
+                  } else if(Array.isArray(txData?.result?.transaction?.message?.accountKeys)){
                     feePayer = txData.result.transaction.message.accountKeys[0];
                   }
-                  // Method 3: Check meta.fee field to confirm transaction exists
-                  else if(txData?.result?.meta){
-                    // Transaction exists, try to get signer from instructions
-                    const instructions = txData?.result?.transaction?.message?.instructions || [];
-                    if(instructions.length > 0 && instructions[0].accounts?.[0]){
-                      feePayer = instructions[0].accounts[0];
-                    }
-                  }
                   
-                  console.log('Checking transaction:', sig.signature, 'Fee payer:', feePayer, 'Connected:', connectedWallet);
+                  console.log('First Transaction - Fee payer:', feePayer, 'Connected:', connectedWallet);
                   
                   if(feePayer && feePayer === connectedWallet){
                     verified = true;
-                    verificationMethod = 'Creator (Transaction History)';
-                    break;
+                    verificationMethod = 'Creator (First Transaction)';
                   }
                 }catch(e){
-                  console.log('Error checking transaction:', e);
+                  console.log('Error checking first transaction:', e);
                 }
               }
             }
           }catch(e){
             console.error('Verification check failed:', e);
-            // If verification fails, we'll allow it but mark as unverified
           }
           
           setCredTokens(prev=>prev.map(t=>
