@@ -5572,9 +5572,31 @@
                     })
                   });
                   const txData = await txResp.json();
-                  const feePayer = txData?.result?.transaction?.message?.accountKeys?.[0]?.pubkey;
                   
-                  if(feePayer === connectedWallet){
+                  // Try multiple ways to get the fee payer
+                  let feePayer = null;
+                  
+                  // Method 1: accountKeys array (parsed format)
+                  if(txData?.result?.transaction?.message?.accountKeys?.[0]?.pubkey){
+                    feePayer = txData.result.transaction.message.accountKeys[0].pubkey;
+                  }
+                  // Method 2: accountKeys array (string format)
+                  else if(Array.isArray(txData?.result?.transaction?.message?.accountKeys) && 
+                          typeof txData.result.transaction.message.accountKeys[0] === 'string'){
+                    feePayer = txData.result.transaction.message.accountKeys[0];
+                  }
+                  // Method 3: Check meta.fee field to confirm transaction exists
+                  else if(txData?.result?.meta){
+                    // Transaction exists, try to get signer from instructions
+                    const instructions = txData?.result?.transaction?.message?.instructions || [];
+                    if(instructions.length > 0 && instructions[0].accounts?.[0]){
+                      feePayer = instructions[0].accounts[0];
+                    }
+                  }
+                  
+                  console.log('Checking transaction:', sig.signature, 'Fee payer:', feePayer, 'Connected:', connectedWallet);
+                  
+                  if(feePayer && feePayer === connectedWallet){
                     verified = true;
                     verificationMethod = 'Creator (Transaction History)';
                     break;
