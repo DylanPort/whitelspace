@@ -5772,13 +5772,21 @@
           console.log('Score data:', scoreData);
           console.log('Proof string:', proofStr);
           
-          setCredScore(scoreData);
-          setCredProof(proofStr || '');
-          setCredSignature(signature || '');
-          
-          console.log('State updated successfully');
-          
-          pushToast?.('Credibility proof generated! Copy to share.','ok');
+          // Use setTimeout to ensure React has time to clean up previous render
+          setTimeout(() => {
+            setCredScore(scoreData);
+            setCredProof(proofStr || '');
+            setCredSignature(signature || '');
+            
+            console.log('State updated successfully');
+            
+            // Reinitialize lucide icons after state update
+            setTimeout(() => {
+              if(window.lucide) window.lucide.createIcons();
+            }, 100);
+            
+            pushToast?.('Credibility proof generated! Copy to share.','ok');
+          }, 50);
         }catch(e){
           console.error('Error generating proof:', e);
           console.error('Error stack:', e.stack);
@@ -6063,7 +6071,7 @@
 
                       {/* Credibility Score Display */}
                       {credScore && credProof && typeof credProof === 'string' && credProof.length > 0 && (
-                        <div className="p-5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-green-500/10 border border-emerald-400/30 shadow-lg animate-in fade-in duration-300">
+                        <div key={credProof} className="p-5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-green-500/10 border border-emerald-400/30 shadow-lg animate-in fade-in duration-300">
                           <div className="flex items-center gap-2 mb-4">
                             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center">
                               <i data-lucide="trophy" className="w-5 h-5 text-white"></i>
