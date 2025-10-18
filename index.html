@@ -5730,11 +5730,11 @@
           
           const scoreData = {
             totalTokens: total,
-            avgMarketCap: Math.round(avgMarketCap),
-            avgHolders: Math.round(avgHolders),
-            tokens100x: max100x,
-            tokens10x: max10x,
-            maxATH: maxATH.toFixed(1),
+            avgMarketCap: Math.round(avgMarketCap) || 0,
+            avgHolders: Math.round(avgHolders) || 0,
+            tokens100x: max100x || 0,
+            tokens10x: max10x || 0,
+            maxATH: (maxATH && isFinite(maxATH)) ? maxATH.toFixed(1) : '1.0',
             timestamp: Date.now()
           };
           
