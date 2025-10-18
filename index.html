@@ -5521,12 +5521,14 @@
           const connectedWallet = window.solana.publicKey.toString();
           
           try{
-            // Method 1: Use Solscan API to get token creator (most reliable)
+            // Method 1: Use Solscan API via CORS proxy to get token creator
             try{
-              const solscanResp = await fetch(`https://api.solscan.io/token/meta?token=${addr}`);
+              // Use CORS proxy to access Solscan API
+              const solscanResp = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://api.solscan.io/token/meta?token=${addr}`)}`);
               
               if(solscanResp.ok){
-                const solscanData = await solscanResp.json();
+                const proxyData = await solscanResp.json();
+                const solscanData = JSON.parse(proxyData.contents);
                 
                 console.log('Solscan API Response:', solscanData);
                 
