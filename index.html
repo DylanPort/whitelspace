@@ -6329,17 +6329,14 @@
                         <label className="text-white text-sm font-medium">name</label>
                         <span className="text-white/50 text-xs">{name.length}/32</span>
                   </div>
-                      <div className="relative">
-                        <input 
-                          value={isObfuscated ? obfuscatedName : name} 
-                          onChange={e=>setName(e.target.value)} 
-                          placeholder="coin name" 
-                          maxLength={32}
-                          className={`w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white text-sm placeholder-white/40 focus:border-white/40 focus:ring-2 focus:ring-white/20 outline-none transition-all pr-10 ${isObfuscated ? 'font-mono tracking-widest text-xs leading-tight' : ''}`}
-                          readOnly={isObfuscated}
-                        />
-                        <i data-lucide="sparkles" className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-purple-400"></i>
-                      </div>
+                      <input 
+                        value={isObfuscated ? obfuscatedName : name} 
+                        onChange={e=>setName(e.target.value)} 
+                        placeholder="coin name" 
+                        maxLength={32}
+                        className={`w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white text-sm placeholder-white/40 focus:border-white/40 focus:ring-2 focus:ring-white/20 outline-none transition-all ${isObfuscated ? 'font-mono tracking-widest text-xs leading-tight' : ''}`}
+                        readOnly={isObfuscated}
+                      />
                     </div>
 
                     {/* Ticker Field */}
