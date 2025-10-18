@@ -5718,6 +5718,9 @@
         
         setCredLoading(true);
         try{
+          console.log('Starting credibility proof generation...');
+          console.log('Tokens:', credTokens);
+          
           // Calculate score metrics
           const total = credTokens.length;
           const totalMarketCap = credTokens.reduce((sum,t)=>sum+(t.marketCap||0),0);
@@ -5727,6 +5730,8 @@
           const max100x = credTokens.filter(t=>(t.athMultiplier||1)>=100).length;
           const max10x = credTokens.filter(t=>(t.athMultiplier||1)>=10).length;
           const maxATH = Math.max(...credTokens.map(t=>t.athMultiplier||1));
+          
+          console.log('Calculated metrics:', {total, avgMarketCap, avgHolders, max100x, max10x, maxATH});
           
           const scoreData = {
             totalTokens: total,
@@ -5764,14 +5769,20 @@
             pushToast?.('Warning: Could not sign proof. It will still work but without signature.','err');
           }
           
+          console.log('Score data:', scoreData);
+          console.log('Proof string:', proofStr);
+          
           setCredScore(scoreData);
-          setCredProof(proofStr);
-          setCredSignature(signature);
+          setCredProof(proofStr || '');
+          setCredSignature(signature || '');
+          
+          console.log('State updated successfully');
           
           pushToast?.('Credibility proof generated! Copy to share.','ok');
         }catch(e){
-          console.error(e);
-          pushToast?.('Failed to generate proof','err');
+          console.error('Error generating proof:', e);
+          console.error('Error stack:', e.stack);
+          pushToast?.(`Failed to generate proof: ${e.message}`,'err');
         }finally{
           setCredLoading(false);
         }
@@ -6051,7 +6062,7 @@
                       )}
 
                       {/* Credibility Score Display */}
-                      {credScore && credProof && (
+                      {credScore && credProof && typeof credProof === 'string' && credProof.length > 0 && (
                         <div className="p-5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-green-500/10 border border-emerald-400/30 shadow-lg animate-in fade-in duration-300">
                           <div className="flex items-center gap-2 mb-4">
                             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center">
