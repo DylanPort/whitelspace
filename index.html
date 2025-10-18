@@ -5521,41 +5521,61 @@
           const connectedWallet = window.solana.publicKey.toString();
           
           try{
-            // Method 1: Use Solana Tracker API to get token creator
+            // Method 1: Use Solscan API to get token creator (most reliable)
             try{
-              const trackerResp = await fetch(`https://data.solanatracker.io/tokens/${addr}`, {
-                headers: {
-                  'x-api-key': '3f5cbb18-8d2f-4a87-ae09-8555c243c705'
-                }
-              });
+              const solscanResp = await fetch(`https://api.solscan.io/token/meta?token=${addr}`);
               
-              if(trackerResp.ok){
-                const trackerData = await trackerResp.json();
+              if(solscanResp.ok){
+                const solscanData = await solscanResp.json();
                 
-                // Log the full response to see structure
-                console.log('Solana Tracker API Response:', trackerData);
+                console.log('Solscan API Response:', solscanData);
                 
-                // Try multiple possible field locations for creator
-                const creator = trackerData?.creator || 
-                               trackerData?.mint?.creator || 
-                               trackerData?.token?.creator ||
-                               trackerData?.pools?.[0]?.creator ||
-                               trackerData?.deployer ||
-                               trackerData?.authority ||
-                               trackerData?.token?.deployer ||
-                               trackerData?.token?.authority;
+                // Solscan returns creator in the data object
+                const creator = solscanData?.data?.creator || 
+                               solscanData?.creator ||
+                               solscanData?.data?.authority;
                 
-                console.log('Solana Tracker - Creator:', creator, 'Connected:', connectedWallet);
+                console.log('Solscan - Creator:', creator, 'Connected:', connectedWallet);
                 
                 if(creator && creator === connectedWallet){
                   verified = true;
-                  verificationMethod = 'Creator (Solana Tracker)';
+                  verificationMethod = 'Creator (Solscan)';
                 }
               } else {
-                console.log('Solana Tracker API returned status:', trackerResp.status);
+                console.log('Solscan API returned status:', solscanResp.status);
               }
             }catch(e){
-              console.log('Solana Tracker API error:', e);
+              console.log('Solscan API error:', e);
+            }
+            
+            // Method 1.5: Try Solana Tracker as backup
+            if(!verified){
+              try{
+                const trackerResp = await fetch(`https://data.solanatracker.io/tokens/${addr}`, {
+                  headers: {
+                    'x-api-key': '3f5cbb18-8d2f-4a87-ae09-8555c243c705'
+                  }
+                });
+                
+                if(trackerResp.ok){
+                  const trackerData = await trackerResp.json();
+                  
+                  const creator = trackerData?.creator || 
+                                 trackerData?.mint?.creator || 
+                                 trackerData?.token?.creator ||
+                                 trackerData?.deployer ||
+                                 trackerData?.authority;
+                  
+                  console.log('Solana Tracker - Creator:', creator, 'Connected:', connectedWallet);
+                  
+                  if(creator && creator === connectedWallet){
+                    verified = true;
+                    verificationMethod = 'Creator (Solana Tracker)';
+                  }
+                }
+              }catch(e){
+                console.log('Solana Tracker API error:', e);
+              }
             }
             
             // Method 1.5: Try to get creator from token metadata (like Solscan does)
