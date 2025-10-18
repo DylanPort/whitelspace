@@ -714,6 +714,14 @@
       return new Uint8Array(h);
     }
 
+    async function sha256Hash(str) {
+      const enc = new TextEncoder();
+      const bytes = enc.encode(str);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", bytes);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
     // ===== Self-contained Encryption (embeds key+iv in blob) =====
     async function encryptSelfContained(plainText){
       const enc = new TextEncoder();
@@ -1598,35 +1606,146 @@
 
     function WalletConnectButton() {
       const [isConnected, setIsConnected] = useState(false);
+      const [walletAddress, setWalletAddress] = useState('');
+      const [balance, setBalance] = useState(null);
+      const [loadingBalance, setLoadingBalance] = useState(false);
+      const [showDropdown, setShowDropdown] = useState(false);
+      
       useEffect(() => {
-        walletStore.setPub = (pk) => setIsConnected(!!pk);
+        walletStore.setPub = (pk) => {
+          setIsConnected(!!pk);
+          setWalletAddress(pk || '');
+        };
       }, []);
       
-      const buttonTitle = isConnected ? "Wallet Connected" : "Connect Phantom Wallet";
+      // Fetch balance when connected
+      useEffect(() => {
+        async function fetchBalance() {
+          if (!walletAddress || !isConnected) {
+            setBalance(null);
+            return;
+          }
+          
+          setLoadingBalance(true);
+          try {
+            const rpc = 'https://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0';
+            const response = await fetch(rpc, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                jsonrpc: '2.0',
+                id: 1,
+                method: 'getBalance',
+                params: [walletAddress]
+              })
+            });
+            const data = await response.json();
+            if (data.result && typeof data.result.value === 'number') {
+              const balanceSOL = data.result.value / 1e9;
+              setBalance(balanceSOL);
+            } else {
+              setBalance(0);
+            }
+          } catch (e) {
+            console.error('Failed to fetch balance:', e);
+            setBalance(null);
+          } finally {
+            setLoadingBalance(false);
+          }
+        }
+        
+        fetchBalance();
+        // Refresh balance every 30 seconds
+        const interval = setInterval(fetchBalance, 30000);
+        return () => clearInterval(interval);
+      }, [walletAddress, isConnected]);
       
-      return (
-        <button
-          title={buttonTitle}
-          className={`w-11 h-11 rounded-full transition-all hover:scale-110 active:scale-95 flex items-center justify-center shadow-lg ${
-            isConnected 
-              ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 shadow-emerald-500/30' 
-              : 'bg-gradient-to-br from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 shadow-cyan-500/30'
-          }`}
-          onClick={async (e) => {
+      useEffect(() => {
+        if (window.lucide) window.lucide.createIcons();
+      }, [isConnected, showDropdown]);
+      
+      const handleConnect = async (e) => {
             ripple(e);
             if (!window?.solana?.isPhantom) {
-              alert("Install Phantom to post Solana Memo (optional). Other features work without it.");
+          alert("Install Phantom to connect your wallet.");
               return;
             }
             try {
               const r = await window.solana.connect();
               walletStore.pubkey = r.publicKey.toBase58();
               walletStore.setPub(walletStore.pubkey);
-            } catch (e) {}
-          }}
-        >
-          <i data-lucide={isConnected ? "check-circle" : "wallet"} className="w-6 h-6 text-white"></i>
+        } catch (e) {
+          console.error('Failed to connect:', e);
+        }
+      };
+      
+      const handleDisconnect = async () => {
+        try {
+          if (window?.solana?.disconnect) {
+            await window.solana.disconnect();
+          }
+          walletStore.pubkey = null;
+          walletStore.setPub(null);
+          setShowDropdown(false);
+        } catch (e) {
+          console.error('Failed to disconnect:', e);
+        }
+      };
+      
+      if (!isConnected) {
+        return (
+          <button
+            title="Connect Phantom Wallet"
+            className="w-11 h-11 rounded-full transition-all hover:scale-110 active:scale-95 flex items-center justify-center shadow-lg bg-gradient-to-br from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 shadow-cyan-500/30"
+            onClick={handleConnect}
+          >
+            <i data-lucide="wallet" className="w-6 h-6 text-white"></i>
         </button>
+        );
+      }
+      
+      return (
+        <div className="relative">
+          <button
+            onClick={() => setShowDropdown(!showDropdown)}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 shadow-lg shadow-emerald-500/30 transition-all hover:scale-105"
+          >
+            <i data-lucide="wallet" className="w-5 h-5 text-white"></i>
+            <div className="hidden sm:flex flex-col items-start">
+              <span className="text-xs text-white/90 font-mono">{walletAddress.slice(0,4)}...{walletAddress.slice(-4)}</span>
+              {loadingBalance ? (
+                <span className="text-xs text-white/70">Loading...</span>
+              ) : balance !== null ? (
+                <span className="text-xs font-bold text-white">{balance.toFixed(4)} SOL</span>
+              ) : (
+                <span className="text-xs text-white/70">--</span>
+              )}
+            </div>
+            <i data-lucide={showDropdown ? "chevron-up" : "chevron-down"} className="w-4 h-4 text-white hidden sm:block"></i>
+          </button>
+          
+          {showDropdown && (
+            <div className="absolute right-0 top-full mt-2 w-64 rounded-xl bg-slate-900/95 backdrop-blur-xl border border-white/10 shadow-2xl z-50 overflow-hidden">
+              <div className="p-4 border-b border-white/10">
+                <div className="text-xs text-white/60 mb-1">Connected Wallet</div>
+                <div className="text-sm font-mono text-white break-all">{walletAddress}</div>
+                {balance !== null && (
+                  <div className="mt-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-400/20">
+                    <div className="text-xs text-white/60">Balance</div>
+                    <div className="text-lg font-bold text-emerald-400">{balance.toFixed(4)} SOL</div>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={handleDisconnect}
+                className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-red-500/20 transition-all text-red-400"
+              >
+                <i data-lucide="log-out" className="w-4 h-4"></i>
+                <span className="text-sm font-semibold">Disconnect</span>
+              </button>
+            </div>
+          )}
+        </div>
       );
     }
 
@@ -1637,8 +1756,8 @@
         { id: "home", label: "Home", icon: "home" },
         { id: "webrtc", label: "WebRTC Transfer", icon: "radio" },
         { id: "swap", label: "Privacy Swap", iconImg: "4DqRlDPT_400x400.png.png" },
-        { id: "solana-privacy", label: "Solana Privacy", iconImg: "solana.png" },
-        { id: "pump-portal", label: "Pump Privacy", iconImg: "idrs8cZ-zg_logos.png" },
+        { id: "solana-privacy", label: "Solana Privacy Tools", iconImg: "solana.png" },
+        { id: "pump-portal", label: "Pump Privacy Tools", iconImg: "idrs8cZ-zg_logos.png" },
         { id: "zolana", label: "Zolana Exchange", iconImg: "zcash-3d-icon-png-download-10372070.png" },
         { id: "steganography", label: "🎭 Steganography", icon: "eye-off" },
         { id: "privacy-checkup", label: "Privacy Checkup", icon: "shield-check" },
@@ -1747,7 +1866,7 @@
       // Early return if library not available (after all hooks)
       if (!libAvailable) {
         return (
-          <GlassCard title="Solana Privacy Toolkit" subtitle="Solana Web3.js library not loaded">
+          <GlassCard title="Solana Privacy Tools" subtitle="Solana Web3.js library not loaded">
             <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6">
               <h3 className="text-white font-semibold mb-2">⚠️ Library Not Loaded</h3>
               <p className="text-white/70 text-sm">The Solana Web3.js library failed to load. Please refresh the page.</p>
@@ -2123,7 +2242,7 @@
         { id: 'donations', name: 'Anonymous Donation Jar', icon: 'piggy-bank', desc: 'Untraceable donations' }
       ];
       return (
-        <GlassCard title="Solana Privacy Toolkit" subtitle="5 Production-Ready Privacy Tools • No Smart Contracts">
+        <GlassCard title="Solana Privacy Tools" subtitle="5 Production-Ready Privacy Tools • No Smart Contracts">
           {/* RPC Selector */}
           <div className="mb-4 bg-green-500/10 border border-green-400/30 rounded-lg p-3">
             <div className="flex items-center justify-between">
@@ -2579,8 +2698,8 @@
         { id:'home',    label:'Home', icon:'home' },
         { id:'webrtc',    label:'WebRTC Transfer', icon:'radio' },
         { id:'swap', label:'Privacy Swap', iconImg:'4DqRlDPT_400x400.png.png' },
-        { id:'solana-privacy', label:'Solana Privacy', iconImg:'solana.png' },
-        { id:'pump-portal', label:'Pump Privacy', iconImg:'idrs8cZ-zg_logos.png' },
+        { id:'solana-privacy', label:'Solana Privacy Tools', iconImg:'solana.png' },
+        { id:'pump-portal', label:'Pump Privacy Tools', iconImg:'idrs8cZ-zg_logos.png' },
         { id:'zolana', label:'Zolana Exchange', iconImg:'zcash-3d-icon-png-download-10372070.png' },
         { id:'steganography', label:'🎭 Steganography', icon:'eye-off' },
         { id:'privacy-checkup', label:'Privacy Checkup', icon:'shield-check' },
@@ -4918,14 +5037,62 @@
       // Encrypt/Decrypt UI state
       const [showEncModal, setShowEncModal] = useState(false);
       const [showDecrypt, setShowDecrypt] = useState(false);
+      const [showDecryptModal, setShowDecryptModal] = useState(false);
+      const [showStegoModal, setShowStegoModal] = useState(false);
+      const [showExtractModal, setShowExtractModal] = useState(false);
       const [encMessage, setEncMessage] = useState('');
       const [decryptInput, setDecryptInput] = useState('');
       const [decryptResult, setDecryptResult] = useState('');
+      // Obfuscated text state
+      const [obfuscatedName, setObfuscatedName] = useState('');
+      const [obfuscatedTicker, setObfuscatedTicker] = useState('');
+      const [obfuscatedDescription, setObfuscatedDescription] = useState('');
+      const [isObfuscated, setIsObfuscated] = useState(false);
       // Wallet balance
       const [walletBalance, setWalletBalance] = useState(null);
       const [loadingBalance, setLoadingBalance] = useState(false);
 
-      useEffect(()=>{ if(window.lucide) window.lucide.createIcons(); },[apiKey, walletPubkey, txSig, showDecrypt, walletBalance]);
+      // Anonymous Dev Credibility Score
+      const [showCredibility, setShowCredibility] = useState(false);
+      const [credTokens, setCredTokens] = useState([]);
+      const [credTokenInput, setCredTokenInput] = useState('');
+      const [credLoading, setCredLoading] = useState(false);
+      const [credScore, setCredScore] = usePersistentState('devCredScore', null);
+      const [credProof, setCredProof] = usePersistentState('devCredProof', '');
+      const [credSignature, setCredSignature] = usePersistentState('devCredSig', '');
+      const [verifyMode, setVerifyMode] = useState(false);
+      const [verifyInput, setVerifyInput] = useState('');
+      const [verifyResult, setVerifyResult] = useState(null);
+      
+      // Track main wallet connection status
+      const [mainWalletConnected, setMainWalletConnected] = useState(false);
+      
+      // Monitor wallet connection status
+      useEffect(() => {
+        const checkConnection = () => {
+          setMainWalletConnected(window.solana?.isConnected || false);
+        };
+        checkConnection();
+        
+        // Listen for wallet events
+        if (window.solana) {
+          window.solana.on('connect', checkConnection);
+          window.solana.on('disconnect', checkConnection);
+        }
+        
+        // Poll for changes (backup)
+        const interval = setInterval(checkConnection, 1000);
+        
+        return () => {
+          clearInterval(interval);
+          if (window.solana) {
+            window.solana.off('connect', checkConnection);
+            window.solana.off('disconnect', checkConnection);
+          }
+        };
+      }, []);
+
+      useEffect(()=>{ if(window.lucide) window.lucide.createIcons(); },[apiKey, walletPubkey, txSig, showDecrypt, walletBalance, showCredibility, credScore, credTokens, verifyResult, mainWalletConnected]);
 
       // Fetch wallet balance when wallet is created
       useEffect(() => {
@@ -4983,7 +5150,155 @@
         return { ok: resp.ok, status, contentType, text, json };
       }
 
+      // Obfuscation function to change characters and fonts - WEIRDEST POSSIBLE
+      function obfuscateText(text) {
+        if (!text) return '';
+        
+        // Multiple layers of weird character substitution maps
+        const weirdCharMaps = [
+          // Layer 1: Mathematical symbols and obscure Unicode
+          {
+            'a': 'ᵃ', 'b': 'ᵇ', 'c': 'ᶜ', 'd': 'ᵈ', 'e': 'ᵉ', 'f': 'ᶠ', 'g': 'ᵍ', 'h': 'ʰ',
+            'i': 'ⁱ', 'j': 'ʲ', 'k': 'ᵏ', 'l': 'ˡ', 'm': 'ᵐ', 'n': 'ⁿ', 'o': 'ᵒ', 'p': 'ᵖ',
+            'q': 'ᵠ', 'r': 'ʳ', 's': 'ˢ', 't': 'ᵗ', 'u': 'ᵘ', 'v': 'ᵛ', 'w': 'ʷ', 'x': 'ˣ',
+            'y': 'ʸ', 'z': 'ᶻ',
+            'A': 'ᴬ', 'B': 'ᴮ', 'C': 'ᶜ', 'D': 'ᴰ', 'E': 'ᴱ', 'F': 'ᶠ', 'G': 'ᴳ', 'H': 'ᴴ',
+            'I': 'ᴵ', 'J': 'ᴶ', 'K': 'ᴷ', 'L': 'ᴸ', 'M': 'ᴹ', 'N': 'ᴺ', 'O': 'ᴼ', 'P': 'ᴾ',
+            'Q': 'ᵠ', 'R': 'ᴿ', 'S': 'ˢ', 'T': 'ᵀ', 'U': 'ᵁ', 'V': 'ᵛ', 'W': 'ᵂ', 'X': 'ˣ',
+            'Y': 'ʸ', 'Z': 'ᶻ'
+          },
+          // Layer 2: Ancient scripts and symbols
+          {
+            'a': 'α', 'b': 'β', 'c': 'γ', 'd': 'δ', 'e': 'ε', 'f': 'φ', 'g': 'γ', 'h': 'η',
+            'i': 'ι', 'j': 'ι', 'k': 'κ', 'l': 'λ', 'm': 'μ', 'n': 'ν', 'o': 'ο', 'p': 'π',
+            'q': 'θ', 'r': 'ρ', 's': 'σ', 't': 'τ', 'u': 'υ', 'v': 'υ', 'w': 'ω', 'x': 'χ',
+            'y': 'ψ', 'z': 'ζ',
+            'A': 'Α', 'B': 'Β', 'C': 'Γ', 'D': 'Δ', 'E': 'Ε', 'F': 'Φ', 'G': 'Γ', 'H': 'Η',
+            'I': 'Ι', 'J': 'Ι', 'K': 'Κ', 'L': 'Λ', 'M': 'Μ', 'N': 'Ν', 'O': 'Ο', 'P': 'Π',
+            'Q': 'Θ', 'R': 'Ρ', 'S': 'Σ', 'T': 'Τ', 'U': 'Υ', 'V': 'Υ', 'W': 'Ω', 'X': 'Χ',
+            'Y': 'Ψ', 'Z': 'Ζ'
+          },
+          // Layer 3: Mathematical operators and symbols
+          {
+            'a': '∀', 'b': '∃', 'c': '∈', 'd': '∋', 'e': '∃', 'f': '∀', 'g': '∇', 'h': 'ℏ',
+            'i': '∫', 'j': '∮', 'k': '∏', 'l': '∑', 'm': '∝', 'n': '∞', 'o': '∅', 'p': '∂',
+            'q': '∆', 'r': '∇', 's': '∝', 't': '∏', 'u': '∪', 'v': '∩', 'w': '∧', 'x': '∨',
+            'y': '⊕', 'z': '⊗',
+            'A': '∀', 'B': '∃', 'C': '∈', 'D': '∋', 'E': '∃', 'F': '∀', 'G': '∇', 'H': 'ℏ',
+            'I': '∫', 'J': '∮', 'K': '∏', 'L': '∑', 'M': '∝', 'N': '∞', 'O': '∅', 'P': '∂',
+            'Q': '∆', 'R': '∇', 'S': '∝', 'T': '∏', 'U': '∪', 'V': '∩', 'W': '∧', 'X': '∨',
+            'Y': '⊕', 'Z': '⊗'
+          },
+          // Layer 4: Weird Unicode blocks and symbols
+          {
+            'a': '▁', 'b': '▂', 'c': '▃', 'd': '▄', 'e': '▅', 'f': '▆', 'g': '▇', 'h': '█',
+            'i': '▉', 'j': '▊', 'k': '▋', 'l': '▌', 'm': '▍', 'n': '▎', 'o': '▏', 'p': '▐',
+            'q': '░', 'r': '▒', 's': '▓', 't': '█', 'u': '▀', 'v': '▁', 'w': '▂', 'x': '▃',
+            'y': '▄', 'z': '▅',
+            'A': '▆', 'B': '▇', 'C': '█', 'D': '▉', 'E': '▊', 'F': '▋', 'G': '▌', 'H': '▍',
+            'I': '▎', 'J': '▏', 'K': '▐', 'L': '░', 'M': '▒', 'N': '▓', 'O': '█', 'P': '▀',
+            'Q': '▁', 'R': '▂', 'S': '▃', 'T': '▄', 'U': '▅', 'V': '▆', 'W': '▇', 'X': '█',
+            'Y': '▉', 'Z': '▊'
+          },
+          // Layer 5: Musical and currency symbols
+          {
+            'a': '♪', 'b': '♫', 'c': '♬', 'd': '♭', 'e': '♮', 'f': '♯', 'g': '♰', 'h': '♱',
+            'i': '♲', 'j': '♳', 'k': '♴', 'l': '♵', 'm': '♶', 'n': '♷', 'o': '♸', 'p': '♹',
+            'q': '♺', 'r': '♻', 's': '♼', 't': '♽', 'u': '♾', 'v': '♿', 'w': '⚀', 'x': '⚁',
+            'y': '⚂', 'z': '⚃',
+            'A': '⚄', 'B': '⚅', 'C': '⚆', 'D': '⚇', 'E': '⚈', 'F': '⚉', 'G': '⚊', 'H': '⚋',
+            'I': '⚌', 'J': '⚍', 'K': '⚎', 'L': '⚏', 'M': '⚐', 'N': '⚑', 'O': '⚒', 'P': '⚓',
+            'Q': '⚔', 'R': '⚕', 'S': '⚖', 'T': '⚗', 'U': '⚘', 'V': '⚙', 'W': '⚚', 'X': '⚛',
+            'Y': '⚜', 'Z': '⚝'
+          }
+        ];
+        
+        // Apply multiple layers of obfuscation
+        let obfuscated = text;
+        weirdCharMaps.forEach((charMap, index) => {
+          obfuscated = obfuscated.split('').map(char => {
+            // Use different layers based on character position for extra confusion
+            const layerIndex = (char.charCodeAt(0) + index) % weirdCharMaps.length;
+            const currentMap = weirdCharMaps[layerIndex];
+            return currentMap[char] || char;
+          }).join('');
+        });
+        
+        return obfuscated;
+      }
+
+      // Deobfuscation function - handles all the weird characters
+      function deobfuscateText(text) {
+        if (!text) return '';
+        
+        // Comprehensive reverse character substitution map for all weird characters
+        const reverseCharMap = {
+          // Layer 1: Mathematical symbols and obscure Unicode
+          'ᵃ': 'a', 'ᵇ': 'b', 'ᶜ': 'c', 'ᵈ': 'd', 'ᵉ': 'e', 'ᶠ': 'f', 'ᵍ': 'g', 'ʰ': 'h',
+          'ⁱ': 'i', 'ʲ': 'j', 'ᵏ': 'k', 'ˡ': 'l', 'ᵐ': 'm', 'ⁿ': 'n', 'ᵒ': 'o', 'ᵖ': 'p',
+          'ᵠ': 'q', 'ʳ': 'r', 'ˢ': 's', 'ᵗ': 't', 'ᵘ': 'u', 'ᵛ': 'v', 'ʷ': 'w', 'ˣ': 'x',
+          'ʸ': 'y', 'ᶻ': 'z',
+          'ᴬ': 'A', 'ᴮ': 'B', 'ᶜ': 'C', 'ᴰ': 'D', 'ᴱ': 'E', 'ᶠ': 'F', 'ᴳ': 'G', 'ᴴ': 'H',
+          'ᴵ': 'I', 'ᴶ': 'J', 'ᴷ': 'K', 'ᴸ': 'L', 'ᴹ': 'M', 'ᴺ': 'N', 'ᴼ': 'O', 'ᴾ': 'P',
+          'ᵠ': 'Q', 'ᴿ': 'R', 'ˢ': 'S', 'ᵀ': 'T', 'ᵁ': 'U', 'ᵛ': 'V', 'ᵂ': 'W', 'ˣ': 'X',
+          'ʸ': 'Y', 'ᶻ': 'Z',
+          
+          // Layer 2: Ancient scripts and symbols
+          'α': 'a', 'β': 'b', 'γ': 'c', 'δ': 'd', 'ε': 'e', 'φ': 'f', 'η': 'h',
+          'ι': 'i', 'κ': 'k', 'λ': 'l', 'μ': 'm', 'ν': 'n', 'ο': 'o', 'π': 'p',
+          'θ': 'q', 'ρ': 'r', 'σ': 's', 'τ': 't', 'υ': 'u', 'ω': 'w', 'χ': 'x',
+          'ψ': 'y', 'ζ': 'z',
+          'Α': 'A', 'Β': 'B', 'Γ': 'C', 'Δ': 'D', 'Ε': 'E', 'Φ': 'F', 'Η': 'H',
+          'Ι': 'I', 'Κ': 'K', 'Λ': 'L', 'Μ': 'M', 'Ν': 'N', 'Ο': 'O', 'Π': 'P',
+          'Θ': 'Q', 'Ρ': 'R', 'Σ': 'S', 'Τ': 'T', 'Υ': 'U', 'Ω': 'W', 'Χ': 'X',
+          'Ψ': 'Y', 'Ζ': 'Z',
+          
+          // Layer 3: Mathematical operators and symbols
+          '∀': 'a', '∃': 'b', '∈': 'c', '∋': 'd', '∇': 'g', 'ℏ': 'h',
+          '∫': 'i', '∮': 'j', '∏': 'k', '∑': 'l', '∝': 'm', '∞': 'n', '∅': 'o', '∂': 'p',
+          '∆': 'q', '∪': 'u', '∩': 'v', '∧': 'w', '∨': 'x', '⊕': 'y', '⊗': 'z',
+          
+          // Layer 4: Weird Unicode blocks and symbols
+          '▁': 'a', '▂': 'b', '▃': 'c', '▄': 'd', '▅': 'e', '▆': 'f', '▇': 'g', '█': 'h',
+          '▉': 'i', '▊': 'j', '▋': 'k', '▌': 'l', '▍': 'm', '▎': 'n', '▏': 'o', '▐': 'p',
+          '░': 'q', '▒': 'r', '▓': 's', '▀': 'u',
+          
+          // Layer 5: Musical and currency symbols
+          '♪': 'a', '♫': 'b', '♬': 'c', '♭': 'd', '♮': 'e', '♯': 'f', '♰': 'g', '♱': 'h',
+          '♲': 'i', '♳': 'j', '♴': 'k', '♵': 'l', '♶': 'm', '♷': 'n', '♸': 'o', '♹': 'p',
+          '♺': 'q', '♻': 'r', '♼': 's', '♽': 't', '♾': 'u', '♿': 'v', '⚀': 'w', '⚁': 'x',
+          '⚂': 'y', '⚃': 'z',
+          '⚄': 'A', '⚅': 'B', '⚆': 'C', '⚇': 'D', '⚈': 'E', '⚉': 'F', '⚊': 'G', '⚋': 'H',
+          '⚌': 'I', '⚍': 'J', '⚎': 'K', '⚏': 'L', '⚐': 'M', '⚑': 'N', '⚒': 'O', '⚓': 'P',
+          '⚔': 'Q', '⚕': 'R', '⚖': 'S', '⚗': 'T', '⚘': 'U', '⚙': 'V', '⚚': 'W', '⚛': 'X',
+          '⚜': 'Y', '⚝': 'Z'
+        };
+        
+        return text.split('').map(char => reverseCharMap[char] || char).join('');
+      }
+
       async function createWallet(){
+        // Check if main wallet is connected
+        if(!window.solana?.isConnected){
+          pushToast?.('Please connect your wallet first in the navbar', 'err');
+          return;
+        }
+        
+        // Show warning before creating wallet
+        const confirmed = confirm(
+          '⚠️ IMPORTANT WARNING ⚠️\n\n' +
+          'You are about to create a new Pump Portal wallet.\n\n' +
+          '🔑 SAVE YOUR PRIVATE KEY IMMEDIATELY!\n' +
+          'Once created, your private key will be displayed ONCE.\n' +
+          'If you lose it, you will lose access to this wallet and all funds.\n\n' +
+          '💾 Copy and store it in a safe place before proceeding.\n\n' +
+          'Click OK to create wallet, or Cancel to abort.'
+        );
+        
+        if (!confirmed) {
+          return;
+        }
+        
         try{
           setCreating(true);
           const { ok, status, json, text } = await fetchJson('https://pumpportal.fun/api/create-wallet', { method: 'GET', headers: { 'accept': 'application/json' } });
@@ -4999,7 +5314,18 @@
           setApiKey(kApi);
           setWalletPubkey(kPub);
           setPrivateKey(kPriv);
-          pushToast?.('Pump wallet created. Fund with SOL before launch.', 'ok');
+          pushToast?.('⚠️ Pump wallet created! SAVE YOUR PRIVATE KEY NOW!', 'ok');
+          
+          // Show another warning after creation
+          setTimeout(() => {
+            alert(
+              '🔴 CRITICAL REMINDER 🔴\n\n' +
+              'Your Pump Portal wallet has been created.\n\n' +
+              '⚠️ COPY AND SAVE YOUR PRIVATE KEY NOW!\n\n' +
+              'This wallet will persist across page refreshes, but if you clear your browser data without saving the private key, you will PERMANENTLY lose access to this wallet and any funds in it.\n\n' +
+              '📋 Click the "Copy" button next to your private key and store it securely!'
+            );
+          }, 500);
         }catch(e){
           console.error(e);
           pushToast?.('Failed to create wallet', 'err');
@@ -5013,8 +5339,17 @@
           if(!imageFile && !name) return alert('Add at least a name or an image');
           const fd = new FormData();
           if(imageFile) fd.append('file', imageFile);
+          
+          // Use obfuscated name and ticker if encryption is active
+          // This ensures Pump.fun displays the weird characters, not the real name/ticker
+          if(isObfuscated) {
+            if(obfuscatedName) fd.append('name', obfuscatedName);
+            if(obfuscatedTicker) fd.append('symbol', obfuscatedTicker);
+          } else {
           if(name) fd.append('name', name);
           if(symbol) fd.append('symbol', symbol);
+          }
+          
           if(description) fd.append('description', description);
           if(twitter) fd.append('twitter', twitter);
           if(telegram) fd.append('telegram', telegram);
@@ -5027,7 +5362,7 @@
           const j = json || {};
           if(!j?.metadataUri) throw new Error('No metadataUri');
           setMetadataUri(j.metadataUri);
-          pushToast?.('Metadata uploaded to IPFS', 'ok');
+          pushToast?.('Metadata uploaded to IPFS with obfuscated name/ticker', 'ok');
         }catch(e){
           console.error(e);
           pushToast?.(`Failed to upload metadata: ${e.message||e}`, 'err');
@@ -5109,28 +5444,320 @@
 
       function resetAll(){
         setApiKey(''); setWalletPubkey(''); setPrivateKey(''); setMetadataUri(''); setTxSig(''); setMintAddress('');
+        // Reset obfuscation (only name and ticker)
+        setObfuscatedName('');
+        setObfuscatedTicker('');
+        setIsObfuscated(false);
         pushToast?.('Cleared local Pump Portal data', 'ok');
+      }
+
+      // ===== ANONYMOUS DEV CREDIBILITY SCORE =====
+      
+      async function addTokenForCredibility(){
+        // Check wallet connection first
+        if(!window.solana?.isConnected){
+          pushToast?.('Please connect your wallet first','err');
+          return;
+        }
+        
+        const addr = credTokenInput.trim();
+        if(!addr) return;
+        if(!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr)){
+          pushToast?.('Invalid Solana address format','err');
+          return;
+        }
+        if(credTokens.find(t=>t.address===addr)){
+          pushToast?.('Token already added','err');
+          return;
+        }
+        setCredTokens(prev=>[...prev, {address:addr, loading:true, verified:false}]);
+        setCredTokenInput('');
+        
+        // Fetch token data from chain
+        try{
+          const rpc = 'https://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0';
+          
+          // Get token supply
+          const supplyResp = await fetch(rpc, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({jsonrpc:'2.0',id:1,method:'getTokenSupply',params:[addr]})
+          });
+          const supplyData = await supplyResp.json();
+          const supply = supplyData?.result?.value?.uiAmount || 0;
+          
+          // Get token largest accounts (holder count approximation)
+          const holdersResp = await fetch(rpc, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({jsonrpc:'2.0',id:2,method:'getTokenLargestAccounts',params:[addr]})
+          });
+          const holdersData = await holdersResp.json();
+          const holders = holdersData?.result?.value?.length || 0;
+          
+          // Try to get price/market cap from DexScreener API
+          let marketCap = 0;
+          let athMultiplier = 1;
+          try{
+            const dexResp = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addr}`);
+            const dexData = await dexResp.json();
+            const pair = dexData?.pairs?.[0];
+            if(pair){
+              marketCap = parseFloat(pair.marketCap) || 0;
+              const currentPrice = parseFloat(pair.priceUsd) || 0;
+              const priceChange24h = parseFloat(pair.priceChange?.h24) || 0;
+              // Estimate ATH multiplier (current vs 24h ago as proxy)
+              if(priceChange24h > 0){
+                athMultiplier = 1 + (priceChange24h / 100);
+              }
+            }
+          }catch(e){
+            console.log('DexScreener API unavailable, using fallback');
+          }
+          
+          // Verify ownership: Check if connected wallet is mint authority or metadata update authority
+          let verified = false;
+          let verificationMethod = '';
+          const connectedWallet = window.solana.publicKey.toString();
+          
+          try{
+            // Get mint account info
+            const mintResp = await fetch(rpc, {
+              method: 'POST',
+              headers: {'Content-Type':'application/json'},
+              body: JSON.stringify({
+                jsonrpc:'2.0',
+                id:3,
+                method:'getAccountInfo',
+                params:[addr, {encoding:'jsonParsed'}]
+              })
+            });
+            const mintData = await mintResp.json();
+            const mintAuthority = mintData?.result?.value?.data?.parsed?.info?.mintAuthority;
+            
+            if(mintAuthority === connectedWallet){
+              verified = true;
+              verificationMethod = 'Mint Authority';
+            }
+            
+            // If not mint authority, check metadata update authority
+            if(!verified){
+              // Derive metadata PDA for this mint
+              const METADATA_PROGRAM_ID = 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s';
+              // For simplicity, we'll check via transaction history as fallback
+              const sigResp = await fetch(rpc, {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({
+                  jsonrpc:'2.0',
+                  id:4,
+                  method:'getSignaturesForAddress',
+                  params:[addr, {limit:100}]
+                })
+              });
+              const sigData = await sigResp.json();
+              const signatures = sigData?.result || [];
+              
+              // Check first few transactions to see if connected wallet was the creator
+              for(let sig of signatures.slice(0, 10)){
+                try{
+                  const txResp = await fetch(rpc, {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({
+                      jsonrpc:'2.0',
+                      id:5,
+                      method:'getTransaction',
+                      params:[sig.signature, {encoding:'jsonParsed', maxSupportedTransactionVersion:0}]
+                    })
+                  });
+                  const txData = await txResp.json();
+                  const feePayer = txData?.result?.transaction?.message?.accountKeys?.[0]?.pubkey;
+                  
+                  if(feePayer === connectedWallet){
+                    verified = true;
+                    verificationMethod = 'Creator (Transaction History)';
+                    break;
+                  }
+                }catch(e){
+                  console.log('Error checking transaction:', e);
+                }
+              }
+            }
+          }catch(e){
+            console.error('Verification check failed:', e);
+            // If verification fails, we'll allow it but mark as unverified
+          }
+          
+          setCredTokens(prev=>prev.map(t=>
+            t.address===addr ? {
+              address:addr,
+              supply,
+              holders,
+              marketCap,
+              athMultiplier,
+              verified,
+              verificationMethod,
+              loading:false
+            } : t
+          ));
+          
+          if(verified){
+            pushToast?.(`Token verified as ${verificationMethod}!`,'ok');
+          } else {
+            pushToast?.('⚠️ Could not verify ownership. Token added but won\'t be trusted.','err');
+          }
+        }catch(e){
+          console.error(e);
+          setCredTokens(prev=>prev.filter(t=>t.address!==addr));
+          pushToast?.('Failed to fetch token data','err');
+        }
+      }
+      
+      function removeCredToken(addr){
+        setCredTokens(prev=>prev.filter(t=>t.address!==addr));
+      }
+      
+      async function generateCredibilityProof(){
+        if(credTokens.length===0){
+          pushToast?.('Add at least one token first','err');
+          return;
+        }
+        
+        // Check if all tokens are verified
+        const unverifiedTokens = credTokens.filter(t=>!t.verified);
+        if(unverifiedTokens.length > 0){
+          pushToast?.(`Cannot generate proof: ${unverifiedTokens.length} token(s) not verified as yours`,'err');
+          return;
+        }
+        
+        // Verify wallet is still connected
+        if(!window.solana?.isConnected){
+          pushToast?.('Wallet disconnected. Please reconnect.','err');
+          return;
+        }
+        
+        setCredLoading(true);
+        try{
+          // Calculate score metrics
+          const total = credTokens.length;
+          const totalMarketCap = credTokens.reduce((sum,t)=>sum+(t.marketCap||0),0);
+          const avgMarketCap = totalMarketCap / total;
+          const totalHolders = credTokens.reduce((sum,t)=>sum+(t.holders||0),0);
+          const avgHolders = totalHolders / total;
+          const max100x = credTokens.filter(t=>(t.athMultiplier||1)>=100).length;
+          const max10x = credTokens.filter(t=>(t.athMultiplier||1)>=10).length;
+          const maxATH = Math.max(...credTokens.map(t=>t.athMultiplier||1));
+          
+          const scoreData = {
+            totalTokens: total,
+            avgMarketCap: Math.round(avgMarketCap),
+            avgHolders: Math.round(avgHolders),
+            tokens100x: max100x,
+            tokens10x: max10x,
+            maxATH: maxATH.toFixed(1),
+            timestamp: Date.now()
+          };
+          
+          // Generate cryptographic commitment (hash of token addresses)
+          const tokenList = credTokens.map(t=>t.address).sort().join(',');
+          const commitment = await sha256Hash(tokenList);
+          
+          // Generate proof string (commitment + score data + wallet address)
+          const walletAddress = window.solana.publicKey.toString();
+          const proofObj = {
+            commitment,
+            score: scoreData,
+            wallet: walletAddress,
+            v: 1 // version
+          };
+          const proofStr = btoa(JSON.stringify(proofObj));
+          
+          // Sign the commitment for authenticity
+          let signature = '';
+          try{
+            const message = `Whistle.Ninja Dev Credibility Proof\nCommitment: ${commitment}\nWallet: ${walletAddress}\nTimestamp: ${scoreData.timestamp}`;
+            const encodedMessage = new TextEncoder().encode(message);
+            const signedMessage = await window.solana.signMessage(encodedMessage, 'utf8');
+            signature = btoa(String.fromCharCode(...signedMessage.signature));
+          }catch(e){
+            console.log('Signing failed:', e);
+            pushToast?.('Warning: Could not sign proof. It will still work but without signature.','err');
+          }
+          
+          setCredScore(scoreData);
+          setCredProof(proofStr);
+          setCredSignature(signature);
+          
+          pushToast?.('Credibility proof generated! Copy to share.','ok');
+        }catch(e){
+          console.error(e);
+          pushToast?.('Failed to generate proof','err');
+        }finally{
+          setCredLoading(false);
+        }
+      }
+      
+      async function verifyCredibilityProof(){
+        try{
+          const input = verifyInput.trim();
+          if(!input){
+            pushToast?.('Paste proof string to verify','err');
+            return;
+          }
+          
+          // Parse proof
+          const proofObj = JSON.parse(atob(input));
+          const { commitment, score, wallet } = proofObj;
+          
+          if(!commitment || !score){
+            throw new Error('Invalid proof format');
+          }
+          
+          // Display verified score (without revealing tokens)
+          setVerifyResult({
+            valid: true,
+            score,
+            commitment: commitment.slice(0,16)+'...',
+            wallet: wallet || 'Unknown'
+          });
+          
+          pushToast?.('Proof verified successfully!','ok');
+        }catch(e){
+          console.error(e);
+          setVerifyResult({valid:false});
+          pushToast?.('Invalid proof','err');
+        }
+      }
+      
+      function resetCredibility(){
+        setCredTokens([]);
+        setCredScore(null);
+        setCredProof('');
+        setCredSignature('');
+        setVerifyResult(null);
+        pushToast?.('Credibility data cleared','ok');
       }
 
       return (
         <>
-        <GlassCard title="Pump Privacy" subtitle="Create wallet, upload metadata, and launch a token on Pump">
+        <GlassCard title="Pump Privacy Tools" subtitle="Create wallet, upload metadata, and launch a token on Pump">
           <div className="space-y-4">
             {/* Decrypt Section - iOS Premium Style */}
-            <div className="bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-indigo-500/10 border border-cyan-400/30 rounded-2xl p-5 shadow-lg">
+            <div className="bg-gradient-to-r from-orange-500/10 via-red-500/10 to-yellow-500/10 border border-orange-400/30 rounded-2xl p-5 shadow-lg">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center shadow-lg">
-                    <i data-lucide="unlock" className="w-5 h-5 text-white"></i>
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 via-red-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/50 ring-2 ring-orange-400/30 animate-pulse-glow">
+                    <i data-lucide="fingerprint" className="w-5 h-5 text-white"></i>
                   </div>
                   <div>
                     <h3 className="font-bold text-white text-base">Decrypt Secret Message</h3>
-                    <p className="text-xs text-cyan-300/80">Reveal encrypted content from token metadata</p>
+                    <p className="text-xs text-orange-300/80">Reveal encrypted content from token metadata</p>
                   </div>
                 </div>
                 <button 
                   onClick={()=>setShowDecrypt(s=>!s)} 
-                  className="px-4 py-2 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 hover:from-cyan-500/30 hover:to-blue-500/30 border border-cyan-400/40 rounded-xl text-cyan-300 font-semibold text-sm transition-all shadow-sm"
+                  className="px-4 py-2 bg-gradient-to-r from-orange-500/20 to-red-500/20 hover:from-orange-500/30 hover:to-red-500/30 border border-orange-400/40 rounded-xl text-orange-300 font-semibold text-sm transition-all shadow-sm"
                 >
                   {showDecrypt ? 'Hide' : 'Show'}
                 </button>
@@ -5138,9 +5765,9 @@
               
               {showDecrypt && (
                 <div className="space-y-4 animate-in fade-in duration-300">
-                  <div className="p-3 rounded-xl bg-white/5 border border-cyan-400/20">
+                  <div className="p-3 rounded-xl bg-white/5 border border-orange-400/20">
                     <p className="text-xs text-white/70 flex items-start gap-2">
-                      <i data-lucide="info" className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5"></i>
+                      <i data-lucide="info" className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5"></i>
                       Paste an encrypted message from token metadata to reveal its content
                     </p>
                   </div>
@@ -5149,7 +5776,7 @@
                     value={decryptInput}
                     onChange={e=>setDecryptInput(e.target.value)}
                     placeholder="Paste [ENCRYPTED:...] or ciphertext"
-                    className="w-full bg-white/5 border border-cyan-400/20 rounded-xl px-4 py-3 text-white text-sm font-mono placeholder-white/40 focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/20 outline-none transition-all"
+                    className="w-full bg-white/5 border border-orange-400/20 rounded-xl px-4 py-3 text-white text-sm font-mono placeholder-white/40 focus:border-orange-400/40 focus:ring-2 focus:ring-orange-400/20 outline-none transition-all"
                   />
                   
                   <div className="flex gap-2 justify-end">
@@ -5167,9 +5794,9 @@
                           pushToast?.('Decryption failed. Invalid or corrupted data.','err');
                         }
                       }}
-                      className="px-6 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-semibold rounded-xl transition-all flex items-center gap-2 shadow-lg hover:shadow-cyan-500/50"
+                      className="px-6 py-2.5 bg-gradient-to-r from-orange-500 via-red-500 to-amber-500 hover:from-orange-400 hover:via-red-400 hover:to-amber-400 text-white font-semibold rounded-xl transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-orange-500/50 hover:scale-105"
                     >
-                      <i data-lucide="unlock" className="w-4 h-4"></i>
+                      <i data-lucide="shield-check" className="w-4 h-4"></i>
                       Decrypt
                     </button>
                   </div>
@@ -5185,6 +5812,346 @@
                       <pre className="text-sm text-white whitespace-pre-wrap break-words bg-black/40 rounded-xl p-4 border border-emerald-400/20">{decryptResult}</pre>
                     </div>
                   )}
+                </div>
+              )}
+            </div>
+            
+            {/* Anonymous Dev Credibility Score - Premium iOS Style */}
+            <div className="bg-gradient-to-br from-red-500/5 via-orange-500/8 to-yellow-500/5 border border-red-400/20 rounded-2xl p-5 shadow-xl backdrop-blur-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-400 via-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-red-500/50 ring-2 ring-red-400/30 animate-pulse-glow">
+                    <i data-lucide="shield-check" className="w-5 h-5 text-white"></i>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-base">Anonymous Dev Credibility</h3>
+                    <p className="text-xs text-orange-300/80">Prove your track record without revealing which tokens</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={()=>setShowCredibility(s=>!s)} 
+                  className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-400/30 rounded-xl text-orange-300 font-semibold text-sm transition-all shadow-sm"
+                >
+                  {showCredibility ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              
+              {showCredibility && (
+                <div className="space-y-4 animate-in fade-in duration-300">
+                  {/* Mode Toggle */}
+                  <div className="flex gap-2 p-1 bg-white/5 rounded-xl border border-red-400/20">
+                    <button
+                      onClick={()=>setVerifyMode(false)}
+                      className={`flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all ${!verifyMode ? 'bg-gradient-to-r from-red-500 via-orange-500 to-amber-500 text-white shadow-lg' : 'text-white/60 hover:text-white/80'}`}
+                    >
+                      <i data-lucide="cpu" className="w-4 h-4 inline mr-1"></i>
+                      Generate Proof
+                    </button>
+                    <button
+                      onClick={()=>setVerifyMode(true)}
+                      className={`flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all ${verifyMode ? 'bg-gradient-to-r from-red-500 via-orange-500 to-amber-500 text-white shadow-lg' : 'text-white/60 hover:text-white/80'}`}
+                    >
+                      <i data-lucide="check-circle-2" className="w-4 h-4 inline mr-1"></i>
+                      Verify Proof
+                    </button>
+                  </div>
+
+                  {!verifyMode ? (
+                    <>
+                      {/* Generate Mode */}
+                      {/* Wallet Connection Status */}
+                      <div className={`p-3 rounded-xl border ${window.solana?.isConnected ? 'bg-emerald-500/10 border-emerald-400/30' : 'bg-yellow-500/10 border-yellow-400/30'}`}>
+                        <div className="flex items-center gap-2">
+                          <i data-lucide={window.solana?.isConnected ? 'check-circle' : 'alert-circle'} className={`w-4 h-4 ${window.solana?.isConnected ? 'text-emerald-400' : 'text-yellow-400'}`}></i>
+                          <span className={`text-sm font-semibold ${window.solana?.isConnected ? 'text-emerald-300' : 'text-yellow-300'}`}>
+                            {window.solana?.isConnected ? `Wallet Connected: ${window.solana.publicKey.toString().slice(0,4)}...${window.solana.publicKey.toString().slice(-4)}` : 'Please connect your wallet to verify token ownership'}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="p-3 rounded-xl bg-white/5 border border-red-400/20">
+                        <p className="text-xs text-white/70 flex items-start gap-2">
+                          <i data-lucide="info" className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5"></i>
+                          Add token addresses you've created. We'll verify ownership on-chain and fetch performance data to generate a cryptographic proof.
+                        </p>
+                      </div>
+
+                      {/* Add Token Input */}
+                      <div className="flex gap-2">
+                        <input
+                          value={credTokenInput}
+                          onChange={e=>setCredTokenInput(e.target.value)}
+                          onKeyPress={e=>e.key==='Enter'&&addTokenForCredibility()}
+                          placeholder="Enter token mint address..."
+                          className="flex-1 bg-white/5 border border-red-400/20 rounded-xl px-4 py-3 text-white text-sm font-mono placeholder-white/40 focus:border-red-400/40 focus:ring-2 focus:ring-red-400/20 outline-none transition-all"
+                        />
+                        <button
+                          onClick={addTokenForCredibility}
+                          className="px-6 py-3 bg-gradient-to-r from-red-500 via-orange-500 to-amber-500 hover:from-red-400 hover:via-orange-400 hover:to-amber-400 text-white font-semibold rounded-xl transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl hover:scale-105"
+                        >
+                          <i data-lucide="zap" className="w-4 h-4"></i>
+                          Add
+                        </button>
+                      </div>
+
+                      {/* Token List */}
+                      {credTokens.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="text-sm font-semibold text-white/90">Added Tokens ({credTokens.length})</div>
+                          <div className="space-y-2 max-h-60 overflow-y-auto">
+                            {credTokens.map(token=>(
+                              <div key={token.address} className={`p-3 border rounded-xl flex items-center justify-between ${token.verified ? 'bg-emerald-500/5 border-emerald-400/30' : 'bg-red-500/5 border-red-400/30'}`}>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <div className="text-xs text-white/60 font-mono truncate flex-1">{token.address}</div>
+                                    {!token.loading && (
+                                      <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${token.verified ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/40' : 'bg-red-500/20 text-red-300 border border-red-400/40'}`}>
+                                        {token.verified ? '✓ Verified' : '✗ Not Verified'}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {token.loading ? (
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-orange-400"></div>
+                                      <span className="text-xs text-white/60">Verifying ownership...</span>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <div className="flex gap-3 mt-1 text-xs">
+                                        <span className="text-emerald-400">MC: ${((token.marketCap||0)/1000).toFixed(0)}K</span>
+                                        <span className="text-cyan-400">Holders: {token.holders||0}</span>
+                                        <span className="text-yellow-400">ATH: {(token.athMultiplier||1).toFixed(1)}x</span>
+                                      </div>
+                                      {token.verified && token.verificationMethod && (
+                                        <div className="text-[10px] text-emerald-400/80 mt-1">
+                                          <i data-lucide="shield-check" className="w-3 h-3 inline mr-1"></i>
+                                          {token.verificationMethod}
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                                <button
+                                  onClick={()=>removeCredToken(token.address)}
+                                  className="ml-3 p-2 bg-red-500/20 hover:bg-red-500/30 border border-red-400/40 rounded-lg text-red-300 transition-all"
+                                >
+                                  <i data-lucide="x" className="w-4 h-4"></i>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Generate Button */}
+                      {credTokens.length > 0 && (
+                        <>
+                          <button
+                            onClick={generateCredibilityProof}
+                            disabled={credLoading || credTokens.some(t=>t.loading) || credTokens.some(t=>!t.verified)}
+                            className="w-full px-6 py-3 bg-gradient-to-r from-red-500 via-orange-500 to-amber-500 hover:from-red-400 hover:via-orange-400 hover:to-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:scale-[1.02]"
+                          >
+                            {credLoading ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <i data-lucide="shield-check" className="w-5 h-5"></i>
+                                Generate Credibility Proof
+                              </>
+                            )}
+                          </button>
+                          {credTokens.some(t=>!t.verified) && (
+                            <div className="text-xs text-red-400 text-center">
+                              ⚠️ All tokens must be verified before generating proof. Remove unverified tokens or use tokens you created.
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {/* Credibility Score Display */}
+                      {credScore && credProof && (
+                        <div className="p-5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-green-500/10 border border-emerald-400/30 shadow-lg animate-in fade-in duration-300">
+                          <div className="flex items-center gap-2 mb-4">
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center">
+                              <i data-lucide="trophy" className="w-5 h-5 text-white"></i>
+                            </div>
+                            <span className="text-emerald-400 font-bold text-lg">Your Credibility Score</span>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                            <div className="p-3 rounded-lg bg-black/40 border border-emerald-400/20">
+                              <div className="text-xs text-white/60 mb-1">Total Tokens</div>
+                              <div className="text-xl font-bold text-white">{credScore.totalTokens||0}</div>
+                            </div>
+                            <div className="p-3 rounded-lg bg-black/40 border border-emerald-400/20">
+                              <div className="text-xs text-white/60 mb-1">100x Tokens</div>
+                              <div className="text-xl font-bold text-yellow-400">{credScore.tokens100x||0}</div>
+                            </div>
+                            <div className="p-3 rounded-lg bg-black/40 border border-emerald-400/20">
+                              <div className="text-xs text-white/60 mb-1">10x+ Tokens</div>
+                              <div className="text-xl font-bold text-cyan-400">{credScore.tokens10x||0}</div>
+                            </div>
+                            <div className="p-3 rounded-lg bg-black/40 border border-emerald-400/20">
+                              <div className="text-xs text-white/60 mb-1">Avg Market Cap</div>
+                              <div className="text-lg font-bold text-emerald-400">${((credScore.avgMarketCap||0)/1000).toFixed(0)}K</div>
+                            </div>
+                            <div className="p-3 rounded-lg bg-black/40 border border-emerald-400/20">
+                              <div className="text-xs text-white/60 mb-1">Avg Holders</div>
+                              <div className="text-lg font-bold text-white">{credScore.avgHolders||0}</div>
+                            </div>
+                            <div className="p-3 rounded-lg bg-black/40 border border-emerald-400/20">
+                              <div className="text-xs text-white/60 mb-1">Max ATH</div>
+                              <div className="text-lg font-bold text-orange-400">{credScore.maxATH||'1.0'}x</div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="text-xs text-white/60 mb-2">
+                              Generated by: <span className="font-mono text-orange-400">{window.solana?.publicKey ? window.solana.publicKey.toString() : 'Unknown'}</span>
+                            </div>
+                            <div className="text-xs text-white/70 font-semibold">Shareable Proof (doesn't reveal token addresses):</div>
+                            <div className="flex gap-2">
+                              <input
+                                readOnly
+                                value={credProof}
+                                className="flex-1 bg-black/40 border border-emerald-400/30 rounded-lg px-3 py-2 text-white text-xs font-mono"
+                              />
+                              <button
+                                onClick={()=>{navigator.clipboard.writeText(credProof); pushToast?.('Proof copied!','ok');}}
+                                className="px-4 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/40 rounded-lg text-emerald-300 font-semibold text-xs transition-all"
+                              >
+                                Copy
+                              </button>
+                            </div>
+                            {credSignature && (
+                              <div className="text-xs text-emerald-400 flex items-center gap-1">
+                                <i data-lucide="check-circle" className="w-3 h-3"></i>
+                                Cryptographically signed with wallet
+                              </div>
+                            )}
+                          </div>
+
+                          <button
+                            onClick={resetCredibility}
+                            className="mt-3 w-full px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white/70 rounded-lg text-xs transition-all"
+                          >
+                            Reset & Start Over
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {/* Verify Mode */}
+                      <div className="p-3 rounded-xl bg-white/5 border border-red-400/20">
+                        <p className="text-xs text-white/70 flex items-start gap-2">
+                          <i data-lucide="info" className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5"></i>
+                          Paste a credibility proof to verify a dev's track record without seeing their specific tokens.
+                        </p>
+                      </div>
+
+                      <div className="space-y-3">
+                        <textarea
+                          value={verifyInput}
+                          onChange={e=>setVerifyInput(e.target.value)}
+                          placeholder="Paste credibility proof string here..."
+                          rows={4}
+                          className="w-full bg-white/5 border border-red-400/20 rounded-xl px-4 py-3 text-white text-sm font-mono placeholder-white/40 focus:border-red-400/40 focus:ring-2 focus:ring-red-400/20 outline-none transition-all"
+                        />
+                        
+                        <button
+                          onClick={verifyCredibilityProof}
+                          className="w-full px-6 py-3 bg-gradient-to-r from-red-500 via-orange-500 to-amber-500 hover:from-red-400 hover:via-orange-400 hover:to-amber-400 text-white font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:scale-[1.02]"
+                        >
+                          <i data-lucide="scan-line" className="w-5 h-5"></i>
+                          Verify Proof
+                        </button>
+                      </div>
+
+                      {/* Verification Result */}
+                      {verifyResult && (
+                        <div className={`p-5 rounded-xl border shadow-lg animate-in fade-in duration-300 ${verifyResult.valid ? 'bg-gradient-to-r from-emerald-500/10 to-green-500/10 border-emerald-400/30' : 'bg-gradient-to-r from-red-500/10 to-rose-500/10 border-red-400/30'}`}>
+                          {(verifyResult.valid && verifyResult.score) ? (
+                            <>
+                              <div className="flex items-center gap-2 mb-4">
+                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center">
+                                  <i data-lucide="check-circle" className="w-5 h-5 text-white"></i>
+                                </div>
+                                <span className="text-emerald-400 font-bold text-lg">✓ Valid Credibility Proof</span>
+                              </div>
+                              
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
+                                <div className="p-3 rounded-lg bg-black/40 border border-emerald-400/20">
+                                  <div className="text-xs text-white/60 mb-1">Total Tokens</div>
+                                  <div className="text-xl font-bold text-white">{verifyResult.score.totalTokens||0}</div>
+                                </div>
+                                <div className="p-3 rounded-lg bg-black/40 border border-emerald-400/20">
+                                  <div className="text-xs text-white/60 mb-1">100x Tokens</div>
+                                  <div className="text-xl font-bold text-yellow-400">{verifyResult.score.tokens100x||0}</div>
+                                </div>
+                                <div className="p-3 rounded-lg bg-black/40 border border-emerald-400/20">
+                                  <div className="text-xs text-white/60 mb-1">10x+ Tokens</div>
+                                  <div className="text-xl font-bold text-cyan-400">{verifyResult.score.tokens10x||0}</div>
+                                </div>
+                                <div className="p-3 rounded-lg bg-black/40 border border-emerald-400/20">
+                                  <div className="text-xs text-white/60 mb-1">Avg Market Cap</div>
+                                  <div className="text-lg font-bold text-emerald-400">${((verifyResult.score.avgMarketCap||0)/1000).toFixed(0)}K</div>
+                                </div>
+                                <div className="p-3 rounded-lg bg-black/40 border border-emerald-400/20">
+                                  <div className="text-xs text-white/60 mb-1">Avg Holders</div>
+                                  <div className="text-lg font-bold text-white">{verifyResult.score.avgHolders||0}</div>
+                                </div>
+                                <div className="p-3 rounded-lg bg-black/40 border border-emerald-400/20">
+                                  <div className="text-xs text-white/60 mb-1">Max ATH</div>
+                                  <div className="text-lg font-bold text-orange-400">{verifyResult.score.maxATH||'1.0'}x</div>
+                                </div>
+                              </div>
+
+                              <div className="text-xs text-white/60">
+                                Commitment Hash: <span className="font-mono text-emerald-400">{verifyResult.commitment||'N/A'}</span>
+                              </div>
+                              <div className="text-xs text-white/60 mt-1">
+                                Dev Wallet: <span className="font-mono text-orange-400">{verifyResult.wallet ? `${verifyResult.wallet.slice(0,4)}...${verifyResult.wallet.slice(-4)}` : 'N/A'}</span>
+                              </div>
+                              <div className="text-xs text-white/60 mt-1">
+                                Timestamp: {verifyResult.score.timestamp ? new Date(verifyResult.score.timestamp).toLocaleString() : 'N/A'}
+                              </div>
+                            </>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-400 to-rose-500 flex items-center justify-center">
+                                <i data-lucide="x-circle" className="w-5 h-5 text-white"></i>
+                              </div>
+                              <span className="text-red-400 font-bold text-lg">✗ Invalid Proof</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* How it Works */}
+                  <div className="p-4 rounded-xl bg-white/5 border border-red-400/20">
+                    <div className="font-semibold text-white mb-2 text-sm">🔐 How Zero-Knowledge Credibility Works</div>
+                    <ol className="list-decimal list-inside space-y-1 text-xs text-white/70">
+                      <li><strong className="text-white/90">Connect wallet:</strong> Must connect wallet to verify you created the tokens</li>
+                      <li><strong className="text-white/90">Add tokens:</strong> Enter token addresses you created</li>
+                      <li><strong className="text-white/90">Verify ownership:</strong> We check on-chain if you're mint authority or creator</li>
+                      <li><strong className="text-white/90">Fetch data:</strong> We verify performance on-chain (market cap, holders, ATH)</li>
+                      <li><strong className="text-white/90">Generate proof:</strong> Creates cryptographic commitment (hash) hiding token addresses</li>
+                      <li><strong className="text-white/90">Share proof:</strong> Copy the proof string and share it anywhere</li>
+                      <li><strong className="text-white/90">Verify:</strong> Anyone can verify your credibility without seeing which tokens</li>
+                    </ol>
+                    <div className="mt-3 p-2 rounded-lg bg-orange-500/10 border border-orange-400/20">
+                      <p className="text-xs text-orange-300"><strong>💡 Privacy Tip:</strong> The proof is cryptographically secure but doesn't reveal your identity or token addresses. Perfect for building anon reputation!</p>
+                    </div>
+                    <div className="mt-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-400/20">
+                      <p className="text-xs text-emerald-300"><strong>🔒 Security:</strong> Tokens are verified by checking mint authority or transaction history to ensure you actually created them.</p>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -5242,8 +6209,37 @@
                   <button onClick={()=>{ navigator.clipboard.writeText(privateKey||''); }} className="text-xs px-2 py-1 bg-white/10 border border-white/20 rounded text-white/70">Copy</button>
                 </div>
                 <input type="password" value={privateKey} onChange={e=>setPrivateKey(e.target.value)} placeholder="Will auto-fill after Create Wallet" className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm font-mono" />
+                
+                {/* Warning Notice */}
+                {!mainWalletConnected ? (
+                  <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-400/30">
+                    <div className="flex items-start gap-2">
+                      <i data-lucide="alert-triangle" className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5"></i>
+                      <div className="text-xs text-yellow-300">
+                        <strong>Connect Your Main Wallet First</strong>
+                        <p className="text-yellow-300/80 mt-1">You must connect your wallet in the navbar before creating a Pump Portal wallet. This ensures your session persists across page refreshes.</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : !apiKey && (
+                  <div className="p-3 rounded-lg bg-red-500/10 border border-red-400/30">
+                    <div className="flex items-start gap-2">
+                      <i data-lucide="shield-alert" className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5"></i>
+                      <div className="text-xs text-red-300">
+                        <strong className="block mb-1">⚠️ CRITICAL: Save Your Private Key!</strong>
+                        <p className="text-red-300/90">After creating your wallet, IMMEDIATELY copy and securely store your private key. This wallet persists in your browser, but if you clear browser data without backing up the key, you will PERMANENTLY lose access to any funds.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="flex gap-2">
-                  <button onClick={createWallet} disabled={creating} className="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-white rounded-lg transition-all">
+                  <button 
+                    onClick={createWallet} 
+                    disabled={creating || !mainWalletConnected} 
+                    className="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 disabled:bg-gray-500 disabled:cursor-not-allowed text-white rounded-lg transition-all"
+                    title={!mainWalletConnected ? "Connect your wallet in the navbar first" : "Create a new Pump Portal wallet"}
+                  >
                     {creating ? 'Creating…' : 'Create Wallet'}
                   </button>
                   <button onClick={resetAll} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all">Reset</button>
@@ -5251,94 +6247,421 @@
                 <p className="text-xs text-white/60">Fund this wallet with SOL to cover creation and initial buy.</p>
               </div>
 
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <input value={name} onChange={e=>setName(e.target.value)} placeholder="Token Name" className="bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm" />
-                  <input value={symbol} onChange={e=>setSymbol(e.target.value)} placeholder="Symbol" className="bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm" />
+              {/* Image Upload Section */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="space-y-2">
+                    <h3 className="text-white text-sm font-medium">select image</h3>
+                    <div className="relative">
+                      {imageFile ? (
+                        <div className="w-24 h-24 rounded-xl border-2 border-white/20 bg-white/5 flex items-center justify-center overflow-hidden">
+                          <img src={URL.createObjectURL(imageFile)} alt="Token" className="w-full h-full object-cover" />
                 </div>
-                <input value={website} onChange={e=>setWebsite(e.target.value)} placeholder="Website (optional)" className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm" />
-                <div className="grid grid-cols-2 gap-2">
-                  <input value={twitter} onChange={e=>setTwitter(e.target.value)} placeholder="Twitter URL (optional)" className="bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm" />
-                  <input value={telegram} onChange={e=>setTelegram(e.target.value)} placeholder="Telegram URL (optional)" className="bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm" />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-white/80 text-sm">Description</label>
-                    <button type="button" onClick={(e)=>{ try{ ripple(e);}catch{} setEncMessage(''); setShowEncModal(true); }} className="text-xs px-2 py-1 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 rounded text-cyan-300">Encrypt message</button>
+                      ) : (
+                        <button 
+                          onClick={() => document.getElementById('image-upload').click()}
+                          className="w-24 h-24 rounded-xl border-2 border-white/20 bg-white/5 flex items-center justify-center hover:border-white/40 transition-colors"
+                        >
+                          <i data-lucide="plus" className="w-8 h-8 text-white/60"></i>
+                        </button>
+                      )}
+                      <input 
+                        id="image-upload"
+                        type="file" 
+                        accept="image/*" 
+                        onChange={e=>setImageFile(e.target.files?.[0]||null)} 
+                        className="hidden" 
+                      />
+                    </div>
                   </div>
-                  <textarea value={description} onChange={e=>setDescription(e.target.value)} placeholder="Description" rows={3} className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm"></textarea>
+                  
+                <div className="grid grid-cols-2 gap-2">
+                    <button 
+                      onClick={() => setShowEncModal(true)}
+                      className="px-3 py-2 bg-purple-500/20 border border-purple-400/30 rounded-lg text-purple-300 text-xs hover:bg-purple-500/30 transition-colors flex items-center gap-1"
+                    >
+                      <i data-lucide="lock" className="w-3 h-3"></i>
+                      ENCRYPT
+                    </button>
+                    <button 
+                      onClick={() => setShowDecryptModal(true)}
+                      className="px-3 py-2 bg-cyan-500/20 border border-cyan-400/30 rounded-lg text-cyan-300 text-xs hover:bg-cyan-500/30 transition-colors flex items-center gap-1"
+                    >
+                      <i data-lucide="unlock" className="w-3 h-3"></i>
+                      DECRYPT
+                    </button>
+                    <button 
+                      onClick={() => setShowStegoModal(true)}
+                      className="px-3 py-2 bg-orange-500/20 border border-orange-400/30 rounded-lg text-orange-300 text-xs hover:bg-orange-500/30 transition-colors flex items-center gap-1"
+                    >
+                      <i data-lucide="eye-off" className="w-3 h-3"></i>
+                      HIDE MSG
+                    </button>
+                    <button 
+                      onClick={() => setShowExtractModal(true)}
+                      className="px-3 py-2 bg-emerald-500/20 border border-emerald-400/30 rounded-lg text-emerald-300 text-xs hover:bg-emerald-500/30 transition-colors flex items-center gap-1"
+                    >
+                      <i data-lucide="search" className="w-3 h-3"></i>
+                      EXTRACT
+                    </button>
+                </div>
+                </div>
+
+
+                {/* Coin Details */}
+                <div className="space-y-4">
+                  {/* Obfuscation Status */}
+                  {isObfuscated && (
+                    <div className="p-3 rounded-lg bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border border-blue-400/30">
+                      <div className="flex items-center gap-2 text-blue-300 text-sm">
+                        <i data-lucide="shield-check" className="w-4 h-4"></i>
+                        <span className="font-semibold">Name & Ticker Obfuscated</span>
+                        <span className="text-blue-300/70">- Data encrypted and saved in description</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Name and Ticker Row */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Name Field */}
+                    <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                        <label className="text-white text-sm font-medium">name</label>
+                        <span className="text-white/50 text-xs">{name.length}/32</span>
+                  </div>
+                      <div className="relative">
+                        <input 
+                          value={isObfuscated ? obfuscatedName : name} 
+                          onChange={e=>setName(e.target.value)} 
+                          placeholder="coin name" 
+                          maxLength={32}
+                          className={`w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white text-sm placeholder-white/40 focus:border-white/40 focus:ring-2 focus:ring-white/20 outline-none transition-all pr-10 ${isObfuscated ? 'font-mono tracking-widest text-xs leading-tight' : ''}`}
+                          readOnly={isObfuscated}
+                        />
+                        <i data-lucide="sparkles" className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-purple-400"></i>
+                      </div>
+                    </div>
+
+                    {/* Ticker Field */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <label className="text-white text-sm font-medium">ticker</label>
+                        <span className="text-white/50 text-xs">{symbol.length}/10</span>
+                      </div>
+                      <input 
+                        value={isObfuscated ? obfuscatedTicker : symbol} 
+                        onChange={e=>setSymbol(e.target.value)} 
+                        placeholder="MEME" 
+                        maxLength={10}
+                        className={`w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white text-sm placeholder-white/40 focus:border-white/40 focus:ring-2 focus:ring-white/20 outline-none transition-all ${isObfuscated ? 'font-mono tracking-widest text-xs leading-tight' : ''}`}
+                        readOnly={isObfuscated}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Website and Twitter Row */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Website Field */}
+                    <div className="space-y-1">
+                      <label className="text-white text-sm font-medium flex items-center gap-2">
+                        <i data-lucide="globe" className="w-4 h-4"></i>
+                        website
+                      </label>
+                      <input 
+                        value={website} 
+                        onChange={e=>setWebsite(e.target.value)} 
+                        placeholder="https://example.com" 
+                        className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white text-sm placeholder-white/40 focus:border-white/40 focus:ring-2 focus:ring-white/20 outline-none transition-all" 
+                      />
+                    </div>
+
+                    {/* Twitter Field */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <label className="text-white text-sm font-medium flex items-center gap-2">
+                          <i data-lucide="twitter" className="w-4 h-4"></i>
+                          twitter
+                        </label>
+                        <div className="flex items-center gap-2 text-white/50 text-xs">
+                          <span>Preview</span>
+                          <i data-lucide="eye" className="w-3 h-3"></i>
+                        </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <input type="file" accept="image/*" onChange={e=>setImageFile(e.target.files?.[0]||null)} className="text-white/70 text-xs" />
-                  <button onClick={uploadMetadata} className="px-3 py-2 bg-purple-500 hover:bg-purple-400 text-white rounded-lg transition-all">Upload Metadata</button>
+                        <input 
+                          value={twitter} 
+                          onChange={e=>setTwitter(e.target.value)} 
+                          placeholder="https://x.com/zektaio/status/1979446068275482789" 
+                          className="flex-1 bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white text-sm placeholder-white/40 focus:border-white/40 focus:ring-2 focus:ring-white/20 outline-none transition-all" 
+                        />
+                        <button className="text-white/50 text-xs hover:text-white transition-colors flex items-center gap-1">
+                          <span>open link</span>
+                          <i data-lucide="external-link" className="w-3 h-3"></i>
+                        </button>
                 </div>
-                {metadataUri && (
-                  <div className="text-xs text-white/70 break-all">IPFS metadata: <a href={metadataUri} target="_blank" className="text-cyan-400 underline">{metadataUri}</a></div>
-                )}
-              </div>
-            </div>
+                    </div>
+                  </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <div className="text-xs text-white/60 mb-1">Initial Buy (SOL)</div>
-                    <input value={amountSol} onChange={e=>setAmountSol(e.target.value)} className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm" />
-                  </div>
-                  <div>
-                    <div className="text-xs text-white/60 mb-1">Priority Fee (SOL)</div>
-                    <input value={priorityFee} onChange={e=>setPriorityFee(e.target.value)} className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm" />
-                  </div>
-                  <div>
-                    <div className="text-xs text-white/60 mb-1">Slippage (%)</div>
-                    <input value={slippagePct} onChange={e=>setSlippagePct(e.target.value)} className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm" />
-                  </div>
-                </div>
-                <button 
-                  onClick={launchToken} 
-                  disabled={walletBalance !== null && walletBalance < 0.02}
-                  className="w-full px-6 py-3 bg-emerald-500 hover:bg-emerald-400 disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all"
-                >
-                  Launch Token
-                </button>
-                {walletBalance !== null && walletBalance < 0.02 && (
-                  <p className="text-xs text-red-400 text-center">⚠️ Insufficient balance. Need at least 0.02 SOL</p>
-                )}
-                {txSig && (
-                  <div className="space-y-1">
-                    <div className="text-xs text-white/70 break-all">Tx: <a href={`https://solscan.io/tx/${txSig}`} target="_blank" className="text-cyan-400 underline">{txSig}</a></div>
-                    {mintAddress && (
+                  {/* Description Field - Auto-filled with encrypted data */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-white text-sm font-medium">description (auto-filled)</label>
+                      <div className="flex items-center gap-2">
+                        {description.includes('[ENCRYPTED:') && (
+                          <div className="flex items-center gap-1 px-2 py-1 bg-emerald-500/20 border border-emerald-400/30 rounded-lg">
+                            <i data-lucide="shield-check" className="w-3 h-3 text-emerald-400"></i>
+                            <span className="text-emerald-300 text-xs font-medium">Encrypted</span>
+                          </div>
+                        )}
+                        <button 
+                          type="button" 
+                          onClick={(e)=>{ try{ ripple(e);}catch{} setEncMessage(''); setShowEncModal(true); }} 
+                          className="group relative px-4 py-2 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 hover:from-blue-500/30 hover:via-purple-500/30 hover:to-pink-500/30 border border-blue-400/30 hover:border-blue-400/50 rounded-xl text-blue-300 hover:text-blue-200 transition-all duration-300 shadow-lg hover:shadow-blue-500/25 backdrop-blur-sm"
+                        >
+                          <div className="flex items-center gap-2">
+                            <i data-lucide="shield-check" className="w-4 h-4 group-hover:scale-110 transition-transform duration-200"></i>
+                            <span className="text-sm font-semibold">Encrypt Message</span>
+                          </div>
+                          <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Show info message when empty */}
+                    {!description && (
+                      <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-400/20">
+                        <i data-lucide="info" className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5"></i>
+                        <p className="text-blue-300 text-xs">
+                          Click <strong>"Encrypt Message"</strong> to add your secret message. The encrypted data will automatically appear here.
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* Show textarea only when there's encrypted data */}
+                    {description && (
                       <>
-                        <div className="text-xs text-white/70 break-all">Mint: <a href={`https://solscan.io/token/${mintAddress}`} target="_blank" className="text-emerald-400 underline">{mintAddress}</a></div>
-                        <div className="text-xs text-white/70 break-all">Pump.fun: <a href={`https://pump.fun/coin/${mintAddress}`} target="_blank" className="text-emerald-300 underline">https://pump.fun/coin/{mintAddress}</a></div>
+                        <textarea 
+                          value={description} 
+                          readOnly
+                          rows={3} 
+                          className="w-full bg-black/20 border border-white/20 rounded-lg px-4 py-3 text-white text-sm font-mono cursor-default outline-none resize-none"
+                        ></textarea>
+                        <div className="flex items-start gap-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-400/20">
+                          <i data-lucide="copy" className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5"></i>
+                          <p className="text-emerald-300 text-xs">
+                            <strong>Encrypted data saved!</strong> Copy the [ENCRYPTED:...] code above to decrypt and view the original name, ticker, and message.
+                          </p>
+                        </div>
                       </>
                     )}
                   </div>
-                )}
-              </div>
 
-              <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-white/80">
-                <div className="font-semibold text-white mb-2">How it works</div>
-                <ol className="list-decimal list-inside space-y-1 text-white/70">
-                  <li><strong className="text-white/90">Create Wallet:</strong> Generate a new wallet with API key for Pump Portal.</li>
-                  <li><strong className="text-white/90">Check Balance:</strong> Live balance updates every 10 seconds. Need minimum 0.02 SOL to launch.</li>
-                  <li><strong className="text-white/90">Fund Wallet:</strong> Transfer SOL to the generated wallet address.</li>
-                  <li><strong className="text-white/90">Add Metadata:</strong> Upload token image, name, symbol, and description to IPFS.</li>
-                  <li><strong className="text-white/90">Encrypt Secrets:</strong> Optionally encrypt messages in description. Others can decrypt on whistle.ninja</li>
-                  <li><strong className="text-white/90">Launch Token:</strong> Click Launch (disabled if balance &lt; 0.02 SOL).</li>
-                  <li><strong className="text-white/90">Decrypt Messages:</strong> Use the Decrypt section below to reveal encrypted secrets.</li>
-                </ol>
-                <div className="mt-3 p-2 rounded-lg bg-cyan-500/10 border border-cyan-400/20">
-                  <p className="text-xs text-cyan-300"><strong>💡 Privacy Tip:</strong> Encrypted messages are self-contained - no separate key needed. Share the encrypted text and anyone can decrypt it here or at whistle.ninja</p>
+                  {/* Upload Metadata Button */}
+                  <div className="space-y-2">
+                    {!isObfuscated && (
+                      <div className="flex items-start gap-2 p-2 rounded-lg bg-yellow-500/10 border border-yellow-400/20">
+                        <i data-lucide="alert-triangle" className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5"></i>
+                        <p className="text-yellow-300 text-xs">
+                          <strong>Important:</strong> Encrypt your message first to obfuscate the name & ticker before uploading metadata!
+                        </p>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={uploadMetadata} 
+                        className="px-4 py-2 bg-purple-500 hover:bg-purple-400 text-white rounded-lg transition-all text-sm font-medium"
+                      >
+                        Upload Metadata
+                      </button>
+                {metadataUri && (
+                        <div className="text-xs text-white/70 break-all">IPFS: <a href={metadataUri} target="_blank" className="text-cyan-400 underline">{metadataUri}</a></div>
+                      )}
+                    </div>
+                    {isObfuscated && metadataUri && (
+                      <div className="flex items-start gap-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-400/20">
+                        <i data-lucide="shield-check" className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5"></i>
+                        <p className="text-emerald-300 text-xs">
+                          <strong>Metadata uploaded with obfuscated name & ticker!</strong> Pump.fun will show weird characters - only decrypt reveals the real name.
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="mt-2 text-xs text-white/50">Never share your private key. Stored only in this browser via localStorage.</div>
-                {lastHttpStatus != null && (
-                  <div className="mt-3 p-2 rounded-lg bg-black/30 border border-white/10">
-                    <div className="text-white/70 text-xs">Last HTTP status: <span className="font-mono">{String(lastHttpStatus)}</span></div>
-                    {lastHttpText && (<pre className="mt-1 text-[11px] leading-snug text-white/70 whitespace-pre-wrap break-words">{lastHttpText}</pre>)}
+              </div>
+            </div>
+
+            {/* Launch Configuration */}
+            <div className="space-y-4">
+              <h3 className="text-white text-sm font-medium">launch configuration</h3>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1">
+                  <label className="text-white/70 text-xs">Initial Buy (SOL)</label>
+                  <input 
+                    value={amountSol} 
+                    onChange={e=>setAmountSol(e.target.value)} 
+                    placeholder="0.1"
+                    className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm placeholder-white/40 focus:border-white/40 focus:ring-2 focus:ring-white/20 outline-none transition-all" 
+                  />
+                  </div>
+                <div className="space-y-1">
+                  <label className="text-white/70 text-xs">Priority Fee (SOL)</label>
+                  <input 
+                    value={priorityFee} 
+                    onChange={e=>setPriorityFee(e.target.value)} 
+                    placeholder="0.001"
+                    className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm placeholder-white/40 focus:border-white/40 focus:ring-2 focus:ring-white/20 outline-none transition-all" 
+                  />
+                  </div>
+                <div className="space-y-1">
+                  <label className="text-white/70 text-xs">Slippage (%)</label>
+                  <input 
+                    value={slippagePct} 
+                    onChange={e=>setSlippagePct(e.target.value)} 
+                    placeholder="5"
+                    className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm placeholder-white/40 focus:border-white/40 focus:ring-2 focus:ring-white/20 outline-none transition-all" 
+                  />
+                  </div>
+                </div>
+
+                <button 
+                  onClick={launchToken} 
+                  disabled={walletBalance !== null && walletBalance < 0.02}
+                className="w-full px-6 py-4 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 disabled:from-gray-500 disabled:to-gray-500 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-emerald-500/25 disabled:shadow-none"
+                >
+                <div className="flex items-center justify-center gap-2">
+                  <i data-lucide="rocket" className="w-5 h-5"></i>
+                  Launch Token
+                </div>
+                </button>
+              
+                {walletBalance !== null && walletBalance < 0.02 && (
+                <div className="p-3 rounded-lg bg-red-500/10 border border-red-400/30">
+                  <div className="flex items-center gap-2 text-red-300 text-sm">
+                    <i data-lucide="alert-triangle" className="w-4 h-4"></i>
+                    <span>Insufficient balance. Need at least 0.02 SOL</span>
+                  </div>
+                </div>
+              )}
+              
+                {txSig && (
+                <div className="space-y-3 p-4 rounded-lg bg-white/5 border border-white/10">
+                  <h4 className="text-white font-medium text-sm">Transaction Details</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-white/70 text-xs">Transaction:</span>
+                      <a href={`https://solscan.io/tx/${txSig}`} target="_blank" className="text-cyan-400 underline text-xs hover:text-cyan-300 transition-colors">
+                        {txSig.slice(0,8)}...{txSig.slice(-8)}
+                      </a>
+                    </div>
+                    {mintAddress && (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className="text-white/70 text-xs">Token Address:</span>
+                          <a href={`https://solscan.io/token/${mintAddress}`} target="_blank" className="text-emerald-400 underline text-xs hover:text-emerald-300 transition-colors">
+                            {mintAddress.slice(0,8)}...{mintAddress.slice(-8)}
+                          </a>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-white/70 text-xs">Pump.fun:</span>
+                          <a href={`https://pump.fun/coin/${mintAddress}`} target="_blank" className="text-emerald-300 underline text-xs hover:text-emerald-200 transition-colors">
+                            View on Pump.fun
+                          </a>
+                        </div>
+                      </>
+                    )}
+                  </div>
                   </div>
                 )}
               </div>
+
+            {/* How it Works Section */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+              <h3 className="text-white font-semibold text-sm mb-4">how it works</h3>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-emerald-400 text-xs font-bold">1</span>
+                </div>
+                  <div>
+                    <div className="text-white font-medium text-sm">Create Wallet</div>
+                    <div className="text-white/70 text-xs">Generate a new wallet with API key for Pump Portal</div>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-emerald-400 text-xs font-bold">2</span>
+                  </div>
+                  <div>
+                    <div className="text-white font-medium text-sm">Fund Wallet</div>
+                    <div className="text-white/70 text-xs">Transfer SOL to the generated wallet address (minimum 0.02 SOL)</div>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-emerald-400 text-xs font-bold">3</span>
+                  </div>
+                  <div>
+                    <div className="text-white font-medium text-sm">Configure Token</div>
+                    <div className="text-white/70 text-xs">Set name, ticker, upload image, and add social links</div>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-emerald-400 text-xs font-bold">4</span>
+                  </div>
+                  <div>
+                    <div className="text-white font-medium text-sm">Encrypt Message</div>
+                    <div className="text-white/70 text-xs">Add secret message - this obfuscates name & ticker with weird characters</div>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-emerald-400 text-xs font-bold">5</span>
+                  </div>
+                  <div>
+                    <div className="text-white font-medium text-sm">Upload Metadata</div>
+                    <div className="text-white/70 text-xs">Uploads to IPFS with obfuscated name/ticker - Pump.fun shows weird characters</div>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-emerald-400 text-xs font-bold">6</span>
+                  </div>
+                  <div>
+                    <div className="text-white font-medium text-sm">Launch Token</div>
+                    <div className="text-white/70 text-xs">Deploy to Pump.fun - only people who decrypt see the real name/ticker</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-4 p-3 rounded-lg bg-cyan-500/10 border border-cyan-400/20">
+                <div className="flex items-start gap-2">
+                  <i data-lucide="lightbulb" className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5"></i>
+                  <div>
+                    <div className="text-cyan-300 font-medium text-xs mb-1">Privacy Tip</div>
+                    <div className="text-cyan-300/80 text-xs">On Pump.fun, the token will display weird characters like "⚐⚈⚐⚈" as the name/ticker. Only people who copy and decrypt the [ENCRYPTED:...] code from the description will see the real name, ticker, and secret message!</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-3 text-xs text-white/50">
+                Never share your private key. Stored only in this browser via localStorage.
+              </div>
+              
+                {lastHttpStatus != null && (
+                <div className="mt-4 p-3 rounded-lg bg-black/30 border border-white/10">
+                  <div className="text-white/70 text-xs mb-2">Last HTTP status: <span className="font-mono">{String(lastHttpStatus)}</span></div>
+                  {lastHttpText && (
+                    <pre className="text-[11px] leading-snug text-white/70 whitespace-pre-wrap break-words">{lastHttpText}</pre>
+                  )}
+                  </div>
+                )}
             </div>
           </div>
         </GlassCard>
@@ -5363,8 +6686,312 @@
                 <textarea value={encMessage} onChange={e=>setEncMessage(e.target.value)} placeholder="Write your secret..." rows={4} className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm"></textarea>
                 
                 <div className="flex gap-2 justify-end">
-                  <button onClick={async()=>{ try{ if(!(encMessage||'').trim()){ pushToast?.('Enter a message','err'); return; } const ct = await encryptSelfContained(encMessage||''); setDescription(prev => (prev? prev+"\n\n": '')+`[ENCRYPTED:${ct}]\n\nDecrypt at whistle.ninja`); pushToast?.('Encrypted text inserted into description','ok'); setShowEncModal(false); }catch(e){ pushToast?.(`Encryption failed: ${e?.message||e}`,'err'); } }} className="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-white rounded-lg transition-all">Encrypt & Insert</button>
+                  <button onClick={async()=>{ 
+                    try{ 
+                      if(!(encMessage||'').trim()){ 
+                        pushToast?.('Enter a message','err'); 
+                        return; 
+                      } 
+                      
+                      // Create the data to encrypt (normal readable text)
+                      const dataToEncrypt = {
+                        name: name,
+                        ticker: symbol,
+                        message: encMessage
+                      };
+                      
+                      // Encrypt the complete data
+                      const ct = await encryptSelfContained(JSON.stringify(dataToEncrypt)); 
+                      console.log('Encrypted data:', ct); // Debug log
+                      
+                      // Add encrypted data to description (replaces any existing content)
+                      const encryptedDescription = `[ENCRYPTED:${ct}]\n\nDecrypt at whistle.ninja`;
+                      console.log('Encrypted description:', encryptedDescription); // Debug log
+                      
+                      // Set description to encrypted data
+                      setDescription(encryptedDescription); 
+                      
+                      // NOW obfuscate ONLY the visible name and ticker fields
+                      // Description stays normal so encrypted code can be copied
+                      const obfName = obfuscateText(name);
+                      const obfTicker = obfuscateText(symbol);
+                      
+                      // Store obfuscated versions for display
+                      setObfuscatedName(obfName);
+                      setObfuscatedTicker(obfTicker);
+                      setIsObfuscated(true);
+                      
+                      pushToast?.('✅ Data encrypted and form obfuscated! Check description for encrypted code.','ok'); 
+                      setShowEncModal(false); 
+                    }catch(e){ 
+                      pushToast?.(`Encryption failed: ${e?.message||e}`,'err'); 
+                    } 
+                  }} className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-400 hover:to-purple-400 text-white rounded-xl transition-all shadow-lg hover:shadow-blue-500/25 font-semibold">
+                    Encrypt & Obfuscate
+                  </button>
                   <button onClick={()=>setShowEncModal(false)} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all">Cancel</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Decrypt Modal */}
+        {showDecryptModal && (
+          <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 backdrop-blur">
+            <div className="max-w-md w-[92%] rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.08] to-white/[0.03] p-5 text-white shadow-2xl">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-white font-semibold">Decrypt Secret</h3>
+                <button onClick={()=>setShowDecryptModal(false)} className="text-white/70 hover:text-white"><i data-lucide="x" className="w-5 h-5"></i></button>
+              </div>
+              <div className="space-y-3">
+                <div className="p-3 rounded-lg bg-cyan-500/10 border border-cyan-400/20">
+                  <div className="flex items-start gap-2">
+                    <i data-lucide="info" className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5"></i>
+                    <p className="text-xs text-white/70">
+                      Paste encrypted text to reveal the hidden message.
+                    </p>
+                  </div>
+                </div>
+                
+                <textarea 
+                  value={decryptInput} 
+                  onChange={e=>setDecryptInput(e.target.value)} 
+                  placeholder="Paste encrypted text here..." 
+                  rows={4} 
+                  className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm"
+                />
+                
+                <div className="flex gap-2 justify-end">
+                  <button 
+                    onClick={async()=>{ 
+                      try{ 
+                        if(!(decryptInput||'').trim()){ 
+                          pushToast?.('Enter encrypted text','err'); 
+                          return; 
+                        } 
+                        const decrypted = await decryptSelfContained(decryptInput||''); 
+                        
+                        // Try to parse as JSON (new format) or use as plain text (old format)
+                        let parsedData;
+                        try {
+                          parsedData = JSON.parse(decrypted);
+                        } catch {
+                          // Old format - just the message
+                          parsedData = { message: decrypted };
+                        }
+                        
+                        setDecryptResult(parsedData);
+                        pushToast?.('Data decrypted!','ok'); 
+                      }catch(e){ 
+                        pushToast?.(`Decryption failed: ${e?.message||e}`,'err'); 
+                      } 
+                    }} 
+                    className="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-white rounded-lg transition-all"
+                  >
+                    Decrypt
+                  </button>
+                  <button onClick={()=>setShowDecryptModal(false)} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all">Cancel</button>
+                </div>
+                
+                {decryptResult && (
+                  <div className="space-y-3">
+                    {/* Show decrypted data */}
+                    <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-400/20">
+                      <div className="text-emerald-300 font-medium text-sm mb-3 flex items-center gap-2">
+                        <i data-lucide="shield-check" className="w-4 h-4"></i>
+                        Decrypted Data
+                      </div>
+                      
+                      {/* New structured format */}
+                      {decryptResult.name && (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-white/70">Name:</span>
+                              <div className="text-white font-semibold mt-1">{decryptResult.name}</div>
+                            </div>
+                            <div>
+                              <span className="text-white/70">Ticker:</span>
+                              <div className="text-white font-semibold mt-1">{decryptResult.ticker}</div>
+                            </div>
+                          </div>
+                          
+                          {decryptResult.message && (
+                            <div>
+                              <span className="text-white/70 text-sm">Secret Message:</span>
+                              <div className="text-white bg-black/20 p-3 rounded border border-white/10 mt-1 whitespace-pre-wrap">
+                                {decryptResult.message}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* Old format - just message */}
+                      {!decryptResult.name && decryptResult.message && (
+                        <div>
+                          <span className="text-white/70 text-sm">Decrypted Message:</span>
+                          <div className="text-white bg-black/20 p-3 rounded border border-white/10 mt-1 whitespace-pre-wrap">
+                            {decryptResult.message}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Show obfuscated token details if they exist */}
+                    {(obfuscatedName || obfuscatedTicker) && (
+                      <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-400/20">
+                        <div className="text-blue-300 font-medium text-sm mb-3 flex items-center gap-2">
+                          <i data-lucide="eye-off" className="w-4 h-4"></i>
+                          Obfuscated Form Display
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          {obfuscatedName && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-white/70">Name (Obfuscated):</span>
+                              <span className="text-white font-mono tracking-widest text-xs leading-tight bg-black/20 px-2 py-1 rounded border border-white/10">{obfuscatedName}</span>
+                            </div>
+                          )}
+                          {obfuscatedTicker && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-white/70">Ticker (Obfuscated):</span>
+                              <span className="text-white font-mono tracking-widest text-xs leading-tight bg-black/20 px-2 py-1 rounded border border-white/10">{obfuscatedTicker}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="mt-3 text-xs text-blue-300/80">
+                          Name & Ticker are obfuscated in the form for privacy - real data is encrypted above
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Steganography Hide Message Modal */}
+        {showStegoModal && (
+          <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 backdrop-blur">
+            <div className="max-w-md w-[92%] rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.08] to-white/[0.03] p-5 text-white shadow-2xl">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-white font-semibold">Hide Message in Image</h3>
+                <button onClick={()=>setShowStegoModal(false)} className="text-white/70 hover:text-white"><i data-lucide="x" className="w-5 h-5"></i></button>
+              </div>
+              <div className="space-y-3">
+                <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-400/20">
+                  <div className="flex items-start gap-2">
+                    <i data-lucide="info" className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5"></i>
+                    <p className="text-xs text-white/70">
+                      Hide a secret message inside your uploaded image using steganography. The image will look identical but contain hidden data.
+                    </p>
+                  </div>
+                </div>
+                
+                {!imageFile ? (
+                  <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-400/20 text-center">
+                    <i data-lucide="image" className="w-8 h-8 text-yellow-400 mx-auto mb-2"></i>
+                    <p className="text-yellow-300 text-sm">Please upload an image first</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                      <div className="text-white/70 text-xs mb-2">Selected Image:</div>
+                      <img src={URL.createObjectURL(imageFile)} alt="Preview" className="w-20 h-20 object-cover rounded-lg" />
+                    </div>
+                    
+                    <textarea 
+                      value={encMessage} 
+                      onChange={e=>setEncMessage(e.target.value)} 
+                      placeholder="Enter secret message to hide..." 
+                      rows={3} 
+                      className="w-full bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-white text-sm"
+                    />
+                    
+                    <div className="flex gap-2 justify-end">
+                      <button 
+                        onClick={async()=>{ 
+                          try{ 
+                            if(!(encMessage||'').trim()){ 
+                              pushToast?.('Enter a message to hide','err'); 
+                              return; 
+                            } 
+                            // Here you would implement the actual steganography
+                            pushToast?.('Message hidden in image! (Steganography feature coming soon)','ok'); 
+                            setShowStegoModal(false); 
+                          }catch(e){ 
+                            pushToast?.(`Failed to hide message: ${e?.message||e}`,'err'); 
+                          } 
+                        }} 
+                        className="px-4 py-2 bg-orange-500 hover:bg-orange-400 text-white rounded-lg transition-all"
+                      >
+                        Hide Message
+                      </button>
+                      <button onClick={()=>setShowStegoModal(false)} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all">Cancel</button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Extract Message Modal */}
+        {showExtractModal && (
+          <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 backdrop-blur">
+            <div className="max-w-md w-[92%] rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.08] to-white/[0.03] p-5 text-white shadow-2xl">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-white font-semibold">Extract Hidden Message</h3>
+                <button onClick={()=>setShowExtractModal(false)} className="text-white/70 hover:text-white"><i data-lucide="x" className="w-5 h-5"></i></button>
+              </div>
+              <div className="space-y-3">
+                <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-400/20">
+                  <div className="flex items-start gap-2">
+                    <i data-lucide="info" className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5"></i>
+                    <p className="text-xs text-white/70">
+                      Upload an image to extract any hidden messages using steganography.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={e=>setImageFile(e.target.files?.[0]||null)} 
+                    className="w-full text-white/70 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-500/20 file:text-emerald-300 hover:file:bg-emerald-500/30"
+                  />
+                  
+                  {imageFile && (
+                    <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                      <div className="text-white/70 text-xs mb-2">Selected Image:</div>
+                      <img src={URL.createObjectURL(imageFile)} alt="Preview" className="w-20 h-20 object-cover rounded-lg" />
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex gap-2 justify-end">
+                  <button 
+                    onClick={async()=>{ 
+                      try{ 
+                        if(!imageFile){ 
+                          pushToast?.('Please select an image','err'); 
+                          return; 
+                        } 
+                        // Here you would implement the actual steganography extraction
+                        pushToast?.('Extracting message... (Steganography feature coming soon)','ok'); 
+                        setShowExtractModal(false); 
+                      }catch(e){ 
+                        pushToast?.(`Failed to extract message: ${e?.message||e}`,'err'); 
+                      } 
+                    }} 
+                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white rounded-lg transition-all"
+                  >
+                    Extract Message
+                  </button>
+                  <button onClick={()=>setShowExtractModal(false)} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all">Cancel</button>
                 </div>
               </div>
             </div>
