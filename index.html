@@ -5531,7 +5531,17 @@
               
               if(trackerResp.ok){
                 const trackerData = await trackerResp.json();
-                const creator = trackerData?.creator || trackerData?.mint?.creator || trackerData?.token?.creator;
+                
+                // Log the full response to see structure
+                console.log('Solana Tracker API Response:', trackerData);
+                
+                // Try multiple possible field locations for creator
+                const creator = trackerData?.creator || 
+                               trackerData?.mint?.creator || 
+                               trackerData?.token?.creator ||
+                               trackerData?.pools?.[0]?.creator ||
+                               trackerData?.deployer ||
+                               trackerData?.authority;
                 
                 console.log('Solana Tracker - Creator:', creator, 'Connected:', connectedWallet);
                 
@@ -5539,9 +5549,42 @@
                   verified = true;
                   verificationMethod = 'Creator (Solana Tracker)';
                 }
+              } else {
+                console.log('Solana Tracker API returned status:', trackerResp.status);
               }
             }catch(e){
               console.log('Solana Tracker API error:', e);
+            }
+            
+            // Method 1.5: Try to get creator from token metadata (like Solscan does)
+            if(!verified){
+              try{
+                // Get token metadata account
+                const metadataResp = await fetch(rpc, {
+                  method: 'POST',
+                  headers: {'Content-Type':'application/json'},
+                  body: JSON.stringify({
+                    jsonrpc:'2.0',
+                    id:6,
+                    method:'getAccountInfo',
+                    params:[addr, {encoding:'jsonParsed'}]
+                  })
+                });
+                const metadataData = await metadataResp.json();
+                
+                // Try to get creator from parsed data
+                const parsedInfo = metadataData?.result?.value?.data?.parsed?.info;
+                const updateAuthority = parsedInfo?.updateAuthority || parsedInfo?.authority;
+                
+                console.log('Token Metadata - Update Authority:', updateAuthority, 'Connected:', connectedWallet);
+                
+                if(updateAuthority && updateAuthority === connectedWallet){
+                  verified = true;
+                  verificationMethod = 'Update Authority';
+                }
+              }catch(e){
+                console.log('Metadata check error:', e);
+              }
             }
             
             // Method 2: Check mint authority (fallback)
