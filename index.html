@@ -5716,64 +5716,66 @@
           return;
         }
         
-        setCredLoading(true);
-        try{
-          console.log('Starting credibility proof generation...');
-          console.log('Tokens:', credTokens);
-          
-          // Calculate score metrics
-          const total = credTokens.length;
-          const totalMarketCap = credTokens.reduce((sum,t)=>sum+(t.marketCap||0),0);
-          const avgMarketCap = totalMarketCap / total;
-          const totalHolders = credTokens.reduce((sum,t)=>sum+(t.holders||0),0);
-          const avgHolders = totalHolders / total;
-          const max100x = credTokens.filter(t=>(t.athMultiplier||1)>=100).length;
-          const max10x = credTokens.filter(t=>(t.athMultiplier||1)>=10).length;
-          const maxATH = Math.max(...credTokens.map(t=>t.athMultiplier||1));
-          
-          console.log('Calculated metrics:', {total, avgMarketCap, avgHolders, max100x, max10x, maxATH});
-          
-          const scoreData = {
-            totalTokens: total,
-            avgMarketCap: Math.round(avgMarketCap) || 0,
-            avgHolders: Math.round(avgHolders) || 0,
-            tokens100x: max100x || 0,
-            tokens10x: max10x || 0,
-            maxATH: (maxATH && isFinite(maxATH)) ? maxATH.toFixed(1) : '1.0',
-            timestamp: Date.now()
-          };
-          
-          // Generate cryptographic commitment (hash of token addresses)
-          const tokenList = credTokens.map(t=>t.address).sort().join(',');
-          const commitment = await sha256Hash(tokenList);
-          
-          // Generate proof string (commitment + score data + wallet address)
-          const walletAddress = window.solana.publicKey.toString();
-          const proofObj = {
-            commitment,
-            score: scoreData,
-            wallet: walletAddress,
-            v: 1 // version
-          };
-          const proofStr = btoa(JSON.stringify(proofObj));
-          
-          // Sign the commitment for authenticity
-          let signature = '';
+        // Use setTimeout to defer the entire operation to next tick
+        // This prevents React rendering conflicts during button click
+        setTimeout(async () => {
+          setCredLoading(true);
           try{
-            const message = `Whistle.Ninja Dev Credibility Proof\nCommitment: ${commitment}\nWallet: ${walletAddress}\nTimestamp: ${scoreData.timestamp}`;
-            const encodedMessage = new TextEncoder().encode(message);
-            const signedMessage = await window.solana.signMessage(encodedMessage, 'utf8');
-            signature = btoa(String.fromCharCode(...signedMessage.signature));
-          }catch(e){
-            console.log('Signing failed:', e);
-            pushToast?.('Warning: Could not sign proof. It will still work but without signature.','err');
-          }
-          
-          console.log('Score data:', scoreData);
-          console.log('Proof string:', proofStr);
-          
-          // Use setTimeout to ensure React has time to clean up previous render
-          setTimeout(() => {
+            console.log('Starting credibility proof generation...');
+            console.log('Tokens:', credTokens);
+            
+            // Calculate score metrics
+            const total = credTokens.length;
+            const totalMarketCap = credTokens.reduce((sum,t)=>sum+(t.marketCap||0),0);
+            const avgMarketCap = totalMarketCap / total;
+            const totalHolders = credTokens.reduce((sum,t)=>sum+(t.holders||0),0);
+            const avgHolders = totalHolders / total;
+            const max100x = credTokens.filter(t=>(t.athMultiplier||1)>=100).length;
+            const max10x = credTokens.filter(t=>(t.athMultiplier||1)>=10).length;
+            const maxATH = Math.max(...credTokens.map(t=>t.athMultiplier||1));
+            
+            console.log('Calculated metrics:', {total, avgMarketCap, avgHolders, max100x, max10x, maxATH});
+            
+            const scoreData = {
+              totalTokens: total,
+              avgMarketCap: Math.round(avgMarketCap) || 0,
+              avgHolders: Math.round(avgHolders) || 0,
+              tokens100x: max100x || 0,
+              tokens10x: max10x || 0,
+              maxATH: (maxATH && isFinite(maxATH)) ? maxATH.toFixed(1) : '1.0',
+              timestamp: Date.now()
+            };
+            
+            // Generate cryptographic commitment (hash of token addresses)
+            const tokenList = credTokens.map(t=>t.address).sort().join(',');
+            const commitment = await sha256Hash(tokenList);
+            
+            // Generate proof string (commitment + score data + wallet address)
+            const walletAddress = window.solana.publicKey.toString();
+            const proofObj = {
+              commitment,
+              score: scoreData,
+              wallet: walletAddress,
+              v: 1 // version
+            };
+            const proofStr = btoa(JSON.stringify(proofObj));
+            
+            // Sign the commitment for authenticity
+            let signature = '';
+            try{
+              const message = `Whistle.Ninja Dev Credibility Proof\nCommitment: ${commitment}\nWallet: ${walletAddress}\nTimestamp: ${scoreData.timestamp}`;
+              const encodedMessage = new TextEncoder().encode(message);
+              const signedMessage = await window.solana.signMessage(encodedMessage, 'utf8');
+              signature = btoa(String.fromCharCode(...signedMessage.signature));
+            }catch(e){
+              console.log('Signing failed:', e);
+              pushToast?.('Warning: Could not sign proof. It will still work but without signature.','warn');
+            }
+            
+            console.log('Score data:', scoreData);
+            console.log('Proof string:', proofStr);
+            
+            // Update state
             setCredScore(scoreData);
             setCredProof(proofStr || '');
             setCredSignature(signature || '');
@@ -5786,14 +5788,14 @@
             }, 100);
             
             pushToast?.('Credibility proof generated! Copy to share.','ok');
-          }, 50);
-        }catch(e){
-          console.error('Error generating proof:', e);
-          console.error('Error stack:', e.stack);
-          pushToast?.(`Failed to generate proof: ${e.message}`,'err');
-        }finally{
-          setCredLoading(false);
-        }
+          }catch(e){
+            console.error('Error generating proof:', e);
+            console.error('Error stack:', e.stack);
+            pushToast?.(`Failed to generate proof: ${e.message}`,'err');
+          }finally{
+            setCredLoading(false);
+          }
+        }, 0);
       }
       
       async function verifyCredibilityProof(){
