@@ -652,8 +652,8 @@
     }
 
     // RPC defaults (hidden in UI; configurable via localStorage keys rpcHttpUrl / rpcWsUrl)
-    const DEFAULT_RPC_HTTP = 'https://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0';
-    const DEFAULT_RPC_WS   = 'wss://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0';
+    const DEFAULT_RPC_HTTP = 'https://rpc-mainnet.solanatracker.io/?api_key=3f5cbb18-8d2f-4a87-ae09-8555c243c705';
+    const DEFAULT_RPC_WS   = 'wss://rpc-mainnet.solanatracker.io/?api_key=3f5cbb18-8d2f-4a87-ae09-8555c243c705';
     function getRpcUrls(){
       try{
         const http = (localStorage.getItem('rpcHttpUrl') || DEFAULT_RPC_HTTP).trim();
@@ -1628,7 +1628,7 @@
           
           setLoadingBalance(true);
           try {
-            const rpc = 'https://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0';
+            const rpc = 'https://rpc-mainnet.solanatracker.io/?api_key=3f5cbb18-8d2f-4a87-ae09-8555c243c705';
             const response = await fetch(rpc, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -1824,7 +1824,7 @@
       const libAvailable = typeof solanaWeb3 !== 'undefined';
       
       // Always call hooks in the same order
-      const [rpc, setRpc] = useState('https://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0');
+      const [rpc, setRpc] = useState('https://rpc-mainnet.solanatracker.io/?api_key=3f5cbb18-8d2f-4a87-ae09-8555c243c705');
       const [showRpcInput, setShowRpcInput] = useState(false);
       const [tool, setTool] = useState('deadman');
       
@@ -2273,7 +2273,7 @@
                   />
               </div>
                 <div className="flex flex-wrap gap-2 text-xs">
-                  <button onClick={()=>{setRpc('https://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0'); pushToast?.('Switched to SolanaTracker Mainnet', 'ok');}} className="px-3 py-1 bg-green-500/20 border border-green-400/40 rounded text-green-400">SolanaTracker (Fast)</button>
+                  <button onClick={()=>{setRpc('https://rpc-mainnet.solanatracker.io/?api_key=3f5cbb18-8d2f-4a87-ae09-8555c243c705'); pushToast?.('Switched to SolanaTracker Mainnet', 'ok');}} className="px-3 py-1 bg-green-500/20 border border-green-400/40 rounded text-green-400">SolanaTracker (Fast)</button>
                   <button onClick={()=>{setRpc('https://api.devnet.solana.com'); pushToast?.('Switched to Devnet', 'ok');}} className="px-3 py-1 bg-cyan-500/20 border border-cyan-400/40 rounded text-cyan-400">Devnet (Test)</button>
                   <button onClick={()=>{setRpc('https://api.mainnet-beta.solana.com'); pushToast?.('Public mainnet may be rate-limited', 'warn');}} className="px-3 py-1 bg-purple-500/20 border border-purple-400/40 rounded text-purple-400">Public Mainnet</button>
                 </div>
@@ -5104,7 +5104,7 @@
           
           setLoadingBalance(true);
           try {
-            const rpc = 'https://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0';
+            const rpc = 'https://rpc-mainnet.solanatracker.io/?api_key=3f5cbb18-8d2f-4a87-ae09-8555c243c705';
             const response = await fetch(rpc, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -5525,7 +5525,7 @@
             try{
               const trackerResp = await fetch(`https://data.solanatracker.io/tokens/${addr}`, {
                 headers: {
-                  'x-api-key': '4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0'
+                  'x-api-key': '3f5cbb18-8d2f-4a87-ae09-8555c243c705'
                 }
               });
               
@@ -5541,7 +5541,9 @@
                                trackerData?.token?.creator ||
                                trackerData?.pools?.[0]?.creator ||
                                trackerData?.deployer ||
-                               trackerData?.authority;
+                               trackerData?.authority ||
+                               trackerData?.token?.deployer ||
+                               trackerData?.token?.authority;
                 
                 console.log('Solana Tracker - Creator:', creator, 'Connected:', connectedWallet);
                 
