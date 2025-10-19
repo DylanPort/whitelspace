@@ -6045,7 +6045,7 @@
 
                       {/* Generate Button */}
                       {credTokens.length > 0 && (
-                        <>
+                        <div className="space-y-3">
                           <button
                             onClick={generateCredibilityProof}
                             disabled={credLoading || credTokens.some(t=>t.loading) || credTokens.some(t=>!t.verified)}
@@ -6068,7 +6068,7 @@
                               ⚠️ All tokens must be verified before generating proof. Remove unverified tokens or use tokens you created.
                             </div>
                           )}
-                        </>
+                        </div>
                       )}
 
                       {/* Credibility Score Display */}
