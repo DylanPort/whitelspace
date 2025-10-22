@@ -8837,12 +8837,19 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       // Fetch global nodes from API
       const fetchGlobalNodes = async () => {
         try {
+          console.log('🌐 Fetching nodes from API...');
           const response = await fetch('http://localhost:8080/api/nodes');
           const data = await response.json();
           
-          console.log('📡 Fetched global nodes:', data);
+          console.log('📡 RAW API Response:', data);
           console.log('📊 Total nodes from server:', data.totalNodes);
-          console.log('📋 Node list:', data.nodes);
+          console.log('📋 Raw node list:', data.nodes);
+          
+          if (!data.nodes || data.nodes.length === 0) {
+            console.warn('⚠️ No nodes in API response!');
+            setGlobalNodes([]);
+            return;
+          }
           
           // Update network stats
           setNetworkStats({
@@ -8852,21 +8859,29 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           });
           
           // Format nodes for display
-          const formattedNodes = data.nodes.map(node => ({
-            id: node.id,
-            location: node.region || 'Unknown',
-            walletAddress: node.walletAddress || 'Unknown',
-            status: 'active', // All nodes in the list are alive
-            reputation: node.reputation || 0,
-            relays: node.relayCount || 0,
-            uptime: Math.floor(node.uptime / 1000 / 60) + ' min',
-            uptimePercent: '99.5%' // Calculate from uptime later
-          }));
+          const formattedNodes = data.nodes.map(node => {
+            const formatted = {
+              id: node.id,
+              location: node.region || 'Unknown',
+              walletAddress: node.walletAddress || 'Unknown',
+              status: 'active', // All nodes in the list are alive
+              reputation: node.reputation || 0,
+              relays: node.relayCount || 0,
+              uptime: Math.floor(node.uptime / 1000 / 60) + ' min',
+              uptimePercent: '99.5%' // Calculate from uptime later
+            };
+            console.log(`📦 Formatted node ${node.id.slice(0,8)}:`, formatted);
+            return formatted;
+          });
           
-          console.log('✅ Formatted nodes for display:', formattedNodes);
+          console.log('✅ Setting globalNodes state with:', formattedNodes);
+          console.log(`✅ Total formatted nodes: ${formattedNodes.length}`);
           setGlobalNodes(formattedNodes);
+          
+          console.log('🔄 globalNodes state should now update and trigger map markers...');
         } catch (err) {
           console.error('❌ Could not fetch global nodes:', err);
+          console.error('❌ Error details:', err.message, err.stack);
         }
       };
       
