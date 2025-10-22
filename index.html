@@ -9023,7 +9023,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       return nodePDA;
     }
     
-    function OfflineNetworkHub({ pushToast }) {
+    function OfflineNetworkHub({ pushToast, setStep }) {
       // Wallet States
       const [wallet, setWallet] = useState(null);
       const [walletAddress, setWalletAddress] = useState(null);
@@ -12731,7 +12731,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                     switch(currentStep) {
                       case 'home': return <Home setStep={setStepGuarded} />;
                       case 'webrtc': return <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />;
-                      case 'offline-network': return <OfflineNetworkHub pushToast={push} />;
+                      case 'offline-network': return <OfflineNetworkHub pushToast={push} setStep={setStepGuarded} />;
                       case 'services': return <Services setStep={setStepGuarded} pushToast={push} />;
                       case 'anonymous-relay': return <AnonymousRelayService setStep={setStepGuarded} pushToast={push} />;
                       case 'privacy-tools': return <PrivacyToolsHub setStep={setStepGuarded} />;
@@ -13441,7 +13441,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                     switch(currentStep) {
                       case 'home': return <Home setStep={setStepGuarded} />;
                       case 'webrtc': return <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />;
-                      case 'offline-network': return <OfflineNetworkHub pushToast={push} />;
+                      case 'offline-network': return <OfflineNetworkHub pushToast={push} setStep={setStepGuarded} />;
                       case 'services': return <Services setStep={setStepGuarded} pushToast={push} />;
                       case 'anonymous-relay': return <AnonymousRelayService setStep={setStepGuarded} pushToast={push} />;
                       case 'privacy-tools': return <PrivacyToolsHub setStep={setStepGuarded} />;
