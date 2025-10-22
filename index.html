@@ -9177,15 +9177,17 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           
           if (poolAccountInfo) {
             const data = poolAccountInfo.data;
-            // Read total_staked (u64 at offset 40)
-            const totalStakedRaw = new DataView(data.buffer, 40, 8).getBigUint64(0, true);
-            // Read total_stakers (u64 at offset 48)
-            const totalStakersRaw = new DataView(data.buffer, 48, 8).getBigUint64(0, true);
+            // Pool structure: discriminator(8) + authority(32) + whistle_mint(32) + total_staked(8) + total_nodes(8)...
+            // Read total_staked (u64 at offset 72 = 8 + 32 + 32)
+            const totalStakedRaw = new DataView(data.buffer, 72, 8).getBigUint64(0, true);
+            // Read total_nodes (u64 at offset 80 = 8 + 32 + 32 + 8)
+            const totalNodesRaw = new DataView(data.buffer, 80, 8).getBigUint64(0, true);
             
             const totalStaked = Number(totalStakedRaw) / 1e6; // Convert from 6 decimals
-            const totalStakers = Number(totalStakersRaw);
+            const totalStakers = Number(totalNodesRaw);
             
             console.log('✅ Global stats - Total Staked:', totalStaked, 'Total Stakers:', totalStakers);
+            console.log('📊 Raw values - totalStakedRaw:', totalStakedRaw.toString(), 'totalNodesRaw:', totalNodesRaw.toString());
             
             setGlobalStats(prev => ({
               ...prev,
