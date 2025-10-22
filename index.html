@@ -8983,7 +8983,16 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
     // Program Constants - MAINNET LIVE! ✅ FIXED 6 DECIMALS!
     const GHOST_PROGRAM_ID = '2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq'; // RELAY CONTRACT DEPLOYED (6 decimals + relay functions)
     const WHISTLE_TOKEN_MINT = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';
-    const MAINNET_RPC = 'https://rpc-mainnet.solanatracker.io/?api_key=25ef537d-3249-479c-96cb-40efc0ce3e09';
+    
+    // RPC endpoints with fallback
+    const RPC_ENDPOINTS = [
+      'https://rpc-mainnet.solanatracker.io/?api_key=25ef537d-3249-479c-96cb-40efc0ce3e09',
+      'https://api.mainnet-beta.solana.com',
+      'https://solana-api.projectserum.com',
+      'https://rpc.ankr.com/solana'
+    ];
+    const MAINNET_RPC = RPC_ENDPOINTS[0];
+    
     const SIGNALING_SERVER_URL = 'wss://whitelspace.onrender.com'; // Production signaling server
     const TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
     const SYSTEM_PROGRAM_ID = solanaWeb3.SystemProgram.programId;
@@ -9236,17 +9245,34 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       
       // Fetch global staking stats from blockchain
       const fetchGlobalStats = async () => {
-        try {
-          console.log('📊 Fetching global staking stats...');
-          const connection = new solanaWeb3.Connection(MAINNET_RPC);
-          const programId = new solanaWeb3.PublicKey(GHOST_PROGRAM_ID);
-          
-          // Get Pool PDA
-          const poolPDA = await getPoolPDA();
-          const poolAccountInfo = await connection.getAccountInfo(poolPDA);
-          
-          if (poolAccountInfo) {
+        let lastError = null;
+        
+        // Try each RPC endpoint
+        for (let i = 0; i < RPC_ENDPOINTS.length; i++) {
+          try {
+            const rpcUrl = RPC_ENDPOINTS[i];
+            console.log(`📊 Fetching global staking stats from RPC ${i + 1}/${RPC_ENDPOINTS.length}...`);
+            
+            const connection = new solanaWeb3.Connection(rpcUrl, {
+              commitment: 'confirmed',
+              confirmTransactionInitialTimeout: 60000
+            });
+            
+            // Get Pool PDA
+            const poolPDA = await getPoolPDA();
+            console.log('🔍 Pool PDA:', poolPDA.toString());
+            
+            const poolAccountInfo = await connection.getAccountInfo(poolPDA);
+            
+            if (!poolAccountInfo) {
+              console.warn('⚠️ Pool account not found');
+              lastError = new Error('Pool account not found');
+              continue;
+            }
+            
             const data = poolAccountInfo.data;
+            console.log('📦 Pool account data length:', data.length);
+            
             // Pool structure: discriminator(8) + authority(32) + whistle_mint(32) + total_staked(8) + total_nodes(8)...
             // Read total_staked (u64 at offset 72 = 8 + 32 + 32)
             const totalStakedRaw = new DataView(data.buffer, 72, 8).getBigUint64(0, true);
@@ -9265,11 +9291,20 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
               totalStaked,
               totalStakers
             }));
+            
+            // Success! Exit loop
+            return;
+            
+          } catch (error) {
+            console.error(`❌ RPC ${i + 1} failed:`, error.message);
+            lastError = error;
+            // Continue to next RPC
           }
-        } catch (error) {
-          console.error('❌ Error fetching global stats:', error);
-          console.error('Error stack:', error.stack);
         }
+        
+        // All RPCs failed
+        console.error('❌ All RPCs failed. Last error:', lastError);
+        console.error('Error stack:', lastError?.stack);
       };
       
       // ========== REAL STAKING - BLOCKCHAIN TRANSACTION ==========
