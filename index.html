@@ -9089,18 +9089,23 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       
       // Connect Wallet (Phantom/Solflare)
       const connectWallet = async (providerName = 'phantom') => {
+        console.log('🔌 connectWallet called');
         setConnecting(true);
         try {
           const provider = window.solana || window.phantom?.solana;
           
           if (!provider) {
+            console.error('❌ No wallet provider found');
             pushToast('❌ Please install Phantom wallet', 'err');
             window.open('https://phantom.app/', '_blank');
             return;
           }
           
+          console.log('✅ Wallet provider found, requesting connection...');
           const resp = await provider.connect();
           const pubkey = resp.publicKey.toString();
+          
+          console.log('✅ Wallet connected:', pubkey);
           
           setWallet(provider);
           setWalletAddress(pubkey);
@@ -9112,9 +9117,11 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           pushToast(`✅ Connected: ${pubkey.slice(0, 4)}...${pubkey.slice(-4)}`, 'ok');
           
           // Load blockchain data
+          console.log('📊 About to call loadBlockchainData...');
           await loadBlockchainData(pubkey);
+          console.log('✅ loadBlockchainData completed');
         } catch (err) {
-          console.error(err);
+          console.error('❌ Connection error:', err);
           pushToast('❌ Failed to connect wallet', 'err');
         } finally {
           setConnecting(false);
