@@ -118,6 +118,31 @@
       animation: markerPulse 2s ease-in-out infinite, markerGlow 2s ease-in-out infinite;
     }
     
+    /* YOUR node - extra special animation */
+    .user-node path {
+      animation: userNodePulse 1.5s ease-in-out infinite, userNodeGlow 1.5s ease-in-out infinite !important;
+    }
+    
+    @keyframes userNodePulse {
+      0%, 100% { 
+        transform: scale(1); 
+        opacity: 1;
+      }
+      50% { 
+        transform: scale(1.4); 
+        opacity: 0.85;
+      }
+    }
+    
+    @keyframes userNodeGlow {
+      0%, 100% { 
+        filter: brightness(1.2) drop-shadow(0 0 12px rgba(16, 185, 129, 1));
+      }
+      50% { 
+        filter: brightness(1.5) drop-shadow(0 0 20px rgba(16, 185, 129, 1));
+      }
+    }
+    
     /* Outer ring pulse */
     .marker-ring path {
       animation: ringPulse 2s ease-in-out infinite;
@@ -9490,18 +9515,6 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             setWorldMap(map);
             console.log('✅ World map initialized successfully!', map);
             
-            // ADD TEST MARKER to verify map is working
-            const testMarker = L.circleMarker([52.52, 13.405], {
-              radius: 20,
-              fillColor: '#ff0000',
-              color: '#ffffff',
-              weight: 5,
-              opacity: 1,
-              fillOpacity: 1
-            }).addTo(map);
-            testMarker.bindPopup('🧪 TEST MARKER - Berlin');
-            console.log('🧪 Added RED test marker at Berlin [52.52, 13.405]');
-            
             // Force map to resize in case container wasn't ready
             setTimeout(() => {
               map.invalidateSize();
@@ -9707,51 +9720,79 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             (Math.random() - 0.5) * 340
           ];
           
-          // Create a HIGHLY visible pulsing marker
+          // Determine if this is the user's node
+          const isUserNode = walletAddress && node.walletAddress === walletAddress;
+          
+          // Color coding: Green for your node, Blue for active, Orange for idle
+          const markerColor = isUserNode ? '#10b981' : (node.status === 'active' ? '#3b82f6' : '#f59e0b');
+          const markerClass = isUserNode ? 'pulsing-marker user-node' : 'pulsing-marker';
+          
+          // Create a properly sized pulsing marker
           const marker = L.circleMarker(finalCoords, {
-            radius: 15,  // Much larger!
-            fillColor: node.status === 'active' ? '#3b82f6' : '#f59e0b',
+            radius: 10,  // Nice visible size
+            fillColor: markerColor,
             color: '#ffffff',
-            weight: 4,  // Thick white border
+            weight: 3,  // White border
             opacity: 1,
-            fillOpacity: 0.95,  // More opaque
-            className: 'pulsing-marker'
+            fillOpacity: 0.9,
+            className: markerClass
           }).addTo(worldMap);
           
-          // Add extra visual emphasis with a larger outer ring
+          // Add outer ring for pulsing effect
           const outerRing = L.circleMarker(finalCoords, {
-            radius: 25,
+            radius: 18,
             fillColor: 'transparent',
-            color: node.status === 'active' ? '#3b82f6' : '#f59e0b',
+            color: markerColor,
             weight: 2,
-            opacity: 0.6,
+            opacity: 0.5,
             fillOpacity: 0,
             className: 'marker-ring'
           }).addTo(worldMap);
           
-          console.log(`✨ Created visible marker at [${finalCoords}] for node ${node.id.slice(0,8)}`);
+          console.log(`✨ Created ${isUserNode ? 'YOUR' : ''} marker at [${finalCoords}] for node ${node.id.slice(0,8)}`);
           
-          // Bind popup to the main marker
+          // Enhanced popup with full details
           marker.bindPopup(`
-            <div style="font-family: system-ui; min-width: 200px;">
-              <div style="font-weight: bold; color: #3b82f6; margin-bottom: 8px;">
-                🌐 Node ${node.id.slice(0, 12)}
+            <div style="font-family: system-ui; min-width: 240px; padding: 4px;">
+              ${isUserNode ? '<div style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 6px 12px; border-radius: 8px; margin-bottom: 12px; text-align: center; font-weight: bold; font-size: 13px;">✨ YOUR NODE ✨</div>' : ''}
+              
+              <div style="font-weight: bold; color: ${markerColor}; margin-bottom: 10px; font-size: 14px;">
+                🌐 Node ${node.id.slice(0, 16)}
               </div>
-              <div style="font-size: 12px; color: #94a3b8; margin-bottom: 4px;">
-                📍 <strong>${node.location}</strong>
+              
+              <div style="display: grid; gap: 6px; font-size: 12px;">
+                <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #334155;">
+                  <span style="color: #94a3b8;">📍 Location</span>
+                  <strong style="color: #e2e8f0;">${node.location.split('/').pop()}</strong>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #334155;">
+                  <span style="color: #94a3b8;">⚡ Status</span>
+                  <strong style="color: ${node.status === 'active' ? '#10b981' : '#f59e0b'};">${node.status.toUpperCase()}</strong>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #334155;">
+                  <span style="color: #94a3b8;">🏆 Reputation</span>
+                  <strong style="color: #e2e8f0;">${node.reputation.toLocaleString()}</strong>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #334155;">
+                  <span style="color: #94a3b8;">📡 Relays</span>
+                  <strong style="color: #3b82f6;">${node.relays.toLocaleString()}</strong>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #334155;">
+                  <span style="color: #94a3b8;">⏱️ Uptime</span>
+                  <strong style="color: #e2e8f0;">${node.uptime}</strong>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                  <span style="color: #94a3b8;">💰 Wallet</span>
+                  <code style="color: #a78bfa; font-size: 10px;">${node.walletAddress ? node.walletAddress.slice(0, 4) + '...' + node.walletAddress.slice(-4) : 'N/A'}</code>
+                </div>
               </div>
-              <div style="font-size: 12px; color: #94a3b8; margin-bottom: 4px;">
-                ⚡ Status: <strong style="color: #10b981;">${node.status.toUpperCase()}</strong>
-              </div>
-              <div style="font-size: 12px; color: #94a3b8; margin-bottom: 4px;">
-                🏆 Reputation: <strong>${node.reputation}</strong>
-              </div>
-              <div style="font-size: 12px; color: #94a3b8; margin-bottom: 4px;">
-                📡 Relays: <strong>${node.relays}</strong>
-              </div>
-              <div style="font-size: 12px; color: #94a3b8;">
-                ⏱️ Uptime: <strong>${node.uptime}</strong>
-              </div>
+              
+              ${isUserNode ? '<div style="margin-top: 10px; padding: 8px; background: #1e293b; border-radius: 6px; text-align: center; color: #10b981; font-size: 11px;">🎉 This is your active node!</div>' : ''}
             </div>
           `);
           
