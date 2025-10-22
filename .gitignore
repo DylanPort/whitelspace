@@ -1,0 +1,32 @@
+# Wallet files - NEVER commit these!
+*.json
+playground-wallet.json
+wallet.json
+keypair.json
+id.json
+
+# Node modules
+node_modules/
+
+# Environment variables
+.env
+.env.local
+
+# Build outputs
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
