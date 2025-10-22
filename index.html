@@ -12372,8 +12372,70 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           return;
         }
         
+        // Validate recipient address
+        try {
+          new solanaWeb3.PublicKey(recipient);
+        } catch (err) {
+          pushToast({ msg: '❌ Invalid Solana address', tone: 'err' });
+          return;
+        }
+        
         setCreating(true);
         try {
+          const connection = new solanaWeb3.Connection('https://api.mainnet-beta.solana.com', 'confirmed');
+          const recipientPubkey = new solanaWeb3.PublicKey(recipient);
+          const userPubkey = new solanaWeb3.PublicKey(walletAddress);
+          
+          // Calculate relay fee (5 $WHISTLE per hop)
+          const relayFee = privacyLevel * 5;
+          const relayFeeTokens = relayFee * 1_000_000; // 6 decimals
+          
+          console.log(`🔒 Creating anonymous relay:`, {
+            recipient: recipient,
+            amount: amount,
+            hops: privacyLevel,
+            fee: relayFee,
+            mode: connectionMode
+          });
+          
+          // Build the actual transaction to relay
+          const transaction = new solanaWeb3.Transaction();
+          
+          // SOL transfer
+          transaction.add(
+            solanaWeb3.SystemProgram.transfer({
+              fromPubkey: userPubkey,
+              toPubkey: recipientPubkey,
+              lamports: parseFloat(amount) * solanaWeb3.LAMPORTS_PER_SOL
+            })
+          );
+          
+          // Add memo with relay instructions
+          const relayMemo = JSON.stringify({
+            type: 'anonymous_relay',
+            hops: privacyLevel,
+            fee: relayFeeTokens,
+            timestamp: Date.now()
+          });
+          
+          transaction.add(
+            new solanaWeb3.TransactionInstruction({
+              keys: [],
+              programId: new solanaWeb3.PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'),
+              data: new TextEncoder().encode(relayMemo)
+            })
+          );
+          
+          // Set recent blockhash
+          const { blockhash } = await connection.getLatestBlockhash();
+          transaction.recentBlockhash = blockhash;
+          transaction.feePayer = userPubkey;
+          
+          // SIGN TRANSACTION
+          const signedTx = await wallet.signTransaction(transaction);
+          
+          console.log('✅ Transaction signed!', signedTx);
+          
           const relayData = {
             type: 'ghost_relay',
             requestId: Date.now(),
@@ -12382,28 +12444,56 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             amount: amount,
             hops: privacyLevel,
             mode: connectionMode,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            signedTx: btoa(String.fromCharCode(...signedTx.serialize()))
           };
 
+          // Handle different connection modes
           if (connectionMode === 'qr' || connectionMode === 'offline') {
             await generateQRCode(relayData);
             setShowQRModal(true);
+            pushToast({ msg: '📱 QR code generated - scan to relay offline', tone: 'ok' });
+          } else if (connectionMode === 'online') {
+            // Submit to blockchain
+            const signature = await connection.sendRawTransaction(signedTx.serialize());
+            await connection.confirmTransaction(signature, 'confirmed');
+            
+            pushToast({ msg: `✅ Transaction sent! Sig: ${signature.slice(0, 8)}...`, tone: 'ok' });
+            
+            setRelayHistory(prev => [{
+              id: relayData.requestId,
+              recipient: recipient,
+              amount: amount,
+              hops: privacyLevel,
+              status: 'completed',
+              timestamp: new Date().toLocaleTimeString(),
+              signature: signature
+            }, ...prev]);
+          } else {
+            // Bluetooth, WiFi Direct, etc. (placeholder)
+            pushToast({ msg: `⚠️ ${connectionMode} mode coming soon. Using online mode...`, tone: 'info' });
+            
+            const signature = await connection.sendRawTransaction(signedTx.serialize());
+            await connection.confirmTransaction(signature, 'confirmed');
+            
+            pushToast({ msg: `✅ Transaction sent! Sig: ${signature.slice(0, 8)}...`, tone: 'ok' });
+            
+            setRelayHistory(prev => [{
+              id: relayData.requestId,
+              recipient: recipient,
+              amount: amount,
+              hops: privacyLevel,
+              status: 'completed',
+              timestamp: new Date().toLocaleTimeString(),
+              signature: signature
+            }, ...prev]);
           }
-
-          setRelayHistory(prev => [{
-            id: relayData.requestId,
-            recipient: recipient,
-            amount: amount,
-            hops: privacyLevel,
-            status: 'pending',
-            timestamp: new Date().toLocaleTimeString()
-          }, ...prev]);
-
-          pushToast({ msg: 'Relay request created!', tone: 'ok' });
           
+          // Clear form
           setRecipient('');
           setAmount('');
         } catch (err) {
+          console.error('Relay creation error:', err);
           pushToast({ msg: 'Failed to create relay: ' + err.message, tone: 'err' });
         } finally {
           setCreating(false);

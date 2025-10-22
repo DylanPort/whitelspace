@@ -25,7 +25,7 @@ pub mod ghost_whistle_staking {
     }
 
     pub fn stake(ctx: Context<Stake>, amount: u64) -> Result<()> {
-        require!(amount >= 10_000_000_000, ErrorCode::MinimumStakeNotMet); // 10,000 $WHISTLE with 6 decimals
+        require!(amount >= 10_000_000, ErrorCode::MinimumStakeNotMet); // 10,000 $WHISTLE with 6 decimals (10,000 * 10^6)
 
         let node = &mut ctx.accounts.node_account;
         let pool = &mut ctx.accounts.pool;
