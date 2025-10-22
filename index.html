@@ -9400,38 +9400,72 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       
       // Initialize world map
       useEffect(() => {
-        if (typeof L === 'undefined') return;
+        console.log('🗺️ Map initialization effect triggered');
+        console.log('📦 Leaflet available:', typeof L);
+        console.log('🗺️ Current worldMap state:', worldMap);
+        
+        if (typeof L === 'undefined') {
+          console.error('❌ Leaflet (L) is not defined!');
+          return;
+        }
         
         // Initialize map once
         if (!worldMap) {
           const mapContainer = document.getElementById('world-map');
-          if (!mapContainer) return;
+          console.log('📦 Map container element:', mapContainer);
           
-          const map = L.map('world-map', {
-            center: [20, 0],
-            zoom: 2,
-            minZoom: 2,
-            maxZoom: 6,
-            zoomControl: true,
-            attributionControl: false
-          });
+          if (!mapContainer) {
+            console.error('❌ Map container not found!');
+            return;
+          }
           
-          // Dark theme tile layer
-          L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            maxZoom: 19
-          }).addTo(map);
-          
-          setWorldMap(map);
-          console.log('🗺️ World map initialized');
+          try {
+            console.log('🚀 Creating Leaflet map...');
+            const map = L.map('world-map', {
+              center: [20, 0],
+              zoom: 2,
+              minZoom: 2,
+              maxZoom: 6,
+              zoomControl: true,
+              attributionControl: false
+            });
+            
+            console.log('🎨 Adding tile layer...');
+            // Dark theme tile layer
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+              maxZoom: 19
+            }).addTo(map);
+            
+            setWorldMap(map);
+            console.log('✅ World map initialized successfully!', map);
+            
+            // Force map to resize in case container wasn't ready
+            setTimeout(() => {
+              map.invalidateSize();
+              console.log('🔄 Map size invalidated');
+            }, 100);
+          } catch (err) {
+            console.error('❌ Error initializing map:', err);
+          }
         }
       }, [worldMap]);
       
       // Update map markers when nodes change
       useEffect(() => {
-        if (!worldMap || !globalNodes) return;
+        console.log('🗺️ Marker update effect triggered');
+        console.log('🗺️ worldMap:', worldMap);
+        console.log('📊 globalNodes:', globalNodes);
+        
+        if (!worldMap || !globalNodes) {
+          console.log('⏭️ Skipping marker update - map or nodes not ready');
+          return;
+        }
+        
+        console.log(`🎯 Updating markers for ${globalNodes.length} nodes`);
         
         // Clear existing markers
         mapMarkers.forEach(marker => marker.remove());
+        console.log(`🧹 Cleared ${mapMarkers.length} old markers`);
         
         // Region to coordinates mapping (expanded to cover all major timezones)
         const regionCoords = {
