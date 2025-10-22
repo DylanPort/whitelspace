@@ -4,8 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Create Relay Pool Vault - Ghost Whistle</title>
+  <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
+  <script>
+    // Make Buffer globally available
+    window.Buffer = window.Buffer || buffer.Buffer;
+    console.log('Buffer loaded:', typeof Buffer, typeof Buffer.from);
+  </script>
   <script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
-  <script src="https://unpkg.com/buffer@6.0.3/index.js"></script>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -100,12 +105,12 @@
       <strong>Prerequisites:</strong>
       <br>✅ Pool must be initialized first (run init-relay-pool.html)
       <br><br>
-      <strong>Program ID:</strong> 3pb437ujFvPq6bKEUnoEwBc711ehM2h9vMu9QkNDsxFN
+      <strong>Program ID:</strong> 2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq
       <br>
       <strong>Token:</strong> $WHISTLE (6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump)
     </div>
 
-    <button id="createButton" onclick="createVault()">
+    <button id="createButton">
       Create Pool Vault
     </button>
 
@@ -256,11 +261,22 @@
       }
     }
 
-    // Auto-load on page load
+    // Auto-load on page load and attach event listeners
     window.addEventListener('load', () => {
-      console.log('Ready to create pool vault');
+      console.log('✅ Page loaded');
       console.log('Program ID:', PROGRAM_ID);
       console.log('$WHISTLE Mint:', WHISTLE_MINT);
+      
+      // Attach button event listener
+      const createBtn = document.getElementById('createButton');
+      if (createBtn) {
+        console.log('✅ Create button found');
+        createBtn.addEventListener('click', createVault);
+      } else {
+        console.error('❌ Create button not found!');
+      }
+      
+      console.log('🎯 Event listener attached!');
     });
   </script>
 </body>

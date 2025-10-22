@@ -4,8 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Initialize Relay Pool - Ghost Whistle</title>
+  <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
+  <script>
+    // Make Buffer globally available
+    window.Buffer = window.Buffer || buffer.Buffer;
+    console.log('Buffer loaded:', typeof Buffer, typeof Buffer.from);
+  </script>
   <script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
-  <script src="https://unpkg.com/buffer@6.0.3/index.js"></script>
   
   <script>
     // Check if Solana Web3.js loaded
@@ -13,6 +18,7 @@
       console.log('🔍 Checking dependencies...');
       console.log('Solana Web3:', typeof solanaWeb3);
       console.log('Buffer:', typeof Buffer);
+      console.log('Buffer.from:', typeof Buffer.from);
       console.log('Window.solana:', typeof window.solana);
       
       if (typeof solanaWeb3 === 'undefined') {
@@ -20,6 +26,13 @@
         alert('Error: Solana Web3.js library failed to load. Please refresh the page.');
       } else {
         console.log('✅ Solana Web3.js loaded successfully');
+      }
+      
+      if (typeof Buffer === 'undefined' || typeof Buffer.from !== 'function') {
+        console.error('❌ Buffer not loaded correctly!');
+        alert('Error: Buffer library failed to load. Please refresh the page.');
+      } else {
+        console.log('✅ Buffer loaded successfully');
       }
     });
   </script>
