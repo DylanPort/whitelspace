@@ -25,7 +25,7 @@
   to = "/index.html"
   status = 200
 
-[headers]
+[[headers]]
   for = "/server.js"
   [headers.values]
     Cache-Control = "no-store"
