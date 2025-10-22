@@ -9490,6 +9490,18 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             setWorldMap(map);
             console.log('✅ World map initialized successfully!', map);
             
+            // ADD TEST MARKER to verify map is working
+            const testMarker = L.circleMarker([52.52, 13.405], {
+              radius: 20,
+              fillColor: '#ff0000',
+              color: '#ffffff',
+              weight: 5,
+              opacity: 1,
+              fillOpacity: 1
+            }).addTo(map);
+            testMarker.bindPopup('🧪 TEST MARKER - Berlin');
+            console.log('🧪 Added RED test marker at Berlin [52.52, 13.405]');
+            
             // Force map to resize in case container wasn't ready
             setTimeout(() => {
               map.invalidateSize();
