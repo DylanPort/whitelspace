@@ -10619,11 +10619,17 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   {connecting ? 'Connecting...' : 'Connect Wallet'}
                 </button>
               ) : (
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <div className="bg-white/80 dark:bg-slate-800/80 rounded-xl px-4 py-2 border border-slate-200 dark:border-slate-700">
                     <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Balance</div>
                     <div className="text-lg font-black text-slate-900 dark:text-white">
                       {tokenBalance.toLocaleString()} $W
+                    </div>
+                  </div>
+                  <div className="bg-blue-500/10 dark:bg-blue-500/20 rounded-xl px-4 py-2 border border-blue-300/50 dark:border-blue-500/50">
+                    <div className="text-[10px] text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1 font-bold">Staked</div>
+                    <div className="text-lg font-black text-blue-700 dark:text-blue-300">
+                      {stakedAmount.toLocaleString()} $W
                     </div>
                   </div>
                   <button
