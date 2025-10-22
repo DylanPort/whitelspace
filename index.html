@@ -8832,7 +8832,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
     const GHOST_PROGRAM_ID = '2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq'; // RELAY CONTRACT DEPLOYED (6 decimals + relay functions)
     const WHISTLE_TOKEN_MINT = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';
     const MAINNET_RPC = 'https://rpc-mainnet.solanatracker.io/?api_key=25ef537d-3249-479c-96cb-40efc0ce3e09';
-    const SIGNALING_SERVER_URL = 'ws://localhost:8080'; // Real signaling server
+    const SIGNALING_SERVER_URL = 'wss://whitelspace.onrender.com'; // Production signaling server
     const TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
     const SYSTEM_PROGRAM_ID = solanaWeb3.SystemProgram.programId;
     
@@ -9026,7 +9026,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const fetchGlobalNodes = async () => {
         try {
           console.log('🌐 Fetching nodes from API...');
-          const response = await fetch('http://localhost:8080/api/nodes');
+          const response = await fetch('https://whitelspace.onrender.com/api/nodes');
           const data = await response.json();
           
           console.log('📡 RAW API Response:', data);
