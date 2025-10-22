@@ -9134,114 +9134,115 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         console.log('🔄 loadBlockchainData called for address:', address);
         setLoading(true);
         
-        // Try multiple RPCs for reliability
-        let connection = null;
-        for (let i = 0; i < RPC_ENDPOINTS.length; i++) {
+        const pubkey = new solanaWeb3.PublicKey(address);
+        let balanceLoaded = false;
+        let stakeLoaded = false;
+        
+        // Try each RPC until we successfully load data
+        for (let rpcIndex = 0; rpcIndex < RPC_ENDPOINTS.length; rpcIndex++) {
           try {
-            connection = new solanaWeb3.Connection(RPC_ENDPOINTS[i], {
+            const rpcUrl = RPC_ENDPOINTS[rpcIndex];
+            console.log(`🔌 Trying RPC ${rpcIndex + 1}/${RPC_ENDPOINTS.length}: ${rpcUrl.split('?')[0]}`);
+            
+            const connection = new solanaWeb3.Connection(rpcUrl, {
               commitment: 'confirmed',
               confirmTransactionInitialTimeout: 60000
             });
-            // Test the connection
-            await connection.getSlot();
-            console.log(`✅ Using RPC ${i + 1}: ${RPC_ENDPOINTS[i].split('?')[0]}`);
-            break;
-          } catch (e) {
-            console.warn(`⚠️ RPC ${i + 1} failed, trying next...`);
-            if (i === RPC_ENDPOINTS.length - 1) {
-              pushToast('❌ All RPCs failed. Please try again.', 'err');
-              setLoading(false);
-              return;
+            
+            // Get token balance
+            if (!balanceLoaded) {
+              try {
+                console.log('🔍 Fetching $WHISTLE balance...');
+                
+                const tokenAccounts = await connection.getParsedTokenAccountsByOwner(pubkey, {
+                  mint: new solanaWeb3.PublicKey(WHISTLE_TOKEN_MINT)
+                });
+                
+                console.log('📊 Token accounts found:', tokenAccounts.value.length);
+                
+                if (tokenAccounts.value.length > 0) {
+                  const balance = tokenAccounts.value[0].account.data.parsed.info.tokenAmount.uiAmount;
+                  console.log('💰 $WHISTLE Balance:', balance);
+                  setTokenBalance(balance || 0);
+                  balanceLoaded = true;
+                  pushToast(`✅ Loaded: ${balance.toLocaleString()} $WHISTLE`, 'ok');
+                } else {
+                  console.log('⚠️ No $WHISTLE token account found');
+                  setTokenBalance(0);
+                  balanceLoaded = true;
+                }
+              } catch (e) {
+                console.error(`❌ Balance fetch failed on RPC ${rpcIndex + 1}:`, e.message);
+                // Continue to next RPC
+              }
             }
+            
+            // Get node account (PDA)
+            if (!stakeLoaded) {
+              try {
+                console.log('🔍 Fetching node account...');
+                const [nodeAccountPDA] = await solanaWeb3.PublicKey.findProgramAddress(
+                  [new TextEncoder().encode('node'), pubkey.toBuffer()],
+                  new solanaWeb3.PublicKey(GHOST_PROGRAM_ID)
+                );
+                
+                console.log('📍 Node PDA:', nodeAccountPDA.toString());
+                const nodeAccountInfo = await connection.getAccountInfo(nodeAccountPDA);
+                
+                if (nodeAccountInfo) {
+                  // Parse node account data
+                  const data = nodeAccountInfo.data;
+                  console.log('📦 Node account data length:', data.length);
+                  
+                  const staked = new DataView(data.buffer, 40, 8).getBigUint64(0, true);
+                  const rep = new DataView(data.buffer, 48, 8).getBigUint64(0, true);
+                  const totalRel = new DataView(data.buffer, 56, 8).getBigUint64(0, true);
+                  const successRel = new DataView(data.buffer, 64, 8).getBigUint64(0, true);
+                  const pendingRew = new DataView(data.buffer, 80, 8).getBigUint64(0, true);
+                  
+                  console.log('📊 Staked (raw):', staked.toString(), '→', Number(staked) / 1e6);
+                  console.log('⭐ Reputation:', rep.toString());
+                  
+                  setStakedAmount(Number(staked) / 1e6); // Convert from 6 decimals
+                  setReputation(Number(rep));
+                  setTotalRelays(Number(totalRel));
+                  setSuccessfulRelays(Number(successRel));
+                  setPendingRewards(Number(pendingRew) / 1e6); // Convert from 6 decimals
+                  stakeLoaded = true;
+                } else {
+                  console.log('⚠️ Node account not found (user hasn\'t staked yet)');
+                  setStakedAmount(0);
+                  setReputation(0);
+                  setTotalRelays(0);
+                  setSuccessfulRelays(0);
+                  setPendingRewards(0);
+                  stakeLoaded = true;
+                }
+              } catch (e) {
+                console.error(`❌ Stake fetch failed on RPC ${rpcIndex + 1}:`, e.message);
+                // Continue to next RPC
+              }
+            }
+            
+            // If both loaded successfully, break the loop
+            if (balanceLoaded && stakeLoaded) {
+              console.log(`✅ All data loaded successfully from RPC ${rpcIndex + 1}`);
+              break;
+            }
+            
+          } catch (err) {
+            console.error(`❌ RPC ${rpcIndex + 1} failed:`, err.message);
+            // Continue to next RPC
           }
         }
         
-        try {
-          const pubkey = new solanaWeb3.PublicKey(address);
-          
-          // Get token balance
-          try {
-            console.log('🔍 Fetching $WHISTLE balance for:', pubkey.toString());
-            console.log('🪙 Token Mint:', WHISTLE_TOKEN_MINT);
-            
-            const tokenAccounts = await connection.getParsedTokenAccountsByOwner(pubkey, {
-              mint: new solanaWeb3.PublicKey(WHISTLE_TOKEN_MINT)
-            });
-            
-            console.log('📊 Token accounts found:', tokenAccounts.value.length);
-            
-            if (tokenAccounts.value.length > 0) {
-              const balance = tokenAccounts.value[0].account.data.parsed.info.tokenAmount.uiAmount;
-              const actualTokenAccount = tokenAccounts.value[0].pubkey;
-              console.log('💰 $WHISTLE Balance:', balance);
-              console.log('💳 Token account with balance:', actualTokenAccount.toString());
-              setTokenBalance(balance || 0);
-              pushToast(`✅ Loaded: ${balance.toLocaleString()} $WHISTLE`, 'ok');
-            } else {
-              console.log('⚠️ No $WHISTLE token account found');
-              pushToast('ℹ️ No $WHISTLE tokens found in wallet', 'info');
-              setTokenBalance(0);
-            }
-          } catch (e) {
-            console.error('❌ Error loading token balance:', e);
-            pushToast('⚠️ Error loading token balance', 'err');
-            setTokenBalance(0);
-          }
-          
-          // Get node account (PDA)
-          try {
-            console.log('🔍 Fetching node account for:', pubkey.toString());
-            const [nodeAccountPDA] = await solanaWeb3.PublicKey.findProgramAddress(
-              [new TextEncoder().encode('node'), pubkey.toBuffer()],
-              new solanaWeb3.PublicKey(GHOST_PROGRAM_ID)
-            );
-            
-            console.log('📍 Node PDA:', nodeAccountPDA.toString());
-            const nodeAccountInfo = await connection.getAccountInfo(nodeAccountPDA);
-            
-            if (nodeAccountInfo) {
-              // Parse node account data
-              const data = nodeAccountInfo.data;
-              console.log('📦 Node account data length:', data.length);
-              
-              const staked = new DataView(data.buffer, 40, 8).getBigUint64(0, true);
-              const rep = new DataView(data.buffer, 48, 8).getBigUint64(0, true);
-              const totalRel = new DataView(data.buffer, 56, 8).getBigUint64(0, true);
-              const successRel = new DataView(data.buffer, 64, 8).getBigUint64(0, true);
-              const pendingRew = new DataView(data.buffer, 80, 8).getBigUint64(0, true);
-              
-              console.log('📊 Staked (raw):', staked.toString(), '→', Number(staked) / 1e6);
-              console.log('⭐ Reputation:', rep.toString());
-              
-              setStakedAmount(Number(staked) / 1e6); // Convert from 6 decimals
-              setReputation(Number(rep));
-              setTotalRelays(Number(totalRel));
-              setSuccessfulRelays(Number(successRel));
-              setPendingRewards(Number(pendingRew) / 1e6); // Convert from 6 decimals
-            } else {
-              console.log('⚠️ Node account exists but has no data');
-              setStakedAmount(0);
-              setReputation(0);
-              setTotalRelays(0);
-              setSuccessfulRelays(0);
-              setPendingRewards(0);
-            }
-          } catch (e) {
-            console.log('ℹ️ No node account found (not staked yet)');
-            console.error('Error details:', e.message);
-            setStakedAmount(0);
-            setReputation(0);
-            setTotalRelays(0);
-            setSuccessfulRelays(0);
-            setPendingRewards(0);
-          }
-          
-        } catch (err) {
-          console.error('Error loading blockchain data:', err);
-          pushToast('⚠️ Error loading data', 'err');
-        } finally {
-          setLoading(false);
+        // Final check
+        if (!balanceLoaded || !stakeLoaded) {
+          console.error('❌ Failed to load all data from all RPCs');
+          pushToast('⚠️ Some data failed to load. Try refreshing.', 'err');
         }
+        
+        setLoading(false);
       };
       
       // Fetch global nodes from API
