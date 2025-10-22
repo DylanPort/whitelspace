@@ -9125,8 +9125,30 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       // Load Blockchain Data
       const loadBlockchainData = async (address) => {
         setLoading(true);
+        
+        // Try multiple RPCs for reliability
+        let connection = null;
+        for (let i = 0; i < RPC_ENDPOINTS.length; i++) {
+          try {
+            connection = new solanaWeb3.Connection(RPC_ENDPOINTS[i], {
+              commitment: 'confirmed',
+              confirmTransactionInitialTimeout: 60000
+            });
+            // Test the connection
+            await connection.getSlot();
+            console.log(`✅ Using RPC ${i + 1}: ${RPC_ENDPOINTS[i].split('?')[0]}`);
+            break;
+          } catch (e) {
+            console.warn(`⚠️ RPC ${i + 1} failed, trying next...`);
+            if (i === RPC_ENDPOINTS.length - 1) {
+              pushToast('❌ All RPCs failed. Please try again.', 'err');
+              setLoading(false);
+              return;
+            }
+          }
+        }
+        
         try {
-          const connection = new solanaWeb3.Connection(MAINNET_RPC, 'confirmed');
           const pubkey = new solanaWeb3.PublicKey(address);
           
           // Get token balance
@@ -9155,34 +9177,55 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           } catch (e) {
             console.error('❌ Error loading token balance:', e);
             pushToast('⚠️ Error loading token balance', 'err');
+            setTokenBalance(0);
           }
           
           // Get node account (PDA)
           try {
+            console.log('🔍 Fetching node account for:', pubkey.toString());
             const [nodeAccountPDA] = await solanaWeb3.PublicKey.findProgramAddress(
-              [Buffer.from('node'), pubkey.toBuffer()],
+              [new TextEncoder().encode('node'), pubkey.toBuffer()],
               new solanaWeb3.PublicKey(GHOST_PROGRAM_ID)
             );
             
+            console.log('📍 Node PDA:', nodeAccountPDA.toString());
             const nodeAccountInfo = await connection.getAccountInfo(nodeAccountPDA);
             
             if (nodeAccountInfo) {
               // Parse node account data
               const data = nodeAccountInfo.data;
+              console.log('📦 Node account data length:', data.length);
+              
               const staked = new DataView(data.buffer, 40, 8).getBigUint64(0, true);
               const rep = new DataView(data.buffer, 48, 8).getBigUint64(0, true);
               const totalRel = new DataView(data.buffer, 56, 8).getBigUint64(0, true);
               const successRel = new DataView(data.buffer, 64, 8).getBigUint64(0, true);
               const pendingRew = new DataView(data.buffer, 80, 8).getBigUint64(0, true);
               
+              console.log('📊 Staked (raw):', staked.toString(), '→', Number(staked) / 1e6);
+              console.log('⭐ Reputation:', rep.toString());
+              
               setStakedAmount(Number(staked) / 1e6); // Convert from 6 decimals
               setReputation(Number(rep));
               setTotalRelays(Number(totalRel));
               setSuccessfulRelays(Number(successRel));
               setPendingRewards(Number(pendingRew) / 1e6); // Convert from 6 decimals
+            } else {
+              console.log('⚠️ Node account exists but has no data');
+              setStakedAmount(0);
+              setReputation(0);
+              setTotalRelays(0);
+              setSuccessfulRelays(0);
+              setPendingRewards(0);
             }
           } catch (e) {
-            console.log('No node account found (not staked yet)');
+            console.log('ℹ️ No node account found (not staked yet)');
+            console.error('Error details:', e.message);
+            setStakedAmount(0);
+            setReputation(0);
+            setTotalRelays(0);
+            setSuccessfulRelays(0);
+            setPendingRewards(0);
           }
           
         } catch (err) {
