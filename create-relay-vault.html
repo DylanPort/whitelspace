@@ -161,8 +161,9 @@
         
         // Derive Pool PDA
         const programId = new solanaWeb3.PublicKey(PROGRAM_ID);
+        const poolSeed = new TextEncoder().encode('pool');
         const [poolPDA] = await solanaWeb3.PublicKey.findProgramAddress(
-          [Buffer.from('pool')],
+          [poolSeed],
           programId
         );
         
