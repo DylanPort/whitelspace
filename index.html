@@ -9433,8 +9433,9 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         // Clear existing markers
         mapMarkers.forEach(marker => marker.remove());
         
-        // Region to coordinates mapping
+        // Region to coordinates mapping (expanded to cover all major timezones)
         const regionCoords = {
+          // North America
           'America/New_York': [40.7128, -74.0060],
           'America/Los_Angeles': [34.0522, -118.2437],
           'America/Chicago': [41.8781, -87.6298],
@@ -9442,8 +9443,38 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           'America/Phoenix': [33.4484, -112.0740],
           'America/Toronto': [43.6532, -79.3832],
           'America/Vancouver': [49.2827, -123.1207],
+          'America/Montreal': [45.5017, -73.5673],
           'America/Sao_Paulo': [-23.5505, -46.6333],
           'America/Mexico_City': [19.4326, -99.1332],
+          'America/Bogota': [4.7110, -74.0721],
+          'America/Lima': [-12.0464, -77.0428],
+          'America/Buenos_Aires': [-34.6037, -58.3816],
+          'America/Santiago': [-33.4489, -70.6693],
+          'America/Caracas': [10.4806, -66.9036],
+          'America/Havana': [23.1136, -82.3666],
+          'America/Panama': [8.9824, -79.5199],
+          'America/Anchorage': [61.2181, -149.9003],
+          'America/Juneau': [58.3019, -134.4197],
+          'America/Boise': [43.6150, -116.2023],
+          'America/Detroit': [42.3314, -83.0458],
+          'America/Indianapolis': [39.7684, -86.1581],
+          'America/Kentucky/Louisville': [38.2527, -85.7585],
+          'America/Louisville': [38.2527, -85.7585],
+          'America/New_Orleans': [29.9511, -90.0715],
+          'America/Houston': [29.7604, -95.3698],
+          'America/Dallas': [32.7767, -96.7970],
+          'America/Miami': [25.7617, -80.1918],
+          'America/Atlanta': [33.7490, -84.3880],
+          'America/Seattle': [47.6062, -122.3321],
+          'America/San_Francisco': [37.7749, -122.4194],
+          'America/Las_Vegas': [36.1699, -115.1398],
+          'America/Portland': [45.5152, -122.6784],
+          'America/Winnipeg': [49.8951, -97.1384],
+          'America/Edmonton': [53.5461, -113.4938],
+          'America/Halifax': [44.6488, -63.5752],
+          'America/St_Johns': [47.5615, -52.7126],
+          
+          // Europe
           'Europe/London': [51.5074, -0.1278],
           'Europe/Paris': [48.8566, 2.3522],
           'Europe/Berlin': [52.5200, 13.4050],
@@ -9451,6 +9482,33 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           'Europe/Madrid': [40.4168, -3.7038],
           'Europe/Rome': [41.9028, 12.4964],
           'Europe/Moscow': [55.7558, 37.6173],
+          'Europe/Stockholm': [59.3293, 18.0686],
+          'Europe/Oslo': [59.9139, 10.7522],
+          'Europe/Copenhagen': [55.6761, 12.5683],
+          'Europe/Helsinki': [60.1699, 24.9384],
+          'Europe/Warsaw': [52.2297, 21.0122],
+          'Europe/Prague': [50.0755, 14.4378],
+          'Europe/Vienna': [48.2082, 16.3738],
+          'Europe/Budapest': [47.4979, 19.0402],
+          'Europe/Bucharest': [44.4268, 26.1025],
+          'Europe/Athens': [37.9838, 23.7275],
+          'Europe/Istanbul': [41.0082, 28.9784],
+          'Europe/Dublin': [53.3498, -6.2603],
+          'Europe/Lisbon': [38.7223, -9.1393],
+          'Europe/Brussels': [50.8503, 4.3517],
+          'Europe/Zurich': [47.3769, 8.5417],
+          'Europe/Geneva': [46.2044, 6.1432],
+          'Europe/Luxembourg': [49.6116, 6.1319],
+          'Europe/Kiev': [50.4501, 30.5234],
+          'Europe/Minsk': [53.9045, 27.5615],
+          'Europe/Riga': [56.9496, 24.1052],
+          'Europe/Tallinn': [59.4370, 24.7536],
+          'Europe/Vilnius': [54.6872, 25.2797],
+          'Europe/Sofia': [42.6977, 23.3219],
+          'Europe/Belgrade': [44.7866, 20.4489],
+          'Europe/Zagreb': [45.8150, 15.9819],
+          
+          // Asia
           'Asia/Tokyo': [35.6762, 139.6503],
           'Asia/Shanghai': [31.2304, 121.4737],
           'Asia/Hong_Kong': [22.3193, 114.1694],
@@ -9459,23 +9517,100 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           'Asia/Mumbai': [19.0760, 72.8777],
           'Asia/Dubai': [25.2048, 55.2708],
           'Asia/Bangkok': [13.7563, 100.5018],
+          'Asia/Manila': [14.5995, 120.9842],
+          'Asia/Jakarta': [-6.2088, 106.8456],
+          'Asia/Kuala_Lumpur': [3.1390, 101.6869],
+          'Asia/Taipei': [25.0330, 121.5654],
+          'Asia/Hanoi': [21.0285, 105.8542],
+          'Asia/Ho_Chi_Minh': [10.8231, 106.6297],
+          'Asia/Delhi': [28.7041, 77.1025],
+          'Asia/Kolkata': [22.5726, 88.3639],
+          'Asia/Karachi': [24.8607, 67.0011],
+          'Asia/Dhaka': [23.8103, 90.4125],
+          'Asia/Colombo': [6.9271, 79.8612],
+          'Asia/Kathmandu': [27.7172, 85.3240],
+          'Asia/Tehran': [35.6892, 51.3890],
+          'Asia/Baghdad': [33.3152, 44.3661],
+          'Asia/Riyadh': [24.7136, 46.6753],
+          'Asia/Kuwait': [29.3759, 47.9774],
+          'Asia/Doha': [25.2854, 51.5310],
+          'Asia/Muscat': [23.5880, 58.3829],
+          'Asia/Jerusalem': [31.7683, 35.2137],
+          'Asia/Beirut': [33.8938, 35.5018],
+          'Asia/Amman': [31.9454, 35.9284],
+          'Asia/Baku': [40.4093, 49.8671],
+          'Asia/Yerevan': [40.1792, 44.4991],
+          'Asia/Tbilisi': [41.7151, 44.8271],
+          'Asia/Tashkent': [41.2995, 69.2401],
+          'Asia/Almaty': [43.2220, 76.8512],
+          'Asia/Bishkek': [42.8746, 74.5698],
+          'Asia/Ulaanbaatar': [47.8864, 106.9057],
+          'Asia/Pyongyang': [39.0392, 125.7625],
+          
+          // Australia & Pacific
           'Australia/Sydney': [-33.8688, 151.2093],
           'Australia/Melbourne': [-37.8136, 144.9631],
+          'Australia/Brisbane': [-27.4698, 153.0251],
+          'Australia/Perth': [-31.9505, 115.8605],
+          'Australia/Adelaide': [-34.9285, 138.6007],
+          'Australia/Hobart': [-42.8821, 147.3272],
+          'Australia/Darwin': [-12.4634, 130.8456],
           'Pacific/Auckland': [-36.8485, 174.7633],
+          'Pacific/Fiji': [-18.1416, 178.4419],
+          'Pacific/Guam': [13.4443, 144.7937],
+          'Pacific/Honolulu': [21.3099, -157.8581],
+          'Pacific/Tahiti': [-17.6509, -149.4260],
+          
+          // Africa
           'Africa/Johannesburg': [-26.2041, 28.0473],
           'Africa/Cairo': [30.0444, 31.2357],
-          'Africa/Lagos': [6.5244, 3.3792]
+          'Africa/Lagos': [6.5244, 3.3792],
+          'Africa/Nairobi': [-1.2864, 36.8172],
+          'Africa/Casablanca': [33.5731, -7.5898],
+          'Africa/Algiers': [36.7538, 3.0588],
+          'Africa/Tunis': [36.8065, 10.1815],
+          'Africa/Tripoli': [32.8872, 13.1913],
+          'Africa/Khartoum': [15.5007, 32.5599],
+          'Africa/Addis_Ababa': [9.0320, 38.7469],
+          'Africa/Dar_es_Salaam': [-6.7924, 39.2083],
+          'Africa/Kampala': [0.3476, 32.5825],
+          'Africa/Lusaka': [-15.3875, 28.3228],
+          'Africa/Harare': [-17.8252, 31.0335],
+          'Africa/Maputo': [-25.9655, 32.5832],
+          'Africa/Windhoek': [-22.5597, 17.0832],
+          'Africa/Kinshasa': [-4.4419, 15.2663],
+          'Africa/Accra': [5.6037, -0.1870],
+          'Africa/Abidjan': [5.3600, -4.0083],
+          'Africa/Dakar': [14.7167, -17.4677],
+          
+          // South America (additional)
+          'America/Montevideo': [-34.9011, -56.1645],
+          'America/Asuncion': [-25.2637, -57.5759],
+          'America/La_Paz': [-16.5000, -68.1500],
+          'America/Guayaquil': [-0.1807, -78.4678],
+          'America/Fortaleza': [-3.7172, -38.5433],
+          'America/Recife': [-8.0476, -34.8770],
+          'America/Manaus': [-3.1190, -60.0217],
+          'America/Rio_Branco': [-9.9750, -67.8243]
         };
         
         const newMarkers = [];
         
+        console.log('🗺️ Creating markers for nodes:', globalNodes.map(n => `${n.id.slice(0,8)} @ ${n.location}`));
+        
         globalNodes.forEach(node => {
-          const coords = regionCoords[node.location] || [
+          const coords = regionCoords[node.location];
+          
+          if (!coords) {
+            console.warn(`⚠️ Unknown region "${node.location}" for node ${node.id.slice(0,8)}, using fallback coordinates`);
+          }
+          
+          const finalCoords = coords || [
             (Math.random() - 0.5) * 140,
             (Math.random() - 0.5) * 340
           ];
           
-          const marker = L.circleMarker(coords, {
+          const marker = L.circleMarker(finalCoords, {
             radius: 8,
             fillColor: node.status === 'active' ? '#3b82f6' : '#f59e0b',
             color: '#fff',
