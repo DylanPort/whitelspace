@@ -9183,7 +9183,9 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             // Read total_nodes (u64 at offset 80 = 8 + 32 + 32 + 8)
             const totalNodesRaw = new DataView(data.buffer, 80, 8).getBigUint64(0, true);
             
-            const totalStaked = Number(totalStakedRaw) / 1e6; // Convert from 6 decimals
+            // Contract uses 10_000_000_000 as minimum (treats as 9 decimals effectively)
+            // So we need to divide by 1e9 instead of 1e6 to get correct display value
+            const totalStaked = Number(totalStakedRaw) / 1e9; // Contract stores with 9 decimal scale
             const totalStakers = Number(totalNodesRaw);
             
             console.log('✅ Global stats - Total Staked:', totalStaked, 'Total Stakers:', totalStakers);
