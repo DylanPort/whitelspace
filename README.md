@@ -58,24 +58,47 @@ Notes:
 
 ## Deployment
 
-### Netlify (recommended)
-This repo contains `netlify.toml` with a single‑page app redirect.
+### 🚀 Production Deployment (Render + Netlify)
 
-- Connect your GitHub repo in Netlify
-- Build command: (leave empty)
-- Publish directory: `.`
-- Click Deploy
+**Ghost Whistle** uses a split architecture:
+- **Backend**: Node.js WebSocket server on Render (free tier)
+- **Frontend**: Static site on Netlify (free tier)
 
-Alternatively, with Netlify CLI:
+#### Quick Deploy Guide
+
+1. **Deploy Backend to Render**
+   ```bash
+   # The backend (signaling-server.js) handles WebSocket connections for P2P nodes
+   # render.yaml is already configured for one-click deployment
+   ```
+   - Go to [render.com](https://render.com) and connect your GitHub repo
+   - Render will auto-detect `render.yaml` and deploy
+   - Copy your Render URL (e.g., `https://ghost-whistle-xyz.onrender.com`)
+
+2. **Update Frontend URLs**
+   - Open `index.html`
+   - Replace `ws://localhost:8080` with `wss://YOUR-RENDER-URL.onrender.com`
+   - Replace `http://localhost:8080` with `https://YOUR-RENDER-URL.onrender.com`
+   - Commit changes
+
+3. **Deploy Frontend to Netlify**
+   - Connect your GitHub repo in Netlify
+   - Build command: (leave empty)
+   - Publish directory: `.`
+   - Click Deploy
+
+📚 **Detailed instructions**: See [DEPLOY-INSTRUCTIONS.md](DEPLOY-INSTRUCTIONS.md)
+
+### Local Development
 ```bash
-npm install -g netlify-cli
-netlify deploy --prod --dir .
+# Terminal 1 - Frontend
+npm start
+
+# Terminal 2 - Signaling Server
+npm run signaling
 ```
 
-### Custom server
-- Development: `npm start` runs Express on port 3000
-- Production: run behind HTTPS (wallets typically require secure context)
-  - Example: `PORT=8080 node server.js` behind Nginx/Cloudflare TLS
+Then open http://localhost:3000
 
 ## Troubleshooting
 

@@ -102,6 +102,18 @@ wss.on('connection', (ws) => {
           handleDisconnect(message);
           break;
         
+        case 'broadcast_relay_request':
+          handleBroadcastRelayRequest(message);
+          break;
+        
+        case 'relay_forward':
+          handleRelayForwardMessage(message);
+          break;
+        
+        case 'relay_to_node':
+          handleRelayToNode(message);
+          break;
+        
         default:
           console.log('⚠️ Unknown message type:', message.type);
       }
@@ -233,6 +245,57 @@ wss.on('connection', (ws) => {
       activeNodes.delete(nodeId);
       console.log(`👋 Node ${nodeId} gracefully disconnected`);
       broadcastNodeList();
+    }
+  }
+
+  function handleBroadcastRelayRequest(message) {
+    const relayData = message.data;
+    console.log(`🔒 Broadcasting relay request ${relayData.requestId} to selected nodes`);
+    
+    // Send relay request to each selected node
+    relayData.nodes.forEach(targetNode => {
+      // Find node by wallet address
+      for (const [id, node] of activeNodes) {
+        if (node.walletAddress === targetNode.wallet && node.ws.readyState === WebSocket.OPEN) {
+          console.log(`  → Sending to node ${id}`);
+          node.ws.send(JSON.stringify({
+            type: 'relay_request',
+            data: relayData
+          }));
+          break;
+        }
+      }
+    });
+  }
+
+  function handleRelayForwardMessage(message) {
+    const { to, data } = message;
+    console.log(`🔄 Forwarding relay ${data.requestId} to ${to?.slice(0, 8)}`);
+    
+    // Find target node by wallet address
+    for (const [id, node] of activeNodes) {
+      if (node.walletAddress === to && node.ws.readyState === WebSocket.OPEN) {
+        node.ws.send(JSON.stringify({
+          type: 'relay_forward',
+          data: data
+        }));
+        console.log(`  ✅ Forwarded to ${id}`);
+        return;
+      }
+    }
+    
+    console.log(`  ⚠️ Target node not found: ${to?.slice(0, 8)}`);
+  }
+
+  function handleRelayToNode(message) {
+    const { targetNode, data } = message;
+    const node = activeNodes.get(targetNode);
+    
+    if (node && node.ws.readyState === WebSocket.OPEN) {
+      node.ws.send(JSON.stringify({
+        type: 'relay_message',
+        data: data
+      }));
     }
   }
 });

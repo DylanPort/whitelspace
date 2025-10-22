@@ -9,6 +9,18 @@
   force = false
 
 [[redirects]]
+  from = "/init-relay-pool.html"
+  to = "/init-relay-pool.html"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/create-relay-vault.html"
+  to = "/create-relay-vault.html"
+  status = 200
+  force = false
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
@@ -17,5 +29,13 @@
   for = "/server.js"
   [headers.values]
     Cache-Control = "no-store"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
 
 

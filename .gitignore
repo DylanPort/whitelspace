@@ -1,9 +1,15 @@
 # Wallet files - NEVER commit these!
-*.json
 playground-wallet.json
 wallet.json
 keypair.json
 id.json
+*-keypair.json
+
+# But allow these JSON files
+!package.json
+!package-lock.json
+!tsconfig.json
+!manifest.webmanifest
 
 # Node modules
 node_modules/
