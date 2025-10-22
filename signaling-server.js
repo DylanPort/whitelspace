@@ -6,8 +6,17 @@
 const express = require('express');
 const WebSocket = require('ws');
 const http = require('http');
+const cors = require('cors');
 
 const app = express();
+
+// Enable CORS for all routes
+app.use(cors({
+  origin: '*', // Allow all origins (or specify 'http://localhost:3000')
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type']
+}));
+
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
