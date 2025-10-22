@@ -33,6 +33,20 @@ app.use(morgan('tiny'));
 
 app.use(express.static(__dirname, { extensions: ['html'] }));
 
+// Serve specific HTML files
+app.get('/init-relay-pool.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'init-relay-pool.html'));
+});
+
+app.get('/create-relay-vault.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'create-relay-vault.html'));
+});
+
+app.get('/whitepaper.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'whitepaper.html'));
+});
+
+// Catch-all route for everything else
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });

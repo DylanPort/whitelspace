@@ -6,6 +6,23 @@
   <title>Initialize Relay Pool - Ghost Whistle</title>
   <script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/buffer@6.0.3/index.js"></script>
+  
+  <script>
+    // Check if Solana Web3.js loaded
+    window.addEventListener('load', function() {
+      console.log('🔍 Checking dependencies...');
+      console.log('Solana Web3:', typeof solanaWeb3);
+      console.log('Buffer:', typeof Buffer);
+      console.log('Window.solana:', typeof window.solana);
+      
+      if (typeof solanaWeb3 === 'undefined') {
+        console.error('❌ Solana Web3.js not loaded!');
+        alert('Error: Solana Web3.js library failed to load. Please refresh the page.');
+      } else {
+        console.log('✅ Solana Web3.js loaded successfully');
+      }
+    });
+  </script>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -97,14 +114,18 @@
     <div class="warning">
       <strong>⚠️ IMPORTANT:</strong> This will initialize the staking pool for the NEW relay contract.
       <br><br>
-      <strong>Program ID:</strong> 3pb437ujFvPq6bKEUnoEwBc711ehM2h9vMu9QkNDsxFN
+      <strong>Program ID:</strong> 2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq
       <br>
       <strong>Token:</strong> $WHISTLE (6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump)
       <br><br>
       Make sure you have ~0.01 SOL for transaction fees.
     </div>
 
-    <button id="initButton" onclick="initializePool()">
+    <button id="testButton" style="background: #28a745; margin-bottom: 10px;">
+      🧪 Test Button (Click Me First)
+    </button>
+    
+    <button id="initButton">
       Initialize Pool
     </button>
 
@@ -131,11 +152,14 @@
     }
 
     async function initializePool() {
+      console.log('🚀 initializePool() called!');
       const button = document.getElementById('initButton');
+      console.log('Button found:', button);
       button.disabled = true;
       
       try {
         showStatus('Connecting to Phantom wallet...', 'info');
+        console.log('Checking Phantom wallet...');
         
         // Connect to Phantom
         if (!window.solana || !window.solana.isPhantom) {
@@ -234,11 +258,38 @@
       }
     }
 
-    // Auto-load on page load
+    // Test function
+    function testFunction() {
+      console.log('🧪 Test button clicked!');
+      alert('✅ Test button works! JavaScript is functioning correctly.');
+      showStatus('Test successful! Ready to initialize pool.', 'success');
+    }
+
+    // Auto-load on page load and attach event listeners
     window.addEventListener('load', () => {
-      console.log('Ready to initialize pool');
+      console.log('✅ Page loaded');
       console.log('Program ID:', PROGRAM_ID);
       console.log('$WHISTLE Mint:', WHISTLE_MINT);
+      
+      // Attach button event listeners
+      const testBtn = document.getElementById('testButton');
+      const initBtn = document.getElementById('initButton');
+      
+      if (testBtn) {
+        console.log('✅ Test button found');
+        testBtn.addEventListener('click', testFunction);
+      } else {
+        console.error('❌ Test button not found!');
+      }
+      
+      if (initBtn) {
+        console.log('✅ Init button found');
+        initBtn.addEventListener('click', initializePool);
+      } else {
+        console.error('❌ Init button not found!');
+      }
+      
+      console.log('🎯 All event listeners attached!');
     });
   </script>
 </body>
