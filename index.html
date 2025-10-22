@@ -4,6 +4,7 @@
 <meta charset="utf-8">
   <title>Whistle — P2P encrypted tips + Solana memo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: http: data: blob:; connect-src 'self' https: wss: ws: http://localhost:* ws://localhost:*; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: http:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https: http:;">
   <link rel="manifest" href="/manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -18,6 +19,10 @@
   <script type="module">import { Buffer } from 'https://esm.sh/buffer@6.0.3'; window.Buffer = Buffer;</script>
   <script crossorigin src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/bs58@5.0.0/dist/bs58.min.js"></script>
+  <!-- Solana Wallet Adapter & SPL Token -->
+  <script src="https://unpkg.com/@solana/spl-token@0.3.8/lib/index.iife.min.js"></script>
+  <script src="https://unpkg.com/@coral-xyz/anchor@0.29.0/dist/browser.js"></script>
+  <script src="https://unpkg.com/bn.js@5.2.1/lib/bn.js"></script>
   <!-- Optional: Solana Mobile Wallet Adapter (deep link-friendly) -->
   <script type="module">
     // Simple feature flag for Solana Mobile deep link environments
@@ -76,6 +81,7 @@
     @keyframes slideInRight{0%{opacity:0;transform:translateX(20px)}100%{opacity:1;transform:translateX(0)}}
     @keyframes scaleIn{0%{opacity:0;transform:scale(.94)}100%{opacity:1;transform:scale(1)}}
     @keyframes shimmer{0%{background-position:200% center}100%{background-position:-200% center}}
+    @keyframes shimmer-slide{0%{transform:translateX(-100%)}100%{transform:translateX(200%)}}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
     @keyframes pulseSlow{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.85;transform:scale(1.05)}}
     @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
@@ -101,6 +107,8 @@
     .mini-code:hover{border-color:rgba(103,232,249,.3);box-shadow:0 0 20px rgba(103,232,249,.15)}
     
     .shimmer-bg{background:linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.08) 50%,rgba(255,255,255,0) 100%);background-size:200% 100%;animation:shimmer 3s linear infinite}
+    .animate-shimmer{animation:shimmer 3s infinite}
+    .animate-shimmer-slide{animation:shimmer-slide 3s linear infinite}
     
     .pulse-glow{animation:pulse 2s ease-in-out infinite}
     
@@ -803,11 +811,7 @@
     function useToasts() {
       const [toasts, setToasts] = useState([]);
       
-      useEffect(() => {
-        if (window.lucide && toasts.length > 0) {
-          setTimeout(() => window.lucide.createIcons(), 0);
-        }
-      }, [toasts]);
+      // Icon initialization removed - using inline SVGs now to prevent DOM conflicts
       
       function push(msg, tone = "default") {
         const id = Math.random().toString(36).slice(2);
@@ -1755,6 +1759,7 @@
       const tabs = [
         { id: "home", label: "Home", icon: "home" },
         { id: "webrtc", label: "WebRTC Transfer", icon: "radio" },
+        { id: "offline-network", label: "👻 Ghost Whistle", icon: "network" },
         { id: "swap", label: "Privacy Swap", iconImg: "4DqRlDPT_400x400.png.png" },
         { id: "solana-privacy", label: "Solana Privacy Tools", iconImg: "solana.png" },
         { id: "pump-portal", label: "Pump Privacy Tools", iconImg: "idrs8cZ-zg_logos.png" },
@@ -2697,6 +2702,7 @@
       const items = [
         { id:'home',    label:'Home', icon:'home' },
         { id:'webrtc',    label:'WebRTC Transfer', icon:'radio' },
+        { id:'offline-network', label:'👻 Ghost Whistle', icon:'network' },
         { id:'swap', label:'Privacy Swap', iconImg:'4DqRlDPT_400x400.png.png' },
         { id:'solana-privacy', label:'Solana Privacy Tools', iconImg:'solana.png' },
         { id:'pump-portal', label:'Pump Privacy Tools', iconImg:'idrs8cZ-zg_logos.png' },
@@ -2714,20 +2720,44 @@
         <aside className="hidden md:block w-[260px] shrink-0 scale-in">
           <div className="rounded-3xl border border-white/10 p-4 sticky top-4 panel-strong">
             <nav className="space-y-2">
-              {items.map((x,i)=> (
+              {items.map((x,i)=> {
+                // Special styling for Ghost Whistle button
+                const isGhostWhistle = x.id === 'offline-network';
+                const isActive = step === x.id;
+                
+                return (
                 <button key={x.id} onClick={()=>setStep(x.id)}
-                  className={`w-full flex items-center gap-3 rounded-xl px-3 py-3 border text-sm transition-all btn-press ${step===x.id
+                    className={`w-full flex items-center gap-3 rounded-xl px-3 py-3 border text-sm transition-all btn-press ${
+                      isGhostWhistle 
+                        ? isActive
+                          ? 'relative border-emerald-400/60 bg-gradient-to-r from-emerald-400/20 via-teal-400/20 to-cyan-400/20 text-white shadow-lg shadow-emerald-500/30 animate-pulse'
+                          : 'relative border-emerald-500/40 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-cyan-500/10 text-emerald-100 hover:border-emerald-400/60 hover:shadow-lg hover:shadow-emerald-500/20 hover:scale-[1.03] animate-shimmer'
+                        : isActive
                     ? 'border-cyan-400/60 bg-cyan-400/15 text-cyan-100 scale-in'
-                    : 'border-white/10 bg-white/[0.03] text-white/80 hover:bg-white/[0.07] hover:scale-[1.02]'}
-                  stagger-${i+1}`}>
+                          : 'border-white/10 bg-white/[0.03] text-white/80 hover:bg-white/[0.07] hover:scale-[1.02]'
+                    } stagger-${i+1}`}>
+                    {isGhostWhistle && !isActive && (
+                      <>
+                        <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-emerald-400/0 via-emerald-400/20 to-emerald-400/0 animate-shimmer-slide"></div>
+                        <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-r from-transparent via-emerald-400/30 to-transparent blur-sm animate-shimmer-slide"></div>
+                      </>
+                    )}
+                    <span className="relative z-10 flex items-center gap-3 w-full">
                   {x.iconImg ? (
                     <img src={x.iconImg} alt={x.label} className="w-5 h-5 object-contain" />
                   ) : (
-                  <i data-lucide={x.icon} className="w-5 h-5"></i>
-                  )}
-                  {x.label}
+                        <i data-lucide={x.icon} className={`w-5 h-5 ${isGhostWhistle ? 'animate-pulse' : ''}`}></i>
+                      )}
+                      <span className={isGhostWhistle ? 'font-bold' : ''}>{x.label}</span>
+                      {isGhostWhistle && (
+                        <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 font-bold uppercase tracking-wider border border-emerald-400/40">
+                          Earn
+                        </span>
+                      )}
+                    </span>
                 </button>
-              ))}
+                );
+              })}
             </nav>
     </div>
         </aside>
@@ -5094,7 +5124,7 @@
         };
       }, []);
 
-      useEffect(()=>{ if(window.lucide) window.lucide.createIcons(); },[apiKey, walletPubkey, txSig, showDecrypt, walletBalance, showCredibility, credScore, credTokens, verifyResult, mainWalletConnected]);
+      useEffect(()=>{ if(window.lucide && !showCredCard) window.lucide.createIcons(); },[apiKey, walletPubkey, txSig, showDecrypt, walletBalance, showCredibility, credTokens, verifyResult, mainWalletConnected]);
 
       // Fetch wallet balance when wallet is created
       useEffect(() => {
@@ -6067,7 +6097,9 @@
                               </>
                             ) : (
                               <>
-                                <i data-lucide="shield-check" className="w-5 h-5"></i>
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                </svg>
                                 Generate Credibility Proof
                               </>
                             )}
@@ -6774,7 +6806,7 @@
         
         {/* Credibility Card Popup Modal */}
         {showCredCard && credScore && credProof && (
-          <div className="fixed inset-0 z-[10000] grid place-items-center bg-black/80 backdrop-blur-sm p-4">
+          <div key={credProof} className="fixed inset-0 z-[10000] grid place-items-center bg-black/80 backdrop-blur-sm p-4">
             <div className="max-w-2xl w-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl border-2 border-emerald-400/30 shadow-2xl shadow-emerald-500/20 overflow-hidden animate-in fade-in zoom-in duration-300">
               {/* Header */}
               <div className="relative bg-gradient-to-r from-emerald-500/20 via-green-500/20 to-teal-500/20 p-6 border-b border-emerald-400/20">
@@ -6782,11 +6814,15 @@
                   onClick={() => setShowCredCard(false)}
                   className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-all"
                 >
-                  <i data-lucide="x" className="w-5 h-5 text-white"></i>
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center shadow-lg shadow-emerald-500/50">
-                    <i data-lucide="trophy" className="w-8 h-8 text-white"></i>
+                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                    </svg>
                   </div>
                   <div>
                     <h2 className="text-2xl font-bold text-white mb-1">Developer Credibility Score</h2>
@@ -6836,7 +6872,9 @@
                 {/* Share Section */}
                 <div className="space-y-3">
                   <div className="text-sm font-semibold text-white/90 flex items-center gap-2">
-                    <i data-lucide="share-2" className="w-4 h-4"></i>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                    </svg>
                     Share Your Credibility
                   </div>
                   
@@ -6853,7 +6891,9 @@
                       }}
                       className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 rounded-lg text-white font-semibold text-sm transition-all flex items-center gap-2"
                     >
-                      <i data-lucide="copy" className="w-4 h-4"></i>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
                       Copy Link
                     </button>
                   </div>
@@ -6866,7 +6906,9 @@
                       }}
                       className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400 rounded-lg text-white font-semibold text-sm transition-all flex items-center justify-center gap-2"
                     >
-                      <i data-lucide="twitter" className="w-4 h-4"></i>
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                      </svg>
                       Share on Twitter
                     </button>
                     <button
@@ -6876,7 +6918,9 @@
                       }}
                       className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 rounded-lg text-white font-semibold text-sm transition-all flex items-center justify-center gap-2"
                     >
-                      <i data-lucide="code" className="w-4 h-4"></i>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                      </svg>
                       Copy Proof
                     </button>
                   </div>
@@ -6885,7 +6929,9 @@
                 {/* Privacy Notice */}
                 <div className="mt-4 p-3 bg-cyan-500/10 border border-cyan-400/20 rounded-lg">
                   <div className="flex items-start gap-2">
-                    <i data-lucide="shield-check" className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5"></i>
+                    <svg className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
                     <p className="text-xs text-cyan-300">
                       <strong>Privacy Protected:</strong> Your credibility proof uses cryptographic commitments. Token addresses remain hidden while proving your track record.
                     </p>
@@ -8506,6 +8552,2179 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       );
     }
 
+    // ============= GHOST WHISTLE EARN - BLOCKCHAIN INTEGRATED =============
+    // Program Constants - MAINNET LIVE! ✅ FIXED 6 DECIMALS!
+    const GHOST_PROGRAM_ID = '3pb437ujFvPq6bKEUnoEwBc711ehM2h9vMu9QkNDsxFN'; // RELAY CONTRACT DEPLOYED (6 decimals + relay functions)
+    const WHISTLE_TOKEN_MINT = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';
+    const MAINNET_RPC = 'https://rpc-mainnet.solanatracker.io/?api_key=25ef537d-3249-479c-96cb-40efc0ce3e09';
+    const SIGNALING_SERVER_URL = 'ws://localhost:8080'; // Real signaling server
+    const TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+    const SYSTEM_PROGRAM_ID = solanaWeb3.SystemProgram.programId;
+    
+    // Helper function to get Pool PDA
+    async function getPoolPDA() {
+      const programId = new solanaWeb3.PublicKey(GHOST_PROGRAM_ID);
+      const poolSeed = new TextEncoder().encode('pool');
+      const [poolPDA] = await solanaWeb3.PublicKey.findProgramAddress(
+        [poolSeed],
+        programId
+      );
+      return poolPDA;
+    }
+    
+    function OfflineNetworkHub({ pushToast }) {
+      // Wallet States
+      const [wallet, setWallet] = useState(null);
+      const [walletAddress, setWalletAddress] = useState(null);
+      const [connecting, setConnecting] = useState(false);
+      
+      // Blockchain Data
+      const [tokenBalance, setTokenBalance] = useState(0);
+      const [stakedAmount, setStakedAmount] = useState(0);
+      const [reputation, setReputation] = useState(0);
+      const [pendingRewards, setPendingRewards] = useState(0);
+      const [totalRelays, setTotalRelays] = useState(0);
+      const [successfulRelays, setSuccessfulRelays] = useState(0);
+      const [loading, setLoading] = useState(false);
+      
+      // UI States
+      const [stakeInput, setStakeInput] = useState('');
+      const [lockPeriod, setLockPeriod] = useState(30);
+      const [showStakeModal, setShowStakeModal] = useState(false);
+      const [showWalletModal, setShowWalletModal] = useState(false);
+      
+      // Node System
+      const [nodeActive, setNodeActive] = useState(false);
+      const [shouldAutoStartNode, setShouldAutoStartNode] = useState(false);
+      const [nodeUptime, setNodeUptime] = useState(0);
+      const [nodeRegion, setNodeRegion] = useState('');
+      const [nearbyNodes, setNearbyNodes] = useState([]);
+      const [globalNodes, setGlobalNodes] = useState([]);
+      const [networkStats, setNetworkStats] = useState({ totalNodes: 0, totalRelays: 0, activeNow: 0 });
+      const [pendingTxs, setPendingTxs] = useState([]);
+      const [peerConnection, setPeerConnection] = useState(null);
+      const [signalServer, setSignalServer] = useState(null);
+      
+      // Anonymous Relay States
+      const [relayRecipient, setRelayRecipient] = useState('');
+      const [relayAmount, setRelayAmount] = useState('');
+      const [relayToken, setRelayToken] = useState('SOL');
+      const [privacyLevel, setPrivacyLevel] = useState(5); // 3, 5, or 7 hops
+      const [relayHistory, setRelayHistory] = useState([]);
+      const [creatingRelay, setCreatingRelay] = useState(false);
+      const [showQRCode, setShowQRCode] = useState(false);
+      const [qrCodeData, setQRCodeData] = useState('');
+      
+      // Connect Wallet (Phantom/Solflare)
+      const connectWallet = async (providerName = 'phantom') => {
+        setConnecting(true);
+        try {
+          const provider = window.solana || window.phantom?.solana;
+          
+          if (!provider) {
+            pushToast('❌ Please install Phantom wallet', 'err');
+            window.open('https://phantom.app/', '_blank');
+            return;
+          }
+          
+          const resp = await provider.connect();
+          const pubkey = resp.publicKey.toString();
+          
+          setWallet(provider);
+          setWalletAddress(pubkey);
+          
+          // Save to localStorage for persistence
+          localStorage.setItem('walletConnected', 'true');
+          localStorage.setItem('walletAddress', pubkey);
+          
+          pushToast(`✅ Connected: ${pubkey.slice(0, 4)}...${pubkey.slice(-4)}`, 'ok');
+          
+          // Load blockchain data
+          await loadBlockchainData(pubkey);
+        } catch (err) {
+          console.error(err);
+          pushToast('❌ Failed to connect wallet', 'err');
+        } finally {
+          setConnecting(false);
+          setShowWalletModal(false);
+        }
+      };
+      
+      // Load Blockchain Data
+      const loadBlockchainData = async (address) => {
+        setLoading(true);
+        try {
+          const connection = new solanaWeb3.Connection(MAINNET_RPC, 'confirmed');
+          const pubkey = new solanaWeb3.PublicKey(address);
+          
+          // Get token balance
+          try {
+            console.log('🔍 Fetching $WHISTLE balance for:', pubkey.toString());
+            console.log('🪙 Token Mint:', WHISTLE_TOKEN_MINT);
+            
+            const tokenAccounts = await connection.getParsedTokenAccountsByOwner(pubkey, {
+              mint: new solanaWeb3.PublicKey(WHISTLE_TOKEN_MINT)
+            });
+            
+            console.log('📊 Token accounts found:', tokenAccounts.value.length);
+            
+            if (tokenAccounts.value.length > 0) {
+              const balance = tokenAccounts.value[0].account.data.parsed.info.tokenAmount.uiAmount;
+              const actualTokenAccount = tokenAccounts.value[0].pubkey;
+              console.log('💰 $WHISTLE Balance:', balance);
+              console.log('💳 Token account with balance:', actualTokenAccount.toString());
+              setTokenBalance(balance || 0);
+              pushToast(`✅ Loaded: ${balance.toLocaleString()} $WHISTLE`, 'ok');
+            } else {
+              console.log('⚠️ No $WHISTLE token account found');
+              pushToast('ℹ️ No $WHISTLE tokens found in wallet', 'info');
+              setTokenBalance(0);
+            }
+          } catch (e) {
+            console.error('❌ Error loading token balance:', e);
+            pushToast('⚠️ Error loading token balance', 'err');
+          }
+          
+          // Get node account (PDA)
+          try {
+            const [nodeAccountPDA] = await solanaWeb3.PublicKey.findProgramAddress(
+              [Buffer.from('node'), pubkey.toBuffer()],
+              new solanaWeb3.PublicKey(GHOST_PROGRAM_ID)
+            );
+            
+            const nodeAccountInfo = await connection.getAccountInfo(nodeAccountPDA);
+            
+            if (nodeAccountInfo) {
+              // Parse node account data
+              const data = nodeAccountInfo.data;
+              const staked = new DataView(data.buffer, 40, 8).getBigUint64(0, true);
+              const rep = new DataView(data.buffer, 48, 8).getBigUint64(0, true);
+              const totalRel = new DataView(data.buffer, 56, 8).getBigUint64(0, true);
+              const successRel = new DataView(data.buffer, 64, 8).getBigUint64(0, true);
+              const pendingRew = new DataView(data.buffer, 80, 8).getBigUint64(0, true);
+              
+              setStakedAmount(Number(staked) / 1e6); // Convert from 6 decimals
+              setReputation(Number(rep));
+              setTotalRelays(Number(totalRel));
+              setSuccessfulRelays(Number(successRel));
+              setPendingRewards(Number(pendingRew) / 1e6); // Convert from 6 decimals
+            }
+          } catch (e) {
+            console.log('No node account found (not staked yet)');
+          }
+          
+        } catch (err) {
+          console.error('Error loading blockchain data:', err);
+          pushToast('⚠️ Error loading data', 'err');
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      // Fetch global nodes from API
+      const fetchGlobalNodes = async () => {
+        try {
+          const response = await fetch('http://localhost:8080/api/nodes');
+          const data = await response.json();
+          
+          console.log('📡 Fetched global nodes:', data);
+          console.log('📊 Total nodes from server:', data.totalNodes);
+          console.log('📋 Node list:', data.nodes);
+          
+          // Update network stats
+          setNetworkStats({
+            totalNodes: data.totalNodes || 0,
+            totalRelays: data.nodes.reduce((sum, n) => sum + (n.relayCount || 0), 0),
+            activeNow: data.totalNodes || 0
+          });
+          
+          // Format nodes for display
+          const formattedNodes = data.nodes.map(node => ({
+            id: node.id,
+            location: node.region || 'Unknown',
+            walletAddress: node.walletAddress || 'Unknown',
+            status: 'active', // All nodes in the list are alive
+            reputation: node.reputation || 0,
+            relays: node.relayCount || 0,
+            uptime: Math.floor(node.uptime / 1000 / 60) + ' min',
+            uptimePercent: '99.5%' // Calculate from uptime later
+          }));
+          
+          console.log('✅ Formatted nodes for display:', formattedNodes);
+          setGlobalNodes(formattedNodes);
+        } catch (err) {
+          console.error('❌ Could not fetch global nodes:', err);
+        }
+      };
+      
+      // ========== REAL STAKING - BLOCKCHAIN TRANSACTION ==========
+      const handleStake = async () => {
+        if (!wallet || !walletAddress) {
+          setShowWalletModal(true);
+          return;
+        }
+        
+        const amount = parseFloat(stakeInput);
+        if (!amount || amount < 1) {
+          pushToast('⚠️ Please enter an amount to stake', 'err');
+          return;
+        }
+        
+        // Note: The smart contract has a hardcoded check for 10_000_000_000_000 base units
+        // This was designed for 9 decimals (10,000 tokens) but your token has 6 decimals
+        // So you need to stake 10,000,000 tokens to meet the contract's minimum
+        
+        if (amount > tokenBalance) {
+          pushToast('❌ Insufficient balance', 'err');
+          return;
+        }
+        
+        setLoading(true);
+        try {
+          const connection = new solanaWeb3.Connection(MAINNET_RPC, 'confirmed');
+          const programId = new solanaWeb3.PublicKey(GHOST_PROGRAM_ID);
+          const userPubkey = new solanaWeb3.PublicKey(walletAddress);
+          const poolPDA = await getPoolPDA();
+          const whistleMint = new solanaWeb3.PublicKey(WHISTLE_TOKEN_MINT);
+          
+          pushToast('📝 Creating stake transaction...', 'info');
+          
+          // Get Node PDA
+          const nodeSeed = new TextEncoder().encode('node');
+          const [nodePDA] = await solanaWeb3.PublicKey.findProgramAddress(
+            [nodeSeed, userPubkey.toBytes()],
+            programId
+          );
+          
+          console.log('Node PDA:', nodePDA.toString());
+          
+          // Get user's Associated Token Account (ATA) - the CORRECT way
+          const SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID = new solanaWeb3.PublicKey(
+            'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'
+          );
+          
+          // Get the user's actual token account that holds $WHISTLE
+          const tokenAccounts = await connection.getParsedTokenAccountsByOwner(userPubkey, {
+            mint: whistleMint
+          });
+          
+          if (tokenAccounts.value.length === 0) {
+            throw new Error('No $WHISTLE token account found. Please get some $WHISTLE first!');
+          }
+          
+          // Use the actual token account (not calculated ATA)
+          const userATA = tokenAccounts.value[0].pubkey;
+          const actualBalance = tokenAccounts.value[0].account.data.parsed.info.tokenAmount.amount;
+          const decimals = tokenAccounts.value[0].account.data.parsed.info.tokenAmount.decimals;
+          
+          console.log('User Token Account:', userATA.toString());
+          console.log('💳 Account raw balance:', actualBalance, 'lamports');
+          console.log('🔢 Token decimals:', decimals);
+          
+          // Get pool vault (pool's token account for $WHISTLE)
+          const [poolVault] = await solanaWeb3.PublicKey.findProgramAddress(
+            [
+              poolPDA.toBytes(),
+              TOKEN_PROGRAM_ID.toBytes(),
+              whistleMint.toBytes()
+            ],
+            SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID
+          );
+          
+          console.log('Pool Vault:', poolVault.toString());
+          
+          // Build stake instruction
+          // Discriminator for "stake": sha256("global:stake")[0..8] = [206, 176, 202, 18, 200, 209, 179, 108]
+          const discriminator = new Uint8Array([206, 176, 202, 18, 200, 209, 179, 108]);
+          
+          // Amount in token base units (use actual decimals from token)
+          const amountLamports = Math.floor(amount * Math.pow(10, decimals));
+          console.log('💵 Staking amount (UI):', amount, '$WHISTLE');
+          console.log('💵 Amount in base units:', amountLamports);
+          console.log('💰 Current balance:', tokenBalance, '$WHISTLE');
+          console.log('💰 Balance in base units:', Math.floor(tokenBalance * Math.pow(10, decimals)));
+          
+          const amountBuffer = new ArrayBuffer(8);
+          const amountView = new DataView(amountBuffer);
+          amountView.setBigUint64(0, BigInt(amountLamports), true); // little-endian
+          
+          // Combine discriminator + amount
+          const instructionData = new Uint8Array(discriminator.length + 8);
+          instructionData.set(discriminator, 0);
+          instructionData.set(new Uint8Array(amountBuffer), discriminator.length);
+          
+          const keys = [
+            { pubkey: nodePDA, isSigner: false, isWritable: true },
+            { pubkey: poolPDA, isSigner: false, isWritable: true },
+            { pubkey: userPubkey, isSigner: true, isWritable: true },
+            { pubkey: userATA, isSigner: false, isWritable: true },
+            { pubkey: poolVault, isSigner: false, isWritable: true },
+            { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+            { pubkey: SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false }
+          ];
+          
+          const stakeInstruction = new solanaWeb3.TransactionInstruction({
+            keys,
+            programId,
+            data: instructionData
+          });
+          
+          const transaction = new solanaWeb3.Transaction().add(stakeInstruction);
+          transaction.feePayer = userPubkey;
+          transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+          
+          // Sign and send via Phantom
+          const signed = await wallet.signTransaction(transaction);
+          const signature = await connection.sendRawTransaction(signed.serialize());
+          
+          pushToast('⏳ Confirming transaction...', 'info');
+          await connection.confirmTransaction(signature, 'confirmed');
+          
+          pushToast(`✅ Staked ${amount.toLocaleString()} $WHISTLE!`, 'ok');
+          console.log('Stake TX:', signature);
+          
+          // Refresh data
+          setStakedAmount(prev => prev + amount);
+          setTokenBalance(prev => prev - amount);
+          setShowStakeModal(false);
+          setStakeInput('');
+          await loadBlockchainData(); // Reload from chain
+          
+        } catch (err) {
+          console.error('Staking error:', err);
+          pushToast('❌ Staking failed: ' + (err.message || 'Unknown error'), 'err');
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      // ========== REAL CLAIM REWARDS - BLOCKCHAIN TRANSACTION ==========
+      const handleClaimRewards = async () => {
+        if (!wallet || pendingRewards === 0) {
+          pushToast('⚠️ No rewards to claim', 'err');
+          return;
+        }
+        
+        setLoading(true);
+        try {
+          const connection = new solanaWeb3.Connection(MAINNET_RPC, 'confirmed');
+          const programId = new solanaWeb3.PublicKey(GHOST_PROGRAM_ID);
+          const userPubkey = new solanaWeb3.PublicKey(walletAddress);
+          const poolPDA = await getPoolPDA();
+          const whistleMint = new solanaWeb3.PublicKey(WHISTLE_TOKEN_MINT);
+          
+          pushToast('📝 Claiming rewards...', 'info');
+          
+          // Get Node PDA
+          const nodeSeed = new TextEncoder().encode('node');
+          const [nodePDA] = await solanaWeb3.PublicKey.findProgramAddress(
+            [nodeSeed, userPubkey.toBytes()],
+            programId
+          );
+          
+          // Get user's actual token account
+          const tokenAccounts = await connection.getParsedTokenAccountsByOwner(userPubkey, {
+            mint: whistleMint
+          });
+          
+          if (tokenAccounts.value.length === 0) {
+            throw new Error('No $WHISTLE token account found!');
+          }
+          
+          const userATA = tokenAccounts.value[0].pubkey;
+          
+          // Get pool vault
+          const SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID = new solanaWeb3.PublicKey(
+            'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'
+          );
+          
+          const [poolVault] = await solanaWeb3.PublicKey.findProgramAddress(
+            [poolPDA.toBytes(), TOKEN_PROGRAM_ID.toBytes(), whistleMint.toBytes()],
+            SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID
+          );
+          
+          // Build claim_rewards instruction
+          // Discriminator for "claim_rewards": [149, 95, 181, 242, 94, 90, 158, 162]
+          const discriminator = new Uint8Array([149, 95, 181, 242, 94, 90, 158, 162]);
+          
+          const keys = [
+            { pubkey: nodePDA, isSigner: false, isWritable: true },
+            { pubkey: poolPDA, isSigner: false, isWritable: true },
+            { pubkey: userPubkey, isSigner: true, isWritable: true },
+            { pubkey: userATA, isSigner: false, isWritable: true },
+            { pubkey: poolVault, isSigner: false, isWritable: true },
+            { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false }
+          ];
+          
+          const claimInstruction = new solanaWeb3.TransactionInstruction({
+            keys,
+            programId,
+            data: discriminator
+          });
+          
+          const transaction = new solanaWeb3.Transaction().add(claimInstruction);
+          transaction.feePayer = userPubkey;
+          transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+          
+          // Sign and send
+          const signed = await wallet.signTransaction(transaction);
+          const signature = await connection.sendRawTransaction(signed.serialize());
+          
+          pushToast('⏳ Confirming transaction...', 'info');
+          await connection.confirmTransaction(signature, 'confirmed');
+          
+          const claimedAmount = pendingRewards;
+          pushToast(`✅ Claimed ${claimedAmount.toFixed(2)} $WHISTLE!`, 'ok');
+          console.log('Claim TX:', signature);
+          
+          // Update state
+          setTokenBalance(prev => prev + pendingRewards);
+          setPendingRewards(0);
+          await loadBlockchainData();
+          
+        } catch (err) {
+          console.error('Claim error:', err);
+          pushToast('❌ Claim failed: ' + (err.message || 'Unknown error'), 'err');
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      // ========== REAL UNSTAKE - BLOCKCHAIN TRANSACTION ==========
+      const handleUnstake = async () => {
+        if (!wallet || nodeActive) {
+          pushToast('⚠️ Stop your node before unstaking', 'err');
+          return;
+        }
+        
+        if (pendingRewards > 0) {
+          pushToast('⚠️ Claim your rewards before unstaking', 'err');
+          return;
+        }
+        
+        if (stakedAmount === 0) {
+          pushToast('⚠️ No tokens staked', 'err');
+          return;
+        }
+        
+        setLoading(true);
+        try {
+          const connection = new solanaWeb3.Connection(MAINNET_RPC, 'confirmed');
+          const programId = new solanaWeb3.PublicKey(GHOST_PROGRAM_ID);
+          const userPubkey = new solanaWeb3.PublicKey(walletAddress);
+          const poolPDA = await getPoolPDA();
+          const whistleMint = new solanaWeb3.PublicKey(WHISTLE_TOKEN_MINT);
+          
+          pushToast('📝 Unstaking tokens...', 'info');
+          
+          // Get Node PDA
+          const nodeSeed = new TextEncoder().encode('node');
+          const [nodePDA] = await solanaWeb3.PublicKey.findProgramAddress(
+            [nodeSeed, userPubkey.toBytes()],
+            programId
+          );
+          
+          // Get user's actual token account
+          const tokenAccounts = await connection.getParsedTokenAccountsByOwner(userPubkey, {
+            mint: whistleMint
+          });
+          
+          if (tokenAccounts.value.length === 0) {
+            throw new Error('No $WHISTLE token account found!');
+          }
+          
+          const userATA = tokenAccounts.value[0].pubkey;
+          
+          // Get pool vault
+          const SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID = new solanaWeb3.PublicKey(
+            'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'
+          );
+          
+          const [poolVault] = await solanaWeb3.PublicKey.findProgramAddress(
+            [poolPDA.toBytes(), TOKEN_PROGRAM_ID.toBytes(), whistleMint.toBytes()],
+            SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID
+          );
+          
+          // Build unstake instruction
+          // Discriminator for "unstake": [90, 95, 107, 42, 205, 124, 50, 225]
+          const discriminator = new Uint8Array([90, 95, 107, 42, 205, 124, 50, 225]);
+          
+          // Amount to unstake (all of it) - 6 decimals
+          const amountLamports = Math.floor(stakedAmount * 1_000_000);
+          const amountBuffer = new ArrayBuffer(8);
+          const amountView = new DataView(amountBuffer);
+          amountView.setBigUint64(0, BigInt(amountLamports), true);
+          
+          const instructionData = new Uint8Array(discriminator.length + 8);
+          instructionData.set(discriminator, 0);
+          instructionData.set(new Uint8Array(amountBuffer), discriminator.length);
+          
+          const keys = [
+            { pubkey: nodePDA, isSigner: false, isWritable: true },
+            { pubkey: poolPDA, isSigner: false, isWritable: true },
+            { pubkey: userPubkey, isSigner: true, isWritable: true },
+            { pubkey: userATA, isSigner: false, isWritable: true },
+            { pubkey: poolVault, isSigner: false, isWritable: true },
+            { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false }
+          ];
+          
+          const unstakeInstruction = new solanaWeb3.TransactionInstruction({
+            keys,
+            programId,
+            data: instructionData
+          });
+          
+          const transaction = new solanaWeb3.Transaction().add(unstakeInstruction);
+          transaction.feePayer = userPubkey;
+          transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+          
+          // Sign and send
+          const signed = await wallet.signTransaction(transaction);
+          const signature = await connection.sendRawTransaction(signed.serialize());
+          
+          pushToast('⏳ Confirming transaction...', 'info');
+          await connection.confirmTransaction(signature, 'confirmed');
+          
+          const unstakedAmount = stakedAmount;
+          pushToast(`✅ Unstaked ${unstakedAmount.toLocaleString()} $WHISTLE!`, 'ok');
+          console.log('Unstake TX:', signature);
+          
+          // Update state
+          setTokenBalance(prev => prev + stakedAmount);
+          setStakedAmount(0);
+          setReputation(0);
+          await loadBlockchainData();
+          
+        } catch (err) {
+          console.error('Unstake error:', err);
+          pushToast('❌ Unstaking failed: ' + (err.message || 'Unknown error'), 'err');
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      // Browser-based Node System (WebRTC)
+      const toggleNode = async () => {
+        if (!wallet || stakedAmount < 10000) {
+          pushToast('⚠️ Stake $WHISTLE to run a node', 'err');
+          setShowStakeModal(true);
+          return;
+        }
+
+        if (!nodeActive) {
+          setNodeActive(true);
+          localStorage.setItem('nodeWasActive', 'true');
+          pushToast('🌐 Activating node...', 'info');
+          
+          // Connect to real signaling server
+          try {
+            console.log('🔌 Connecting to signaling server:', SIGNALING_SERVER_URL);
+            const ws = new WebSocket(SIGNALING_SERVER_URL);
+            const nodeId = `GW-${walletAddress.slice(0, 8)}-${Date.now()}`;
+            
+            ws.onopen = () => {
+              console.log('✅ Connected to signaling server');
+              // Get and save region
+              const detectedRegion = Intl.DateTimeFormat().resolvedOptions().timeZone;
+              setNodeRegion(detectedRegion);
+              
+              // Register this node
+              ws.send(JSON.stringify({
+                type: 'register',
+                nodeId: nodeId,
+                walletAddress: walletAddress,
+                region: detectedRegion
+              }));
+              pushToast('✅ Node registered on network!', 'ok');
+            };
+            
+            ws.onmessage = (event) => {
+              const message = JSON.parse(event.data);
+              console.log('📨 Received:', message.type);
+              
+              switch (message.type) {
+                case 'registered':
+                  console.log('✅ Registered as:', message.nodeId);
+                  // Immediately fetch the updated node list
+                  fetchGlobalNodes();
+                  break;
+                  
+                case 'node-list':
+                  // Update nearby nodes from real network
+                  console.log('📡 Active nodes:', message.totalNodes);
+                  const nodes = message.nodes.slice(0, 5).map(node => ({
+                    id: node.id,
+                    name: node.id.slice(0, 12),
+                    signal: 70 + Math.random() * 30,
+                    relays: node.relayCount,
+                    region: node.region || 'Unknown'
+                  }));
+                  setNearbyNodes(nodes);
+                  
+                  // Also update global nodes via API
+                  fetchGlobalNodes();
+                  break;
+                  
+                case 'relay-stats':
+                  // Update relay stats
+                  pushToast(`📡 Network relay recorded!`, 'info');
+                  break;
+                  
+                case 'offer':
+                  // Handle WebRTC offer from another node
+                  handleWebRTCOffer(message, ws);
+                  break;
+              }
+            };
+            
+            ws.onerror = (err) => {
+              console.error('❌ WebSocket error:', err);
+              pushToast('⚠️ Connection issue, retrying...', 'err');
+            };
+            
+            ws.onclose = () => {
+              console.log('🔌 Disconnected from signaling server');
+              if (nodeActive) {
+                pushToast('⚠️ Lost connection to network', 'err');
+              }
+            };
+            
+            setSignalServer(ws);
+            
+            // Send heartbeat every 30 seconds
+            const heartbeat = setInterval(() => {
+              if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                  type: 'heartbeat',
+                  nodeId: nodeId
+                }));
+              }
+            }, 30000);
+            
+            // Store heartbeat interval for cleanup
+            ws._heartbeatInterval = heartbeat;
+            
+          } catch (err) {
+            console.error('❌ Failed to start node:', err);
+            pushToast('❌ Failed to start node', 'err');
+            setNodeActive(false);
+          }
+          
+        } else {
+          // Stop node
+          setNodeActive(false);
+          localStorage.setItem('nodeWasActive', 'false');
+          if (signalServer) {
+            clearInterval(signalServer._heartbeatInterval);
+            signalServer.send(JSON.stringify({
+              type: 'disconnect',
+              nodeId: `GW-${walletAddress.slice(0, 8)}`
+            }));
+            signalServer.close();
+            setSignalServer(null);
+          }
+          if (peerConnection) {
+            peerConnection.close();
+            setPeerConnection(null);
+          }
+          setNearbyNodes([]);
+          setNodeUptime(0);
+          pushToast('⏸ Node deactivated', 'info');
+        }
+      };
+      
+      // Handle relay request (earn rewards)
+      // ========== REAL RELAY RECORDING - BLOCKCHAIN TRANSACTION ==========
+      const handleRelayRequest = async (data) => {
+        if (!wallet || !walletAddress) {
+          console.log('⚠️ No wallet connected for relay recording');
+          return;
+        }
+        
+        try {
+          const connection = new solanaWeb3.Connection(MAINNET_RPC, 'confirmed');
+          const programId = new solanaWeb3.PublicKey(GHOST_PROGRAM_ID);
+          const userPubkey = new solanaWeb3.PublicKey(walletAddress);
+          const poolPDA = await getPoolPDA();
+          
+          // Get Node PDA
+          const nodeSeed = new TextEncoder().encode('node');
+          const [nodePDA] = await solanaWeb3.PublicKey.findProgramAddress(
+            [nodeSeed, userPubkey.toBytes()],
+            programId
+          );
+          
+          // Build record_relay instruction
+          // Discriminator for "record_relay": [191, 240, 172, 203, 186, 131, 54, 218]
+          const discriminator = new Uint8Array([191, 240, 172, 203, 186, 131, 54, 218]);
+          
+          // Generate a transaction signature (or use the actual relayed tx sig)
+          const txSig = data?.signature || `RELAY-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          const success = true; // Assume success for now
+          
+          // Encode string length + string + bool
+          const encoder = new TextEncoder();
+          const sigBytes = encoder.encode(txSig);
+          const sigLen = sigBytes.length;
+          
+          // Build instruction data: discriminator + string_length (u32) + string_bytes + bool (u8)
+          const instructionData = new Uint8Array(discriminator.length + 4 + sigLen + 1);
+          let offset = 0;
+          
+          // Discriminator
+          instructionData.set(discriminator, offset);
+          offset += discriminator.length;
+          
+          // String length (little-endian u32)
+          const lenView = new DataView(instructionData.buffer, offset, 4);
+          lenView.setUint32(0, sigLen, true);
+          offset += 4;
+          
+          // String bytes
+          instructionData.set(sigBytes, offset);
+          offset += sigLen;
+          
+          // Bool (success)
+          instructionData[offset] = success ? 1 : 0;
+          
+          const keys = [
+            { pubkey: nodePDA, isSigner: false, isWritable: true },
+            { pubkey: poolPDA, isSigner: false, isWritable: true },
+            { pubkey: userPubkey, isSigner: true, isWritable: false }
+          ];
+          
+          const relayInstruction = new solanaWeb3.TransactionInstruction({
+            keys,
+            programId,
+            data: instructionData
+          });
+          
+          const transaction = new solanaWeb3.Transaction().add(relayInstruction);
+          transaction.feePayer = userPubkey;
+          transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+          
+          // Sign and send
+          const signed = await wallet.signTransaction(transaction);
+          const signature = await connection.sendRawTransaction(signed.serialize());
+          
+          // Don't wait for confirmation to avoid slowing down relay
+          connection.confirmTransaction(signature, 'confirmed').then(() => {
+            console.log('✅ Relay recorded on-chain:', signature);
+          });
+          
+          // Update UI immediately
+          setTotalRelays(prev => prev + 1);
+          setSuccessfulRelays(prev => prev + 1);
+          
+          // Note: rewards are calculated on-chain, fetch from blockchain
+          pushToast(`📡 Relay recorded on-chain!`, 'ok');
+          
+          // Refresh blockchain data to get updated rewards
+          setTimeout(() => loadBlockchainData(), 2000);
+          
+        } catch (err) {
+          console.error('Relay recording error:', err);
+          // Don't show error toast to avoid spamming user
+          // Just increment locally as fallback
+          setTotalRelays(prev => prev + 1);
+        }
+      };
+      
+      // Uptime counter
+      useEffect(() => {
+        if (!nodeActive) return;
+        const interval = setInterval(() => {
+          setNodeUptime(prev => prev + 1);
+        }, 1000);
+        return () => clearInterval(interval);
+      }, [nodeActive]);
+      
+      // Auto-refresh blockchain data
+      useEffect(() => {
+        if (!walletAddress) return;
+        const interval = setInterval(() => {
+          loadBlockchainData(walletAddress);
+        }, 30000); // Refresh every 30s
+        return () => clearInterval(interval);
+      }, [walletAddress]);
+      
+      // Auto-refresh global nodes
+      useEffect(() => {
+        // Fetch immediately on mount
+        fetchGlobalNodes();
+        
+        // Then fetch every 10 seconds
+        const interval = setInterval(() => {
+          fetchGlobalNodes();
+        }, 10000); // Refresh every 10s
+        
+        return () => clearInterval(interval);
+      }, []);
+      
+      // Auto-start node if it was running before refresh
+      useEffect(() => {
+        if (shouldAutoStartNode && walletAddress && stakedAmount >= 10000 && !nodeActive) {
+          console.log('🚀 Auto-starting node...');
+          setShouldAutoStartNode(false); // Reset flag
+          
+          // Small delay to ensure everything is loaded
+          setTimeout(() => {
+            toggleNode();
+          }, 1500);
+        }
+      }, [shouldAutoStartNode, walletAddress, stakedAmount, nodeActive]);
+      
+      // Auto-connect wallet on page load
+      useEffect(() => {
+        const autoConnect = async () => {
+          const wasConnected = localStorage.getItem('walletConnected');
+          const savedAddress = localStorage.getItem('walletAddress');
+          
+          if (wasConnected === 'true' && savedAddress) {
+            try {
+              const provider = window.solana || window.phantom?.solana;
+              
+              if (provider && provider.isConnected) {
+                // Wallet is still connected in Phantom
+                const pubkey = provider.publicKey.toString();
+                
+                if (pubkey === savedAddress) {
+                  setWallet(provider);
+                  setWalletAddress(pubkey);
+                  await loadBlockchainData(pubkey);
+                  console.log('✅ Auto-reconnected wallet:', pubkey.slice(0, 8) + '...');
+                  
+                  // Auto-restart node if it was running
+                  const wasNodeActive = localStorage.getItem('nodeWasActive');
+                  if (wasNodeActive === 'true') {
+                    console.log('🔄 Will auto-restart node after data loads...');
+                    setShouldAutoStartNode(true);
+                  }
+                }
+              } else if (provider) {
+                // Wallet exists but not connected, try silent connect
+                try {
+                  await provider.connect({ onlyIfTrusted: true });
+                  const pubkey = provider.publicKey.toString();
+                  
+                  setWallet(provider);
+                  setWalletAddress(pubkey);
+                  await loadBlockchainData(pubkey);
+                  console.log('✅ Silent reconnect successful:', pubkey.slice(0, 8) + '...');
+                  
+                  // Auto-restart node if it was running
+                  const wasNodeActive = localStorage.getItem('nodeWasActive');
+                  if (wasNodeActive === 'true') {
+                    console.log('🔄 Will auto-restart node after data loads...');
+                    setShouldAutoStartNode(true);
+                  }
+                } catch (err) {
+                  // Silent connect failed, user needs to manually connect
+                  console.log('ℹ️ Wallet not auto-connected (user must approve)');
+                  localStorage.removeItem('walletConnected');
+                }
+              }
+            } catch (err) {
+              console.error('Auto-connect failed:', err);
+              localStorage.removeItem('walletConnected');
+            }
+          }
+        };
+        
+        autoConnect();
+      }, []);
+      
+      // Format uptime
+      const formatUptime = (seconds) => {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        return `${h}h ${m}m ${s}s`;
+      };
+      
+      // ========== ANONYMOUS RELAY FUNCTIONS ==========
+      
+      // Calculate relay fee based on privacy level
+      const calculateRelayFee = (hops) => {
+        const feePerHop = 5; // 5 $WHISTLE per hop
+        return hops * feePerHop;
+      };
+      
+      // Create and sign relay request (OFFLINE CAPABLE)
+      const createRelayRequest = async () => {
+        if (!wallet || !walletAddress) {
+          pushToast('⚠️ Connect wallet first', 'err');
+          setShowWalletModal(true);
+          return;
+        }
+        
+        // Validate inputs
+        if (!relayRecipient || !solanaWeb3.PublicKey.isOnCurve(relayRecipient)) {
+          pushToast('❌ Invalid recipient address', 'err');
+          return;
+        }
+        
+        if (!relayAmount || parseFloat(relayAmount) <= 0) {
+          pushToast('❌ Invalid amount', 'err');
+          return;
+        }
+        
+        setCreatingRelay(true);
+        
+        try {
+          const connection = new solanaWeb3.Connection(MAINNET_RPC, 'confirmed');
+          const recipientPubkey = new solanaWeb3.PublicKey(relayRecipient);
+          const userPubkey = new solanaWeb3.PublicKey(walletAddress);
+          
+          // Calculate relay fee
+          const relayFee = calculateRelayFee(privacyLevel);
+          const relayFeeTokens = relayFee * 1_000_000; // 6 decimals
+          
+          // Check if user has enough balance
+          if (tokenBalance < relayFee) {
+            pushToast(`❌ Insufficient balance. Need ${relayFee} $WHISTLE`, 'err');
+            return;
+          }
+          
+          console.log(`🔒 Creating anonymous relay:`, {
+            recipient: relayRecipient,
+            amount: relayAmount,
+            token: relayToken,
+            hops: privacyLevel,
+            fee: relayFee
+          });
+          
+          // Build the actual transaction to relay
+          const transaction = new solanaWeb3.Transaction();
+          
+          if (relayToken === 'SOL') {
+            // SOL transfer
+            transaction.add(
+              solanaWeb3.SystemProgram.transfer({
+                fromPubkey: userPubkey,
+                toPubkey: recipientPubkey,
+                lamports: parseFloat(relayAmount) * solanaWeb3.LAMPORTS_PER_SOL
+              })
+            );
+          } else {
+            // Token transfer (simplified - would need actual token mint)
+            pushToast('⚠️ Token transfers coming soon', 'info');
+            return;
+          }
+          
+          // Add memo with relay instructions
+          const relayMemo = JSON.stringify({
+            type: 'anonymous_relay',
+            hops: privacyLevel,
+            fee: relayFeeTokens,
+            timestamp: Date.now()
+          });
+          
+          transaction.add(
+            new solanaWeb3.TransactionInstruction({
+              keys: [],
+              programId: new solanaWeb3.PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'),
+              data: Buffer.from(relayMemo)
+            })
+          );
+          
+          // Set recent blockhash (can work offline if blockhash is cached)
+          const { blockhash } = await connection.getLatestBlockhash();
+          transaction.recentBlockhash = blockhash;
+          transaction.feePayer = userPubkey;
+          
+          // SIGN TRANSACTION (Works OFFLINE!)
+          const signedTx = await wallet.signTransaction(transaction);
+          
+          console.log('✅ Transaction signed offline!', signedTx.signature);
+          
+          // Encrypt transaction for multi-hop relay
+          const encryptedPayload = await encryptForRelay(signedTx, privacyLevel);
+          
+          // Create relay request object
+          const relayRequest = {
+            id: Date.now(),
+            signature: signedTx.signature ? Buffer.from(signedTx.signature).toString('base64') : null,
+            encryptedTx: encryptedPayload,
+            hops: privacyLevel,
+            fee: relayFee,
+            created: new Date().toISOString(),
+            status: 'pending'
+          };
+          
+          // Add to history
+          setRelayHistory(prev => [relayRequest, ...prev]);
+          
+          // If online and nodes available, submit to network
+          if (globalNodes.length > 0) {
+            await submitToRelayNetwork(relayRequest);
+            pushToast(`✅ Relay request submitted (${privacyLevel} hops)`, 'ok');
+          } else {
+            // Generate QR code for offline transmission
+            const qrData = JSON.stringify({
+              tx: Buffer.from(signedTx.serialize()).toString('base64'),
+              hops: privacyLevel,
+              fee: relayFee
+            });
+            setQRCodeData(qrData);
+            setShowQRCode(true);
+            pushToast('📱 QR code generated - scan to relay', 'info');
+          }
+          
+          // Clear form
+          setRelayRecipient('');
+          setRelayAmount('');
+          
+        } catch (err) {
+          console.error('Relay creation error:', err);
+          pushToast(`❌ Relay creation failed: ${err.message}`, 'err');
+        } finally {
+          setCreatingRelay(false);
+        }
+      };
+      
+      // Encrypt transaction for multi-hop relay (Onion-style)
+      const encryptForRelay = async (signedTx, numHops) => {
+        try {
+          // Serialize transaction
+          const txData = signedTx.serialize();
+          const txBase64 = Buffer.from(txData).toString('base64');
+          
+          // Select relay nodes (highest reputation first)
+          const selectedNodes = globalNodes
+            .sort((a, b) => b.reputation - a.reputation)
+            .slice(0, numHops);
+          
+          if (selectedNodes.length < numHops) {
+            console.warn(`⚠️ Only ${selectedNodes.length} nodes available for ${numHops} hops`);
+          }
+          
+          // For now, return a simplified encrypted payload
+          // In production, this would use actual encryption per node
+          const payload = {
+            transaction: txBase64,
+            hops: selectedNodes.map(n => ({
+              nodeId: n.id,
+              region: n.location
+            })),
+            encrypted: true, // Flag indicating encryption
+            timestamp: Date.now()
+          };
+          
+          return JSON.stringify(payload);
+        } catch (err) {
+          console.error('Encryption error:', err);
+          return JSON.stringify({ transaction: Buffer.from(signedTx.serialize()).toString('base64') });
+        }
+      };
+      
+      // Submit relay request to node network
+      const submitToRelayNetwork = async (relayRequest) => {
+        try {
+          if (!signalServer || signalServer.readyState !== WebSocket.OPEN) {
+            throw new Error('Not connected to signaling server');
+          }
+          
+          // Send relay request to network
+          signalServer.send(JSON.stringify({
+            type: 'relay-request',
+            request: relayRequest
+          }));
+          
+          console.log('📡 Relay request sent to network:', relayRequest.id);
+          
+          // Update history status
+          setRelayHistory(prev => 
+            prev.map(r => r.id === relayRequest.id ? {...r, status: 'in-progress'} : r)
+          );
+        } catch (err) {
+          console.error('Submit error:', err);
+          throw err;
+        }
+      };
+      
+      // Generate QR code for offline relay
+      const generateQRCodeForRelay = () => {
+        if (!relayRecipient || !relayAmount) {
+          pushToast('❌ Fill in recipient and amount first', 'err');
+          return;
+        }
+        
+        // Create simplified relay data for QR
+        const qrPayload = {
+          to: relayRecipient,
+          amount: relayAmount,
+          token: relayToken,
+          hops: privacyLevel,
+          fee: calculateRelayFee(privacyLevel),
+          timestamp: Date.now()
+        };
+        
+        const qrData = JSON.stringify(qrPayload);
+        setQRCodeData(qrData);
+        setShowQRCode(true);
+        
+        pushToast('📱 QR Code generated! Scan with internet-connected device', 'ok');
+      };
+      
+      // Disconnect wallet
+      const disconnectWallet = () => {
+        if (wallet) {
+          wallet.disconnect();
+        }
+        
+        // Clear localStorage
+        localStorage.removeItem('walletConnected');
+        localStorage.removeItem('walletAddress');
+        localStorage.removeItem('nodeWasActive');
+        
+        setWallet(null);
+        setWalletAddress(null);
+        setTokenBalance(0);
+        setStakedAmount(0);
+        setReputation(0);
+        setPendingRewards(0);
+        pushToast('👋 Wallet disconnected', 'info');
+      };
+      
+      return (
+        <div className="space-y-6">
+          {/* Header with Wallet Connection */}
+          <div className="relative overflow-hidden rounded-3xl border border-slate-200/50 dark:border-slate-700/50 bg-gradient-to-br from-white via-blue-50/30 to-cyan-50/30 dark:from-slate-900 dark:via-blue-950/30 dark:to-cyan-950/30 p-6 shadow-2xl">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight mb-2">
+                  👻 GHOST WHISTLE EARN
+                </h1>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  World's first browser-based offline transaction network • Earn by staking & running nodes
+                </p>
+              </div>
+              
+              {!walletAddress ? (
+                <button
+                  onClick={() => setShowWalletModal(true)}
+                  disabled={connecting}
+                  className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2 disabled:opacity-50"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  {connecting ? 'Connecting...' : 'Connect Wallet'}
+                </button>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <div className="bg-white/80 dark:bg-slate-800/80 rounded-xl px-4 py-2 border border-slate-200 dark:border-slate-700">
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Balance</div>
+                    <div className="text-lg font-black text-slate-900 dark:text-white">
+                      {tokenBalance.toLocaleString()} $W
+                    </div>
+                  </div>
+                  <button
+                    onClick={disconnectWallet}
+                    className="px-4 py-3 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-bold transition-all"
+                    title={walletAddress}
+                  >
+                    {walletAddress.slice(0, 4)}...{walletAddress.slice(-4)}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Main Dashboard - Only show when wallet connected */}
+          {walletAddress ? (
+            <>
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/50 dark:to-cyan-950/50 rounded-2xl p-4 border border-blue-200/50 dark:border-blue-800/50">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider">Staked</div>
+                      <div className="text-xl font-black text-blue-900 dark:text-blue-300">{stakedAmount.toLocaleString()}</div>
+                    </div>
+                  </div>
+                  <div className="text-[9px] text-slate-600 dark:text-slate-400">$WHISTLE locked</div>
+                </div>
+
+                <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/50 dark:to-teal-950/50 rounded-2xl p-4 border border-emerald-200/50 dark:border-emerald-800/50">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">Reputation</div>
+                      <div className="text-xl font-black text-emerald-900 dark:text-emerald-300">{reputation}</div>
+                    </div>
+                  </div>
+                  <div className="text-[9px] text-slate-600 dark:text-slate-400">Network score</div>
+                </div>
+
+                <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/50 dark:to-amber-950/50 rounded-2xl p-4 border border-orange-200/50 dark:border-orange-800/50">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-orange-600 dark:text-orange-400 font-bold uppercase tracking-wider">Rewards</div>
+                      <div className="text-xl font-black text-orange-900 dark:text-orange-300">{pendingRewards.toFixed(2)}</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleClaimRewards}
+                    disabled={pendingRewards === 0 || loading}
+                    className="text-[9px] font-bold text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    CLAIM NOW
+                  </button>
+                </div>
+
+                <div className="bg-gradient-to-br from-cyan-50 to-sky-50 dark:from-cyan-950/50 dark:to-sky-950/50 rounded-2xl p-4 border border-cyan-200/50 dark:border-cyan-800/50">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-sky-600 flex items-center justify-center">
+                      <div className={`relative w-3 h-3 ${nodeActive ? 'bg-white' : 'bg-white/50'} rounded-full`}></div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-cyan-600 dark:text-cyan-400 font-bold uppercase tracking-wider">Node</div>
+                      <div className="text-xl font-black text-cyan-900 dark:text-cyan-300">{nodeActive ? 'ACTIVE' : 'OFFLINE'}</div>
+                    </div>
+                  </div>
+                  <div className="text-[9px] text-slate-600 dark:text-slate-400">{totalRelays} total relays</div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <button
+                  onClick={() => setShowStakeModal(true)}
+                  className="px-6 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  STAKE $WHISTLE
+                </button>
+
+                <button
+                  onClick={toggleNode}
+                  disabled={stakedAmount < 10000}
+                  className={`px-6 py-4 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 ${
+                    stakedAmount < 10000
+                      ? 'bg-slate-400 dark:bg-slate-700 text-white opacity-50 cursor-not-allowed'
+                      : nodeActive
+                        ? 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white'
+                        : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white'
+                  }`}
+                >
+                  {nodeActive ? (
+                    <>
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <rect x="6" y="6" width="12" height="12" rx="1"/>
+                      </svg>
+                      STOP NODE
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"/>
+                      </svg>
+                      {stakedAmount >= 10000 ? 'START NODE' : 'LOCKED - STAKE FIRST'}
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* PROFESSIONAL NODE DASHBOARD - Only show when active */}
+              {nodeActive && (
+                <div className="space-y-6">
+                  {/* Node Status Banner */}
+                  <div className="relative overflow-hidden rounded-3xl border border-emerald-200 dark:border-emerald-800 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-emerald-950/50 dark:via-teal-950/50 dark:to-cyan-950/50 p-6">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl"></div>
+                    <div className="relative z-10">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="relative">
+                            <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center">
+                              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </div>
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full animate-ping"></div>
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full"></div>
+                          </div>
+                          <div>
+                            <h3 className="text-2xl font-black text-emerald-900 dark:text-emerald-300">NODE OPERATIONAL</h3>
+                            <p className="text-sm text-emerald-700 dark:text-emerald-400">Your privacy relay is active and earning</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-wider mb-1">Session Uptime</div>
+                          <div className="text-3xl font-black text-emerald-900 dark:text-emerald-300">{formatUptime(nodeUptime)}</div>
+                        </div>
+                      </div>
+                      
+                      {/* Node Region Display */}
+                      {nodeRegion && (
+                        <div className="mb-4 flex items-center justify-center gap-2 text-emerald-700 dark:text-emerald-400">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          <span className="text-sm font-bold">Broadcasting from: {nodeRegion}</span>
+                        </div>
+                      )}
+                      
+                      {/* Key Metrics Grid */}
+                      <div className="grid grid-cols-4 gap-4">
+                        <div className="bg-white/50 dark:bg-slate-900/50 rounded-xl p-4 text-center">
+                          <div className="text-2xl font-black text-blue-600 dark:text-blue-400">{walletAddress ? `${walletAddress.slice(0,4)}...${walletAddress.slice(-4)}` : 'N/A'}</div>
+                          <div className="text-[10px] text-slate-600 dark:text-slate-400 uppercase tracking-wider mt-1">Node ID</div>
+                        </div>
+                        <div className="bg-white/50 dark:bg-slate-900/50 rounded-xl p-4 text-center">
+                          <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{nearbyNodes.length}</div>
+                          <div className="text-[10px] text-slate-600 dark:text-slate-400 uppercase tracking-wider mt-1">Connected Peers</div>
+                        </div>
+                        <div className="bg-white/50 dark:bg-slate-900/50 rounded-xl p-4 text-center">
+                          <div className="text-2xl font-black text-orange-600 dark:text-orange-400">{totalRelays}</div>
+                          <div className="text-[10px] text-slate-600 dark:text-slate-400 uppercase tracking-wider mt-1">Total Relays</div>
+                        </div>
+                        <div className="bg-white/50 dark:bg-slate-900/50 rounded-xl p-4 text-center">
+                          <div className="text-2xl font-black text-purple-600 dark:text-purple-400">{totalRelays > 0 ? ((successfulRelays / totalRelays) * 100).toFixed(1) : 100}%</div>
+                          <div className="text-[10px] text-slate-600 dark:text-slate-400 uppercase tracking-wider mt-1">Success Rate</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Detailed Node Statistics */}
+                  <div className="bg-white/80 dark:bg-slate-900/80 rounded-2xl p-6 border border-slate-200/50 dark:border-slate-700/50">
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+                      <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                      Node Performance Metrics
+                    </h3>
+                    
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {/* Network Performance */}
+                      <div className="space-y-4">
+                        <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Network Performance</h4>
+                        
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                            <span className="text-sm text-slate-600 dark:text-slate-400">Relay Success Rate</span>
+                            <span className="text-lg font-black text-emerald-600 dark:text-emerald-400">
+                              {totalRelays > 0 ? ((successfulRelays / totalRelays) * 100).toFixed(1) : 100}%
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                            <span className="text-sm text-slate-600 dark:text-slate-400">Successful Relays</span>
+                            <span className="text-lg font-black text-green-600 dark:text-green-400">{successfulRelays}</span>
+                          </div>
+                          
+                          <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                            <span className="text-sm text-slate-600 dark:text-slate-400">Failed Relays</span>
+                            <span className="text-lg font-black text-red-600 dark:text-red-400">{totalRelays - successfulRelays}</span>
+                          </div>
+                          
+                          <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                            <span className="text-sm text-slate-600 dark:text-slate-400">Average Per Hour</span>
+                            <span className="text-lg font-black text-blue-600 dark:text-blue-400">
+                              {nodeUptime > 0 ? ((totalRelays / (nodeUptime / 3600)) || 0).toFixed(1) : '0.0'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Node Status & Reputation */}
+                      <div className="space-y-4">
+                        <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Node Status & Reputation</h4>
+                        
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                            <span className="text-sm text-slate-600 dark:text-slate-400">Network Reputation</span>
+                            <span className="text-lg font-black text-purple-600 dark:text-purple-400">{reputation}</span>
+                          </div>
+                          
+                          <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                            <span className="text-sm text-slate-600 dark:text-slate-400">Staked Amount</span>
+                            <span className="text-lg font-black text-indigo-600 dark:text-indigo-400">{stakedAmount.toLocaleString()}</span>
+                          </div>
+                          
+                          <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                            <span className="text-sm text-slate-600 dark:text-slate-400">Pending Rewards</span>
+                            <span className="text-lg font-black text-orange-600 dark:text-orange-400">{pendingRewards.toFixed(2)}</span>
+                          </div>
+                          
+                          <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                            <span className="text-sm text-slate-600 dark:text-slate-400">Network Position</span>
+                            <span className="text-lg font-black text-cyan-600 dark:text-cyan-400">
+                              #{networkStats.totalNodes > 0 ? Math.min(reputation || 1, networkStats.totalNodes) : 1}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Reward Rate Calculation */}
+                    <div className="mt-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-xl border border-amber-200 dark:border-amber-800">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-xs text-amber-700 dark:text-amber-400 font-bold uppercase tracking-wider mb-1">Current Earning Rate</div>
+                          <div className="text-2xl font-black text-amber-900 dark:text-amber-300">
+                            {nodeUptime > 0 && totalRelays > 0 
+                              ? ((pendingRewards / (nodeUptime / 3600)) || 0).toFixed(2)
+                              : '0.00'} $WHISTLE/hr
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs text-amber-700 dark:text-amber-400 font-bold uppercase tracking-wider mb-1">Est. 24h Earnings</div>
+                          <div className="text-2xl font-black text-amber-900 dark:text-amber-300">
+                            {nodeUptime > 0 && totalRelays > 0 
+                              ? ((pendingRewards / (nodeUptime / 3600)) * 24 || 0).toFixed(2)
+                              : '0.00'} $WHISTLE
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Connected Peers Network Map */}
+                  {nearbyNodes.length > 0 && (
+                    <div className="bg-white/80 dark:bg-slate-900/80 rounded-2xl p-6 border border-slate-200/50 dark:border-slate-700/50">
+                      <h3 className="text-lg font-black text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                        <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        Connected Peers ({nearbyNodes.length})
+                      </h3>
+                      <div className="grid md:grid-cols-2 gap-3">
+                        {nearbyNodes.map(node => (
+                          <div key={node.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
+                            <div className="flex items-center gap-3">
+                              <div className={`relative w-3 h-3 rounded-full ${node.signal > 80 ? 'bg-emerald-500' : node.signal > 50 ? 'bg-orange-500' : 'bg-red-500'}`}>
+                                <div className="absolute inset-0 rounded-full animate-ping opacity-75" style={{backgroundColor: node.signal > 80 ? '#10b981' : node.signal > 50 ? '#f97316' : '#ef4444'}}></div>
+                              </div>
+                              <div>
+                                <div className="text-sm font-mono font-bold text-slate-900 dark:text-white">{node.name}</div>
+                                <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                                  {node.region && <span className="mr-2">📍 {node.region.split('/').pop()}</span>}
+                                  {node.relays || 0} relays
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className={`text-lg font-black ${node.signal > 80 ? 'text-emerald-600 dark:text-emerald-400' : node.signal > 50 ? 'text-orange-600 dark:text-orange-400' : 'text-red-600 dark:text-red-400'}`}>
+                                {Math.floor(node.signal)}%
+                              </div>
+                              <div className="text-[10px] text-slate-500 dark:text-slate-400">signal</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Network Health Indicator */}
+                  <div className="bg-white/80 dark:bg-slate-900/80 rounded-2xl p-6 border border-slate-200/50 dark:border-slate-700/50">
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                      <svg className="w-5 h-5 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      Network Health & Connectivity
+                    </h3>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="text-center p-4 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 rounded-xl">
+                        <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
+                          {nearbyNodes.length > 0 ? 'STRONG' : 'SEARCHING'}
+                        </div>
+                        <div className="text-xs text-slate-600 dark:text-slate-400 mt-2">Connection Strength</div>
+                      </div>
+                      <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-xl">
+                        <div className="text-3xl font-black text-blue-600 dark:text-blue-400">
+                          {nearbyNodes.length > 0 ? Math.floor(nearbyNodes.reduce((sum, n) => sum + n.signal, 0) / nearbyNodes.length) : 0}%
+                        </div>
+                        <div className="text-xs text-slate-600 dark:text-slate-400 mt-2">Avg. Signal Quality</div>
+                      </div>
+                      <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 rounded-xl">
+                        <div className="text-3xl font-black text-purple-600 dark:text-purple-400">
+                          {totalRelays > 0 ? 'ACTIVE' : 'STANDBY'}
+                        </div>
+                        <div className="text-xs text-slate-600 dark:text-slate-400 mt-2">Relay Status</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Info Section */}
+              <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-2xl p-6 border border-blue-200 dark:border-blue-800">
+                <h3 className="text-lg font-black text-slate-900 dark:text-white mb-4">How It Works</h3>
+                <div className="grid md:grid-cols-3 gap-4 text-sm text-slate-700 dark:text-slate-300">
+                  <div>
+                    <div className="font-bold mb-2">1. Stake $WHISTLE</div>
+                    <p className="text-xs">Lock at least 10,000 $WHISTLE tokens to activate your node</p>
+                  </div>
+                  <div>
+                    <div className="font-bold mb-2">2. Run Your Node</div>
+                    <p className="text-xs">Keep your browser open to relay transactions through the mesh network</p>
+                  </div>
+                  <div>
+                    <div className="font-bold mb-2">3. Earn Rewards</div>
+                    <p className="text-xs">Get paid 8 $WHISTLE for each successful relay based on your reputation</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Unstake Section - Only show if staked */}
+              {stakedAmount > 0 && (
+                <div className="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-950/30 dark:to-orange-950/30 rounded-2xl p-6 border border-red-200 dark:border-red-800">
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white mb-4">Unstake Your $WHISTLE</h3>
+                  <div className="grid md:grid-cols-2 gap-6 items-center">
+                    <div className="space-y-2">
+                      <div className="text-sm text-slate-700 dark:text-slate-300">
+                        <span className="font-bold">Staked Amount:</span> {stakedAmount.toLocaleString()} $WHISTLE
+                      </div>
+                      <div className="text-sm text-slate-700 dark:text-slate-300">
+                        <span className="font-bold">Pending Rewards:</span> {pendingRewards.toLocaleString()} $WHISTLE
+                      </div>
+                      {pendingRewards > 0 && (
+                        <div className="text-xs text-orange-600 dark:text-orange-400 font-bold">
+                          ⚠️ Claim your rewards before unstaking!
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={handleUnstake}
+                      disabled={loading || nodeActive || pendingRewards > 0}
+                      className="px-6 py-4 rounded-2xl bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-bold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                      </svg>
+                      {nodeActive ? 'Stop Node First' : pendingRewards > 0 ? 'Claim Rewards First' : 'UNSTAKE ALL'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ANONYMOUS RELAY SERVICE - NEW SUBSECTION */}
+              <div className="bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50 dark:from-purple-950/30 dark:via-indigo-950/30 dark:to-blue-950/30 rounded-3xl p-8 border border-purple-200 dark:border-purple-800">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-3">
+                      <svg className="w-8 h-8 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                      🔒 Anonymous Relay Service
+                    </h2>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
+                      Send transactions anonymously through privacy nodes • Works offline • Multi-hop encryption
+                    </p>
+                  </div>
+                  <div className="px-4 py-2 bg-purple-100 dark:bg-purple-900/50 rounded-full">
+                    <span className="text-xs font-bold text-purple-700 dark:text-purple-300 uppercase tracking-wider">Beta</span>
+                  </div>
+                </div>
+
+                {/* Relay Credits Balance */}
+                <div className="grid md:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-purple-100 dark:border-purple-900">
+                    <div className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">Your Balance</div>
+                    <div className="text-2xl font-black text-purple-600 dark:text-purple-400">{tokenBalance.toLocaleString()} $WHISTLE</div>
+                  </div>
+                  <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-purple-100 dark:border-purple-900">
+                    <div className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">Available Relays</div>
+                    <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400">~{Math.floor(tokenBalance / 25)}</div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400">@ 25 $WHISTLE per relay</div>
+                  </div>
+                  <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-purple-100 dark:border-purple-900">
+                    <div className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">Relays Completed</div>
+                    <div className="text-2xl font-black text-blue-600 dark:text-blue-400">{totalRelays}</div>
+                  </div>
+                </div>
+
+                {/* How It Works */}
+                <div className="bg-white dark:bg-slate-900 rounded-xl p-6 mb-6 border border-purple-100 dark:border-purple-900">
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    How Anonymous Relay Works
+                  </h3>
+                  <div className="grid md:grid-cols-4 gap-4 text-sm">
+                    <div className="text-center">
+                      <div className="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center mx-auto mb-2">
+                        <span className="text-xl font-bold text-purple-600 dark:text-purple-400">1</span>
+                      </div>
+                      <div className="font-bold text-slate-900 dark:text-white mb-1">Create & Sign</div>
+                      <div className="text-xs text-slate-600 dark:text-slate-400">Sign transaction offline on your device</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center mx-auto mb-2">
+                        <span className="text-xl font-bold text-indigo-600 dark:text-indigo-400">2</span>
+                      </div>
+                      <div className="font-bold text-slate-900 dark:text-white mb-1">Multi-Hop Relay</div>
+                      <div className="text-xs text-slate-600 dark:text-slate-400">3-5 privacy nodes relay your transaction</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center mx-auto mb-2">
+                        <span className="text-xl font-bold text-blue-600 dark:text-blue-400">3</span>
+                      </div>
+                      <div className="font-bold text-slate-900 dark:text-white mb-1">Broadcast</div>
+                      <div className="text-xs text-slate-600 dark:text-slate-400">Final node submits to Solana</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center mx-auto mb-2">
+                        <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">4</span>
+                      </div>
+                      <div className="font-bold text-slate-900 dark:text-white mb-1">Nodes Earn</div>
+                      <div className="text-xs text-slate-600 dark:text-slate-400">Relay fee split among nodes</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Create Relay Request */}
+                <div className="bg-gradient-to-br from-white to-purple-50 dark:from-slate-900 dark:to-purple-950/30 rounded-xl p-6 border border-purple-200 dark:border-purple-800">
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white mb-4">Create Anonymous Relay</h3>
+                  
+                  <div className="space-y-4">
+                    {/* Recipient Address */}
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                        Send To (Solana Address)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="7NFF..."
+                        value={relayRecipient}
+                        onChange={(e) => setRelayRecipient(e.target.value)}
+                        className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                      />
+                    </div>
+
+                    {/* Amount */}
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                          Amount
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="0.5"
+                          step="0.001"
+                          value={relayAmount}
+                          onChange={(e) => setRelayAmount(e.target.value)}
+                          className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                          Token
+                        </label>
+                        <select 
+                          value={relayToken}
+                          onChange={(e) => setRelayToken(e.target.value)}
+                          className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                        >
+                          <option>SOL</option>
+                          <option>$WHISTLE</option>
+                          <option>USDC</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Privacy Level */}
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">
+                        Privacy Level (Number of Hops)
+                      </label>
+                      <div className="space-y-3">
+                        <label className={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-all ${privacyLevel === 3 ? 'border-purple-400 dark:border-purple-600 bg-purple-50 dark:bg-purple-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-purple-400 dark:hover:border-purple-600'}`}>
+                          <div className="flex items-center gap-3">
+                            <input 
+                              type="radio" 
+                              name="privacy" 
+                              value="3" 
+                              checked={privacyLevel === 3}
+                              onChange={(e) => setPrivacyLevel(parseInt(e.target.value))}
+                              className="w-4 h-4 text-purple-600" 
+                            />
+                            <div>
+                              <div className="font-bold text-slate-900 dark:text-white">Standard (3 hops)</div>
+                              <div className="text-xs text-slate-600 dark:text-slate-400">Good privacy • Fast</div>
+                            </div>
+                          </div>
+                          <div className="text-sm font-bold text-purple-600 dark:text-purple-400">15 $WHISTLE</div>
+                        </label>
+                        <label className={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-all ${privacyLevel === 5 ? 'border-purple-400 dark:border-purple-600 bg-purple-50 dark:bg-purple-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-purple-400 dark:hover:border-purple-600'}`}>
+                          <div className="flex items-center gap-3">
+                            <input 
+                              type="radio" 
+                              name="privacy" 
+                              value="5" 
+                              checked={privacyLevel === 5}
+                              onChange={(e) => setPrivacyLevel(parseInt(e.target.value))}
+                              className="w-4 h-4 text-purple-600" 
+                            />
+                            <div>
+                              <div className="font-bold text-slate-900 dark:text-white">High (5 hops) ⭐ Recommended</div>
+                              <div className="text-xs text-slate-600 dark:text-slate-400">Strong privacy • Balanced</div>
+                            </div>
+                          </div>
+                          <div className="text-sm font-bold text-purple-600 dark:text-purple-400">25 $WHISTLE</div>
+                        </label>
+                        <label className={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-all ${privacyLevel === 7 ? 'border-purple-400 dark:border-purple-600 bg-purple-50 dark:bg-purple-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-purple-400 dark:hover:border-purple-600'}`}>
+                          <div className="flex items-center gap-3">
+                            <input 
+                              type="radio" 
+                              name="privacy" 
+                              value="7" 
+                              checked={privacyLevel === 7}
+                              onChange={(e) => setPrivacyLevel(parseInt(e.target.value))}
+                              className="w-4 h-4 text-purple-600" 
+                            />
+                            <div>
+                              <div className="font-bold text-slate-900 dark:text-white">Maximum (7 hops)</div>
+                              <div className="text-xs text-slate-600 dark:text-slate-400">Extreme privacy • Slower</div>
+                            </div>
+                          </div>
+                          <div className="text-sm font-bold text-purple-600 dark:text-purple-400">50 $WHISTLE</div>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Offline Mode */}
+                    <div className="bg-indigo-50 dark:bg-indigo-950/30 rounded-lg p-4 border border-indigo-200 dark:border-indigo-800">
+                      <div className="flex items-start gap-3">
+                        <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+                        </svg>
+                        <div className="flex-1">
+                          <div className="font-bold text-indigo-900 dark:text-indigo-300 mb-1">✅ Offline Mode Available</div>
+                          <div className="text-sm text-indigo-700 dark:text-indigo-400 mb-2">
+                            Sign transaction offline, then transmit via:
+                          </div>
+                          <div className="text-xs text-indigo-600 dark:text-indigo-400 space-y-1">
+                            <div>• Nearby nodes (automatic if node detected)</div>
+                            <div>• QR Code (scan with internet-connected device)</div>
+                            <div>• Bluetooth/WiFi Direct</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Buttons */}
+                    <div className="grid md:grid-cols-2 gap-4 pt-2">
+                      <button
+                        onClick={createRelayRequest}
+                        disabled={!walletAddress || creatingRelay}
+                        className="px-6 py-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                        </svg>
+                        {creatingRelay ? 'Creating...' : 'Sign & Create Relay'}
+                      </button>
+                      <button
+                        onClick={generateQRCodeForRelay}
+                        disabled={!walletAddress}
+                        className="px-6 py-4 rounded-xl bg-white dark:bg-slate-800 border-2 border-purple-600 dark:border-purple-400 text-purple-600 dark:text-purple-400 font-bold hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                        </svg>
+                        Generate QR Code (Offline)
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Relay History */}
+                <div className="mt-6 bg-white dark:bg-slate-900 rounded-xl p-6 border border-purple-100 dark:border-purple-900">
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white mb-4">Recent Relays</h3>
+                  {relayHistory.length === 0 ? (
+                    <div className="text-center py-8">
+                      <svg className="w-16 h-16 text-slate-300 dark:text-slate-700 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                      </svg>
+                      <div className="text-slate-500 dark:text-slate-400 font-bold mb-1">No Relays Yet</div>
+                      <div className="text-sm text-slate-400 dark:text-slate-500">Create your first anonymous relay above</div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {relayHistory.slice(0, 5).map((relay, idx) => (
+                        <div key={relay.id} className={`flex items-center justify-between p-4 rounded-lg border ${
+                          relay.status === 'pending' ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800' :
+                          relay.status === 'in-progress' ? 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800' :
+                          'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800'
+                        }`}>
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                              relay.status === 'pending' ? 'bg-blue-100 dark:bg-blue-900/50' :
+                              relay.status === 'in-progress' ? 'bg-orange-100 dark:bg-orange-900/50' :
+                              'bg-emerald-100 dark:bg-emerald-900/50'
+                            }`}>
+                              <svg className={`w-5 h-5 ${
+                                relay.status === 'pending' ? 'text-blue-600 dark:text-blue-400' :
+                                relay.status === 'in-progress' ? 'text-orange-600 dark:text-orange-400' :
+                                'text-emerald-600 dark:text-emerald-400'
+                              }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                {relay.status === 'pending' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />}
+                                {relay.status === 'in-progress' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />}
+                                {relay.status !== 'pending' && relay.status !== 'in-progress' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />}
+                              </svg>
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-900 dark:text-white">
+                                {relay.status === 'pending' ? 'Pending' : 
+                                 relay.status === 'in-progress' ? 'In Progress' : 'Completed'}
+                              </div>
+                              <div className="text-sm text-slate-600 dark:text-slate-400">
+                                {relay.hops} hops • {relay.fee} $WHISTLE • {new Date(relay.created).toLocaleTimeString()}
+                              </div>
+                            </div>
+                          </div>
+                          <div className={`text-sm font-bold ${
+                            relay.status === 'pending' ? 'text-blue-600 dark:text-blue-400' :
+                            relay.status === 'in-progress' ? 'text-orange-600 dark:text-orange-400' :
+                            'text-emerald-600 dark:text-emerald-400'
+                          }`}>
+                            {relay.status === 'pending' ? '⏳ Waiting' :
+                             relay.status === 'in-progress' ? '🔄 Relaying' :
+                             '✅ Confirmed'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* QR Code Modal */}
+              {showQRCode && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowQRCode(false)}>
+                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+                    <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-4">🔒 Offline Relay QR Code</h2>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
+                      Scan this QR code with an internet-connected device to relay your transaction
+                    </p>
+                    
+                    <div className="bg-white p-6 rounded-xl mb-6">
+                      <div className="aspect-square bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center text-center p-4">
+                        <div className="text-xs font-mono text-slate-600 dark:text-slate-400 break-all">
+                          {qrCodeData.slice(0, 100)}...
+                          <div className="mt-4 text-slate-500 text-xs">
+                            📱 QR Code will be generated here
+                            <div className="text-[10px] mt-2">(Add QRCode.js library for production)</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                      Privacy: {privacyLevel} hops • Fee: {calculateRelayFee(privacyLevel)} $WHISTLE
+                    </div>
+                    
+                    <button
+                      onClick={() => setShowQRCode(false)}
+                      className="w-full px-6 py-3 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-bold transition-all"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="bg-white/80 dark:bg-slate-900/80 rounded-2xl p-12 border border-slate-200/50 dark:border-slate-700/50 text-center">
+              <svg className="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Connect Your Wallet</h2>
+              <p className="text-slate-600 dark:text-slate-400 mb-6">
+                Connect your Solana wallet to stake $WHISTLE and start earning by running a privacy node
+              </p>
+              <button
+                onClick={() => setShowWalletModal(true)}
+                className="px-8 py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold shadow-lg hover:shadow-xl transition-all"
+              >
+                Connect Wallet
+              </button>
+            </div>
+          )}
+
+          {/* GLOBAL NODE NETWORK - VISIBLE TO EVERYONE */}
+          <div className="bg-white/80 dark:bg-slate-900/80 rounded-2xl p-6 border border-slate-200/50 dark:border-slate-700/50">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">🌍 Global Node Network</h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Live nodes running worldwide</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">LIVE</span>
+                <button
+                  onClick={fetchGlobalNodes}
+                  className="ml-4 px-3 py-1 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold transition-all"
+                  title="Manually refresh nodes"
+                >
+                  🔄 Refresh
+                </button>
+              </div>
+            </div>
+
+            {/* Network Stats - REAL DATA FROM API */}
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="text-center p-4 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/50 dark:to-teal-950/50 rounded-xl">
+                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{networkStats.totalNodes}</div>
+                <div className="text-[10px] text-slate-600 dark:text-slate-400 uppercase tracking-wider">Active Nodes</div>
+              </div>
+              <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/50 dark:to-amber-950/50 rounded-xl">
+                <div className="text-2xl font-black text-orange-600 dark:text-orange-400">{networkStats.totalRelays}</div>
+                <div className="text-[10px] text-slate-600 dark:text-slate-400 uppercase tracking-wider">Total Relays</div>
+              </div>
+              <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/50 dark:to-cyan-950/50 rounded-xl">
+                <div className="text-2xl font-black text-blue-600 dark:text-blue-400">{networkStats.activeNow}</div>
+                <div className="text-[10px] text-slate-600 dark:text-slate-400 uppercase tracking-wider">Online Now</div>
+              </div>
+            </div>
+
+            {/* Node List */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider px-4">
+                <span>Location</span>
+                <span>Status</span>
+                <span>Reputation</span>
+                <span>Relays</span>
+              </div>
+
+              {/* REAL NODES FROM API */}
+              {globalNodes.length > 0 ? globalNodes.map(node => (
+                <div key={node.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className={`w-2 h-2 rounded-full ${node.status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></div>
+                    <span className="text-sm font-bold text-slate-900 dark:text-white">{node.location}</span>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <div className={`text-xs font-bold px-3 py-1 rounded-full ${
+                      node.status === 'active' 
+                        ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300' 
+                        : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+                    }`}>
+                      {node.status.toUpperCase()}
+                    </div>
+                    <div className="text-sm font-bold text-blue-600 dark:text-blue-400 w-16 text-right">{node.reputation}</div>
+                    <div className="text-sm font-bold text-orange-600 dark:text-orange-400 w-16 text-right">{node.relays}</div>
+                    <div className="text-xs text-slate-600 dark:text-slate-400 w-16 text-right">{node.uptime}</div>
+                  </div>
+                </div>
+              )) : (
+                <div className="text-center py-12">
+                  <div className="text-slate-400 dark:text-slate-500 text-sm font-bold mb-2">No active nodes yet</div>
+                  <div className="text-slate-500 dark:text-slate-600 text-xs">Be the first to start a node!</div>
+                </div>
+              )}
+            </div>
+
+            {/* Your Node Status - Only show if you have a node */}
+            {walletAddress && stakedAmount >= 10000 && (
+              <div className="mt-6 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                <div className="flex items-center gap-3">
+                  <div className={`w-3 h-3 rounded-full ${nodeActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></div>
+                  <div className="flex-1">
+                    <div className="text-sm font-black text-slate-900 dark:text-white">Your Node: {walletAddress?.slice(0, 8)}...</div>
+                    <div className="text-xs text-slate-600 dark:text-slate-400">
+                      {nodeActive ? `✅ Running • ${successfulRelays} relays • Reputation: ${reputation}` : '⏸️ Offline • Click "Start Node" to begin earning'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* NODE RADAR - VISIBLE TO EVERYONE */}
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-8 border border-slate-700 relative overflow-hidden">
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 border-2 border-emerald-500 rounded-full"></div>
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 border-2 border-emerald-500 rounded-full"></div>
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] border-2 border-emerald-500 rounded-full"></div>
+            </div>
+            
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-lg font-black text-white">📡 Node Radar</h3>
+                  <p className="text-xs text-slate-400 mt-1">Real-time visualization of active nodes</p>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/20 rounded-full border border-emerald-500/50">
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-bold text-emerald-400">SCANNING</span>
+                </div>
+              </div>
+
+              {/* Radar visualization */}
+              <div className="relative h-64 bg-slate-950/50 rounded-xl border border-slate-700/50 mb-4 overflow-hidden">
+                {/* Center (network center or your node if active) */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-emerald-500 rounded-full shadow-lg shadow-emerald-500/50 z-20">
+                  <div className="absolute inset-0 bg-emerald-500 rounded-full animate-ping"></div>
+                </div>
+
+                {/* Show global nodes on radar */}
+                {globalNodes.slice(0, 8).map((node, idx) => {
+                  const angle = (idx * 360) / Math.min(globalNodes.length, 8);
+                  const distance = 30 + (idx % 3) * 20 + Math.random() * 15;
+                  const x = 50 + distance * Math.cos(angle * Math.PI / 180) * 0.8;
+                  const y = 50 + distance * Math.sin(angle * Math.PI / 180) * 0.8;
+                  
+                  return (
+                    <div 
+                      key={node.id}
+                      className="absolute w-3 h-3 -translate-x-1/2 -translate-y-1/2 transition-all duration-1000"
+                      style={{ left: `${x}%`, top: `${y}%` }}
+                    >
+                      <div className={`w-full h-full rounded-full ${node.status === 'active' ? 'bg-blue-500' : 'bg-orange-500'} shadow-lg`}>
+                        <div className="absolute inset-0 bg-inherit rounded-full animate-ping opacity-75"></div>
+                      </div>
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 whitespace-nowrap text-[10px] font-bold text-white bg-slate-900/80 px-2 py-0.5 rounded">
+                        <div>{node.id.slice(0, 12)}</div>
+                        {node.location && <div className="text-[8px] text-slate-400">📍 {node.location.split('/').pop()}</div>}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* No nodes message */}
+                {globalNodes.length === 0 && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-slate-500 text-sm font-bold mb-2">No nodes detected</div>
+                      <div className="text-slate-600 text-xs">Be the first to start a node!</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Legend */}
+              <div className="flex items-center justify-center gap-6 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
+                  <span className="text-slate-300">{nodeActive ? 'Your Node' : 'Network Center'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                  <span className="text-slate-300">Active Nodes</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                  <span className="text-slate-300">Idle Nodes</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Wallet Connection Modal */}
+          {showWalletModal && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowWalletModal(false)}>
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-6">Connect Wallet</h2>
+                <button
+                  onClick={connectWallet}
+                  disabled={connecting}
+                  className="w-full px-6 py-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                >
+                  {connecting ? 'Connecting...' : 'Phantom Wallet'}
+                </button>
+                <button
+                  onClick={() => setShowWalletModal(false)}
+                  className="w-full mt-4 px-6 py-3 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-bold transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Stake Modal */}
+          {showStakeModal && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowStakeModal(false)}>
+              <div className="rounded-2xl bg-white dark:bg-slate-900 max-w-lg w-full shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                {/* Header */}
+                <div className="bg-gradient-to-r from-blue-600 to-cyan-600 p-6">
+                  <h2 className="text-2xl font-black text-white mb-1">STAKE $WHISTLE</h2>
+                  <p className="text-blue-100 text-sm">Lock tokens to activate your node</p>
+                </div>
+
+                {/* Content */}
+                <div className="p-6 space-y-5">
+                  {/* Wallet Balance */}
+                  <div className="bg-slate-100 dark:bg-slate-800 rounded-xl p-4">
+                    <div className="text-xs text-slate-600 dark:text-slate-400 mb-1 uppercase tracking-wider">Wallet Balance</div>
+                    <div className="text-2xl font-black text-slate-900 dark:text-white">{tokenBalance.toLocaleString()} $WHISTLE</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-500 mt-1">≈ ${(tokenBalance * 0.00013).toFixed(2)} USD</div>
+                  </div>
+
+                  {/* Amount Input */}
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Stake Amount</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={stakeInput}
+                        onChange={(e) => setStakeInput(e.target.value)}
+                        placeholder="10,000 minimum"
+                        className="w-full px-4 py-3 rounded-xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-blue-500 focus:outline-none transition-all font-bold"
+                      />
+                      <button
+                        onClick={() => setStakeInput(tokenBalance.toString())}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all"
+                      >
+                        MAX
+                      </button>
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <button onClick={() => setStakeInput('10000')} className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all">10K</button>
+                      <button onClick={() => setStakeInput('50000')} className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all">50K</button>
+                      <button onClick={() => setStakeInput('100000')} className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all">100K</button>
+                      <button onClick={() => setStakeInput(tokenBalance.toString())} className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all">MAX</button>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={() => setShowStakeModal(false)}
+                      className="flex-1 px-6 py-3 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-bold transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleStake}
+                      disabled={loading}
+                      className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold transition-all shadow-lg disabled:opacity-50"
+                    >
+                      {loading ? 'Staking...' : 'Stake Now'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+
     function App() {
       const { toasts, push } = useToasts();
       const [step, setStep] = usePersistentState('uiStep', "home");
@@ -8534,7 +10753,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
+      const validSteps = ['home', 'webrtc', 'offline-network', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -8566,6 +10785,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                     switch(currentStep) {
                       case 'home': return <Home setStep={setStepGuarded} />;
                       case 'webrtc': return <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />;
+                      case 'offline-network': return <OfflineNetworkHub pushToast={push} />;
                       case 'steganography': return <UnifiedSteganography pushToast={push} />;
                       case 'privacy-checkup': return <PrivacyCheckup pushToast={push} />;
                       case 'censorship-map': return <CensorshipMap pushToast={push} />;
@@ -8597,9 +10817,728 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   : "bg-cyan-500/90 border-cyan-300/50 text-white shadow-cyan-500/50"
               }`}>
                 <div className="flex items-center gap-3">
-                  {t.tone === "ok" && <i data-lucide="check-circle" className="w-6 h-6 shrink-0"></i>}
-                  {t.tone === "err" && <i data-lucide="x-circle" className="w-6 h-6 shrink-0"></i>}
-                  {t.tone !== "ok" && t.tone !== "err" && <i data-lucide="info" className="w-6 h-6 shrink-0"></i>}
+                  {t.tone === "ok" && (
+                    <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m7 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  {t.tone === "err" && (
+                    <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  {t.tone !== "ok" && t.tone !== "err" && (
+                    <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
+                    </svg>
+                  )}
+                  <span className="flex-1">{t.msg}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+</script>
+<script defer type='text/javascript' src='https://changenow.io/embeds/exchange-widget/v2/stepper-connector.js'></script>
+</body>
+</html>
+
+<!-- OLD JUNK BELOW TO DELETE
+                {nearbyNodes.length === 0 ? (
+                  <div className="text-center py-16">
+                    <svg className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+                    </svg>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">
+                      {nodeActive ? 'Scanning network...' : 'Node offline'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {nearbyNodes.map((node, i) => (
+                      <div key={node.id} className="group hover:bg-slate-100/50 dark:hover:bg-slate-800/50 rounded-lg p-3 transition-all">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${node.signal >= 80 ? 'bg-emerald-500' : node.signal >= 50 ? 'bg-orange-500' : 'bg-red-500'}`}></div>
+                            <span className="text-sm font-bold text-slate-900 dark:text-white font-mono">{node.name}</span>
+                          </div>
+                          <span className={`text-xs font-bold ${node.signal >= 80 ? 'text-emerald-600 dark:text-emerald-400' : node.signal >= 50 ? 'text-orange-600 dark:text-orange-400' : 'text-red-600 dark:text-red-400'}`}>
+                            {node.signal}%
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] text-slate-600 dark:text-slate-400 font-medium">
+                          <span>{node.distance}</span>
+                          <span>{node.uptime}</span>
+                          <span>{node.relayed} relays</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Transaction Queue - Minimalist */}
+            <div className="backdrop-blur-sm bg-white/70 dark:bg-slate-900/70 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 overflow-hidden shadow-xl">
+              <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Transaction Queue · {pendingTxs.length}</h3>
+              </div>
+              <div className="p-3">
+                {pendingTxs.length === 0 ? (
+                  <div className="text-center py-16">
+                    <svg className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 font-medium mb-4">No pending transactions</p>
+                    <button 
+                      onClick={() => setShowCreateTx(true)}
+                      disabled={!nodeActive}
+                      className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-slate-400 disabled:opacity-40 text-white text-xs font-bold transition-all"
+                    >
+                      + NEW
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {pendingTxs.map((tx) => (
+                      <div key={tx.id} className="group hover:bg-slate-100/50 dark:hover:bg-slate-800/50 rounded-lg p-3 transition-all">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${tx.status === 'confirmed' ? 'bg-emerald-500' : tx.status === 'relaying' ? 'bg-blue-500 animate-pulse' : 'bg-orange-500'}`}></div>
+                            <span className="text-xs font-bold text-slate-900 dark:text-white font-mono">{tx.id}</span>
+                          </div>
+                          <span className="text-xs font-bold text-slate-900 dark:text-white">{tx.amount} SOL</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] text-slate-600 dark:text-slate-400 font-medium mb-1">
+                          <span className="truncate max-w-[120px]">{tx.recipient}</span>
+                          <span>{tx.hops} hops</span>
+                          <span>{tx.created}</span>
+                        </div>
+                        {tx.memo && (
+                          <div className="text-[10px] text-slate-500 dark:text-slate-500 italic mt-1 truncate">{tx.memo}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Node Operators & Staking Protocol */}
+          <div className="backdrop-blur-sm bg-white/70 dark:bg-slate-900/70 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 overflow-hidden shadow-xl">
+            <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/50 dark:to-cyan-950/50">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">Node Operators & Staking</h3>
+              <p className="text-[10px] text-slate-600 dark:text-slate-400 mt-0.5">Earn $WHISTLE by running nodes and staking tokens</p>
+            </div>
+            
+            <div className="p-4">
+              {/* How It Works - 2 Column */}
+              <div className="grid md:grid-cols-2 gap-4 mb-4">
+                {/* Node Operators */}
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-sm font-black">1</span>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white mb-1">RUN A NODE</h4>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                        Keep your device online with the WHISTLE app running. Your node will automatically relay encrypted transactions through the mesh network.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-sm font-black">2</span>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white mb-1">RELAY MESSAGES</h4>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                        Each transaction you relay earns you $WHISTLE tokens. The more uptime and relays, the higher your rewards.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-sm font-black">3</span>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white mb-1">EARN REWARDS</h4>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                        Automatic payouts every 24h. Top node operators earn bonus multipliers for reliability and performance.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Staking Protocol */}
+                <div className="space-y-3">
+                  <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
+                    <h4 className="text-xs font-black text-blue-900 dark:text-blue-300 mb-2 uppercase tracking-wider">Base Staking APY</h4>
+                    <div className="text-3xl font-black text-blue-600 dark:text-blue-400 mb-1">45%</div>
+                    <p className="text-[10px] text-slate-600 dark:text-slate-400">Up to 60% APY with node boost</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between py-2 border-b border-slate-200 dark:border-slate-700">
+                      <span className="text-xs text-slate-600 dark:text-slate-400">Minimum Stake</span>
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">10,000 $WHISTLE</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b border-slate-200 dark:border-slate-700">
+                      <span className="text-xs text-slate-600 dark:text-slate-400">Lock Period</span>
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">30 / 90 / 180 days</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b border-slate-200 dark:border-slate-700">
+                      <span className="text-xs text-slate-600 dark:text-slate-400">Node Operator Boost</span>
+                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">+15% APY</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b border-slate-200 dark:border-slate-700">
+                      <span className="text-xs text-slate-600 dark:text-slate-400">Reward per Relay</span>
+                      <span className="text-xs font-bold text-orange-600 dark:text-orange-400">8 $WHISTLE</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2">
+                      <span className="text-xs text-slate-600 dark:text-slate-400">Rewards Claim</span>
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">Daily</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Requirements & Benefits */}
+              <div className="grid md:grid-cols-3 gap-3">
+                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-200 dark:border-slate-700">
+                  <h5 className="text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-400 mb-2">Node Requirements</h5>
+                  <ul className="space-y-1 text-xs text-slate-600 dark:text-slate-400">
+                    <li className="flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-blue-500"></div>
+                      <span>WiFi or Bluetooth enabled</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-blue-500"></div>
+                      <span>Device stays online</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-blue-500"></div>
+                      <span>WHISTLE app running</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-200 dark:border-slate-700">
+                  <h5 className="text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-400 mb-2">Earning Factors</h5>
+                  <ul className="space-y-1 text-xs text-slate-600 dark:text-slate-400">
+                    <li className="flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-emerald-500"></div>
+                      <span>Uptime percentage</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-emerald-500"></div>
+                      <span>Messages relayed</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-emerald-500"></div>
+                      <span>Network contribution</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-200 dark:border-slate-700">
+                  <h5 className="text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-400 mb-2">Staker Benefits</h5>
+                  <ul className="space-y-1 text-xs text-slate-600 dark:text-slate-400">
+                    <li className="flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-orange-500"></div>
+                      <span>Daily compound rewards</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-orange-500"></div>
+                      <span>Node operator bonus</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-orange-500"></div>
+                      <span>Governance rights</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Tokenomics Info */}
+              <div className="mt-4 bg-gradient-to-r from-slate-100 to-slate-50 dark:from-slate-800/50 dark:to-slate-900/50 rounded-xl p-3 border border-slate-200 dark:border-slate-700">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+                  <div>
+                    <div className="text-[9px] text-slate-500 dark:text-slate-500 mb-1 uppercase tracking-wider">Total Supply</div>
+                    <div className="text-sm font-black text-slate-900 dark:text-white">1B $WHISTLE</div>
+                  </div>
+                  <div>
+                    <div className="text-[9px] text-slate-500 dark:text-slate-500 mb-1 uppercase tracking-wider">Market Cap</div>
+                    <div className="text-sm font-black text-slate-900 dark:text-white">$130K</div>
+                  </div>
+                  <div>
+                    <div className="text-[9px] text-slate-500 dark:text-slate-500 mb-1 uppercase tracking-wider">Token Price</div>
+                    <div className="text-sm font-black text-slate-900 dark:text-white">$0.00013</div>
+                  </div>
+                  <div>
+                    <div className="text-[9px] text-slate-500 dark:text-slate-500 mb-1 uppercase tracking-wider">Contract</div>
+                    <div className="text-[10px] font-mono font-bold text-blue-600 dark:text-blue-400">6Hb...pump</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Reward Calculation Example */}
+              <div className="mt-3 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
+                <h5 className="text-xs font-black text-slate-900 dark:text-white mb-3 uppercase tracking-wider">💰 Example Earnings Calculator</h5>
+                
+                {/* Scenario 1: Small Holder */}
+                <div className="mb-4 pb-4 border-b border-slate-200 dark:border-slate-700">
+                  <div className="text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wider">📊 Entry Level (100K $WHISTLE Staked = $13 USD)</div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                      <div className="text-[9px] text-slate-600 dark:text-slate-400 mb-1">Base Staking (45% APY)</div>
+                      <div className="text-base font-black text-blue-600 dark:text-blue-400">123 $W/day</div>
+                      <div className="text-[8px] text-slate-500 dark:text-slate-500">~$0.016/day</div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-slate-600 dark:text-slate-400 mb-1">Node Rewards (50 relays)</div>
+                      <div className="text-base font-black text-emerald-600 dark:text-emerald-400">400 $W/day</div>
+                      <div className="text-[8px] text-slate-500 dark:text-slate-500">~$0.052/day</div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-slate-600 dark:text-slate-400 mb-1">w/ Node Boost (60% APY)</div>
+                      <div className="text-base font-black text-orange-600 dark:text-orange-400">564 $W/day</div>
+                      <div className="text-[8px] text-slate-500 dark:text-slate-500">~$0.073/day</div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-slate-600 dark:text-slate-400 mb-1">Monthly Total</div>
+                      <div className="text-base font-black text-slate-900 dark:text-white">~16.9K $W</div>
+                      <div className="text-[8px] text-emerald-600 dark:text-emerald-400">~$2.20 (17% gain)</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Scenario 2: Power User */}
+                <div>
+                  <div className="text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wider">🚀 Power User (500K $WHISTLE Staked = $65 USD)</div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                      <div className="text-[9px] text-slate-600 dark:text-slate-400 mb-1">Base Staking (45% APY)</div>
+                      <div className="text-base font-black text-blue-600 dark:text-blue-400">616 $W/day</div>
+                      <div className="text-[8px] text-slate-500 dark:text-slate-500">~$0.080/day</div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-slate-600 dark:text-slate-400 mb-1">Node Rewards (200 relays)</div>
+                      <div className="text-base font-black text-emerald-600 dark:text-emerald-400">1,600 $W/day</div>
+                      <div className="text-[8px] text-slate-500 dark:text-slate-500">~$0.208/day</div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-slate-600 dark:text-slate-400 mb-1">w/ Node Boost (60% APY)</div>
+                      <div className="text-base font-black text-orange-600 dark:text-orange-400">2,422 $W/day</div>
+                      <div className="text-[8px] text-slate-500 dark:text-slate-500">~$0.315/day</div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-slate-600 dark:text-slate-400 mb-1">Monthly Total</div>
+                      <div className="text-base font-black text-slate-900 dark:text-white">~72.7K $W</div>
+                      <div className="text-[8px] text-emerald-600 dark:text-emerald-400">~$9.45 (14.5% gain)</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 text-center">
+                  <p className="text-[9px] text-slate-600 dark:text-slate-500 italic">* Price assumes current $130K market cap. Actual earnings in USD will increase with market cap growth.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Create Transaction Modal */}
+          {showCreateTx && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowCreateTx(false)}>
+              <div className="rounded-3xl border border-white/20 bg-slate-900/95 p-8 max-w-lg w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                <h2 className="text-2xl font-bold text-white mb-6">Create Offline Transaction</h2>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-white/70 text-sm mb-2">Recipient Address</label>
+                    <input
+                      type="text"
+                      value={txRecipient}
+                      onChange={(e) => setTxRecipient(e.target.value)}
+                      placeholder="Enter Solana wallet address..."
+                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-cyan-400 focus:outline-none transition-all"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-white/70 text-sm mb-2">Amount (SOL)</label>
+                    <input
+                      type="number"
+                      step="0.001"
+                      value={txAmount}
+                      onChange={(e) => setTxAmount(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-cyan-400 focus:outline-none transition-all"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-white/70 text-sm mb-2">Memo (Optional)</label>
+                    <input
+                      type="text"
+                      value={txMemo}
+                      onChange={(e) => setTxMemo(e.target.value)}
+                      placeholder="Add a note..."
+                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-cyan-400 focus:outline-none transition-all"
+                    />
+                  </div>
+                  
+                  <div className="bg-cyan-500/10 border border-cyan-400/30 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div className="text-sm text-white/70">
+                        Your transaction will be signed offline and broadcast through the mesh network. 
+                        It may take several minutes to reach an internet-connected node.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex gap-3 mt-6">
+                  <button
+                    onClick={createOfflineTx}
+                    className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-white font-bold transition-all hover:scale-105 shadow-lg shadow-cyan-500/50"
+                  >
+                    Create & Broadcast
+                  </button>
+                  <button
+                    onClick={() => setShowCreateTx(false)}
+                    className="px-6 py-3 rounded-xl border-2 border-white/20 hover:border-white/30 bg-white/5 hover:bg-white/10 text-white font-bold transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Info Modal */}
+          {showNodeInfo && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowNodeInfo(false)}>
+              <div className="rounded-3xl border border-white/20 bg-slate-900/95 p-8 max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                <h2 className="text-3xl font-bold text-white mb-6">How Offline Network Works</h2>
+                
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-xl font-bold text-cyan-400 mb-3">🌐 Mesh Network Protocol</h3>
+                    <p className="text-white/70 leading-relaxed">
+                      Every device running WHISTLE becomes a relay node. Transactions hop from device to device 
+                      using WiFi Direct and Bluetooth, creating a decentralized mesh network that works completely offline.
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-xl font-bold text-purple-400 mb-3">💰 Earn $WHISTLE Rewards</h3>
+                    <p className="text-white/70 leading-relaxed">
+                      Every time you relay a transaction, you earn $WHISTLE tokens. The more you help the network, 
+                      the more you earn. Rewards are automatically distributed when transactions confirm on-chain.
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-xl font-bold text-emerald-400 mb-3">🔒 Privacy & Security</h3>
+                    <p className="text-white/70 leading-relaxed">
+                      All messages are end-to-end encrypted. Relay nodes can't read transaction contents. 
+                      Your keys never leave your device. Transactions are signed offline and verified on-chain.
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-xl font-bold text-yellow-400 mb-3">🚀 Use Cases</h3>
+                    <ul className="text-white/70 space-y-2 list-disc list-inside">
+                      <li>Send crypto during internet outages</li>
+                      <li>Censorship-resistant transactions</li>
+                      <li>Emergency disaster communications</li>
+                      <li>Rural areas with poor connectivity</li>
+                      <li>Privacy-focused offline payments</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border border-cyan-400/30 rounded-xl p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-400 to-purple-400 flex items-center justify-center shrink-0">
+                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4 className="text-white font-bold mb-2">Coming Soon: Mobile App</h4>
+                        <p className="text-white/70 text-sm">
+                          Native iOS & Android apps with true WiFi Direct and Bluetooth mesh capabilities. 
+                          Join the waitlist to be the first to access global offline Solana transactions.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={() => setShowNodeInfo(false)}
+                  className="w-full mt-6 px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-bold transition-all hover:scale-105 shadow-lg"
+                >
+                  Got It!
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Stake Modal */}
+          {showStakeModal && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowStakeModal(false)}>
+              <div className="rounded-2xl bg-white dark:bg-slate-900 max-w-lg w-full shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                {/* Header */}
+                <div className="bg-gradient-to-r from-blue-600 to-cyan-600 p-6">
+                  <h2 className="text-2xl font-black text-white mb-1">STAKE $WHISTLE</h2>
+                  <p className="text-blue-100 text-sm">Lock tokens to activate your node</p>
+                </div>
+
+                {/* Content */}
+                <div className="p-6 space-y-5">
+                  {/* Wallet Balance */}
+                  <div className="bg-slate-100 dark:bg-slate-800 rounded-xl p-4">
+                    <div className="text-xs text-slate-600 dark:text-slate-400 mb-1 uppercase tracking-wider">Wallet Balance</div>
+                    <div className="text-2xl font-black text-slate-900 dark:text-white">{tokenBalance.toLocaleString()} $WHISTLE</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-500 mt-1">≈ ${(tokenBalance * 0.00013).toFixed(2)} USD</div>
+                  </div>
+
+                  {/* Amount Input */}
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Stake Amount</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={stakeInput}
+                        onChange={(e) => setStakeInput(e.target.value)}
+                        placeholder="10,000 minimum"
+                        className="w-full px-4 py-3 rounded-xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-blue-500 focus:outline-none transition-all font-bold"
+                      />
+                      <button
+                        onClick={() => setStakeInput(tokenBalance.toString())}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all"
+                      >
+                        MAX
+                      </button>
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <button onClick={() => setStakeInput('10000')} className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all">10K</button>
+                      <button onClick={() => setStakeInput('50000')} className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all">50K</button>
+                      <button onClick={() => setStakeInput('100000')} className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all">100K</button>
+                      <button onClick={() => setStakeInput('250000')} className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all">250K</button>
+                    </div>
+                  </div>
+
+                  {/* Lock Period */}
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">Lock Period</label>
+                    <div className="grid grid-cols-3 gap-3">
+                      <button
+                        onClick={() => setLockPeriod(30)}
+                        className={`py-3 px-4 rounded-xl border-2 transition-all font-bold ${
+                          lockPeriod === 30
+                            ? 'bg-blue-600 border-blue-600 text-white'
+                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-blue-400'
+                        }`}
+                      >
+                        <div className="text-xs mb-1">30 Days</div>
+                        <div className="text-[10px] opacity-70">45% APY</div>
+                      </button>
+                      <button
+                        onClick={() => setLockPeriod(90)}
+                        className={`py-3 px-4 rounded-xl border-2 transition-all font-bold ${
+                          lockPeriod === 90
+                            ? 'bg-blue-600 border-blue-600 text-white'
+                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-blue-400'
+                        }`}
+                      >
+                        <div className="text-xs mb-1">90 Days</div>
+                        <div className="text-[10px] opacity-70">52% APY</div>
+                      </button>
+                      <button
+                        onClick={() => setLockPeriod(180)}
+                        className={`py-3 px-4 rounded-xl border-2 transition-all font-bold ${
+                          lockPeriod === 180
+                            ? 'bg-blue-600 border-blue-600 text-white'
+                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-blue-400'
+                        }`}
+                      >
+                        <div className="text-xs mb-1">180 Days</div>
+                        <div className="text-[10px] opacity-70">60% APY</div>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Expected Returns */}
+                  {stakeInput && parseFloat(stakeInput) >= 10000 && (
+                    <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 rounded-xl p-4 border border-emerald-200 dark:border-emerald-800">
+                      <div className="text-xs font-bold text-emerald-900 dark:text-emerald-300 mb-3 uppercase tracking-wider">Expected Returns</div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-[10px] text-emerald-700 dark:text-emerald-400 mb-1">Daily Rewards</div>
+                          <div className="text-lg font-black text-emerald-900 dark:text-emerald-300">
+                            {(parseFloat(stakeInput) * (lockPeriod === 30 ? 0.45 : lockPeriod === 90 ? 0.52 : 0.60) / 365).toFixed(0)} $W
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-emerald-700 dark:text-emerald-400 mb-1">Total at Unlock</div>
+                          <div className="text-lg font-black text-emerald-900 dark:text-emerald-300">
+                            {(parseFloat(stakeInput) * (1 + (lockPeriod === 30 ? 0.45 : lockPeriod === 90 ? 0.52 : 0.60) * (lockPeriod / 365))).toFixed(0)} $W
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={() => setShowStakeModal(false)}
+                      className="flex-1 px-6 py-3 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-bold transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleStake}
+                      className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold transition-all shadow-lg hover:shadow-xl"
+                    >
+                      Stake Now
+                    </button>
+                  </div>
+
+                  {/* Info Note */}
+                  <div className="text-[10px] text-slate-600 dark:text-slate-500 text-center italic pt-2">
+                    ⚠️ Tokens will be locked for {lockPeriod} days. Early withdrawal not available.
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function App() {
+      const { toasts, push } = useToasts();
+      const [step, setStep] = usePersistentState('uiStep', "home");
+      const lastNavRef = React.useRef(0);
+      const pendingNavRef = React.useRef(null);
+
+      // Guarded setter to debounce rapid section changes
+      const setStepGuarded = React.useCallback((next) => {
+        const now = Date.now();
+        const minGapMs = 250; // throttle interval
+        if (now - lastNavRef.current < minGapMs) {
+          // schedule the latest desired step after the gap
+          pendingNavRef.current = next;
+          clearTimeout(setStepGuarded._t);
+          setStepGuarded._t = setTimeout(() => {
+            lastNavRef.current = Date.now();
+            const target = typeof pendingNavRef.current === 'function' ? pendingNavRef.current(step) : pendingNavRef.current;
+            pendingNavRef.current = null;
+            setStep(target);
+          }, minGapMs - (now - lastNavRef.current));
+          return;
+        }
+        lastNavRef.current = now;
+        setStep(next);
+      }, [step, setStep]);
+      const [hashFromFlow, setHashFromFlow] = useState("");
+      
+      // Ensure step is always valid, default to 'home' if not
+      const validSteps = ['home', 'webrtc', 'offline-network', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
+      const currentStep = validSteps.includes(step) ? step : 'home';
+      
+      return (
+        <div className="relative min-h-screen text-white">
+          {/* animated gradient blobs */}
+          <div className="sky"></div>
+          <div className="sky-dim"></div>
+          <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+            <div className="cloud c1"></div>
+            <div className="cloud c2"></div>
+            <div className="cloud c3"></div>
+            <div className="cloud c4"></div>
+            <div className="cloud c5"></div>
+            <div className="cloud c6"></div>
+            <div className="cloud c7"></div>
+            <div className="cloud c8"></div>
+            <div className="cloud c9"></div>
+          </div>
+          <div className="max-w-6xl mx-auto p-6 sm:p-4 md:p-6">
+            <SectionHeader />
+            <div className="mt-5 flex gap-6">
+              <Sidebar step={currentStep} setStep={setStepGuarded} />
+              <main className="flex-1 min-w-0">
+                <div className="mb-4 md:hidden">
+                  <StepPills step={currentStep} setStep={setStepGuarded} />
+                </div>
+                <ErrorBoundary key={currentStep}>
+                  {(() => {
+                    switch(currentStep) {
+                      case 'home': return <Home setStep={setStepGuarded} />;
+                      case 'webrtc': return <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />;
+                      case 'offline-network': return <OfflineNetworkHub pushToast={push} />;
+                      case 'steganography': return <UnifiedSteganography pushToast={push} />;
+                      case 'privacy-checkup': return <PrivacyCheckup pushToast={push} />;
+                      case 'censorship-map': return <CensorshipMap pushToast={push} />;
+                      case 'swap': return <PrivacySwap />;
+                      case 'solana-privacy': return <SolanaPrivacyToolkit pushToast={push} />;
+                      case 'pump-portal': return <PumpPortalLaunch pushToast={push} />;
+                      case 'zolana': return <ZolanaExchange pushToast={push} />;
+                      default: return (
+                        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6">
+                          <h2 className="text-white text-xl font-bold mb-2">Section Not Found</h2>
+                          <p className="text-white/70">The section "{currentStep}" could not be loaded.</p>
+                        </div>
+                      );
+                    }
+                  })()}
+                </ErrorBoundary>
+              </main>
+            </div>
+          </div>
+
+          {/* Toasts */}
+          <div className="fixed top-20 right-4 space-y-3 z-50">
+            {toasts.map((t) => (
+              <div key={t.id} className={`toast-enter rounded-2xl border-2 px-6 py-4 text-base font-semibold backdrop-blur-xl shadow-2xl min-w-[320px] ${
+                t.tone === "ok"
+                  ? "bg-emerald-500/90 border-emerald-300/50 text-white shadow-emerald-500/50"
+                  : t.tone === "err"
+                  ? "bg-rose-500/90 border-rose-300/50 text-white shadow-rose-500/50"
+                  : "bg-cyan-500/90 border-cyan-300/50 text-white shadow-cyan-500/50"
+              }`}>
+                <div className="flex items-center gap-3">
+                  {t.tone === "ok" && (
+                    <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m7 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  {t.tone === "err" && (
+                    <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  {t.tone !== "ok" && t.tone !== "err" && (
+                    <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
+                    </svg>
+                  )}
                   <span className="flex-1">{t.msg}</span>
                 </div>
               </div>

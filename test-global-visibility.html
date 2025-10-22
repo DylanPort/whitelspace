@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Global Node Visibility</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: white;
+    }
+    .stat {
+      background: #2a2a2a;
+      padding: 20px;
+      margin: 10px 0;
+      border-radius: 10px;
+    }
+    .stat h2 {
+      margin: 0 0 10px 0;
+      color: #10b981;
+    }
+    .node {
+      background: #333;
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 5px;
+    }
+    button {
+      background: #10b981;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background: #059669;
+    }
+  </style>
+</head>
+<body>
+  <h1>🌍 Test: Global Node Visibility</h1>
+  <p>This page fetches nodes from the API without any wallet connection.</p>
+  
+  <button onclick="fetchNodes()">🔄 Fetch Nodes Now</button>
+  
+  <div class="stat">
+    <h2>Total Nodes</h2>
+    <div id="totalNodes" style="font-size: 48px; font-weight: bold;">-</div>
+  </div>
+  
+  <div class="stat">
+    <h2>Node List</h2>
+    <div id="nodeList">Loading...</div>
+  </div>
+  
+  <div class="stat">
+    <h2>Raw API Response</h2>
+    <pre id="rawResponse" style="background: #000; padding: 10px; border-radius: 5px; overflow-x: auto;">Loading...</pre>
+  </div>
+
+  <script>
+    async function fetchNodes() {
+      try {
+        console.log('🔄 Fetching nodes from API...');
+        const response = await fetch('http://localhost:8080/api/nodes');
+        const data = await response.json();
+        
+        console.log('✅ Response:', data);
+        
+        // Update total
+        document.getElementById('totalNodes').textContent = data.totalNodes;
+        
+        // Update raw response
+        document.getElementById('rawResponse').textContent = JSON.stringify(data, null, 2);
+        
+        // Update node list
+        if (data.nodes.length === 0) {
+          document.getElementById('nodeList').innerHTML = '<p style="color: #999;">No active nodes</p>';
+        } else {
+          const nodeHTML = data.nodes.map(node => `
+            <div class="node">
+              <strong>ID:</strong> ${node.id}<br>
+              <strong>Wallet:</strong> ${node.walletAddress}<br>
+              <strong>Region:</strong> ${node.region}<br>
+              <strong>Relays:</strong> ${node.relayCount}<br>
+              <strong>Uptime:</strong> ${Math.floor(node.uptime / 1000 / 60)} min
+            </div>
+          `).join('');
+          document.getElementById('nodeList').innerHTML = nodeHTML;
+        }
+      } catch (err) {
+        console.error('❌ Error:', err);
+        document.getElementById('nodeList').innerHTML = '<p style="color: #ff0000;">Error: ' + err.message + '</p>';
+        document.getElementById('rawResponse').textContent = 'Error: ' + err.message;
+      }
+    }
+    
+    // Fetch on load
+    fetchNodes();
+    
+    // Auto-refresh every 5 seconds
+    setInterval(fetchNodes, 5000);
+  </script>
+</body>
+</html>
+

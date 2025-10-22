@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Create Pool Vault - Ghost Whistle</title>
+  <script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
+  <script src="https://unpkg.com/buffer@6.0.3/index.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #0a0a0a;
+      color: #fff;
+    }
+    h1 { color: #00ff88; }
+    button {
+      background: linear-gradient(135deg, #00ff88, #00cc66);
+      border: none;
+      color: #000;
+      padding: 20px 40px;
+      font-size: 18px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: bold;
+      margin: 20px 0;
+    }
+    button:hover { transform: scale(1.05); }
+    #status {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      padding: 20px;
+      border-radius: 12px;
+      margin: 20px 0;
+      min-height: 100px;
+      font-family: monospace;
+      white-space: pre-wrap;
+    }
+    .success { color: #00ff88; }
+    .error { color: #ff4444; }
+    .info { color: #44aaff; }
+  </style>
+</head>
+<body>
+  <h1>🏦 Create Ghost Whistle Pool Vault</h1>
+  <p>This will create the Associated Token Account (ATA) for the pool to hold $WHISTLE tokens.</p>
+  
+  <div id="status">Click the button to create pool vault...</div>
+  
+  <button id="createBtn">
+    🚀 Create Pool Vault
+  </button>
+
+  <script>
+    const PROGRAM_ID = '3aUoFGbk4NifQegfFmqP4W3G24Yb7oFKfp9VErQtshqu'; // NEW FIXED CONTRACT
+    const WHISTLE_MINT = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';
+    const RPC_URL = 'https://rpc-mainnet.solanatracker.io/?api_key=25ef537d-3249-479c-96cb-40efc0ce3e09';
+    const TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+    const ASSOCIATED_TOKEN_PROGRAM_ID = 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL';
+    const SYSTEM_PROGRAM_ID = '11111111111111111111111111111111';
+    const RENT_PROGRAM_ID = 'SysvarRent111111111111111111111111111111111';
+
+    window.addEventListener('load', () => {
+      document.getElementById('createBtn').addEventListener('click', createPoolVault);
+    });
+
+    async function createPoolVault() {
+      const statusDiv = document.getElementById('status');
+      statusDiv.innerHTML = '🔌 Connecting to Phantom...';
+
+      try {
+        // Check for Phantom
+        if (!window.solana || !window.solana.isPhantom) {
+          statusDiv.innerHTML = '<span class="error">❌ Phantom wallet not found! Please install it.</span>';
+          return;
+        }
+
+        // Connect wallet
+        const provider = await window.solana.connect();
+        statusDiv.innerHTML = `<span class="success">✅ Wallet connected: ${provider.publicKey.toString().slice(0, 8)}...</span>`;
+
+        const connection = new solanaWeb3.Connection(RPC_URL, 'confirmed');
+        const programId = new solanaWeb3.PublicKey(PROGRAM_ID);
+        
+        // Calculate Pool PDA
+        statusDiv.innerHTML += '<br>📍 Finding pool PDA...';
+        const poolSeed = new TextEncoder().encode('pool');
+        const [poolPDA] = await solanaWeb3.PublicKey.findProgramAddress(
+          [poolSeed],
+          programId
+        );
+        statusDiv.innerHTML += '<br>📍 Pool PDA: ' + poolPDA.toString();
+        
+        const whistleMint = new solanaWeb3.PublicKey(WHISTLE_MINT);
+        const tokenProgramId = new solanaWeb3.PublicKey(TOKEN_PROGRAM_ID);
+        const associatedTokenProgramId = new solanaWeb3.PublicKey(ASSOCIATED_TOKEN_PROGRAM_ID);
+        const systemProgramId = new solanaWeb3.PublicKey(SYSTEM_PROGRAM_ID);
+        const rentProgramId = new solanaWeb3.PublicKey(RENT_PROGRAM_ID);
+
+        statusDiv.innerHTML += '<br>📍 Calculating pool vault address...';
+
+        // Find pool vault ATA
+        const [poolVaultATA] = await solanaWeb3.PublicKey.findProgramAddress(
+          [
+            poolPDA.toBytes(),
+            tokenProgramId.toBytes(),
+            whistleMint.toBytes()
+          ],
+          associatedTokenProgramId
+        );
+
+        statusDiv.innerHTML += `<br><span class="info">📍 Pool Vault ATA: ${poolVaultATA.toString()}</span>`;
+
+        // Check if it already exists
+        try {
+          const accountInfo = await connection.getAccountInfo(poolVaultATA);
+          if (accountInfo) {
+            statusDiv.innerHTML += '<br><span class="success">✅ Pool vault already exists!</span>';
+            statusDiv.innerHTML += `<br><br><span class="success">🎉 DONE! Pool vault is ready for staking!</span>`;
+            return;
+          }
+        } catch (e) {
+          // Doesn't exist, we'll create it
+        }
+
+        statusDiv.innerHTML += '<br>📝 Creating Associated Token Account...';
+
+        // Create ATA instruction
+        // Instruction layout for create_associated_token_account is just the accounts, no data
+        const keys = [
+          { pubkey: provider.publicKey, isSigner: true, isWritable: true }, // payer
+          { pubkey: poolVaultATA, isSigner: false, isWritable: true }, // associated_token_account
+          { pubkey: poolPDA, isSigner: false, isWritable: false }, // owner
+          { pubkey: whistleMint, isSigner: false, isWritable: false }, // mint
+          { pubkey: systemProgramId, isSigner: false, isWritable: false }, // system_program
+          { pubkey: tokenProgramId, isSigner: false, isWritable: false }, // token_program
+        ];
+
+        const createATAInstruction = new solanaWeb3.TransactionInstruction({
+          keys,
+          programId: associatedTokenProgramId,
+          data: new Uint8Array(0) // No instruction data for create
+        });
+
+        const transaction = new solanaWeb3.Transaction().add(createATAInstruction);
+        transaction.feePayer = provider.publicKey;
+        
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+        transaction.recentBlockhash = blockhash;
+
+        statusDiv.innerHTML += '<br>📝 Sending transaction to wallet...';
+
+        // Sign transaction with Phantom
+        const signedTx = await window.solana.signTransaction(transaction);
+        
+        statusDiv.innerHTML += '<br>📤 Sending to network...';
+        
+        const signature = await connection.sendRawTransaction(signedTx.serialize());
+
+        statusDiv.innerHTML += '<br>⏳ Confirming transaction...';
+
+        await connection.confirmTransaction({
+          signature,
+          blockhash,
+          lastValidBlockHeight
+        });
+
+        statusDiv.innerHTML += `<br><br><span class="success">✅ POOL VAULT CREATED SUCCESSFULLY!</span>`;
+        statusDiv.innerHTML += `<br><span class="info">🔗 Transaction: ${signature}</span>`;
+        statusDiv.innerHTML += `<br><span class="info">📍 Pool Vault Address: ${poolVaultATA.toString()}</span>`;
+        statusDiv.innerHTML += `<br><br><span class="success">🎉 Users can now stake $WHISTLE!</span>`;
+        statusDiv.innerHTML += `<br><br>💡 <strong>Next Step:</strong> Fund this vault with $WHISTLE for rewards!`;
+
+      } catch (err) {
+        console.error('Error:', err);
+        statusDiv.innerHTML += `<br><br><span class="error">❌ Error: ${err.message || err}</span>`;
+        statusDiv.innerHTML += `<br><span class="error">💡 Check console for details (F12)</span>`;
+      }
+    }
+  </script>
+</body>
+</html>
+

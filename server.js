@@ -25,7 +25,7 @@ app.use(helmet.contentSecurityPolicy({
       'https://changenow.io'
     ],
     'img-src': ["'self'", 'data:', 'blob:', 'https:'],
-    'connect-src': ["'self'", 'https:', 'wss:'],
+    'connect-src': ["'self'", 'https:', 'wss:', 'ws:', 'http://localhost:*', 'ws://localhost:*'],
   }
 }));
 app.use(compression());

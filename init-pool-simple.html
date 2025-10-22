@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Initialize Ghost Whistle Pool</title>
+  <script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
+  <script src="https://unpkg.com/buffer@6.0.3/index.js"></script>
+</head>
+<body>
+  <h1>🚀 Initialize Ghost Whistle Staking Pool</h1>
+  <div id="status">Click the button to initialize...</div>
+  <button id="initBtn" style="padding: 20px; font-size: 18px; margin: 20px;">
+    Initialize Pool
+  </button>
+  
+  <script>
+    const PROGRAM_ID = '3aUoFGbk4NifQegfFmqP4W3G24Yb7oFKfp9VErQtshqu'; // NEW FIXED CONTRACT (6 decimals)
+    const WHISTLE_MINT = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';
+    const RPC_URL = 'https://rpc-mainnet.solanatracker.io/?api_key=25ef537d-3249-479c-96cb-40efc0ce3e09';
+    
+    const IDL = {
+      "version": "0.1.0",
+      "name": "ghost_whistle_staking",
+      "instructions": [
+        {
+          "name": "initialize",
+          "accounts": [
+            { "name": "pool", "isMut": true, "isSigner": false },
+            { "name": "whistleMint", "isMut": false, "isSigner": false },
+            { "name": "authority", "isMut": true, "isSigner": true },
+            { "name": "systemProgram", "isMut": false, "isSigner": false }
+          ],
+          "args": []
+        }
+      ],
+      "accounts": [
+        {
+          "name": "StakingPool",
+          "type": {
+            "kind": "struct",
+            "fields": [
+              { "name": "authority", "type": "publicKey" },
+              { "name": "whistleMint", "type": "publicKey" },
+              { "name": "totalStaked", "type": "u64" },
+              { "name": "totalNodes", "type": "u64" },
+              { "name": "totalReputation", "type": "u64" },
+              { "name": "feePool", "type": "u64" },
+              { "name": "baseReward", "type": "u64" },
+              { "name": "bonusPerPoint", "type": "u64" }
+            ]
+          }
+        }
+      ]
+    };
+    
+    async function initializePool() {
+      const statusDiv = document.getElementById('status');
+      
+      try {
+        statusDiv.innerHTML = '🔌 Checking for Phantom wallet...';
+        
+        // Check for Phantom
+        const provider = window.solana;
+        if (!provider || !provider.isPhantom) {
+          statusDiv.innerHTML = '❌ Phantom wallet not found!<br>';
+          statusDiv.innerHTML += '💡 Please install Phantom: <a href="https://phantom.app" target="_blank">phantom.app</a>';
+          return;
+        }
+        
+        statusDiv.innerHTML = '🔌 Connecting to Phantom wallet...';
+        
+        // Connect to wallet
+        try {
+          const resp = await provider.connect();
+          statusDiv.innerHTML = '✅ Wallet connected: ' + resp.publicKey.toString().slice(0, 8) + '...';
+        } catch (err) {
+          if (err.code === 4001) {
+            statusDiv.innerHTML = '❌ Connection rejected by user';
+          } else {
+            statusDiv.innerHTML = '❌ Failed to connect: ' + err.message;
+          }
+          return;
+        }
+        
+        // Setup connection
+        const connection = new solanaWeb3.Connection(RPC_URL, 'confirmed');
+        const programId = new solanaWeb3.PublicKey(PROGRAM_ID);
+        
+        statusDiv.innerHTML += '<br>📍 Finding pool PDA...';
+        
+        // Find pool PDA
+        const poolSeed = new TextEncoder().encode('pool');
+        const [poolPDA] = await solanaWeb3.PublicKey.findProgramAddress(
+          [poolSeed],
+          programId
+        );
+        
+        statusDiv.innerHTML += '<br>📍 Pool PDA: ' + poolPDA.toString();
+        
+        // Check if already initialized
+        try {
+          const accountInfo = await connection.getAccountInfo(poolPDA);
+          if (accountInfo && accountInfo.data.length > 0) {
+            statusDiv.innerHTML += '<br><br>✅ <b>POOL ALREADY INITIALIZED!</b>';
+            statusDiv.innerHTML += '<br>📍 Pool Address: ' + poolPDA.toString();
+            statusDiv.innerHTML += '<br><br>🎉 You can now use the staking functions!';
+            statusDiv.innerHTML += '<br><br>💡 The frontend is ready to integrate real staking!';
+            return;
+          }
+          statusDiv.innerHTML += '<br>ℹ️ Pool not initialized yet, proceeding...';
+        } catch (e) {
+          statusDiv.innerHTML += '<br>⚠️ Could not check pool status: ' + e.message;
+        }
+        
+        statusDiv.innerHTML += '<br><br>📝 Creating initialize instruction...';
+        
+        const whistleMint = new solanaWeb3.PublicKey(WHISTLE_MINT);
+        
+        // Build initialize instruction manually
+        // Instruction discriminator for "initialize" (first 8 bytes of sha256("global:initialize"))
+        const discriminator = new Uint8Array([175, 175, 109, 31, 13, 152, 155, 237]);
+        
+        const keys = [
+          { pubkey: poolPDA, isSigner: false, isWritable: true },
+          { pubkey: whistleMint, isSigner: false, isWritable: false },
+          { pubkey: provider.publicKey, isSigner: true, isWritable: true },
+          { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
+        ];
+        
+        const initInstruction = new solanaWeb3.TransactionInstruction({
+          keys,
+          programId,
+          data: discriminator,
+        });
+        
+        const transaction = new solanaWeb3.Transaction().add(initInstruction);
+        transaction.feePayer = provider.publicKey;
+        transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+        
+        statusDiv.innerHTML += '<br>📝 Sending transaction to wallet...';
+        
+        // Sign and send
+        const signed = await provider.signTransaction(transaction);
+        const tx = await connection.sendRawTransaction(signed.serialize());
+        
+        statusDiv.innerHTML += '<br>⏳ Confirming transaction...';
+        
+        statusDiv.innerHTML += '<br><br>✅ <b>POOL INITIALIZED SUCCESSFULLY!</b>';
+        statusDiv.innerHTML += '<br>🔗 Transaction: <a href="https://solscan.io/tx/' + tx + '" target="_blank">' + tx.slice(0, 8) + '...</a>';
+        statusDiv.innerHTML += '<br>📍 Pool Address: ' + poolPDA.toString();
+        
+        // Wait for confirmation  
+        await connection.confirmTransaction(tx, 'confirmed');
+        
+        statusDiv.innerHTML += '<br><br>📊 <b>Pool Configuration:</b>';
+        statusDiv.innerHTML += '<br>  Authority: ' + provider.publicKey.toString();
+        statusDiv.innerHTML += '<br>  Whistle Mint: ' + WHISTLE_MINT;
+        statusDiv.innerHTML += '<br>  Base Reward: 5,000,000,000 (5 $WHISTLE)';
+        statusDiv.innerHTML += '<br>  Bonus Per Point: 1,000,000,000 (1 $WHISTLE)';
+        
+        statusDiv.innerHTML += '<br><br>🎉 <b>INITIALIZATION COMPLETE!</b>';
+        statusDiv.innerHTML += '<br>✨ You can now stake, earn rewards, and run nodes!';
+        statusDiv.innerHTML += '<br><br>💡 <b>Tell the developer: "pool is initialized"</b>';
+        
+      } catch (err) {
+        console.error('Error:', err);
+        statusDiv.innerHTML += '<br><br>❌ <b>Error:</b> ' + err.message;
+        statusDiv.innerHTML += '<br>💡 Check console for details (F12)';
+      }
+    }
+    
+    // Add click handler when page loads
+    window.addEventListener('load', function() {
+      console.log('✅ Page loaded, button ready');
+      document.getElementById('initBtn').addEventListener('click', function() {
+        console.log('🖱️ Button clicked!');
+        initializePool();
+      });
+    });
+  </script>
+  
+  <style>
+    body {
+      font-family: monospace;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #00ff00;
+    }
+    h1 {
+      color: #00ffff;
+    }
+    #status {
+      background: #000;
+      padding: 20px;
+      border: 2px solid #00ff00;
+      border-radius: 10px;
+      margin: 20px 0;
+      min-height: 100px;
+      line-height: 1.8;
+    }
+    button {
+      background: linear-gradient(to right, #00ff00, #00ffff);
+      border: none;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 10px;
+    }
+    button:hover {
+      opacity: 0.8;
+    }
+    a {
+      color: #00ffff;
+    }
+  </style>
+</body>
+</html>
+

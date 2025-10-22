@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Initialize Relay Pool - Ghost Whistle</title>
+  <script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
+  <script src="https://unpkg.com/buffer@6.0.3/index.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    .container {
+      background: white;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    h1 {
+      color: #667eea;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+    }
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 10px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 20px;
+      transition: transform 0.2s;
+    }
+    button:hover {
+      transform: translateY(-2px);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    #status {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 10px;
+      font-weight: bold;
+    }
+    .success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+    .details {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 20px;
+      font-family: monospace;
+      font-size: 12px;
+      word-break: break-all;
+    }
+    .warning {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚀 Initialize Relay Pool</h1>
+    <p class="subtitle">Ghost Whistle Staking + Relay Contract</p>
+    
+    <div class="warning">
+      <strong>⚠️ IMPORTANT:</strong> This will initialize the staking pool for the NEW relay contract.
+      <br><br>
+      <strong>Program ID:</strong> 3pb437ujFvPq6bKEUnoEwBc711ehM2h9vMu9QkNDsxFN
+      <br>
+      <strong>Token:</strong> $WHISTLE (6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump)
+      <br><br>
+      Make sure you have ~0.01 SOL for transaction fees.
+    </div>
+
+    <button id="initButton" onclick="initializePool()">
+      Initialize Pool
+    </button>
+
+    <div id="status" style="display: none;"></div>
+    <div id="details" class="details" style="display: none;"></div>
+  </div>
+
+  <script>
+    const PROGRAM_ID = '3pb437ujFvPq6bKEUnoEwBc711ehM2h9vMu9QkNDsxFN';
+    const WHISTLE_MINT = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';
+    const RPC_URL = 'https://rpc-mainnet.solanatracker.io/?api_key=25ef537d-3249-479c-96cb-40efc0ce3e09';
+
+    function showStatus(message, type) {
+      const statusDiv = document.getElementById('status');
+      statusDiv.textContent = message;
+      statusDiv.className = type;
+      statusDiv.style.display = 'block';
+    }
+
+    function showDetails(data) {
+      const detailsDiv = document.getElementById('details');
+      detailsDiv.textContent = JSON.stringify(data, null, 2);
+      detailsDiv.style.display = 'block';
+    }
+
+    async function initializePool() {
+      const button = document.getElementById('initButton');
+      button.disabled = true;
+      
+      try {
+        showStatus('Connecting to Phantom wallet...', 'info');
+        
+        // Connect to Phantom
+        if (!window.solana || !window.solana.isPhantom) {
+          throw new Error('Phantom wallet not found! Please install Phantom.');
+        }
+
+        const provider = window.solana;
+        await provider.connect();
+        const walletPubkey = provider.publicKey;
+        
+        showStatus('Connected! Building transaction...', 'info');
+        
+        // Connect to Solana
+        const connection = new solanaWeb3.Connection(RPC_URL, 'confirmed');
+        
+        // Derive Pool PDA
+        const programId = new solanaWeb3.PublicKey(PROGRAM_ID);
+        const [poolPDA, poolBump] = await solanaWeb3.PublicKey.findProgramAddress(
+          [Buffer.from('pool')],
+          programId
+        );
+        
+        console.log('Pool PDA:', poolPDA.toString());
+        console.log('Pool Bump:', poolBump);
+        
+        // Check if pool already exists
+        const poolAccount = await connection.getAccountInfo(poolPDA);
+        if (poolAccount) {
+          showStatus('⚠️ Pool already initialized!', 'error');
+          showDetails({
+            poolPDA: poolPDA.toString(),
+            message: 'This pool has already been initialized. No need to initialize again.'
+          });
+          button.disabled = false;
+          return;
+        }
+        
+        // Build initialize instruction
+        const whistleMint = new solanaWeb3.PublicKey(WHISTLE_MINT);
+        
+        // Instruction discriminator for "initialize" (first 8 bytes of sha256("global:initialize"))
+        const discriminator = new Uint8Array([175, 175, 109, 31, 13, 152, 155, 237]);
+        
+        const keys = [
+          { pubkey: poolPDA, isSigner: false, isWritable: true },
+          { pubkey: whistleMint, isSigner: false, isWritable: false },
+          { pubkey: walletPubkey, isSigner: true, isWritable: true },
+          { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
+        ];
+        
+        const initInstruction = new solanaWeb3.TransactionInstruction({
+          keys,
+          programId,
+          data: discriminator
+        });
+        
+        // Create transaction
+        const transaction = new solanaWeb3.Transaction();
+        transaction.add(initInstruction);
+        
+        // Get recent blockhash
+        const { blockhash } = await connection.getLatestBlockhash();
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = walletPubkey;
+        
+        showStatus('Please approve transaction in Phantom...', 'info');
+        
+        // Sign and send
+        const signedTx = await provider.signTransaction(transaction);
+        const signature = await connection.sendRawTransaction(signedTx.serialize());
+        
+        showStatus('Transaction sent! Confirming...', 'info');
+        console.log('Transaction signature:', signature);
+        
+        // Confirm transaction
+        await connection.confirmTransaction(signature, 'confirmed');
+        
+        showStatus('✅ Pool initialized successfully!', 'success');
+        showDetails({
+          signature: signature,
+          poolPDA: poolPDA.toString(),
+          authority: walletPubkey.toString(),
+          whistleMint: WHISTLE_MINT,
+          explorerUrl: `https://solscan.io/tx/${signature}`,
+          nextStep: 'Now create the pool vault using create-relay-vault.html'
+        });
+        
+      } catch (error) {
+        console.error('Initialization error:', error);
+        showStatus(`❌ Error: ${error.message}`, 'error');
+        showDetails({
+          error: error.message,
+          stack: error.stack
+        });
+        button.disabled = false;
+      }
+    }
+
+    // Auto-load on page load
+    window.addEventListener('load', () => {
+      console.log('Ready to initialize pool');
+      console.log('Program ID:', PROGRAM_ID);
+      console.log('$WHISTLE Mint:', WHISTLE_MINT);
+    });
+  </script>
+</body>
+</html>
+

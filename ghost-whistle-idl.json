@@ -1,0 +1,132 @@
+{
+  "version": "0.1.0",
+  "name": "ghost_whistle_staking",
+  "instructions": [
+    {
+      "name": "initialize",
+      "accounts": [
+        { "name": "pool", "isMut": true, "isSigner": false },
+        { "name": "whistleMint", "isMut": false, "isSigner": false },
+        { "name": "authority", "isMut": true, "isSigner": true },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": []
+    },
+    {
+      "name": "stake",
+      "accounts": [
+        { "name": "nodeAccount", "isMut": true, "isSigner": false },
+        { "name": "pool", "isMut": true, "isSigner": false },
+        { "name": "user", "isMut": true, "isSigner": true },
+        { "name": "userTokenAccount", "isMut": true, "isSigner": false },
+        { "name": "poolVault", "isMut": true, "isSigner": false },
+        { "name": "tokenProgram", "isMut": false, "isSigner": false },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [{ "name": "amount", "type": "u64" }]
+    },
+    {
+      "name": "recordRelay",
+      "accounts": [
+        { "name": "nodeAccount", "isMut": true, "isSigner": false },
+        { "name": "pool", "isMut": true, "isSigner": false },
+        { "name": "authority", "isMut": false, "isSigner": true }
+      ],
+      "args": [
+        { "name": "transactionSignature", "type": "string" },
+        { "name": "success", "type": "bool" }
+      ]
+    },
+    {
+      "name": "claimRewards",
+      "accounts": [
+        { "name": "nodeAccount", "isMut": true, "isSigner": false },
+        { "name": "pool", "isMut": true, "isSigner": false },
+        { "name": "user", "isMut": true, "isSigner": true },
+        { "name": "userTokenAccount", "isMut": true, "isSigner": false },
+        { "name": "poolVault", "isMut": true, "isSigner": false },
+        { "name": "tokenProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": []
+    },
+    {
+      "name": "unstake",
+      "accounts": [
+        { "name": "nodeAccount", "isMut": true, "isSigner": false },
+        { "name": "pool", "isMut": true, "isSigner": false },
+        { "name": "user", "isMut": true, "isSigner": true },
+        { "name": "userTokenAccount", "isMut": true, "isSigner": false },
+        { "name": "poolVault", "isMut": true, "isSigner": false },
+        { "name": "tokenProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [{ "name": "amount", "type": "u64" }]
+    },
+    {
+      "name": "depositFees",
+      "accounts": [
+        { "name": "pool", "isMut": true, "isSigner": false },
+        { "name": "user", "isMut": true, "isSigner": true },
+        { "name": "userTokenAccount", "isMut": true, "isSigner": false },
+        { "name": "poolVault", "isMut": true, "isSigner": false },
+        { "name": "tokenProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [{ "name": "amount", "type": "u64" }]
+    },
+    {
+      "name": "updateParams",
+      "accounts": [
+        { "name": "pool", "isMut": true, "isSigner": false },
+        { "name": "authority", "isMut": false, "isSigner": true }
+      ],
+      "args": [
+        { "name": "newBase", "type": "u64" },
+        { "name": "newBonus", "type": "u64" }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "StakingPool",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "authority", "type": "publicKey" },
+          { "name": "whistleMint", "type": "publicKey" },
+          { "name": "totalStaked", "type": "u64" },
+          { "name": "totalNodes", "type": "u64" },
+          { "name": "totalReputation", "type": "u64" },
+          { "name": "feePool", "type": "u64" },
+          { "name": "baseReward", "type": "u64" },
+          { "name": "bonusPerPoint", "type": "u64" }
+        ]
+      }
+    },
+    {
+      "name": "NodeAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "owner", "type": "publicKey" },
+          { "name": "stakedAmount", "type": "u64" },
+          { "name": "reputationScore", "type": "u64" },
+          { "name": "totalRelays", "type": "u64" },
+          { "name": "successfulRelays", "type": "u64" },
+          { "name": "failedRelays", "type": "u64" },
+          { "name": "totalEarned", "type": "u64" },
+          { "name": "pendingRewards", "type": "u64" },
+          { "name": "totalClaimed", "type": "u64" },
+          { "name": "createdAt", "type": "i64" },
+          { "name": "lastRelay", "type": "i64" }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    { "code": 6000, "name": "MinimumStakeNotMet", "msg": "Minimum stake is 10,000 $WHISTLE" },
+    { "code": 6001, "name": "NoRewardsToClaim", "msg": "No rewards to claim" },
+    { "code": 6002, "name": "InsufficientStake", "msg": "Insufficient staked amount" },
+    { "code": 6003, "name": "ClaimRewardsFirst", "msg": "Must claim rewards before unstaking" },
+    { "code": 6004, "name": "Unauthorized", "msg": "Unauthorized" }
+  ]
+}
+
