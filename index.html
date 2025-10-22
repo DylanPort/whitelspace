@@ -8701,6 +8701,30 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       );
       return poolPDA;
     }
+
+    // Helper function to get Relay Request PDA
+    async function getRelayRequestPDA(requestId) {
+      const programId = new solanaWeb3.PublicKey(GHOST_PROGRAM_ID);
+      const requestIdBuffer = new ArrayBuffer(8);
+      const view = new DataView(requestIdBuffer);
+      view.setBigUint64(0, BigInt(requestId), true); // little-endian
+      
+      const [relayRequestPDA] = await solanaWeb3.PublicKey.findProgramAddress(
+        [new TextEncoder().encode('relay_request'), new Uint8Array(requestIdBuffer)],
+        programId
+      );
+      return relayRequestPDA;
+    }
+
+    // Helper function to get Node PDA for any wallet
+    async function getNodePDA(walletPubkey) {
+      const programId = new solanaWeb3.PublicKey(GHOST_PROGRAM_ID);
+      const [nodePDA] = await solanaWeb3.PublicKey.findProgramAddress(
+        [new TextEncoder().encode('node'), walletPubkey.toBuffer()],
+        programId
+      );
+      return nodePDA;
+    }
     
     function OfflineNetworkHub({ pushToast }) {
       // Wallet States
