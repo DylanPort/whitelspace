@@ -55,6 +55,7 @@
     .leaflet-container {
       background: #0f1419 !important;
       border-radius: 12px;
+      z-index: 1;
     }
     .leaflet-tile-pane {
       opacity: 0.6 !important;
@@ -69,18 +70,68 @@
     .leaflet-popup-tip {
       background: rgba(15, 23, 42, 0.95) !important;
     }
-    .node-marker {
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-      border: 3px solid rgba(255, 255, 255, 0.9);
-      box-shadow: 0 0 20px rgba(59, 130, 246, 0.6), 0 0 40px rgba(59, 130, 246, 0.3);
-      animation: pulse 2s ease-in-out infinite;
+    
+    /* Make markers HIGHLY visible */
+    .leaflet-marker-pane {
+      z-index: 1000 !important;
     }
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.1); opacity: 0.8; }
+    
+    /* Pulsing marker animation for all circle markers */
+    @keyframes markerPulse {
+      0%, 100% { 
+        transform: scale(1); 
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+      }
+      50% { 
+        transform: scale(1.3); 
+        opacity: 0.9;
+        box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+      }
+    }
+    
+    /* Glow effect for markers */
+    @keyframes markerGlow {
+      0%, 100% { 
+        filter: brightness(1) drop-shadow(0 0 8px rgba(59, 130, 246, 0.8));
+      }
+      50% { 
+        filter: brightness(1.2) drop-shadow(0 0 16px rgba(59, 130, 246, 1));
+      }
+    }
+    
+    /* Ensure markers are visible on dark background */
+    .leaflet-overlay-pane svg {
+      z-index: 100 !important;
+    }
+    
+    .leaflet-overlay-pane svg path {
+      stroke-width: 4px !important;
+      stroke: #ffffff !important;
+      stroke-opacity: 1 !important;
+      fill-opacity: 1 !important;
+      filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
+    }
+    
+    /* Pulsing marker class */
+    .pulsing-marker path {
+      animation: markerPulse 2s ease-in-out infinite, markerGlow 2s ease-in-out infinite;
+    }
+    
+    /* Outer ring pulse */
+    .marker-ring path {
+      animation: ringPulse 2s ease-in-out infinite;
+    }
+    
+    @keyframes ringPulse {
+      0%, 100% { 
+        transform: scale(1);
+        opacity: 0.6;
+      }
+      50% { 
+        transform: scale(1.2);
+        opacity: 0.3;
+      }
     }
 
     /* Animated sky with clouds */
@@ -9644,15 +9695,31 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             (Math.random() - 0.5) * 340
           ];
           
+          // Create a HIGHLY visible pulsing marker
           const marker = L.circleMarker(finalCoords, {
-            radius: 8,
+            radius: 15,  // Much larger!
             fillColor: node.status === 'active' ? '#3b82f6' : '#f59e0b',
-            color: '#fff',
-            weight: 2,
+            color: '#ffffff',
+            weight: 4,  // Thick white border
             opacity: 1,
-            fillOpacity: 0.8
+            fillOpacity: 0.95,  // More opaque
+            className: 'pulsing-marker'
           }).addTo(worldMap);
           
+          // Add extra visual emphasis with a larger outer ring
+          const outerRing = L.circleMarker(finalCoords, {
+            radius: 25,
+            fillColor: 'transparent',
+            color: node.status === 'active' ? '#3b82f6' : '#f59e0b',
+            weight: 2,
+            opacity: 0.6,
+            fillOpacity: 0,
+            className: 'marker-ring'
+          }).addTo(worldMap);
+          
+          console.log(`✨ Created visible marker at [${finalCoords}] for node ${node.id.slice(0,8)}`);
+          
+          // Bind popup to the main marker
           marker.bindPopup(`
             <div style="font-family: system-ui; min-width: 200px;">
               <div style="font-weight: bold; color: #3b82f6; margin-bottom: 8px;">
@@ -9676,11 +9743,13 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             </div>
           `);
           
+          // Store both the marker and its ring so we can remove them later
           newMarkers.push(marker);
+          newMarkers.push(outerRing);
         });
         
         setMapMarkers(newMarkers);
-        console.log(`🗺️ Updated map with ${newMarkers.length} nodes`);
+        console.log(`🗺️ Updated map with ${globalNodes.length} nodes (${newMarkers.length} total markers including rings)`);
       }, [globalNodes, worldMap]);
       
       // Auto-start node if it was running before refresh
