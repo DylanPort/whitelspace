@@ -10423,7 +10423,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           } else {
             // Generate QR code for offline transmission
             const qrData = JSON.stringify({
-              tx: Buffer.from(signedTx.serialize()).toString('base64'),
+              tx: btoa(String.fromCharCode(...signedTx.serialize())),
               hops: privacyLevel,
               fee: relayFee
             });
