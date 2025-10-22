@@ -2824,6 +2824,156 @@
       );
     }
 
+    // Privacy Tools Hub
+    function PrivacyToolsHub({ setStep }) {
+      useEffect(() => {
+        if (window.lucide) window.lucide.createIcons();
+      }, []);
+      
+      const tools = [
+        {
+          id: 'steganography',
+          title: 'Steganography',
+          subtitle: 'Hide in Plain Sight',
+          description: 'Hide sensitive messages and files inside images, audio, and video. Uses compression-resistant spread spectrum technology.',
+          icon: 'eye-off',
+          color: 'purple',
+          gradient: 'from-purple-600 to-pink-600',
+          features: ['Image steganography', 'Audio hiding', 'Video embedding', 'Compression-resistant']
+        },
+        {
+          id: 'privacy-checkup',
+          title: 'Privacy Checkup',
+          subtitle: 'Test Your Anonymity',
+          description: 'Comprehensive privacy testing suite. Check for browser leaks, IP exposure, WebRTC leaks, and fingerprinting vulnerabilities.',
+          icon: 'shield-check',
+          color: 'emerald',
+          gradient: 'from-emerald-600 to-teal-600',
+          features: ['IP leak detection', 'WebRTC test', 'Browser fingerprint', 'DNS leak check']
+        },
+        {
+          id: 'censorship-map',
+          title: 'Censorship Map',
+          subtitle: 'Global Internet Freedom',
+          description: 'Real-time global censorship tracking. Monitor internet restrictions, blocked services, and freedom scores by country.',
+          icon: 'globe',
+          color: 'red',
+          gradient: 'from-red-600 to-orange-600',
+          features: ['Live censorship data', 'Freedom scores', 'Blocked services', 'Regional analysis']
+        }
+      ];
+      
+      return (
+        <div className="min-h-screen bg-slate-950 p-3 md:p-6">
+          {/* Header */}
+          <div className="relative overflow-hidden rounded-xl border border-cyan-500/20 bg-black/40 backdrop-blur-xl shadow-2xl mb-6 md:mb-8">
+            <div className="flex items-center justify-between px-3 md:px-4 py-2 bg-gradient-to-r from-slate-900/80 to-slate-800/80 border-b border-cyan-500/20">
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1.5">
+                  <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-red-500/80"></div>
+                  <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-yellow-500/80"></div>
+                  <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-green-500/80"></div>
+                </div>
+                <span className="text-[10px] md:text-xs font-mono text-slate-500 ml-2">privacy_tools.sh</span>
+              </div>
+              <div className="px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30">
+                <span className="text-cyan-400 text-[10px] md:text-xs font-mono">ACTIVE</span>
+              </div>
+            </div>
+            
+            <div className="p-4 md:p-8">
+              <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
+                <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/50">
+                  <i data-lucide="shield" className="w-6 h-6 md:w-8 md:h-8 text-white"></i>
+                </div>
+                <div>
+                  <h1 className="text-xl md:text-3xl font-bold text-white font-mono mb-1">🛡️ PRIVACY_TOOLS</h1>
+                  <p className="text-slate-400 font-mono text-xs md:text-sm">Advanced anonymity and security utilities</p>
+                </div>
+              </div>
+              
+              <p className="text-slate-300 text-xs md:text-sm mb-4 md:mb-6 max-w-3xl">
+                Professional-grade privacy tools for steganography, security auditing, and global censorship monitoring.
+                All tools run locally in your browser with zero data collection.
+              </p>
+              
+              <div className="grid grid-cols-3 gap-2 md:gap-3">
+                <div className="px-2 md:px-3 py-2 rounded bg-slate-900/50 border border-slate-700/50">
+                  <div className="text-[9px] md:text-xs text-slate-500 font-mono mb-1">TOOLS</div>
+                  <div className="text-xs md:text-sm font-mono font-bold text-cyan-400">3 ACTIVE</div>
+                </div>
+                <div className="px-2 md:px-3 py-2 rounded bg-slate-900/50 border border-slate-700/50">
+                  <div className="text-[9px] md:text-xs text-slate-500 font-mono mb-1">PRIVACY</div>
+                  <div className="text-xs md:text-sm font-mono font-bold text-emerald-400">MAXIMUM</div>
+                </div>
+                <div className="px-2 md:px-3 py-2 rounded bg-slate-900/50 border border-slate-700/50">
+                  <div className="text-[9px] md:text-xs text-slate-500 font-mono mb-1">STATUS</div>
+                  <div className="text-xs md:text-sm font-mono font-bold text-purple-400">LOCAL</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Tools Grid */}
+          <div className="grid md:grid-cols-3 gap-4 md:gap-6">
+            {tools.map((tool, idx) => (
+              <div 
+                key={tool.id}
+                className="relative group cursor-pointer"
+                onClick={() => setStep(tool.id)}
+                style={{ animationDelay: `${idx * 100}ms` }}
+              >
+                <div className={`rounded-xl border border-${tool.color}-500/20 bg-black/30 backdrop-blur-xl shadow-2xl overflow-hidden transition-all duration-300 group-hover:border-${tool.color}-500/40 group-hover:shadow-${tool.color}-500/20 group-hover:scale-[1.02]`}>
+                  {/* Tool Top Bar */}
+                  <div className={`flex items-center justify-between px-3 md:px-4 py-2 bg-gradient-to-r from-slate-900/60 to-slate-800/60 border-b border-${tool.color}-500/10`}>
+                    <div className="flex items-center gap-2">
+                      <i data-lucide={tool.icon} className="w-5 h-5 md:w-6 md:h-6"></i>
+                      <span className="text-[10px] md:text-xs font-mono text-slate-500">{tool.id}.tool</span>
+                    </div>
+                    <div className={`px-2 py-0.5 rounded bg-${tool.color}-500/10 border border-${tool.color}-500/30`}>
+                      <span className={`text-${tool.color}-400 text-[10px] md:text-xs font-mono`}>READY</span>
+                    </div>
+                  </div>
+                  
+                  {/* Tool Content */}
+                  <div className="p-4 md:p-6">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`text-${tool.color}-500 font-mono text-xs md:text-sm`}>$</span>
+                      <h3 className="text-base md:text-lg font-bold text-white font-mono">{tool.title}</h3>
+                    </div>
+                    <p className={`text-[10px] md:text-xs text-${tool.color}-400/70 font-mono mb-3 md:mb-4`}>{tool.subtitle}</p>
+                    
+                    <p className="text-xs md:text-sm text-slate-400 font-mono mb-4 md:mb-6 leading-relaxed">
+                      {tool.description}
+                    </p>
+                    
+                    {/* Features List */}
+                    <div className="space-y-2 mb-4 md:mb-6">
+                      {tool.features.map((feature, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-[10px] md:text-xs text-slate-400 font-mono">
+                          <span className={`text-${tool.color}-500`}>▸</span>
+                          <span>{feature}</span>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Launch Button */}
+                    <button
+                      className={`w-full px-4 md:px-6 py-2.5 md:py-3 rounded-lg bg-gradient-to-r ${tool.gradient} hover:scale-[1.02] text-white font-mono text-xs md:text-sm font-bold shadow-lg transition-all flex items-center justify-center gap-2 md:gap-3 group-hover:shadow-${tool.color}-500/30`}
+                    >
+                      <span className={`text-${tool.color}-200`}>{'>'}</span>
+                      <span>LAUNCH_{tool.id.toUpperCase()}</span>
+                      <span className={`text-${tool.color}-200`}>{'<'}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
     // Sidebar navigation
     function Sidebar({ step, setStep }){
       const items = [
@@ -11451,30 +11601,30 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       ];
 
       return (
-        <div className="min-h-screen bg-slate-950 p-6">
+        <div className="min-h-screen bg-slate-950 p-3 md:p-6">
           {/* Terminal Header */}
-          <div className="relative overflow-hidden rounded-xl border border-cyan-500/20 bg-black/40 backdrop-blur-xl shadow-2xl mb-8">
+          <div className="relative overflow-hidden rounded-xl border border-cyan-500/20 bg-black/40 backdrop-blur-xl shadow-2xl mb-6 md:mb-8">
             {/* Terminal Top Bar */}
-            <div className="flex items-center justify-between px-4 py-2 bg-gradient-to-r from-slate-900/80 to-slate-800/80 border-b border-cyan-500/20">
+            <div className="flex items-center justify-between px-3 md:px-4 py-2 bg-gradient-to-r from-slate-900/80 to-slate-800/80 border-b border-cyan-500/20">
               <div className="flex items-center gap-2">
                 <div className="flex gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
-                  <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
-                  <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
+                  <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-red-500/80"></div>
+                  <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-yellow-500/80"></div>
+                  <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-green-500/80"></div>
                 </div>
-                <span className="ml-3 text-xs font-mono text-slate-500">ghost@services:~$</span>
+                <span className="ml-2 md:ml-3 text-[10px] md:text-xs font-mono text-slate-500">ghost@services:~$</span>
               </div>
-              <div className="flex items-center gap-2 px-3 py-1 rounded bg-emerald-500/10 border border-emerald-500/30">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
-                <span className="text-emerald-400 text-xs font-mono">MAINNET</span>
+              <div className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 rounded bg-emerald-500/10 border border-emerald-500/30">
+                <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
+                <span className="text-emerald-400 text-[10px] md:text-xs font-mono">MAINNET</span>
               </div>
             </div>
             
             {/* Terminal Content */}
-            <div className="p-8">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-cyan-500 font-mono text-sm">$</span>
-                <h1 className="text-3xl font-bold text-white font-mono">GHOST_WHISTLE_SERVICES.sh</h1>
+            <div className="p-4 md:p-8">
+              <div className="flex items-center gap-2 mb-3 md:mb-4">
+                <span className="text-cyan-500 font-mono text-xs md:text-sm">$</span>
+                <h1 className="text-lg md:text-3xl font-bold text-white font-mono">GHOST_WHISTLE_SERVICES.sh</h1>
                 <div className="h-px flex-1 bg-gradient-to-r from-cyan-500/30 to-transparent"></div>
               </div>
               
@@ -11527,9 +11677,9 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 {/* Sustainability Pillar */}
                 <div className="relative group">
                   <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <div className="relative bg-slate-900/40 backdrop-blur-sm border border-emerald-500/20 rounded-xl p-5 hover:border-emerald-500/40 transition-all">
-                    <div className="w-12 h-12 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center mb-4">
-                      <span className="text-2xl">💰</span>
+                  <div className="relative bg-slate-900/40 backdrop-blur-sm border border-emerald-500/20 rounded-xl p-3 md:p-5 hover:border-emerald-500/40 transition-all">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center mb-3 md:mb-4">
+                      <span className="text-xl md:text-2xl">💰</span>
                     </div>
                     <div className="text-emerald-400 font-mono text-sm font-bold mb-2">01. TRUE SUSTAINABILITY</div>
                     <p className="text-slate-400 text-xs font-mono leading-relaxed mb-3">
@@ -11547,9 +11697,9 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 {/* Decentralization Pillar */}
                 <div className="relative group">
                   <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <div className="relative bg-slate-900/40 backdrop-blur-sm border border-cyan-500/20 rounded-xl p-5 hover:border-cyan-500/40 transition-all">
-                    <div className="w-12 h-12 rounded-lg bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center mb-4">
-                      <span className="text-2xl">🌐</span>
+                  <div className="relative bg-slate-900/40 backdrop-blur-sm border border-cyan-500/20 rounded-xl p-3 md:p-5 hover:border-cyan-500/40 transition-all">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center mb-3 md:mb-4">
+                      <span className="text-xl md:text-2xl">🌐</span>
                     </div>
                     <div className="text-cyan-400 font-mono text-sm font-bold mb-2">02. REAL DECENTRALIZATION</div>
                     <p className="text-slate-400 text-xs font-mono leading-relaxed mb-3">
@@ -11567,9 +11717,9 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 {/* Privacy Pillar */}
                 <div className="relative group">
                   <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <div className="relative bg-slate-900/40 backdrop-blur-sm border border-purple-500/20 rounded-xl p-5 hover:border-purple-500/40 transition-all">
-                    <div className="w-12 h-12 rounded-lg bg-purple-500/20 border border-purple-500/30 flex items-center justify-center mb-4">
-                      <span className="text-2xl">🔐</span>
+                  <div className="relative bg-slate-900/40 backdrop-blur-sm border border-purple-500/20 rounded-xl p-3 md:p-5 hover:border-purple-500/40 transition-all">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-purple-500/20 border border-purple-500/30 flex items-center justify-center mb-3 md:mb-4">
+                      <span className="text-xl md:text-2xl">🔐</span>
                     </div>
                     <div className="text-purple-400 font-mono text-sm font-bold mb-2">03. PRIVACY FIRST</div>
                     <p className="text-slate-400 text-xs font-mono leading-relaxed mb-3">
@@ -11675,23 +11825,23 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   </div>
                   
                   {/* Service Content */}
-                  <div className="p-6">
+                  <div className="p-4 md:p-6">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className={`text-${service.color}-500 font-mono text-sm`}>$</span>
-                      <h3 className="text-lg font-bold text-white font-mono">{service.title}</h3>
+                      <span className={`text-${service.color}-500 font-mono text-xs md:text-sm`}>$</span>
+                      <h3 className="text-base md:text-lg font-bold text-white font-mono">{service.title}</h3>
                     </div>
-                    <p className={`text-xs text-${service.color}-400/70 font-mono mb-4`}>{service.subtitle}</p>
+                    <p className={`text-[10px] md:text-xs text-${service.color}-400/70 font-mono mb-3 md:mb-4`}>{service.subtitle}</p>
                     
-                    <p className="text-sm text-slate-400 font-mono mb-6 leading-relaxed">
+                    <p className="text-xs md:text-sm text-slate-400 font-mono mb-4 md:mb-6 leading-relaxed">
                       {service.description}
                     </p>
                     
                     {/* Feature Grid */}
-                    <div className="grid grid-cols-2 gap-2 mb-6">
+                    <div className="grid grid-cols-2 gap-2 mb-4 md:mb-6">
                       {service.features.map((feature, idx) => (
-                        <div key={idx} className="px-3 py-2 rounded bg-slate-900/40 border border-slate-700/40">
-                          <div className="text-[10px] text-slate-500 font-mono mb-1">{feature.label}</div>
-                          <div className={`text-xs font-mono font-bold text-${service.color}-400`}>{feature.value}</div>
+                        <div key={idx} className="px-2 md:px-3 py-2 rounded bg-slate-900/40 border border-slate-700/40">
+                          <div className="text-[9px] md:text-[10px] text-slate-500 font-mono mb-1">{feature.label}</div>
+                          <div className={`text-[10px] md:text-xs font-mono font-bold text-${service.color}-400`}>{feature.value}</div>
                         </div>
                       ))}
                     </div>
@@ -11700,11 +11850,11 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                     <button
                       onClick={() => service.action && setStep(service.action)}
                       disabled={service.comingSoon}
-                      className={`w-full px-6 py-3 rounded-lg bg-gradient-to-r ${service.gradient} ${service.comingSoon ? 'opacity-60 cursor-not-allowed' : 'hover:scale-[1.02] group-hover:shadow-' + service.color + '-500/30'} text-white font-mono font-bold shadow-lg transition-all flex items-center justify-center gap-3`}
+                      className={`w-full px-4 md:px-6 py-2.5 md:py-3 rounded-lg bg-gradient-to-r ${service.gradient} ${service.comingSoon ? 'opacity-60 cursor-not-allowed' : 'hover:scale-[1.02] group-hover:shadow-' + service.color + '-500/30'} text-white font-mono text-xs md:text-sm font-bold shadow-lg transition-all flex items-center justify-center gap-2 md:gap-3`}
                     >
                       <span className={`text-${service.color}-200`}>{'>'}</span>
                       <span>{service.buttonText}</span>
-                      {service.comingSoon && <span className="text-xs ml-2 px-2 py-1 bg-black/40 rounded">⏳</span>}
+                      {service.comingSoon && <span className="text-[10px] md:text-xs ml-1 md:ml-2 px-1.5 md:px-2 py-0.5 md:py-1 bg-black/40 rounded">⏳</span>}
                       <span className={`text-${service.color}-200`}>{'<'}</span>
                     </button>
                   </div>
