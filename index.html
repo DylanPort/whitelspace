@@ -440,6 +440,33 @@
         height: 1rem !important;
       }
       
+      /* Reduce button icon sizes on mobile */
+      button svg.w-5,
+      button svg.w-7 {
+        width: 1rem !important;
+        height: 1rem !important;
+      }
+      
+      /* Reduce large icon container sizes in Ghost Whistle */
+      .w-14.h-14 {
+        width: 2rem !important;
+        height: 2rem !important;
+      }
+      
+      /* Make emoji in headings smaller on mobile */
+      h1 {
+        font-size: 1.5rem !important;
+        line-height: 1.3 !important;
+      }
+      
+      .text-3xl {
+        font-size: 1.5rem !important;
+      }
+      
+      .text-4xl {
+        font-size: 1.75rem !important;
+      }
+      
       /* Exception: Keep header button icons larger */
       header i[data-lucide], header svg {
         width: 1.5rem !important;
@@ -582,10 +609,36 @@
         font-size: 0.875rem !important;
       }
       
+      /* Make emoji in headings even smaller on phones */
+      h1 {
+        font-size: 1.25rem !important;
+      }
+      
+      .text-3xl {
+        font-size: 1.25rem !important;
+      }
+      
+      .text-4xl {
+        font-size: 1.5rem !important;
+      }
+      
       /* Even smaller icons on phones */
       i[data-lucide], svg.lucide {
         width: 0.875rem !important;
         height: 0.875rem !important;
+      }
+      
+      /* Even smaller button icons on phones */
+      button svg.w-5,
+      button svg.w-7 {
+        width: 0.875rem !important;
+        height: 0.875rem !important;
+      }
+      
+      /* Even smaller icon containers */
+      .w-14.h-14 {
+        width: 1.75rem !important;
+        height: 1.75rem !important;
       }
       
       /* Exception: Keep header button icons larger on phones */
