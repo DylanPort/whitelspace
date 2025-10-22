@@ -9065,6 +9065,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [pendingTxs, setPendingTxs] = useState([]);
       const [peerConnection, setPeerConnection] = useState(null);
       const [signalServer, setSignalServer] = useState(null);
+      const [showMobileSidebar, setShowMobileSidebar] = useState(false);
       
       // Anonymous Relay States
       const [relayRecipient, setRelayRecipient] = useState('');
@@ -10711,18 +10712,29 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             
             <div className="relative z-10 flex gap-0 h-[600px]">
               {/* LEFT SIDE - INTERACTIVE MAP (WIDER) */}
-              <div className="flex-1 flex flex-col p-6 pr-3">
+              <div className="flex-1 flex flex-col p-4 md:p-6 pr-3">
                 {/* Map Header */}
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 md:gap-3">
                     <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse shadow-lg shadow-emerald-500/50"></div>
                     <div>
-                      <div className="text-sm font-bold text-white/90 uppercase tracking-wider">Live Global Network</div>
-                      <div className="text-xs text-white/60 font-mono">Real-time node visualization</div>
+                      <div className="text-xs md:text-sm font-bold text-white/90 uppercase tracking-wider">Live Global Network</div>
+                      <div className="hidden md:block text-xs text-white/60 font-mono">Real-time node visualization</div>
                     </div>
                   </div>
-                  <div className="px-3 py-1.5 rounded-lg bg-cyan-500/10 backdrop-blur-sm border border-cyan-500/20">
-                    <span className="text-xs text-cyan-300 font-bold font-mono">{networkStats.totalNodes} ACTIVE</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowMobileSidebar(true)}
+                      className="md:hidden px-3 py-1.5 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs font-bold hover:bg-cyan-500/30 transition-all flex items-center gap-1.5"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                      </svg>
+                      Nodes
+                    </button>
+                    <div className="px-3 py-1.5 rounded-lg bg-cyan-500/10 backdrop-blur-sm border border-cyan-500/20">
+                      <span className="text-xs text-cyan-300 font-bold font-mono">{networkStats.totalNodes} ACTIVE</span>
+                    </div>
                   </div>
                 </div>
 
@@ -10752,8 +10764,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-400/20 to-transparent blur-sm"></div>
               </div>
 
-              {/* RIGHT SIDE - MODERN TERMINAL (SAME HEIGHT) */}
-              <div className="w-96 shrink-0 flex flex-col">
+              {/* RIGHT SIDE - MODERN TERMINAL (SAME HEIGHT) - Hidden on mobile, shown in overlay */}
+              <div className={`shrink-0 flex-col ${showMobileSidebar ? 'flex fixed inset-0 z-50 w-full bg-slate-950 md:relative md:w-96 md:bg-transparent' : 'hidden md:flex md:w-96'}`}>
                 {/* Modern Terminal Header */}
                 <div className="relative bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-cyan-500/20 px-5 py-3.5">
                   {/* Glowing accent line */}
@@ -10769,12 +10781,20 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                       <div className="h-4 w-px bg-white/10"></div>
                       <span className="text-[11px] font-bold text-white/50 uppercase tracking-wider">NODE MONITOR</span>
                     </div>
-                    <button
-                      onClick={fetchGlobalNodes}
-                      className="px-3 py-1.5 text-[10px] bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 hover:border-cyan-400/50 text-cyan-300 rounded-lg font-bold transition-all hover:shadow-lg hover:shadow-cyan-500/20"
-                    >
-                      <span className="mr-1">↻</span>SYNC
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setShowMobileSidebar(false)}
+                        className="md:hidden px-3 py-1.5 text-[10px] bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 hover:border-red-400/50 text-red-300 rounded-lg font-bold transition-all"
+                      >
+                        ✕ CLOSE
+                      </button>
+                      <button
+                        onClick={fetchGlobalNodes}
+                        className="px-3 py-1.5 text-[10px] bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 hover:border-cyan-400/50 text-cyan-300 rounded-lg font-bold transition-all hover:shadow-lg hover:shadow-cyan-500/20"
+                      >
+                        <span className="mr-1">↻</span>SYNC
+                      </button>
+                    </div>
                   </div>
                   
                   <div className="flex items-center gap-2 text-[11px] font-mono">
