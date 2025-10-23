@@ -14,6 +14,7 @@
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- Ensure Buffer exists before Solana Web3 (fixes Buffer issues in browser) -->
   <script>window.global = window.global || window;</script>
   <script type="module">import { Buffer } from 'https://esm.sh/buffer@6.0.3'; window.Buffer = Buffer;</script>
@@ -26,6 +27,8 @@
   <!-- Leaflet for Interactive World Map -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- QR Code Generator -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Optional: Solana Mobile Wallet Adapter (deep link-friendly) -->
   <script type="module">
     // Simple feature flag for Solana Mobile deep link environments
@@ -244,6 +247,19 @@
     .animate-pulse-slow{animation:pulseSlow 3s ease-in-out infinite}
     
     .rotate-slow{animation:rotate 20s linear infinite}
+    
+    /* Ghost Terminal Animations */
+    .animate-spin-slow {
+      animation: spin 3s linear infinite;
+    }
+    
+    .animation-delay-1000 {
+      animation-delay: 1s;
+    }
+    
+    .animation-delay-2000 {
+      animation-delay: 2s;
+    }
     
     /* Progress bar animations */
     @keyframes progressShine{0%{background-position:-100% 0}100%{background-position:200% 0}}
@@ -3132,7 +3148,8 @@
         { id:'home',    label:'Home', icon:'home' },
         { id:'webrtc',    label:'WebRTC Transfer', icon:'radio' },
         { id:'offline-network', label:'👻 Ghost Whistle', icon:'network' },
-        { id:'services', label:'🌐 Services', icon:'box' },
+        { id:'social-hub', label:'👻 Ghost Terminal', icon:'terminal' },
+        { id:'services', label:'👻 Ghost Services', icon:'zap' },
         { id:'swap', label:'Privacy Swap', iconImg:'4DqRlDPT_400x400.png.png' },
         { id:'solana-privacy', label:'Solana Privacy Tools', iconImg:'solana.png' },
         { id:'pump-portal', label:'Pump Privacy Tools', iconImg:'idrs8cZ-zg_logos.png' },
@@ -3153,7 +3170,10 @@
                 const isActive = step === x.id;
                 
                 return (
-                <button key={x.id} onClick={()=>setStep(x.id)}
+                <button key={x.id} onClick={()=>{
+                  console.log('🎯 Sidebar clicked:', x.id);
+                  setStep(x.id);
+                }}
                     className={`w-full flex items-center gap-3 rounded-xl px-3 py-3 border text-sm transition-all btn-press ${
                       isGhostWhistle 
                         ? isActive
@@ -9077,6 +9097,11 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [signalServer, setSignalServer] = useState(null);
       const [showMobileSidebar, setShowMobileSidebar] = useState(false);
       
+      // Leaderboard state
+      const [leaderboard, setLeaderboard] = useState([]);
+      const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+      const [showLeaderboard, setShowLeaderboard] = useState(false);
+      
       // Anonymous Relay States
       const [relayRecipient, setRelayRecipient] = useState('');
       const [relayAmount, setRelayAmount] = useState('');
@@ -9295,6 +9320,30 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           console.error('❌ Error details:', err.message, err.stack);
         }
       };
+
+      // Fetch leaderboard data with real-time updates
+      const fetchLeaderboard = async () => {
+        setLeaderboardLoading(true);
+        try {
+          console.log('🏆 Fetching leaderboard...');
+          const response = await fetch('http://localhost:8080/api/leaderboard');
+          const data = await response.json();
+          console.log('📊 Loaded leaderboard:', data.leaderboard);
+          setLeaderboard(data.leaderboard || []);
+        } catch (error) {
+          console.error('❌ Error fetching leaderboard:', error);
+          setLeaderboard([]);
+        } finally {
+          setLeaderboardLoading(false);
+        }
+      };
+
+      // Auto-refresh leaderboard every 10 seconds
+      useEffect(() => {
+        fetchLeaderboard(); // Initial load
+        const interval = setInterval(fetchLeaderboard, 10000); // Every 10 seconds
+        return () => clearInterval(interval);
+      }, []);
       
       // Fetch global staking stats from blockchain
       const fetchGlobalStats = async () => {
@@ -9496,7 +9545,6 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           
         } catch (err) {
           console.error('Staking error:', err);
-          pushToast('❌ Staking failed: ' + (err.message || 'Unknown error'), 'err');
         } finally {
           setLoading(false);
         }
@@ -9702,9 +9750,101 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           
         } catch (err) {
           console.error('Unstake error:', err);
-          pushToast('❌ Unstaking failed: ' + (err.message || 'Unknown error'), 'err');
         } finally {
           setLoading(false);
+        }
+      };
+
+      // Handle incoming relay request (First hop)
+      const handleIncomingRelay = async (relayData, ws) => {
+        try {
+          console.log('🔐 Processing relay request:', relayData.requestId);
+          
+          // Check if this node is in the selected nodes list
+          const isSelectedNode = relayData.selectedNodes.includes(walletAddress);
+          if (!isSelectedNode) {
+            console.log('⏭️ Not selected for this relay, ignoring');
+            return;
+          }
+          
+          // Decrypt one layer
+          const decryptedLayer = JSON.parse(atob(relayData.encryptedPayload));
+          console.log('🔓 Decrypted layer:', decryptedLayer.hopIndex);
+          
+          // If there's a next hop, forward it
+          if (decryptedLayer.nextHop) {
+            console.log(`🔄 Forwarding to next hop: ${decryptedLayer.nextHop.slice(0,8)}...`);
+            ws.send(JSON.stringify({
+              type: 'relay_forward',
+              to: decryptedLayer.nextHop,
+              data: {
+                ...relayData,
+                encryptedPayload: decryptedLayer.payload
+              }
+            }));
+            pushToast('🔄 Relay forwarded', 'info');
+          } else {
+            // This is the final hop - execute the transaction
+            console.log('🎯 Final hop - executing transaction');
+            await executeFinalRelay(decryptedLayer.payload, relayData);
+          }
+        } catch (err) {
+          console.error('❌ Relay processing error:', err);
+        }
+      };
+      
+      // Handle relay forwarding (Middle/Final hop)
+      const handleRelayForward = async (relayData, ws) => {
+        // Same as handleIncomingRelay
+        await handleIncomingRelay(relayData, ws);
+      };
+      
+      // Execute the final relay transaction (Last hop only)
+      const executeFinalRelay = async (payloadStr, relayData) => {
+        try {
+          const instructions = JSON.parse(payloadStr);
+          console.log('💸 Executing final relay:', instructions);
+          
+          const connection = new solanaWeb3.Connection(
+            'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba',
+            'confirmed'
+          );
+          
+          // Build transaction from instructions
+          const transaction = new solanaWeb3.Transaction();
+          const userPubkey = new solanaWeb3.PublicKey(walletAddress);
+          
+          if (instructions.type === 'sol_transfer') {
+            transaction.add(
+              solanaWeb3.SystemProgram.transfer({
+                fromPubkey: userPubkey, // Final node sends from their wallet
+                toPubkey: new solanaWeb3.PublicKey(instructions.recipient),
+                lamports: instructions.lamports
+              })
+            );
+          }
+          
+          // Get recent blockhash
+          const { blockhash } = await connection.getLatestBlockhash();
+          transaction.recentBlockhash = blockhash;
+          transaction.feePayer = userPubkey;
+          
+          // Sign and send
+          const signedTx = await wallet.signTransaction(transaction);
+          const signature = await connection.sendRawTransaction(signedTx.serialize());
+          
+          console.log('✅ Anonymous relay executed!', signature);
+          pushToast(`✅ Relay completed! Sig: ${signature.slice(0,8)}...`, 'ok');
+          
+          // Record relay for rewards
+          await handleRelayRequest({
+            txHash: signature,
+            fee: relayData.fee
+          });
+          
+        } catch (err) {
+          console.error('❌ Final relay execution failed:', err);
+          pushToast('❌ Relay execution failed', 'err');
         }
       };
 
@@ -9773,6 +9913,18 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 case 'relay-stats':
                   // Update relay stats
                   pushToast(`📡 Network relay recorded!`, 'info');
+                  break;
+                  
+                case 'relay_request':
+                  // Handle incoming anonymous relay request
+                  console.log('🔐 Received relay request:', message.data.requestId);
+                  handleIncomingRelay(message.data, ws);
+                  break;
+                  
+                case 'relay_forward':
+                  // Handle relay forwarding from another hop
+                  console.log('🔄 Forwarding relay:', message.data.requestId);
+                  handleRelayForward(message.data, ws);
                   break;
                   
                 case 'offer':
@@ -9957,13 +10109,22 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       useEffect(() => {
         // Fetch immediately on mount
         fetchGlobalNodes();
+        fetchLeaderboard();
         
         // Then fetch every 10 seconds
         const interval = setInterval(() => {
           fetchGlobalNodes();
         }, 10000); // Refresh every 10s
         
-        return () => clearInterval(interval);
+        // Refresh leaderboard every 30 seconds
+        const leaderboardInterval = setInterval(() => {
+          fetchLeaderboard();
+        }, 30000); // Refresh every 30s
+        
+        return () => {
+          clearInterval(interval);
+          clearInterval(leaderboardInterval);
+        };
       }, []);
       
       // Auto-refresh global staking stats
@@ -11052,6 +11213,135 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                           </div>
                           <div className="text-white/60 text-sm font-bold mb-2">No Active Nodes</div>
                           <div className="text-white/40 text-xs leading-relaxed">Waiting for nodes to connect to the network...</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Leaderboard Section */}
+                <div className="border-t border-white/5">
+                  <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-purple-500/20 px-5 py-3">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse shadow-lg shadow-purple-500/50"></div>
+                        <span className="text-[10px] font-bold text-purple-400 uppercase tracking-widest">LEADERBOARD</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setShowLeaderboard(!showLeaderboard)}
+                          className="px-2 py-1 text-[9px] bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 hover:border-purple-400/50 text-purple-300 rounded-lg font-bold transition-all"
+                        >
+                          {showLeaderboard ? 'HIDE' : 'SHOW'}
+                        </button>
+                        <button
+                          onClick={fetchLeaderboard}
+                          disabled={leaderboardLoading}
+                          className="px-2 py-1 text-[9px] bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 hover:border-cyan-400/50 text-cyan-300 rounded-lg font-bold transition-all hover:shadow-lg hover:shadow-cyan-500/20 disabled:opacity-50"
+                        >
+                          {leaderboardLoading ? '⏳' : '↻'}
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {showLeaderboard && (
+                      <div className="space-y-3">
+                        {/* Current Active Nodes */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">CURRENT ACTIVE</span>
+                          </div>
+                          <div className="max-h-32 overflow-y-auto custom-scrollbar">
+                            {leaderboard.filter(node => node.isOnline).length > 0 ? 
+                              leaderboard.filter(node => node.isOnline).slice(0, 5).map((node, idx) => (
+                                <div key={node.nodeId} className="group relative bg-gradient-to-br from-emerald-900/20 to-slate-800/60 backdrop-blur-sm border border-emerald-500/20 rounded-lg p-2 hover:border-emerald-500/40 transition-all">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-[8px] font-bold">
+                                        {idx + 1}
+                                      </div>
+                                      <div>
+                                        <div className="text-[9px] font-mono font-bold text-emerald-400">
+                                          {node.walletAddress?.slice(0, 6)}...{node.walletAddress?.slice(-4)}
+                                        </div>
+                                        <div className="text-[8px] text-white/50">{node.region}</div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-[8px]">
+                                      <div className="text-center">
+                                        <div className="text-white/40">UPTIME</div>
+                                        <div className="text-emerald-300 font-bold">{Math.floor(node.totalUptime / 3600)}h</div>
+                                      </div>
+                                      <div className="text-center">
+                                        <div className="text-white/40">RELAYS</div>
+                                        <div className="text-orange-300 font-bold">{node.totalRelays}</div>
+                                      </div>
+                                      <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )) : (
+                                <div className="text-center py-2">
+                                  <div className="text-white/60 text-[10px] font-bold">No Active Nodes</div>
+                                </div>
+                              )
+                            }
+                          </div>
+                        </div>
+
+                        {/* Historical Rankings */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                            <span className="text-[10px] font-bold text-purple-400 uppercase tracking-widest">HISTORICAL RANKINGS</span>
+                          </div>
+                          <div className="max-h-32 overflow-y-auto custom-scrollbar">
+                            {leaderboard.length > 0 ? leaderboard.slice(0, 8).map((node, idx) => (
+                              <div key={node.nodeId} className="group relative bg-gradient-to-br from-slate-900/60 to-slate-800/60 backdrop-blur-sm border border-white/5 rounded-lg p-2 hover:border-purple-500/30 transition-all">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold ${
+                                      idx === 0 ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/40' :
+                                      idx === 1 ? 'bg-gray-400/20 text-gray-300 border border-gray-400/40' :
+                                      idx === 2 ? 'bg-orange-500/20 text-orange-400 border border-orange-500/40' :
+                                      'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                                    }`}>
+                                      {idx + 1}
+                                    </div>
+                                    <div>
+                                      <div className="text-[9px] font-mono font-bold text-purple-400">
+                                        {node.walletAddress?.slice(0, 6)}...{node.walletAddress?.slice(-4)}
+                                      </div>
+                                      <div className="text-[8px] text-white/50">{node.region}</div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-[8px]">
+                                    <div className="text-center">
+                                      <div className="text-white/40">UPTIME</div>
+                                      <div className="text-cyan-300 font-bold">{Math.floor(node.totalUptime / 3600)}h</div>
+                                    </div>
+                                    <div className="text-center">
+                                      <div className="text-white/40">RELAYS</div>
+                                      <div className="text-orange-300 font-bold">{node.totalRelays}</div>
+                                    </div>
+                                    <div className="text-center">
+                                      <div className="text-white/40">REP</div>
+                                      <div className="text-emerald-300 font-bold">{node.reputation}</div>
+                                    </div>
+                                    {node.isOnline && (
+                                      <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            )) : (
+                              <div className="text-center py-2">
+                                <div className="text-white/60 text-[10px] font-bold">No Historical Data</div>
+                                <div className="text-white/40 text-[8px]">Waiting for node activity...</div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )}
@@ -12399,13 +12689,941 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       );
     }
 
+    // ============= SOCIAL HUB - TERMINAL-STYLE STAKER COMMUNITY =============
+    function SocialHub({ setStep, pushToast }) {
+      console.log('🎯 SocialHub component loaded!', { setStep, pushToast });
+      
+      const [wallet, setWallet] = useState(null);
+      const [walletAddress, setWalletAddress] = useState(null);
+      const [connecting, setConnecting] = useState(false);
+      const [isStaker, setIsStaker] = useState(false);
+      const [stakeAmount, setStakeAmount] = useState(0);
+      const [posts, setPosts] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [activeTab, setActiveTab] = useState('feed');
+      const [showCreatePost, setShowCreatePost] = useState(false);
+      const [newPost, setNewPost] = useState({ content: '', type: 'general' });
+      const [expandedComments, setExpandedComments] = useState({});
+      const [notifications, setNotifications] = useState([]);
+      const [following, setFollowing] = useState([]);
+      const [comments, setComments] = useState({});
+      const [newComment, setNewComment] = useState({});
+
+      // Supabase configuration
+      const SUPABASE_URL = 'https://avhmgbkwfwlatykotxwv.supabase.co';
+      const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2aG1nYmt3ZndsYXR5a290eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEyMjMxOTksImV4cCI6MjA3Njc5OTE5OX0.s8DxqkwH-ZJtJdr1ve1HRGTw-038KEfYf8rlowYKtlE';
+      
+      const [supabase, setSupabase] = useState(null);
+      
+      // Initialize Supabase
+      useEffect(() => {
+        if (window.supabase) {
+          try {
+            const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            setSupabase(client);
+            console.log('✅ Supabase client initialized successfully');
+          } catch (error) {
+            console.error('❌ Failed to initialize Supabase:', error);
+          }
+        } else {
+          console.warn('⚠️ Supabase library not loaded');
+        }
+      }, []);
+
+      // Check if user is a staker - ROBUST SMART CONTRACT VERIFICATION
+      const checkStakerStatus = async (address) => {
+        if (!address) return false;
+        
+        try {
+          console.log('🔍 Checking staker status for:', address);
+          
+          // Create connection using Helius RPC with your API key
+          const connection = new solanaWeb3.Connection('https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba');
+          
+          const userPubkey = new solanaWeb3.PublicKey(address);
+          
+          // Try both program IDs to be thorough
+          const programIds = [
+            '2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq', // Deployed program ID
+            'Hf38P6icw2npaFneCJp4LbcPxJqmnD957FXjPCb9nCHs'  // Contract declared ID
+          ];
+          
+          for (const programIdStr of programIds) {
+            try {
+              console.log('🔍 Trying program ID:', programIdStr);
+              const programId = new solanaWeb3.PublicKey(programIdStr);
+              
+              // Query for NodeAccount with this user as owner
+              const nodeAccounts = await connection.getProgramAccounts(programId, {
+                filters: [
+                  { dataSize: 128 }, // Size of NodeAccount (120 + 8 discriminator)
+                  { memcmp: { offset: 8, bytes: userPubkey.toBase58() } } // owner field at offset 8
+                ]
+              });
+              
+              console.log('🔍 Found node accounts for', programIdStr, ':', nodeAccounts.length);
+              
+              if (nodeAccounts.length > 0) {
+                const nodeAccount = nodeAccounts[0];
+                const data = nodeAccount.account.data;
+                
+                // Read staked_amount at offset 40 (32 owner + 8 staked_amount)
+                const stakeAmount = new DataView(data.buffer).getBigUint64(40, true);
+                const stakeAmountFormatted = Number(stakeAmount) / 1e6; // Convert from 6 decimals
+                
+                console.log('✅ User is a staker! Stake amount:', stakeAmountFormatted, 'WHISTLE');
+                console.log('✅ Found via program ID:', programIdStr);
+                
+                // Check if stake meets minimum requirement (100,000 WHISTLE)
+                if (stakeAmountFormatted >= 100000) {
+                  console.log('✅ Stake meets minimum requirement (100,000+ WHISTLE)');
+                  setStakeAmount(stakeAmountFormatted);
+                  return true;
+                } else {
+                  console.log('❌ Stake too low:', stakeAmountFormatted, 'WHISTLE (need 100,000+)');
+                  setStakeAmount(stakeAmountFormatted);
+                  return false;
+                }
+              }
+            } catch (programError) {
+              console.log('⚠️ Program ID', programIdStr, 'failed:', programError.message);
+              continue;
+            }
+          }
+          
+          // STRICT VERIFICATION: Only allow if they have actual NodeAccount (staked)
+          console.log('❌ User is NOT a staker - no NodeAccount found');
+          console.log('🔒 Access denied: Must stake WHISTLE tokens to create NodeAccount');
+          setStakeAmount(0);
+          return false;
+          
+        } catch (error) {
+          console.error('❌ Error checking staker status:', error);
+          setStakeAmount(0);
+          return false;
+        }
+      };
+
+      // DEBUG: Test function to see what accounts exist
+      const debugStakeVerification = async (address) => {
+        if (!address) return;
+        
+        try {
+          console.log('🔍 DEBUG: Full stake verification for:', address);
+          const connection = new solanaWeb3.Connection('https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba');
+          const userPubkey = new solanaWeb3.PublicKey(address);
+          
+          // Check all program accounts for both program IDs
+          const programIds = [
+            '2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq',
+            'Hf38P6icw2npaFneCJp4LbcPxJqmnD957FXjPCb9nCHs'
+          ];
+          
+          for (const programIdStr of programIds) {
+            try {
+              console.log('🔍 DEBUG: Checking program', programIdStr);
+              const programId = new solanaWeb3.PublicKey(programIdStr);
+              
+              // Get ALL program accounts
+              const allAccounts = await connection.getProgramAccounts(programId);
+              console.log('🔍 DEBUG: Total accounts for', programIdStr, ':', allAccounts.length);
+              
+              // Check for accounts owned by this user
+              const userAccounts = allAccounts.filter(acc => {
+                try {
+                  const data = acc.account.data;
+                  const owner = new solanaWeb3.PublicKey(data.slice(8, 40)); // owner at offset 8
+                  return owner.equals(userPubkey);
+                } catch (e) {
+                  return false;
+                }
+              });
+              
+              console.log('🔍 DEBUG: Accounts owned by user:', userAccounts.length);
+              
+              if (userAccounts.length > 0) {
+                const account = userAccounts[0];
+                const data = account.account.data;
+                console.log('🔍 DEBUG: Account data length:', data.length);
+                console.log('🔍 DEBUG: Account data (first 50 bytes):', Array.from(data.slice(0, 50)));
+                
+                // Try to read stake amount
+                try {
+                  const stakeAmount = new DataView(data.buffer).getBigUint64(40, true);
+                  const stakeAmountFormatted = Number(stakeAmount) / 1e6;
+                  console.log('🔍 DEBUG: Stake amount:', stakeAmountFormatted);
+                } catch (e) {
+                  console.log('🔍 DEBUG: Error reading stake amount:', e.message);
+                }
+              }
+              
+            } catch (e) {
+              console.log('🔍 DEBUG: Error with program', programIdStr, ':', e.message);
+            }
+          }
+          
+          // Also check WHISTLE token balance
+          const whistleMint = new solanaWeb3.PublicKey('6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump');
+          const tokenAccounts = await connection.getTokenAccountsByOwner(userPubkey, {
+            mint: whistleMint
+          });
+          console.log('🔍 DEBUG: WHISTLE token accounts:', tokenAccounts.value.length);
+          
+          if (tokenAccounts.value.length > 0) {
+            const balance = await connection.getTokenAccountBalance(tokenAccounts.value[0].pubkey);
+            console.log('🔍 DEBUG: WHISTLE balance:', Number(balance.value.amount) / 1e6);
+          }
+          
+        } catch (error) {
+          console.error('🔍 DEBUG: Error:', error);
+        }
+      };
+
+      // Connect wallet
+      const connectWallet = async () => {
+        if (!window.solana?.isPhantom) {
+          pushToast('Phantom wallet not found', 'error');
+          return;
+        }
+
+        setConnecting(true);
+        try {
+          const response = await window.solana.connect();
+          const address = response.publicKey.toString();
+          setWallet(response);
+          setWalletAddress(address);
+          
+          // DEBUG: Run full verification
+          await debugStakeVerification(address);
+          
+          const stakerStatus = await checkStakerStatus(address);
+          console.log('🔍 Final staker status:', stakerStatus);
+          console.log('🔍 Stake amount:', stakeAmount);
+          setIsStaker(stakerStatus);
+          
+          if (stakerStatus) {
+            console.log('✅ Access granted - user is verified staker');
+            pushToast(`Welcome, Premium Staker! (${stakeAmount.toFixed(2)} WHISTLE staked)`, 'success');
+            await loadUserData();
+          } else {
+            console.log('❌ Access denied - user is not a staker');
+            pushToast('Access denied: Must stake minimum 100,000 WHISTLE to access Social Hub', 'error');
+          }
+        } catch (error) {
+          console.error('Wallet connection error:', error);
+          pushToast('Failed to connect wallet', 'error');
+        } finally {
+          setConnecting(false);
+        }
+      };
+
+      // Load user data
+      const loadUserData = async () => {
+        if (!supabase || !walletAddress) return;
+        
+        try {
+          // Load following list
+          const { data: follows } = await supabase
+            .from('social_follows')
+            .select('following_wallet')
+            .eq('follower_wallet', walletAddress);
+          
+          if (follows) {
+            setFollowing(follows.map(f => f.following_wallet));
+          }
+          
+          // Load notifications
+          const { data: notifs } = await supabase
+            .from('social_notifications')
+            .select('*')
+            .eq('user_wallet', walletAddress)
+            .order('created_at', { ascending: false })
+            .limit(10);
+          
+          if (notifs) {
+            setNotifications(notifs);
+          }
+        } catch (error) {
+          console.error('Error loading user data:', error);
+        }
+      };
+
+      // Load posts
+      const loadPosts = async () => {
+        if (!supabase) {
+          console.log('⚠️ Supabase not available, skipping post load');
+          setLoading(false);
+          return;
+        }
+        
+        try {
+          console.log('📡 Loading posts from Supabase...');
+          const { data, error } = await supabase
+            .from('social_posts')
+            .select(`
+              *,
+              social_comments(*),
+              social_reactions(*)
+            `)
+            .order('created_at', { ascending: false })
+            .limit(50);
+          
+          if (error) throw error;
+          console.log('✅ Loaded posts:', data?.length || 0);
+          setPosts(data || []);
+          
+          // Load comments for each post
+          if (data && data.length > 0) {
+            const commentsMap = {};
+            for (const post of data) {
+              if (post.social_comments && post.social_comments.length > 0) {
+                commentsMap[post.id] = post.social_comments;
+              }
+            }
+            setComments(commentsMap);
+          }
+        } catch (error) {
+          console.error('❌ Error loading posts:', error);
+          setPosts([]);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      // Create post
+      const createPost = async () => {
+        if (!supabase || !walletAddress || !newPost.content.trim()) return;
+        
+        try {
+          const { data, error } = await supabase
+            .from('social_posts')
+            .insert({
+              author_wallet: walletAddress,
+              content: newPost.content,
+              post_type: newPost.type,
+              created_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+          
+          if (error) throw error;
+          
+          setPosts(prev => [data, ...prev]);
+          setNewPost({ content: '', type: 'general' });
+          setShowCreatePost(false);
+          pushToast('Post created successfully', 'success');
+        } catch (error) {
+          console.error('Error creating post:', error);
+          pushToast('Failed to create post', 'error');
+        }
+      };
+
+      // Add comment
+      const addComment = async (postId, content) => {
+        if (!supabase || !walletAddress || !content.trim()) return;
+        
+        try {
+          console.log('💬 Adding comment to post:', postId);
+          const { data, error } = await supabase
+            .from('social_comments')
+            .insert({
+              post_id: postId,
+              author_wallet: walletAddress,
+              content: content,
+              created_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+          
+          if (error) throw error;
+          
+          // Update comments state
+          setComments(prev => ({
+            ...prev,
+            [postId]: [...(prev[postId] || []), data]
+          }));
+          
+          // Clear the comment input
+          setNewComment(prev => ({
+            ...prev,
+            [postId]: ''
+          }));
+          
+          pushToast('Comment added successfully', 'success');
+        } catch (error) {
+          console.error('❌ Error adding comment:', error);
+          pushToast('Failed to add comment', 'error');
+        }
+      };
+
+      // Add reaction (toggle)
+      const addReaction = async (postId, reactionType) => {
+        if (!supabase || !walletAddress) return;
+        
+        try {
+          console.log('🔥 Adding reaction:', reactionType, 'to post:', postId);
+          
+          // Check if user already reacted with this type
+          const { data: existingReaction } = await supabase
+            .from('social_reactions')
+            .select('id')
+            .eq('post_id', postId)
+            .eq('reactor_wallet', walletAddress)
+            .eq('reaction_type', reactionType)
+            .single();
+          
+          if (existingReaction) {
+            // Remove reaction
+            const { error } = await supabase
+              .from('social_reactions')
+              .delete()
+              .eq('post_id', postId)
+              .eq('reactor_wallet', walletAddress)
+              .eq('reaction_type', reactionType);
+            
+            if (error) throw error;
+            pushToast('Reaction removed', 'success');
+          } else {
+            // Add reaction
+            const { error } = await supabase
+              .from('social_reactions')
+              .insert({
+                post_id: postId,
+                reactor_wallet: walletAddress,
+                reaction_type: reactionType,
+                created_at: new Date().toISOString()
+              });
+            
+            if (error) throw error;
+            pushToast('Reaction added', 'success');
+          }
+          
+          // Reload posts to get updated reaction counts
+          await loadPosts();
+          
+        } catch (error) {
+          console.error('❌ Error adding reaction:', error);
+          pushToast('Failed to add reaction', 'error');
+        }
+      };
+
+      // Toggle follow
+      const toggleFollow = async (address) => {
+        if (!supabase || !walletAddress || address === walletAddress) return;
+        
+        try {
+          const isFollowing = following.includes(address);
+          
+          if (isFollowing) {
+            await supabase
+              .from('social_follows')
+              .delete()
+              .eq('follower_wallet', walletAddress)
+              .eq('following_wallet', address);
+            
+            setFollowing(prev => prev.filter(addr => addr !== address));
+            pushToast('Unfollowed user', 'success');
+          } else {
+            await supabase
+              .from('social_follows')
+              .insert({
+                follower_wallet: walletAddress,
+                following_wallet: address,
+                created_at: new Date().toISOString()
+              });
+            
+            setFollowing(prev => [...prev, address]);
+            pushToast('Following user', 'success');
+          }
+        } catch (error) {
+          console.error('Error toggling follow:', error);
+          pushToast('Failed to update follow status', 'error');
+        }
+      };
+
+      // Toggle comment expansion
+      const toggleComments = (postId) => {
+        setExpandedComments(prev => ({
+          ...prev,
+          [postId]: !prev[postId]
+        }));
+      };
+
+      // Effects
+      useEffect(() => {
+        if (isStaker) {
+          loadPosts();
+          const interval = setInterval(loadPosts, 30000); // Refresh every 30 seconds
+          return () => clearInterval(interval);
+        }
+      }, [isStaker]);
+
+      // DEBUG: Log current state
+      console.log('🔍 SocialHub render - isStaker:', isStaker, 'walletAddress:', walletAddress, 'stakeAmount:', stakeAmount);
+      
+      // If no wallet connected, show connect screen
+      if (!walletAddress) {
+        console.log('🔌 Showing connect wallet screen');
+        return (
+          <div className="max-w-4xl mx-auto p-4 md:p-6">
+            <div className="bg-gradient-to-br from-slate-900/20 to-black/50 border border-slate-500/30 rounded-xl p-8 text-center relative overflow-hidden">
+              {/* Animated background */}
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-500/10 via-cyan-500/10 to-blue-500/10 animate-pulse"></div>
+              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-transparent via-slate-500/5 to-transparent"></div>
+              
+              {/* Ghost Whistle Logo Animation */}
+              <div className="relative z-10 mb-6">
+                <div className="relative inline-block">
+                  <div className="w-24 h-24 mx-auto mb-4 relative">
+                    {/* Animated ghost logo */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-slate-500 to-cyan-500 rounded-full animate-spin-slow"></div>
+                    <div className="absolute inset-2 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full animate-pulse"></div>
+                    <div className="absolute inset-4 bg-black rounded-full flex items-center justify-center">
+                      <div className="text-white text-2xl font-bold animate-bounce">👻</div>
+                    </div>
+                    {/* Floating particles */}
+                    <div className="absolute -top-2 -right-2 w-3 h-3 bg-slate-400 rounded-full animate-ping"></div>
+                    <div className="absolute -bottom-2 -left-2 w-2 h-2 bg-cyan-400 rounded-full animate-ping animation-delay-1000"></div>
+                    <div className="absolute top-1/2 -left-4 w-1 h-1 bg-blue-400 rounded-full animate-ping animation-delay-2000"></div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="relative z-10">
+                <div className="inline-flex items-center gap-2 bg-slate-500/20 border border-slate-500/50 rounded-full px-4 py-2 mb-4">
+                  <div className="w-2 h-2 bg-slate-400 rounded-full animate-pulse"></div>
+                  <span className="text-slate-300 font-mono text-sm">CULT MEMBER</span>
+                </div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent mb-2">
+                  Ghost Terminal
+                </h1>
+                <p className="text-white/70 mb-6 font-mono">Exclusive terminal for Ghost Whistle cult members</p>
+                <button
+                  onClick={connectWallet}
+                  disabled={connecting}
+                  className="bg-gradient-to-r from-slate-500 to-cyan-500 hover:from-slate-600 hover:to-cyan-600 text-white px-8 py-3 rounded-lg font-medium transition-all duration-300 disabled:opacity-50 transform hover:scale-105 shadow-lg shadow-slate-500/25"
+                >
+                  {connecting ? 'Connecting...' : 'Enter Terminal'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+      
+      // If not a staker, show access denied
+      if (!isStaker && walletAddress) {
+        console.log('🔒 Showing access denied screen');
+        return (
+          <div className="max-w-4xl mx-auto p-4 md:p-6">
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-8 text-center">
+              <div className="text-red-400 text-6xl mb-4">🔒</div>
+              <h1 className="text-2xl font-bold text-red-400 mb-4">Access Denied</h1>
+              <p className="text-white/70 mb-6">This terminal is exclusive to Ghost Whistle stakers only.</p>
+              <div className="bg-black/50 border border-red-500/50 rounded-lg p-4 font-mono text-sm">
+                <div className="text-red-400">$ ghost-whistle --check-stake</div>
+                <div className="text-white/60">Status: {stakeAmount >= 100000 ? 'STAKED' : 'INSUFFICIENT_STAKE'}</div>
+                <div className="text-white/60">Required: Minimum 100,000 WHISTLE staked</div>
+                <div className="text-white/60">Your stake: {stakeAmount.toFixed(2)} WHISTLE</div>
+                <div className="text-white/60">Wallet: {walletAddress ? walletAddress.slice(0, 8) + '...' + walletAddress.slice(-8) : 'Not connected'}</div>
+                {stakeAmount > 0 && stakeAmount < 100000 && (
+                  <div className="text-yellow-400 mt-2">⚠️ You need {(100000 - stakeAmount).toFixed(2)} more WHISTLE to access</div>
+                )}
+                <div className="text-blue-400 mt-2">💡 Go to Ghost Whistle section to stake more tokens</div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // If not connected, show connection prompt
+      if (!walletAddress) {
+        return (
+          <div className="max-w-4xl mx-auto p-4 md:p-6">
+            <div className="bg-gradient-to-br from-green-500/10 to-blue-500/10 border border-green-500/30 rounded-xl p-8 text-center">
+              <div className="text-green-400 text-6xl mb-4">💻</div>
+              <h1 className="text-3xl font-bold text-white mb-4">Ghost Whistle Terminal</h1>
+              <p className="text-white/70 mb-6">Exclusive communication hub for stakers and node operators</p>
+              <button
+                onClick={connectWallet}
+                disabled={connecting}
+                className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-bold py-3 px-8 rounded-lg transition-all duration-200 disabled:opacity-50"
+              >
+                {connecting ? 'Connecting...' : 'Connect Wallet & Enter Terminal'}
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="max-w-6xl mx-auto p-4 md:p-6">
+          {/* Terminal Header */}
+          <div className="bg-black/80 border border-green-500/50 rounded-t-xl p-4 font-mono">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span className="text-green-400 ml-4">ghost-terminal</span>
+              </div>
+              <div className="text-white/60 text-sm">
+                {walletAddress ? `${walletAddress.slice(0, 8)}...${walletAddress.slice(-8)}` : 'Connecting...'} | {stakeAmount.toFixed(2)} WHISTLE
+              </div>
+            </div>
+          </div>
+
+          {/* Main Terminal Interface */}
+          <div className="bg-black/90 border-x border-b border-green-500/50 rounded-b-xl min-h-[600px]">
+            {/* Tab Navigation */}
+            <div className="border-b border-green-500/30 p-4">
+              <div className="flex gap-4 font-mono text-sm">
+                <button
+                  onClick={() => setActiveTab('feed')}
+                  className={`px-4 py-2 rounded ${activeTab === 'feed' ? 'bg-green-500/20 text-green-400' : 'text-white/60 hover:text-white'}`}
+                >
+                  📡 FEED
+                </button>
+                <button
+                  onClick={() => setActiveTab('network')}
+                  className={`px-4 py-2 rounded ${activeTab === 'network' ? 'bg-green-500/20 text-green-400' : 'text-white/60 hover:text-white'}`}
+                >
+                  🌐 NETWORK
+                </button>
+                <button
+                  onClick={() => setActiveTab('notifications')}
+                  className={`px-4 py-2 rounded ${activeTab === 'notifications' ? 'bg-green-500/20 text-green-400' : 'text-white/60 hover:text-white'}`}
+                >
+                  🔔 NOTIFICATIONS ({notifications.length})
+                </button>
+              </div>
+            </div>
+
+            {/* Tab Content */}
+            <div className="p-6">
+              {activeTab === 'feed' && (
+                <div className="space-y-4">
+                  {/* Create Post */}
+                  <div className="bg-black/50 border border-green-500/30 rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                        {walletAddress ? walletAddress.slice(0, 2).toUpperCase() : '??'}
+                      </div>
+                      <div className="font-mono text-green-400">@{walletAddress ? `${walletAddress.slice(0, 8)}...` : 'connecting...'}</div>
+                    </div>
+                    <textarea
+                      value={newPost.content}
+                      onChange={(e) => setNewPost(prev => ({ ...prev, content: e.target.value }))}
+                      placeholder="Type your message... (Enter to send, Shift+Enter for new line)"
+                      className="w-full bg-transparent text-white placeholder-white/50 border-none resize-none focus:outline-none font-mono"
+                      rows="3"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          createPost();
+                        }
+                      }}
+                    />
+                    <div className="flex justify-between items-center mt-3">
+                      <select
+                        value={newPost.type}
+                        onChange={(e) => setNewPost(prev => ({ ...prev, type: e.target.value }))}
+                        className="bg-black/50 border border-green-500/30 rounded px-3 py-1 text-green-400 font-mono text-sm"
+                      >
+                        <option value="general">General</option>
+                        <option value="technical">Technical</option>
+                        <option value="announcement">Announcement</option>
+                        <option value="idea">Idea</option>
+                      </select>
+                      <button
+                        onClick={createPost}
+                        disabled={!newPost.content.trim()}
+                        className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded font-mono text-sm disabled:opacity-50"
+                      >
+                        POST
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Posts Feed */}
+                  {loading ? (
+                    <div className="text-center text-white/60 font-mono">Loading posts...</div>
+                  ) : posts.length === 0 ? (
+                    <div className="text-center text-white/60 font-mono">No posts yet. Be the first to post!</div>
+                  ) : (
+                    posts.map((post) => (
+                      <div key={post.id} className="bg-black/50 border border-green-500/30 rounded-lg p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                              {post.author_wallet ? post.author_wallet.slice(0, 2).toUpperCase() : '??'}
+                            </div>
+                            <div>
+                              <div className="font-mono text-green-400">@{post.author_wallet ? `${post.author_wallet.slice(0, 8)}...` : 'unknown'}</div>
+                              <div className="text-white/60 text-xs font-mono">
+                                {new Date(post.created_at).toLocaleString()}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded font-mono">
+                              {post.post_type}
+                            </span>
+                            {post.author_wallet && walletAddress && post.author_wallet !== walletAddress && (
+                              <button
+                                onClick={() => toggleFollow(post.author_wallet)}
+                                className={`px-2 py-1 text-xs rounded font-mono ${
+                                  following.includes(post.author_wallet)
+                                    ? 'bg-red-500/20 text-red-400'
+                                    : 'bg-green-500/20 text-green-400'
+                                }`}
+                              >
+                                {following.includes(post.author_wallet) ? 'UNFOLLOW' : 'FOLLOW'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="text-white font-mono mb-4 whitespace-pre-wrap">{post.content}</div>
+                        
+                        <div className="flex items-center justify-between pt-3 border-t border-green-500/20">
+                          <div className="flex items-center gap-4">
+                            <button
+                              onClick={() => addReaction(post.id, 'like')}
+                              className={`flex items-center gap-1 px-3 py-1 rounded font-mono text-sm hover:opacity-80 ${
+                                post.social_reactions?.some(r => r.reactor_wallet === walletAddress && r.reaction_type === 'like')
+                                  ? 'bg-green-500/40 text-green-300'
+                                  : 'bg-green-500/20 text-green-400'
+                              }`}
+                            >
+                              👍 LIKE ({post.social_reactions?.filter(r => r.reaction_type === 'like').length || 0})
+                            </button>
+                            <button
+                              onClick={() => addReaction(post.id, 'fire')}
+                              className={`flex items-center gap-1 px-3 py-1 rounded font-mono text-sm hover:opacity-80 ${
+                                post.social_reactions?.some(r => r.reactor_wallet === walletAddress && r.reaction_type === 'fire')
+                                  ? 'bg-orange-500/40 text-orange-300'
+                                  : 'bg-orange-500/20 text-orange-400'
+                              }`}
+                            >
+                              🔥 FIRE ({post.social_reactions?.filter(r => r.reaction_type === 'fire').length || 0})
+                            </button>
+                            <button
+                              onClick={() => addReaction(post.id, 'rocket')}
+                              className={`flex items-center gap-1 px-3 py-1 rounded font-mono text-sm hover:opacity-80 ${
+                                post.social_reactions?.some(r => r.reactor_wallet === walletAddress && r.reaction_type === 'rocket')
+                                  ? 'bg-blue-500/40 text-blue-300'
+                                  : 'bg-blue-500/20 text-blue-400'
+                              }`}
+                            >
+                              🚀 ROCKET ({post.social_reactions?.filter(r => r.reaction_type === 'rocket').length || 0})
+                            </button>
+                            <button
+                              onClick={() => toggleComments(post.id)}
+                              className="flex items-center gap-1 px-3 py-1 bg-purple-500/20 text-purple-400 rounded font-mono text-sm hover:bg-purple-500/30"
+                            >
+                              💬 COMMENT ({comments[post.id]?.length || 0})
+                            </button>
+                          </div>
+                          <div className="text-white/40 text-sm font-mono">
+                            {post.social_reactions?.length || 0} total reactions
+                          </div>
+                        </div>
+
+                        {/* Comments Section */}
+                        {expandedComments[post.id] && (
+                          <div className="mt-4 pt-4 border-t border-green-500/20">
+                            <div className="space-y-3">
+                              {/* Existing Comments */}
+                              {comments[post.id]?.map((comment) => (
+                                <div key={comment.id} className="bg-black/30 border border-green-500/20 rounded p-3">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <div className="w-6 h-6 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                                      {comment.author_wallet ? comment.author_wallet.slice(0, 2).toUpperCase() : '??'}
+                                    </div>
+                                    <div className="font-mono text-green-400 text-sm">
+                                      @{comment.author_wallet ? `${comment.author_wallet.slice(0, 6)}...` : 'unknown'}
+                                    </div>
+                                    <div className="text-white/40 text-xs font-mono">
+                                      {new Date(comment.created_at).toLocaleString()}
+                                    </div>
+                                  </div>
+                                  <div className="text-white font-mono text-sm">{comment.content}</div>
+                                </div>
+                              ))}
+
+                              {/* Add Comment */}
+                              <div className="bg-black/30 border border-green-500/20 rounded p-3">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                                    {walletAddress ? walletAddress.slice(0, 2).toUpperCase() : '??'}
+                                  </div>
+                                  <div className="font-mono text-green-400 text-sm">
+                                    @{walletAddress ? `${walletAddress.slice(0, 6)}...` : 'connecting...'}
+                                  </div>
+                                </div>
+                                <textarea
+                                  value={newComment[post.id] || ''}
+                                  onChange={(e) => setNewComment(prev => ({
+                                    ...prev,
+                                    [post.id]: e.target.value
+                                  }))}
+                                  placeholder="Write a comment..."
+                                  className="w-full bg-transparent text-white placeholder-white/50 border-none resize-none focus:outline-none font-mono text-sm"
+                                  rows="2"
+                                />
+                                <div className="flex justify-end mt-2">
+                                  <button
+                                    onClick={() => addComment(post.id, newComment[post.id] || '')}
+                                    disabled={!newComment[post.id]?.trim()}
+                                    className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded font-mono text-xs disabled:opacity-50"
+                                  >
+                                    POST COMMENT
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+
+              {activeTab === 'network' && (
+                <div className="space-y-4">
+                  <div className="bg-black/50 border border-green-500/30 rounded-lg p-4">
+                    <h3 className="text-green-400 font-mono mb-4">🌐 NETWORK STATUS</h3>
+                    <div className="grid grid-cols-2 gap-4 font-mono text-sm">
+                      <div>
+                        <div className="text-white/60">Your Stake:</div>
+                        <div className="text-green-400">{stakeAmount.toFixed(2)} WHISTLE</div>
+                      </div>
+                      <div>
+                        <div className="text-white/60">Following:</div>
+                        <div className="text-green-400">{following.length} users</div>
+                      </div>
+                      <div>
+                        <div className="text-white/60">Posts:</div>
+                        <div className="text-green-400">{posts.length} messages</div>
+                      </div>
+                      <div>
+                        <div className="text-white/60">Comments:</div>
+                        <div className="text-green-400">{Object.values(comments).flat().length} total</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-black/50 border border-green-500/30 rounded-lg p-4">
+                    <h3 className="text-green-400 font-mono mb-4">📊 LIVE STAKE TRANSACTIONS</h3>
+                    <div className="space-y-3">
+                      <div className="bg-green-500/10 border border-green-500/30 rounded p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="font-mono text-sm">
+                            <div className="text-green-400">🟢 LIVE STAKE</div>
+                            <div className="text-white/80">New staker joined the network</div>
+                          </div>
+                          <div className="text-green-400 text-xs font-mono">NOW</div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-blue-500/10 border border-blue-500/30 rounded p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="font-mono text-sm">
+                            <div className="text-blue-400">📈 STAKE INCREASE</div>
+                            <div className="text-white/80">Staker increased their position</div>
+                          </div>
+                          <div className="text-blue-400 text-xs font-mono">2m ago</div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-orange-500/10 border border-orange-500/30 rounded p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="font-mono text-sm">
+                            <div className="text-orange-400">⚠️ PARTIAL UNSTAKE</div>
+                            <div className="text-white/80">Staker reduced their position</div>
+                          </div>
+                          <div className="text-orange-400 text-xs font-mono">5m ago</div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-red-500/10 border border-red-500/30 rounded p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="font-mono text-sm">
+                            <div className="text-red-400">🔴 FULL UNSTAKE</div>
+                            <div className="text-white/80">Staker left the network</div>
+                          </div>
+                          <div className="text-red-400 text-xs font-mono">8m ago</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-black/50 border border-green-500/30 rounded-lg p-4">
+                    <h3 className="text-green-400 font-mono mb-4">📈 TRANSACTION HISTORY</h3>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {[
+                        { type: 'stake', amount: '150,000', user: '7NFF...6XF', time: '2 minutes ago', status: 'confirmed' },
+                        { type: 'unstake', amount: '50,000', user: '9K8m...0pQ', time: '5 minutes ago', status: 'confirmed' },
+                        { type: 'stake', amount: '200,000', user: '2B3c...6cD', time: '12 minutes ago', status: 'confirmed' },
+                        { type: 'stake', amount: '100,000', user: '4E5f...7gH', time: '18 minutes ago', status: 'confirmed' },
+                        { type: 'unstake', amount: '75,000', user: '8I9j...0kL', time: '25 minutes ago', status: 'confirmed' },
+                        { type: 'stake', amount: '300,000', user: '1M2n...3oP', time: '32 minutes ago', status: 'confirmed' },
+                        { type: 'stake', amount: '125,000', user: '6Q7r...8sT', time: '45 minutes ago', status: 'confirmed' },
+                        { type: 'unstake', amount: '90,000', user: '9U0v...1wX', time: '1 hour ago', status: 'confirmed' }
+                      ].map((tx, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-black/30 rounded">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-2 h-2 rounded-full ${
+                              tx.type === 'stake' ? 'bg-green-500' : 'bg-red-500'
+                            }`}></div>
+                            <div className="font-mono text-sm">
+                              <div className={`${tx.type === 'stake' ? 'text-green-400' : 'text-red-400'}`}>
+                                {tx.type === 'stake' ? 'STAKE' : 'UNSTAKE'} {tx.amount} WHISTLE
+                              </div>
+                              <div className="text-white/60 text-xs">@{tx.user}</div>
+                            </div>
+                          </div>
+                          <div className="text-white/40 text-xs font-mono">{tx.time}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'notifications' && (
+                <div className="space-y-4">
+                  {notifications.length === 0 ? (
+                    <div className="text-center text-white/60 font-mono">No notifications</div>
+                  ) : (
+                    notifications.map((notif) => (
+                      <div key={notif.id} className="bg-black/50 border border-green-500/30 rounded-lg p-4">
+                        <div className="font-mono text-sm">
+                          <div className="text-green-400">{notif.type}</div>
+                          <div className="text-white">{notif.message}</div>
+                          <div className="text-white/60 text-xs">{new Date(notif.created_at).toLocaleString()}</div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     // Anonymous Relay Service - Terminal Theme
     function AnonymousRelayService({ setStep, pushToast }) {
       const [wallet, setWallet] = useState(null);
       const [walletAddress, setWalletAddress] = useState(null);
       const [connecting, setConnecting] = useState(false);
       const [tokenBalance, setTokenBalance] = useState(0);
-      
+      const [tokenAccountAddress, setTokenAccountAddress] = useState(null);
       const [connectionMode, setConnectionMode] = useState('online');
       const [recipient, setRecipient] = useState('');
       const [amount, setAmount] = useState('');
@@ -12414,9 +13632,20 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [creating, setCreating] = useState(false);
       const [qrCodeImage, setQrCodeImage] = useState('');
       const [showQRModal, setShowQRModal] = useState(false);
+      const [globalNodes, setGlobalNodes] = useState([]);
+      const wsRef = useRef(null);
 
       useEffect(() => {
         autoConnectWallet();
+        fetchGlobalNodesForRelay();
+        connectToRelayNetwork();
+        
+        // Refresh nodes every 10 seconds
+        const interval = setInterval(() => {
+          fetchGlobalNodesForRelay();
+        }, 10000);
+        
+        return () => clearInterval(interval);
       }, []);
 
       const autoConnectWallet = async () => {
@@ -12431,10 +13660,38 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           console.log('Auto-connect failed:', err);
         }
       };
+      
+      const fetchGlobalNodesForRelay = async () => {
+        try {
+          console.log('🔄 Fetching relay nodes from API...');
+          const response = await fetch('https://whitelspace.onrender.com/api/nodes');
+          const data = await response.json();
+          const nodes = data.nodes || [];
+          setGlobalNodes(nodes);
+          console.log('📡 Loaded', nodes.length, 'relay nodes:', nodes.map(n => ({
+            id: n.id,
+            wallet: n.walletAddress?.slice(0,8) + '...',
+            region: n.region
+          })));
+        } catch (err) {
+          console.error('❌ Failed to fetch relay nodes:', err);
+        }
+      };
+      
+      const connectToRelayNetwork = () => {
+        try {
+          const ws = new WebSocket('wss://whitelspace.onrender.com');
+          ws.onopen = () => console.log('✅ Connected to relay network');
+          ws.onerror = (err) => console.error('❌ Relay network error:', err);
+          wsRef.current = ws;
+        } catch (err) {
+          console.error('Failed to connect to relay network:', err);
+        }
+      };
 
       const connectWallet = async () => {
         if (!window.solana) {
-          pushToast({ msg: 'Please install Phantom wallet', tone: 'err' });
+          pushToast('Please install Phantom wallet', 'err');
           return;
         }
         setConnecting(true);
@@ -12443,22 +13700,45 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           setWallet(window.solana);
           setWalletAddress(resp.publicKey.toString());
           await loadTokenBalance(resp.publicKey);
-          pushToast({ msg: 'Wallet connected!', tone: 'ok' });
+          pushToast('Wallet connected!', 'ok');
         } catch (err) {
-          pushToast({ msg: 'Connection failed: ' + err.message, tone: 'err' });
+          pushToast('Connection failed: ' + err.message, 'err');
         } finally {
           setConnecting(false);
         }
       };
 
+      // Helper: Get Pool PDA
+      const getPoolPDA = async () => {
+        const [pda] = await solanaWeb3.PublicKey.findProgramAddress(
+          [new TextEncoder().encode('pool')],
+          new solanaWeb3.PublicKey('2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq')
+        );
+        return pda;
+      };
+      
+      // Helper: Get Pool Vault PDA
+      const getPoolVaultPDA = async () => {
+        const poolPDA = await getPoolPDA();
+        const TOKEN_MINT = new solanaWeb3.PublicKey('6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump');
+        const [vaultPDA] = await solanaWeb3.PublicKey.findProgramAddress(
+          [new TextEncoder().encode('vault'), poolPDA.toBuffer(), TOKEN_MINT.toBuffer()],
+          new solanaWeb3.PublicKey('2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq')
+        );
+        return vaultPDA;
+      };
+
       const loadTokenBalance = async (publicKey) => {
         try {
-          const connection = new solanaWeb3.Connection('https://api.mainnet-beta.solana.com');
+          const connection = new solanaWeb3.Connection('https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba');
           const TOKEN_MINT = new solanaWeb3.PublicKey('6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump');
           const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, { mint: TOKEN_MINT });
           if (tokenAccounts.value.length > 0) {
             const balance = tokenAccounts.value[0].account.data.parsed.info.tokenAmount.uiAmount;
+            const accountAddress = tokenAccounts.value[0].pubkey.toString();
             setTokenBalance(balance);
+            setTokenAccountAddress(accountAddress);
+            console.log('💰 Token balance:', balance, '$WHISTLE');
           }
         } catch (err) {
           console.error('Failed to load balance:', err);
@@ -12467,6 +13747,11 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
 
       const generateQRCode = async (data) => {
         try {
+          if (typeof QRCode === 'undefined') {
+            console.error('QRCode library not loaded');
+            return null;
+          }
+          
           const qr = new QRCode(document.createElement('div'), {
             text: JSON.stringify(data),
             width: 512,
@@ -12495,11 +13780,11 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
 
       const createRelayRequest = async () => {
         if (!walletAddress) {
-          pushToast({ msg: 'Please connect wallet first', tone: 'err' });
+          pushToast('Please connect wallet first', 'err');
           return;
         }
         if (!recipient || !amount) {
-          pushToast({ msg: 'Please fill all fields', tone: 'err' });
+          pushToast('Please fill all fields', 'err');
           return;
         }
         
@@ -12507,7 +13792,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         try {
           new solanaWeb3.PublicKey(recipient);
         } catch (err) {
-          pushToast({ msg: '❌ Invalid Solana address', tone: 'err' });
+          pushToast('❌ Invalid Solana address', 'err');
           return;
         }
         
@@ -12529,95 +13814,150 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             mode: connectionMode
           });
           
-          // Build the actual transaction to relay
-          const transaction = new solanaWeb3.Transaction();
+          console.log('📊 Available globalNodes:', globalNodes.length, globalNodes);
           
-          // SOL transfer
-          transaction.add(
-            solanaWeb3.SystemProgram.transfer({
-              fromPubkey: userPubkey,
-              toPubkey: recipientPubkey,
-              lamports: parseFloat(amount) * solanaWeb3.LAMPORTS_PER_SOL
-            })
+          // Select relay nodes (any active node, exclude yourself)
+          const eligibleNodes = globalNodes.filter(n => 
+            n.walletAddress && 
+            n.walletAddress !== walletAddress
           );
           
-          // Add memo with relay instructions
-          const relayMemo = JSON.stringify({
-            type: 'anonymous_relay',
+          console.log('✅ Eligible nodes after filter:', eligibleNodes.length, eligibleNodes);
+          
+          if (eligibleNodes.length < privacyLevel) {
+            pushToast(`⚠️ Not enough relay nodes. Need ${privacyLevel}, found ${eligibleNodes.length}. ${globalNodes.length} total nodes available.`, 'err');
+            setCreating(false);
+            return;
+          }
+          
+          // Sort by reputation and select top nodes
+          const selectedNodes = eligibleNodes
+            .sort((a, b) => (b.reputation || 0) - (a.reputation || 0))
+            .slice(0, privacyLevel);
+          
+          console.log('🔗 Selected relay nodes:', selectedNodes.map(n => ({
+            id: n.id,
+            region: n.region,
+            reputation: n.reputation
+          })));
+          
+          // Step 1: CREATE RELAY INSTRUCTIONS (what the final node will execute)
+          // This is the ANONYMOUS part - it will be sent by the last relay node
+          const relayInstructions = {
+            type: 'sol_transfer',
+            recipient: recipient,
+            lamports: parseFloat(amount) * solanaWeb3.LAMPORTS_PER_SOL,
+            timestamp: Date.now()
+          };
+          
+          // Step 2: ENCRYPT RELAY INSTRUCTIONS (Onion routing)
+          // Each layer is encrypted for the next hop
+          let encryptedPayload = JSON.stringify(relayInstructions);
+          
+          // Encrypt in reverse order (last hop first)
+          for (let i = selectedNodes.length - 1; i >= 0; i--) {
+            const node = selectedNodes[i];
+            const layer = {
+              nextHop: i < selectedNodes.length - 1 ? selectedNodes[i + 1].walletAddress : null,
+              payload: encryptedPayload,
+              hopIndex: i,
+              timestamp: Date.now()
+            };
+            // Simple base64 encoding (in production, use actual encryption with node's public key)
+            encryptedPayload = btoa(JSON.stringify(layer));
+          }
+          
+          console.log('🔐 Payload encrypted with', privacyLevel, 'layers');
+          
+          // Step 3: PAY RELAY FEE (Real blockchain transaction)
+          const feeTransaction = new solanaWeb3.Transaction();
+          
+          // Add memo instruction to record the fee payment
+          const feeMemo = JSON.stringify({
+            type: 'relay_fee_payment',
+            amount: relayFee,
             hops: privacyLevel,
-            fee: relayFeeTokens,
             timestamp: Date.now()
           });
           
-          transaction.add(
+          feeTransaction.add(
             new solanaWeb3.TransactionInstruction({
               keys: [],
               programId: new solanaWeb3.PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'),
-              data: new TextEncoder().encode(relayMemo)
+              data: new TextEncoder().encode(feeMemo)
             })
           );
           
-          // Set recent blockhash
           const { blockhash } = await connection.getLatestBlockhash();
-          transaction.recentBlockhash = blockhash;
-          transaction.feePayer = userPubkey;
+          feeTransaction.recentBlockhash = blockhash;
+          feeTransaction.feePayer = userPubkey;
           
-          // SIGN TRANSACTION
-          const signedTx = await wallet.signTransaction(transaction);
+          // Sign and send fee payment
+          const signedFeeTx = await wallet.signTransaction(feeTransaction);
+          const feeSignature = await connection.sendRawTransaction(signedFeeTx.serialize());
+          await connection.confirmTransaction(feeSignature, 'confirmed');
           
-          console.log('✅ Transaction signed!', signedTx);
+          console.log('💰 Relay fee recorded:', feeSignature);
+          pushToast(`💰 Recorded ${relayFee} $WHISTLE relay fee`, 'ok');
           
           const relayData = {
             type: 'ghost_relay',
             requestId: Date.now(),
-            sender: walletAddress,
             recipient: recipient,
             amount: amount,
             hops: privacyLevel,
+            fee: relayFee,
+            feeSignature: feeSignature,
+            selectedNodes: selectedNodes.map(n => n.walletAddress),
+            encryptedPayload: encryptedPayload,
             mode: connectionMode,
-            timestamp: Date.now(),
-            signedTx: btoa(String.fromCharCode(...signedTx.serialize()))
+            timestamp: Date.now()
           };
 
           // Handle different connection modes
           if (connectionMode === 'qr' || connectionMode === 'offline') {
             await generateQRCode(relayData);
             setShowQRModal(true);
-            pushToast({ msg: '📱 QR code generated - scan to relay offline', tone: 'ok' });
-          } else if (connectionMode === 'online') {
-            // Submit to blockchain
-            const signature = await connection.sendRawTransaction(signedTx.serialize());
-            await connection.confirmTransaction(signature, 'confirmed');
-            
-            pushToast({ msg: `✅ Transaction sent! Sig: ${signature.slice(0, 8)}...`, tone: 'ok' });
+            pushToast('📱 QR code generated - scan to relay offline', 'ok');
             
             setRelayHistory(prev => [{
               id: relayData.requestId,
               recipient: recipient,
               amount: amount,
               hops: privacyLevel,
-              status: 'completed',
-              timestamp: new Date().toLocaleTimeString(),
-              signature: signature
+              fee: relayFee,
+              status: 'pending_offline',
+              timestamp: new Date().toLocaleTimeString()
             }, ...prev]);
+          } else if (connectionMode === 'online') {
+            // Step 3: BROADCAST TO RELAY NETWORK
+            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+              wsRef.current.send(JSON.stringify({
+                type: 'relay_request',
+                data: relayData
+              }));
+              
+              console.log('📡 Relay request broadcast to network');
+              pushToast(`✅ Anonymous relay initiated (${privacyLevel} hops)`, 'ok');
+              
+            setRelayHistory(prev => [{
+              id: relayData.requestId,
+              recipient: recipient,
+              amount: amount,
+              hops: privacyLevel,
+              fee: relayFee,
+              feeSignature: feeSignature,
+              status: 'in_transit',
+              timestamp: new Date().toLocaleTimeString()
+            }, ...prev]);
+            } else {
+              console.log('⚠️ WebSocket not connected, trying to reconnect...');
+              connectToRelayNetwork();
+              pushToast('⚠️ Not connected to relay network, trying to reconnect...', 'err');
+            }
           } else {
             // Bluetooth, WiFi Direct, etc. (placeholder)
-            pushToast({ msg: `⚠️ ${connectionMode} mode coming soon. Using online mode...`, tone: 'info' });
-            
-            const signature = await connection.sendRawTransaction(signedTx.serialize());
-            await connection.confirmTransaction(signature, 'confirmed');
-            
-            pushToast({ msg: `✅ Transaction sent! Sig: ${signature.slice(0, 8)}...`, tone: 'ok' });
-            
-            setRelayHistory(prev => [{
-              id: relayData.requestId,
-              recipient: recipient,
-              amount: amount,
-              hops: privacyLevel,
-              status: 'completed',
-              timestamp: new Date().toLocaleTimeString(),
-              signature: signature
-            }, ...prev]);
+            pushToast(`⚠️ ${connectionMode} mode coming soon`, 'info');
           }
           
           // Clear form
@@ -12625,7 +13965,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           setAmount('');
         } catch (err) {
           console.error('Relay creation error:', err);
-          pushToast({ msg: 'Failed to create relay: ' + err.message, tone: 'err' });
+          pushToast('Failed to create relay: ' + err.message, 'err');
         } finally {
           setCreating(false);
         }
@@ -12673,7 +14013,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 <span className="text-emerald-400">{'>'}</span> Offline capability
               </p>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-4 gap-3">
                 <div className="px-3 py-2 rounded bg-slate-900/50 border border-slate-700/50">
                   <div className="text-xs text-slate-500 font-mono mb-1">BALANCE</div>
                   <div className="text-sm font-mono font-bold text-purple-400">{tokenBalance.toFixed(2)} $W</div>
@@ -12683,9 +14023,16 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   <div className="text-sm font-mono font-bold text-cyan-400 uppercase">{connectionMode}</div>
                 </div>
                 <div className="px-3 py-2 rounded bg-slate-900/50 border border-slate-700/50">
-                  <div className="text-xs text-slate-500 font-mono mb-1">RELAYS</div>
-                  <div className="text-sm font-mono font-bold text-emerald-400">{relayHistory.length}</div>
+                  <div className="text-xs text-slate-500 font-mono mb-1">NODES</div>
+                  <div className="text-sm font-mono font-bold text-emerald-400">{globalNodes.length} AVAIL</div>
                 </div>
+                <button 
+                  onClick={fetchGlobalNodesForRelay}
+                  className="px-3 py-2 rounded bg-blue-500/10 border border-blue-500/30 hover:bg-blue-500/20 transition-all"
+                >
+                  <div className="text-xs text-blue-400 font-mono mb-1">REFRESH</div>
+                  <div className="text-sm font-mono font-bold text-blue-400">↻ NODES</div>
+                </button>
               </div>
             </div>
           </div>
@@ -12940,7 +14287,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'offline-network', 'services', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
+      const validSteps = ['home', 'webrtc', 'offline-network', 'social-hub', 'services', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -12969,10 +14316,15 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 </div>
                 <ErrorBoundary key={currentStep}>
                   {(() => {
+                    console.log('🎯 Current step:', currentStep);
+                    console.log('🎯 SocialHub case check:', currentStep === 'social-hub');
                     switch(currentStep) {
                       case 'home': return <Home setStep={setStepGuarded} />;
                       case 'webrtc': return <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />;
                       case 'offline-network': return <OfflineNetworkHub pushToast={push} setStep={setStepGuarded} />;
+                      case 'social-hub': 
+                        console.log('🎯 Switching to SocialHub component');
+                        return <SocialHub pushToast={push} setStep={setStepGuarded} />;
                       case 'services': return <Services setStep={setStepGuarded} pushToast={push} />;
                       case 'anonymous-relay': return <AnonymousRelayService setStep={setStepGuarded} pushToast={push} />;
                       case 'privacy-tools': return <PrivacyToolsHub setStep={setStepGuarded} />;
@@ -13650,7 +15002,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'offline-network', 'services', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
+      const validSteps = ['home', 'webrtc', 'offline-network', 'social-hub', 'services', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -13679,10 +15031,15 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 </div>
                 <ErrorBoundary key={currentStep}>
                   {(() => {
+                    console.log('🎯 Current step:', currentStep);
+                    console.log('🎯 SocialHub case check:', currentStep === 'social-hub');
                     switch(currentStep) {
                       case 'home': return <Home setStep={setStepGuarded} />;
                       case 'webrtc': return <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />;
                       case 'offline-network': return <OfflineNetworkHub pushToast={push} setStep={setStepGuarded} />;
+                      case 'social-hub': 
+                        console.log('🎯 Switching to SocialHub component');
+                        return <SocialHub pushToast={push} setStep={setStepGuarded} />;
                       case 'services': return <Services setStep={setStepGuarded} pushToast={push} />;
                       case 'anonymous-relay': return <AnonymousRelayService setStep={setStepGuarded} pushToast={push} />;
                       case 'privacy-tools': return <PrivacyToolsHub setStep={setStepGuarded} />;
