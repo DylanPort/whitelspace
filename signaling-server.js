@@ -252,7 +252,7 @@ wss.on('connection', (ws) => {
           handleIceCandidate(message);
           break;
         
-        case 'relay-request':
+        case 'relay_request':
           handleRelayRequest(message);
           break;
         
@@ -441,21 +441,37 @@ wss.on('connection', (ws) => {
   function handleBroadcastRelayRequest(message) {
     const relayData = message.data;
     console.log(`🔒 Broadcasting relay request ${relayData.requestId} to selected nodes`);
+    console.log(`📊 Selected nodes:`, relayData.selectedNodes);
     
     // Send relay request to each selected node
-    relayData.nodes.forEach(targetNode => {
+    relayData.selectedNodes.forEach(targetWallet => {
       // Find node by wallet address
       for (const [id, node] of activeNodes) {
-        if (node.walletAddress === targetNode.wallet && node.ws.readyState === WebSocket.OPEN) {
-          console.log(`  → Sending to node ${id}`);
-          node.ws.send(JSON.stringify({
+        if (node.walletAddress === targetWallet && node.ws.readyState === WebSocket.OPEN) {
+          console.log(`  → Sending to node ${id} (${targetWallet.slice(0,8)}...)`);
+          
+          // Create relay request with proper structure
+          const relayRequest = {
             type: 'relay_request',
-            data: relayData
-          }));
+            requestId: relayData.requestId,
+            recipient: relayData.recipient,
+            amount: relayData.amount,
+            hops: relayData.hops,
+            fee: relayData.fee,
+            feeSignature: relayData.feeSignature,
+            selectedNodes: relayData.selectedNodes,
+            encryptedPayload: relayData.encryptedPayload,
+            mode: relayData.mode,
+            timestamp: relayData.timestamp
+          };
+          
+          node.ws.send(JSON.stringify(relayRequest));
           break;
         }
       }
     });
+    
+    console.log(`✅ Relay request ${relayData.requestId} broadcast to ${relayData.selectedNodes.length} nodes`);
   }
 
   function handleRelayForwardMessage(message) {
@@ -487,6 +503,37 @@ wss.on('connection', (ws) => {
         data: data
       }));
     }
+  }
+
+  function handleRelayRequest(message) {
+    console.log(`🔒 Processing relay request ${message.requestId}`);
+    
+    // Find the node that sent this request
+    let senderNode = null;
+    for (const [id, node] of activeNodes) {
+      if (node.ws === ws) {
+        senderNode = node;
+        break;
+      }
+    }
+    
+    if (!senderNode) {
+      console.log('⚠️ Could not find sender node for relay request');
+      return;
+    }
+    
+    console.log(`📡 Relay request from node ${senderNode.id} (${senderNode.walletAddress.slice(0,8)}...)`);
+    
+    // Increment relay count for this node
+    senderNode.relayCount++;
+    
+    // Update node performance in database
+    upsertNodePerformance(senderNode.id, senderNode.walletAddress, senderNode.region, 0, senderNode.relayCount);
+    
+    // Broadcast relay stats update
+    broadcastRelayStats(senderNode.id, senderNode.relayCount);
+    
+    console.log(`✅ Node ${senderNode.id} completed relay ${message.requestId} (total: ${senderNode.relayCount})`);
   }
 });
 

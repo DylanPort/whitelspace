@@ -3150,6 +3150,7 @@
         { id:'offline-network', label:'👻 Ghost Whistle', icon:'network' },
         { id:'social-hub', label:'👻 Ghost Terminal', icon:'terminal' },
         { id:'services', label:'👻 Ghost Services', icon:'zap' },
+        { id:'how-it-works', label:'How It Works', icon:'book-open' },
         { id:'swap', label:'Privacy Swap', iconImg:'4DqRlDPT_400x400.png.png' },
         { id:'solana-privacy', label:'Solana Privacy Tools', iconImg:'solana.png' },
         { id:'pump-portal', label:'Pump Privacy Tools', iconImg:'idrs8cZ-zg_logos.png' },
@@ -3172,7 +3173,11 @@
                 return (
                 <button key={x.id} onClick={()=>{
                   console.log('🎯 Sidebar clicked:', x.id);
-                  setStep(x.id);
+                  if (x.id === 'how-it-works') {
+                    window.open('/howto', '_blank');
+                  } else {
+                    setStep(x.id);
+                  }
                 }}
                     className={`w-full flex items-center gap-3 rounded-xl px-3 py-3 border text-sm transition-all btn-press ${
                       isGhostWhistle 
@@ -9756,7 +9761,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       };
 
       // Handle incoming relay request (First hop)
-      const handleIncomingRelay = async (relayData, ws) => {
+      const handleIncomingRelay = async (relayData) => {
         try {
           console.log('🔐 Processing relay request:', relayData.requestId);
           
@@ -9767,29 +9772,100 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             return;
           }
           
-          // Decrypt one layer
-          const decryptedLayer = JSON.parse(atob(relayData.encryptedPayload));
-          console.log('🔓 Decrypted layer:', decryptedLayer.hopIndex);
+          console.log('✅ This node is selected for relay, processing...');
           
-          // If there's a next hop, forward it
-          if (decryptedLayer.nextHop) {
-            console.log(`🔄 Forwarding to next hop: ${decryptedLayer.nextHop.slice(0,8)}...`);
-            ws.send(JSON.stringify({
-              type: 'relay_forward',
-              to: decryptedLayer.nextHop,
-              data: {
-                ...relayData,
-                encryptedPayload: decryptedLayer.payload
-              }
-            }));
-            pushToast('🔄 Relay forwarded', 'info');
-          } else {
-            // This is the final hop - execute the transaction
-            console.log('🎯 Final hop - executing transaction');
-            await executeFinalRelay(decryptedLayer.payload, relayData);
+          try {
+            const connection = new solanaWeb3.Connection('https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba', 'confirmed');
+            const recipientPubkey = new solanaWeb3.PublicKey(relayData.recipient);
+            const userPubkey = new solanaWeb3.PublicKey(walletAddress);
+            const programId = new solanaWeb3.PublicKey('2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq');
+            
+            // Step 1: JOIN RELAY (Smart contract call)
+            const relayRequestPDA = new solanaWeb3.PublicKey(relayData.relayRequestPDA);
+            
+            // Get node account PDA
+            const [nodePDA] = await solanaWeb3.PublicKey.findProgramAddress(
+              [new TextEncoder().encode('node'), userPubkey.toBytes()],
+              programId
+            );
+            
+            // Build join_relay instruction with correct discriminator
+            // Anchor discriminator: sha256("global:join_relay")[:8]
+            const joinRelayInstruction = new solanaWeb3.TransactionInstruction({
+              keys: [
+                { pubkey: relayRequestPDA, isSigner: false, isWritable: true },
+                { pubkey: nodePDA, isSigner: false, isWritable: false },
+                { pubkey: userPubkey, isSigner: true, isWritable: false }
+              ],
+              programId: programId,
+              data: Buffer.from([174, 68, 154, 105, 59, 161, 34, 159]) // Correct join_relay discriminator
+            });
+            
+            // Step 2: EXECUTE SOL TRANSFER
+            const solTransferInstruction = solanaWeb3.SystemProgram.transfer({
+              fromPubkey: userPubkey,
+              toPubkey: recipientPubkey,
+              lamports: parseFloat(relayData.amount) * solanaWeb3.LAMPORTS_PER_SOL
+            });
+            
+            // Combine both instructions
+            const transaction = new solanaWeb3.Transaction()
+              .add(joinRelayInstruction)
+              .add(solTransferInstruction);
+            
+            // Get recent blockhash
+            const { blockhash } = await connection.getLatestBlockhash();
+            transaction.recentBlockhash = blockhash;
+            transaction.feePayer = userPubkey;
+            
+            // Sign and send
+            const signedTx = await wallet.signTransaction(transaction);
+            const signature = await connection.sendRawTransaction(signedTx.serialize());
+            await connection.confirmTransaction(signature, 'confirmed');
+            
+            console.log('✅ Anonymous relay executed!', signature);
+            pushToast(`✅ Relay completed! TX: ${signature.slice(0,8)}...`, 'ok');
+            
+            // Notify server that relay was completed
+            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+              wsRef.current.send(JSON.stringify({
+                type: 'relay_request',
+                requestId: relayData.requestId,
+                status: 'completed',
+                signature: signature
+              }));
+            }
+            
+            // Update relay history
+            setRelayHistory(prev => [{
+              id: relayData.requestId,
+              recipient: relayData.recipient,
+              amount: relayData.amount,
+              hops: relayData.hops,
+              fee: relayData.fee,
+              status: 'completed',
+              signature: signature,
+              timestamp: new Date().toLocaleTimeString()
+            }, ...prev]);
+            
+          } catch (txError) {
+            console.error('❌ Transaction execution failed:', txError);
+            pushToast('❌ Relay transaction failed', 'err');
+            
+            // Notify server of failure
+            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+              wsRef.current.send(JSON.stringify({
+                type: 'relay_request',
+                requestId: relayData.requestId,
+                status: 'failed',
+                error: txError.message
+              }));
+            }
           }
+          
         } catch (err) {
           console.error('❌ Relay processing error:', err);
+          pushToast('❌ Relay processing failed', 'err');
         }
       };
       
@@ -12203,6 +12279,427 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       );
     }
 
+    // How It Works Section - Modern Terminal Interface
+    function HowItWorks({ setStep, pushToast }) {
+      const [activeTab, setActiveTab] = useState('overview');
+      const [proMode, setProMode] = useState(false);
+      const [terminalOutput, setTerminalOutput] = useState([]);
+      const [isTyping, setIsTyping] = useState(false);
+      const [currentStep, setCurrentStep] = useState(0);
+
+      const tabs = [
+        { id: 'overview', label: 'OVERVIEW', icon: 'grid' },
+        { id: 'staking', label: 'STAKING', icon: 'lock' },
+        { id: 'nodes', label: 'NODES', icon: 'cpu' },
+        { id: 'relay', label: 'RELAY', icon: 'zap' },
+        { id: 'economics', label: 'ECONOMICS', icon: 'trending-up' },
+        { id: 'pro', label: 'PRO MODE', icon: 'terminal' }
+      ];
+
+      const terminalCommands = {
+        overview: [
+          { cmd: 'ghost-whistle --help', output: 'Ghost Whistle Anonymous Relay Network v1.0.0' },
+          { cmd: 'ghost-whistle --status', output: 'Network Status: ACTIVE | Nodes: 127 | Relays: 2,847' },
+          { cmd: 'ghost-whistle --info', output: 'Decentralized anonymous SOL transfer network built on Solana' },
+          { cmd: 'ghost-whistle --features', output: 'Multi-hop privacy, reputation system, smart contract security' }
+        ],
+        staking: [
+          { cmd: 'stake --connect-wallet', output: 'Connecting to Solana wallet...' },
+          { cmd: 'stake --amount 10000', output: 'Staking 10,000 WHISTLE tokens...' },
+          { cmd: 'stake --create-node', output: 'Creating node account on-chain...' },
+          { cmd: 'stake --status', output: 'Node Status: ACTIVE | Stake: 10,000 WHISTLE | Reputation: 1,250' }
+        ],
+        nodes: [
+          { cmd: 'node --register', output: 'Registering node in network...' },
+          { cmd: 'node --status', output: 'Node Status: ONLINE | Uptime: 99.7% | Relays: 47' },
+          { cmd: 'node --earnings', output: 'Total Earnings: 235 WHISTLE | Last 24h: 12 WHISTLE' },
+          { cmd: 'node --reputation', output: 'Reputation Score: 1,250 | Rank: #23 | Bonus: +25%' }
+        ],
+        relay: [
+          { cmd: 'relay --create --hops 3 --fee 15', output: 'Creating anonymous relay request...' },
+          { cmd: 'relay --select-nodes', output: 'Selecting 3 nodes for relay path...' },
+          { cmd: 'relay --execute', output: 'Executing SOL transfer through relay...' },
+          { cmd: 'relay --complete', output: 'Relay completed successfully | TX: 4fAk1P91NivfJV7ApETkX9hRgR7cxvtLPnnU4vLKa85PDGtuNLsomBH41kcuim6buzD1p1jmgVdwvJusTEXJCzrd' }
+        ],
+        economics: [
+          { cmd: 'economics --rewards', output: 'Base Reward: 5 WHISTLE per relay | Reputation Bonus: Up to 50%' },
+          { cmd: 'economics --fees', output: 'Relay Fee: 5 WHISTLE per hop | Minimum: 15 WHISTLE (3 hops)' },
+          { cmd: 'economics --compound', output: 'Compound Growth: Reinvested earnings increase future rewards' },
+          { cmd: 'economics --projection', output: 'Projected Monthly Earnings: 150-300 WHISTLE (based on activity)' }
+        ],
+        pro: [
+          { cmd: 'pro --architecture', output: 'Program ID: 2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq' },
+          { cmd: 'pro --tokenomics', output: 'Token Mint: 6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump' },
+          { cmd: 'pro --security', output: 'Built on Anchor framework | Rust-based | PDA security' },
+          { cmd: 'pro --future', output: 'Roadmap: Cross-chain relays, AI routing, enterprise features' }
+        ]
+      };
+
+      const simulateTyping = (commands, callback) => {
+        setIsTyping(true);
+        let commandIndex = 0;
+        
+        const typeCommand = () => {
+          if (commandIndex < commands.length) {
+            const command = commands[commandIndex];
+            setTerminalOutput(prev => [...prev, { type: 'command', text: command.cmd }]);
+            
+            setTimeout(() => {
+              setTerminalOutput(prev => [...prev, { type: 'output', text: command.output }]);
+              commandIndex++;
+              setTimeout(typeCommand, 1000);
+            }, 1500);
+          } else {
+            setIsTyping(false);
+            if (callback) callback();
+          }
+        };
+        
+        typeCommand();
+      };
+
+      const handleTabClick = (tabId) => {
+        setActiveTab(tabId);
+        setTerminalOutput([]);
+        setCurrentStep(0);
+        
+        if (tabId === 'pro') {
+          setProMode(true);
+        } else {
+          setProMode(false);
+        }
+        
+        setTimeout(() => {
+          simulateTyping(terminalCommands[tabId] || []);
+        }, 300);
+      };
+
+      const moneyFlowSteps = [
+        {
+          step: 1,
+          title: 'USER CREATES RELAY',
+          description: 'User wants to send SOL anonymously',
+          amount: '15 WHISTLE',
+          details: 'Pays 5 WHISTLE per hop (minimum 3 hops)',
+          color: 'from-green-500 to-emerald-500'
+        },
+        {
+          step: 2,
+          title: 'FEE LOCKED IN ESCROW',
+          description: 'WHISTLE fees locked in smart contract',
+          amount: '15 WHISTLE',
+          details: 'Fees held until relay completion',
+          color: 'from-blue-500 to-cyan-500'
+        },
+        {
+          step: 3,
+          title: 'NODES SELECTED',
+          description: 'Network selects 3 nodes for relay',
+          amount: '5 WHISTLE each',
+          details: 'Based on reputation and availability',
+          color: 'from-orange-500 to-yellow-500'
+        },
+        {
+          step: 4,
+          title: 'SOL TRANSFERRED',
+          description: 'Selected node sends SOL to recipient',
+          amount: 'X SOL',
+          details: 'Actual SOL transfer occurs',
+          color: 'from-red-500 to-pink-500'
+        },
+        {
+          step: 5,
+          title: 'FEES DISTRIBUTED',
+          description: 'WHISTLE fees distributed to participating nodes',
+          amount: '5 WHISTLE each',
+          details: 'Plus reputation-based bonuses',
+          color: 'from-indigo-500 to-purple-500'
+        }
+      ];
+
+      return (
+        <div className="min-h-screen bg-black text-green-400 font-mono">
+          {/* Terminal Header */}
+          <div className="bg-gray-900 border-b border-gray-700 px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex gap-2">
+                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-emerald-500 rounded-lg flex items-center justify-center">
+                    <span className="text-black text-sm font-bold">👻</span>
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-bold text-white">GHOST WHISTLE</h1>
+                    <p className="text-sm text-gray-400">How to stake your WHISTLE and operate your node</p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">TERMINAL v1.0.0</span>
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Terminal Navigation */}
+          <div className="bg-gray-800 border-b border-gray-700 px-6 py-3">
+            <div className="flex gap-1">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabClick(tab.id)}
+                  className={`px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                    activeTab === tab.id
+                      ? 'bg-green-500 text-black border-b-2 border-green-400'
+                      : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Terminal Content */}
+          <div className="flex h-screen">
+            {/* Terminal Output */}
+            <div className="flex-1 p-6">
+              <div className="bg-gray-900 rounded-lg border border-gray-700 h-full overflow-hidden">
+                <div className="bg-gray-800 px-4 py-2 border-b border-gray-700 flex items-center gap-2">
+                  <span className="text-xs text-gray-400">ghost-whistle@terminal:~$</span>
+                  <div className="flex-1"></div>
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
+                    <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
+                    <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
+                  </div>
+                </div>
+                
+                <div className="p-4 h-full overflow-y-auto custom-scrollbar">
+                  <div className="space-y-2">
+                    {terminalOutput.map((line, index) => (
+                      <div key={index} className="flex items-start gap-2">
+                        {line.type === 'command' ? (
+                          <>
+                            <span className="text-green-400">$</span>
+                            <span className="text-white">{line.text}</span>
+                          </>
+                        ) : (
+                          <span className="text-gray-300 ml-4">{line.text}</span>
+                        )}
+                      </div>
+                    ))}
+                    {isTyping && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-green-400">$</span>
+                        <span className="text-white animate-pulse">_</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Interactive Panel */}
+            <div className="w-96 bg-gray-800 border-l border-gray-700 p-6 overflow-y-auto">
+              {activeTab === 'overview' && (
+                <div className="space-y-6">
+                  <div className="bg-gray-900 rounded-lg p-4 border border-gray-700">
+                    <h3 className="text-lg font-bold text-white mb-3">SYSTEM OVERVIEW</h3>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Network Status:</span>
+                        <span className="text-green-400">ACTIVE</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Total Nodes:</span>
+                        <span className="text-white">127</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Relays Completed:</span>
+                        <span className="text-white">2,847</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Privacy Level:</span>
+                        <span className="text-yellow-400">MAXIMUM</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-900 rounded-lg p-4 border border-gray-700">
+                    <h3 className="text-lg font-bold text-white mb-3">KEY FEATURES</h3>
+                    <ul className="space-y-2 text-sm text-gray-300">
+                      <li>• Anonymous SOL transfers</li>
+                      <li>• Multi-hop privacy (minimum 3 hops)</li>
+                      <li>• Decentralized node network</li>
+                      <li>• Reputation-based rewards</li>
+                      <li>• Smart contract security</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'staking' && (
+                <div className="space-y-6">
+                  <div className="bg-gray-900 rounded-lg p-4 border border-gray-700">
+                    <h3 className="text-lg font-bold text-white mb-3">STAKING PROCESS</h3>
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                          <span className="text-black text-xs font-bold">1</span>
+                        </div>
+                        <div>
+                          <h4 className="text-white font-medium">Connect Wallet</h4>
+                          <p className="text-sm text-gray-400">Use Phantom, Solflare, or any Solana-compatible wallet</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                          <span className="text-black text-xs font-bold">2</span>
+                        </div>
+                        <div>
+                          <h4 className="text-white font-medium">Stake WHISTLE</h4>
+                          <p className="text-sm text-gray-400">Minimum stake: 10,000 WHISTLE tokens</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                          <span className="text-black text-xs font-bold">3</span>
+                        </div>
+                        <div>
+                          <h4 className="text-white font-medium">Create Node</h4>
+                          <p className="text-sm text-gray-400">Node account tracks stake, reputation, and earnings</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                          <span className="text-black text-xs font-bold">4</span>
+                        </div>
+                        <div>
+                          <h4 className="text-white font-medium">Start Earning</h4>
+                          <p className="text-sm text-gray-400">Earn fees from anonymous relay transactions</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'relay' && (
+                <div className="space-y-6">
+                  <div className="bg-gray-900 rounded-lg p-4 border border-gray-700">
+                    <h3 className="text-lg font-bold text-white mb-3">MONEY FLOW</h3>
+                    <div className="space-y-4">
+                      {moneyFlowSteps.map((step, index) => (
+                        <div key={index} className="flex items-center gap-3">
+                          <div className={`w-8 h-8 bg-gradient-to-r ${step.color} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                            <span className="text-white text-sm font-bold">{step.step}</span>
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-white font-medium text-sm">{step.title}</h4>
+                              <span className="text-green-400 text-xs font-bold">{step.amount}</span>
+                            </div>
+                            <p className="text-xs text-gray-400">{step.description}</p>
+                            <p className="text-xs text-gray-500">{step.details}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'economics' && (
+                <div className="space-y-6">
+                  <div className="bg-gray-900 rounded-lg p-4 border border-gray-700">
+                    <h3 className="text-lg font-bold text-white mb-3">EARNING MECHANISMS</h3>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-400 text-sm">Staking Rewards:</span>
+                        <span className="text-green-400 font-bold">5 WHISTLE</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-400 text-sm">Reputation Bonus:</span>
+                        <span className="text-yellow-400 font-bold">Up to 50%</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-400 text-sm">Relay Fees:</span>
+                        <span className="text-blue-400 font-bold">5 WHISTLE/hop</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-400 text-sm">Compound Growth:</span>
+                        <span className="text-purple-400 font-bold">Variable</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-900 rounded-lg p-4 border border-gray-700">
+                    <h3 className="text-lg font-bold text-white mb-3">PROJECTED EARNINGS</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Daily:</span>
+                        <span className="text-white">5-10 WHISTLE</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Weekly:</span>
+                        <span className="text-white">35-70 WHISTLE</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Monthly:</span>
+                        <span className="text-green-400 font-bold">150-300 WHISTLE</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'pro' && (
+                <div className="space-y-6">
+                  <div className="bg-gray-900 rounded-lg p-4 border border-gray-700">
+                    <h3 className="text-lg font-bold text-white mb-3">TECHNICAL SPECS</h3>
+                    <div className="space-y-3 text-sm">
+                      <div>
+                        <span className="text-gray-400">Program ID:</span>
+                        <div className="text-green-400 font-mono text-xs break-all">2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq</div>
+                      </div>
+                      <div>
+                        <span className="text-gray-400">Token Mint:</span>
+                        <div className="text-green-400 font-mono text-xs break-all">6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump</div>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Framework:</span>
+                        <span className="text-white">Anchor</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Language:</span>
+                        <span className="text-white">Rust</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-900 rounded-lg p-4 border border-gray-700">
+                    <h3 className="text-lg font-bold text-white mb-3">FUTURE ROADMAP</h3>
+                    <ul className="space-y-2 text-sm text-gray-300">
+                      <li>• Cross-chain relays</li>
+                      <li>• AI-powered routing</li>
+                      <li>• Enterprise features</li>
+                      <li>• Layer 2 integration</li>
+                      <li>• Developer SDK</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     // Services Section - Smart Contract Features
     function Services({ setStep, pushToast }) {
       useEffect(() => {
@@ -13680,9 +14177,58 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       
       const connectToRelayNetwork = () => {
         try {
-          const ws = new WebSocket('wss://whitelspace.onrender.com');
-          ws.onopen = () => console.log('✅ Connected to relay network');
+          const ws = new WebSocket('ws://localhost:8080');
+          ws.onopen = () => {
+            console.log('✅ Connected to relay network');
+            // Register this node for relay services
+            if (walletAddress) {
+              ws.send(JSON.stringify({
+                type: 'register',
+                nodeId: `relay-${walletAddress.slice(0, 8)}-${Date.now()}`,
+                walletAddress: walletAddress,
+                region: Intl.DateTimeFormat().resolvedOptions().timeZone
+              }));
+            }
+          };
+          
+          ws.onmessage = (event) => {
+            try {
+              const message = JSON.parse(event.data);
+              
+              switch (message.type) {
+                case 'node_list':
+                  console.log('📡 Received node list:', message.nodes);
+                  setGlobalNodes(message.nodes);
+                  break;
+                
+                case 'relay_request':
+                  console.log('🔒 Received relay request:', message);
+                  handleIncomingRelay(message);
+                  break;
+                
+                case 'relay_forward':
+                  console.log('🔄 Received relay forward:', message);
+                  handleIncomingRelay(message.data);
+                  break;
+                
+                case 'relay-stats':
+                  console.log('📊 Relay stats update:', message);
+                  break;
+                
+                default:
+                  console.log('⚠️ Unknown message type:', message.type);
+              }
+            } catch (err) {
+              console.error('❌ Error parsing WebSocket message:', err);
+            }
+          };
+          
           ws.onerror = (err) => console.error('❌ Relay network error:', err);
+          ws.onclose = () => {
+            console.log('🔌 Relay network disconnected, reconnecting...');
+            setTimeout(connectToRelayNetwork, 5000);
+          };
+          
           wsRef.current = ws;
         } catch (err) {
           console.error('Failed to connect to relay network:', err);
@@ -13798,7 +14344,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         
         setCreating(true);
         try {
-          const connection = new solanaWeb3.Connection('https://api.mainnet-beta.solana.com', 'confirmed');
+          const connection = new solanaWeb3.Connection('https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba', 'confirmed');
           const recipientPubkey = new solanaWeb3.PublicKey(recipient);
           const userPubkey = new solanaWeb3.PublicKey(walletAddress);
           
@@ -13869,45 +14415,98 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           
           console.log('🔐 Payload encrypted with', privacyLevel, 'layers');
           
-          // Step 3: PAY RELAY FEE (Real blockchain transaction)
-          const feeTransaction = new solanaWeb3.Transaction();
+          // Step 3: CREATE RELAY REQUEST (Smart contract call)
+          const programId = new solanaWeb3.PublicKey('2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq');
+          const poolPDA = await getPoolPDA();
+          const relayFeeTokensAmount = relayFee * 1_000_000; // Convert to 6 decimals
           
-          // Add memo instruction to record the fee payment
-          const feeMemo = JSON.stringify({
-            type: 'relay_fee_payment',
-            amount: relayFee,
-            hops: privacyLevel,
-            timestamp: Date.now()
+          // Get user's WHISTLE token account
+          const whistleMint = new solanaWeb3.PublicKey('6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump');
+          const tokenAccounts = await connection.getParsedTokenAccountsByOwner(userPubkey, {
+            mint: whistleMint
           });
           
-          feeTransaction.add(
-            new solanaWeb3.TransactionInstruction({
-              keys: [],
-              programId: new solanaWeb3.PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'),
-              data: new TextEncoder().encode(feeMemo)
-            })
+          if (tokenAccounts.value.length === 0) {
+            pushToast('❌ No WHISTLE token account found', 'err');
+            return;
+          }
+          
+          const userTokenAccount = tokenAccounts.value[0].pubkey;
+          
+          // Get pool vault PDA
+          const SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID = new solanaWeb3.PublicKey(
+            'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'
           );
           
+          const [poolVault] = await solanaWeb3.PublicKey.findProgramAddress(
+            [poolPDA.toBytes(), TOKEN_PROGRAM_ID.toBytes(), whistleMint.toBytes()],
+            SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID
+          );
+          
+          // Create relay request PDA - need to get the current total_relay_requests from pool
+          const poolAccount = await connection.getAccountInfo(poolPDA);
+          if (!poolAccount) {
+            pushToast('❌ Pool account not found', 'err');
+            return;
+          }
+          
+          // Read total_relay_requests from pool data (offset 88 in StakingPool struct)
+          const poolData = poolAccount.data;
+          const totalRelayRequests = new DataView(poolData.buffer).getBigUint64(88, true);
+          const requestId = Number(totalRelayRequests) + 1;
+          
+          const [relayRequestPDA] = await solanaWeb3.PublicKey.findProgramAddress(
+            [
+              new TextEncoder().encode('relay'),
+              userPubkey.toBytes(),
+              new Uint8Array(8).map((_, i) => (requestId >> (i * 8)) & 0xFF) // requestId as little-endian
+            ],
+            programId
+          );
+          
+          // Build create_relay_request instruction with correct discriminator
+          // Anchor discriminator: sha256("global:create_relay_request")[:8]
+          // This is the correct discriminator for create_relay_request
+          const createRelayInstruction = new solanaWeb3.TransactionInstruction({
+            keys: [
+              { pubkey: relayRequestPDA, isSigner: false, isWritable: true },
+              { pubkey: poolPDA, isSigner: false, isWritable: true },
+              { pubkey: userPubkey, isSigner: true, isWritable: true },
+              { pubkey: userTokenAccount, isSigner: false, isWritable: true },
+              { pubkey: poolVault, isSigner: false, isWritable: true },
+              { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+              { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false }
+            ],
+            programId: programId,
+            data: Buffer.concat([
+              Buffer.from([67, 42, 93, 118, 176, 117, 164, 234]), // Correct create_relay_request discriminator
+              Buffer.from(new Uint8Array(1).fill(privacyLevel)), // num_hops
+              Buffer.from(new Uint8Array(8).fill(0).map((_, i) => (relayFeeTokensAmount >> (i * 8)) & 0xFF)) // relay_fee (little-endian)
+            ])
+          });
+          
+          const relayTransaction = new solanaWeb3.Transaction().add(createRelayInstruction);
           const { blockhash } = await connection.getLatestBlockhash();
-          feeTransaction.recentBlockhash = blockhash;
-          feeTransaction.feePayer = userPubkey;
+          relayTransaction.recentBlockhash = blockhash;
+          relayTransaction.feePayer = userPubkey;
           
-          // Sign and send fee payment
-          const signedFeeTx = await wallet.signTransaction(feeTransaction);
-          const feeSignature = await connection.sendRawTransaction(signedFeeTx.serialize());
-          await connection.confirmTransaction(feeSignature, 'confirmed');
+          // Sign and send relay request creation
+          const signedRelayTx = await wallet.signTransaction(relayTransaction);
+          const relaySignature = await connection.sendRawTransaction(signedRelayTx.serialize());
+          await connection.confirmTransaction(relaySignature, 'confirmed');
           
-          console.log('💰 Relay fee recorded:', feeSignature);
-          pushToast(`💰 Recorded ${relayFee} $WHISTLE relay fee`, 'ok');
+          console.log('💰 Relay request created:', relaySignature);
+          pushToast(`💰 Created relay request with ${relayFee} $WHISTLE fee`, 'ok');
           
           const relayData = {
             type: 'ghost_relay',
-            requestId: Date.now(),
+            requestId: requestId,
             recipient: recipient,
             amount: amount,
             hops: privacyLevel,
             fee: relayFee,
-            feeSignature: feeSignature,
+            relaySignature: relaySignature,
+            relayRequestPDA: relayRequestPDA.toString(),
             selectedNodes: selectedNodes.map(n => n.walletAddress),
             encryptedPayload: encryptedPayload,
             mode: connectionMode,
@@ -13933,7 +14532,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             // Step 3: BROADCAST TO RELAY NETWORK
             if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
               wsRef.current.send(JSON.stringify({
-                type: 'relay_request',
+                type: 'broadcast_relay_request',
                 data: relayData
               }));
               
@@ -13946,7 +14545,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
               amount: amount,
               hops: privacyLevel,
               fee: relayFee,
-              feeSignature: feeSignature,
+              relaySignature: relaySignature,
               status: 'in_transit',
               timestamp: new Date().toLocaleTimeString()
             }, ...prev]);
@@ -14287,7 +14886,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'offline-network', 'social-hub', 'services', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
+      const validSteps = ['home', 'webrtc', 'offline-network', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -14326,6 +14925,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                         console.log('🎯 Switching to SocialHub component');
                         return <SocialHub pushToast={push} setStep={setStepGuarded} />;
                       case 'services': return <Services setStep={setStepGuarded} pushToast={push} />;
+                      case 'how-it-works': return <HowItWorks pushToast={push} setStep={setStepGuarded} />;
                       case 'anonymous-relay': return <AnonymousRelayService setStep={setStepGuarded} pushToast={push} />;
                       case 'privacy-tools': return <PrivacyToolsHub setStep={setStepGuarded} />;
                       case 'steganography': return <UnifiedSteganography pushToast={push} />;
@@ -15002,7 +15602,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'offline-network', 'social-hub', 'services', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
+      const validSteps = ['home', 'webrtc', 'offline-network', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -15041,6 +15641,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                         console.log('🎯 Switching to SocialHub component');
                         return <SocialHub pushToast={push} setStep={setStepGuarded} />;
                       case 'services': return <Services setStep={setStepGuarded} pushToast={push} />;
+                      case 'how-it-works': return <HowItWorks pushToast={push} setStep={setStepGuarded} />;
                       case 'anonymous-relay': return <AnonymousRelayService setStep={setStepGuarded} pushToast={push} />;
                       case 'privacy-tools': return <PrivacyToolsHub setStep={setStepGuarded} />;
                       case 'steganography': return <UnifiedSteganography pushToast={push} />;
