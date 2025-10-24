@@ -14550,6 +14550,16 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       }, []);
 
       const autoConnectWallet = async () => {
+        // Prefer mobile in-app wallet
+        try {
+          const saved = localStorage.getItem('ghost_mobile_address');
+          if (saved) {
+            setWalletAddress(saved);
+            await loadTokenBalance(new solanaWeb3.PublicKey(saved));
+            return;
+          }
+        } catch {}
+        // Fallback to Phantom (trusted)
         try {
           if (window.solana && window.solana.isPhantom) {
             const response = await window.solana.connect({ onlyIfTrusted: true });
@@ -14640,6 +14650,12 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       };
 
       const connectWallet = async () => {
+        // On mobile: open in-app wallet
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile) {
+          window.dispatchEvent(new Event('open-mobile-wallet'));
+          return;
+        }
         if (!window.solana) {
           pushToast('Please install Phantom wallet', 'err');
           return;
@@ -14730,7 +14746,11 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
 
       const createRelayRequest = async () => {
         if (!walletAddress) {
-          pushToast('Please connect wallet first', 'err');
+          const saved = localStorage.getItem('ghost_mobile_address');
+          if (saved) setWalletAddress(saved);
+        }
+        if (!walletAddress) {
+          pushToast('Create or import a mobile wallet from the navbar first', 'err');
           return;
         }
         if (!recipient || !amount) {
