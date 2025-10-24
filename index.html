@@ -9798,7 +9798,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 { pubkey: userPubkey, isSigner: true, isWritable: false }
               ],
               programId: programId,
-              data: Buffer.from([174, 68, 154, 105, 59, 161, 34, 159]) // Correct join_relay discriminator
+              data: Buffer.from([162, 40, 72, 1, 209, 121, 73, 130]) // Correct join_relay discriminator
             });
             
             // Step 2: EXECUTE SOL TRANSFER
@@ -10659,102 +10659,127 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         
         try {
           const connection = new solanaWeb3.Connection(MAINNET_RPC, 'confirmed');
-          const recipientPubkey = new solanaWeb3.PublicKey(relayRecipient);
           const userPubkey = new solanaWeb3.PublicKey(walletAddress);
           
-          // Calculate relay fee
-          const relayFee = calculateRelayFee(privacyLevel);
-          const relayFeeTokens = relayFee * 1_000_000; // 6 decimals
+          // Calculate relay fee (minimum 5 WHISTLE per hop with 6 decimals)
+          const relayFee = privacyLevel * 5_000_000; // 5 WHISTLE per hop
           
           // Check if user has enough balance
-          if (tokenBalance < relayFee) {
-            pushToast(`❌ Insufficient balance. Need ${relayFee} $WHISTLE`, 'err');
+          if (tokenBalance < (relayFee / 1_000_000)) {
+            pushToast(`❌ Insufficient balance. Need ${relayFee / 1_000_000} $WHISTLE`, 'err');
             return;
           }
           
-          console.log(`🔒 Creating anonymous relay:`, {
+          console.log(`🔒 Creating smart contract relay request:`, {
             recipient: relayRecipient,
             amount: relayAmount,
-            token: relayToken,
             hops: privacyLevel,
             fee: relayFee
           });
           
-          // Build the actual transaction to relay
-          const transaction = new solanaWeb3.Transaction();
+          // Get pool account to read total_relay_requests
+          const poolPDA = solanaWeb3.PublicKey.findProgramAddressSync(
+            [Buffer.from('pool')],
+            new solanaWeb3.PublicKey('2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq')
+          )[0];
           
-          if (relayToken === 'SOL') {
-            // SOL transfer
-            transaction.add(
-              solanaWeb3.SystemProgram.transfer({
-                fromPubkey: userPubkey,
-                toPubkey: recipientPubkey,
-                lamports: parseFloat(relayAmount) * solanaWeb3.LAMPORTS_PER_SOL
-              })
-            );
-          } else {
-            // Token transfer (simplified - would need actual token mint)
-            pushToast('⚠️ Token transfers coming soon', 'info');
-            return;
+          // Get user's token account
+          const userTokenAccount = solanaWeb3.PublicKey.findProgramAddressSync(
+            [
+              userPubkey.toBuffer(),
+              new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA').toBuffer(),
+              new solanaWeb3.PublicKey('6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump').toBuffer()
+            ],
+            new solanaWeb3.PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL')
+          )[0];
+          
+          // Get pool vault
+          const poolVault = solanaWeb3.PublicKey.findProgramAddressSync(
+            [
+              poolPDA.toBuffer(),
+              new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA').toBuffer(),
+              new solanaWeb3.PublicKey('6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump').toBuffer()
+            ],
+            new solanaWeb3.PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL')
+          )[0];
+          
+          // Read pool data to get total_relay_requests
+          const poolAccountInfo = await connection.getAccountInfo(poolPDA);
+          if (!poolAccountInfo) {
+            throw new Error('Pool not initialized');
           }
           
-          // Add memo with relay instructions
-          const relayMemo = JSON.stringify({
-            type: 'anonymous_relay',
-            hops: privacyLevel,
-            fee: relayFeeTokens,
-            timestamp: Date.now()
+          const poolData = poolAccountInfo.data;
+          const totalRelayRequests = new DataView(poolData.buffer).getBigUint64(88, true); // Offset 88 for total_relay_requests
+          
+          // Create relay request PDA
+          const relayRequestPDA = solanaWeb3.PublicKey.findProgramAddressSync(
+            [
+              Buffer.from('relay'),
+              userPubkey.toBuffer(),
+              Buffer.from((Number(totalRelayRequests) + 1).toString())
+            ],
+            new solanaWeb3.PublicKey('2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq')
+          )[0];
+          
+          // Create the smart contract instruction
+          const createRelayInstruction = new solanaWeb3.TransactionInstruction({
+            keys: [
+              { pubkey: relayRequestPDA, isSigner: false, isWritable: true },
+              { pubkey: poolPDA, isSigner: false, isWritable: true },
+              { pubkey: userPubkey, isSigner: true, isWritable: false },
+              { pubkey: userTokenAccount, isSigner: false, isWritable: true },
+              { pubkey: poolVault, isSigner: false, isWritable: true },
+              { pubkey: new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'), isSigner: false, isWritable: false },
+              { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false }
+            ],
+            programId: new solanaWeb3.PublicKey('2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq'),
+            data: Buffer.concat([
+              Buffer.from([196, 238, 60, 58, 209, 166, 136, 86]), // create_relay_request discriminator
+              Buffer.from([privacyLevel]), // num_hops (u8)
+              Buffer.alloc(7), // padding for u8
+              Buffer.from(new Uint8Array(new BigUint64Array([BigInt(relayFee)]).buffer)) // relay_fee (u64, little endian)
+            ])
           });
           
-          transaction.add(
-            new solanaWeb3.TransactionInstruction({
-              keys: [],
-              programId: new solanaWeb3.PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'),
-              data: Buffer.from(relayMemo)
-            })
-          );
+          // Build transaction
+          const transaction = new solanaWeb3.Transaction();
+          transaction.add(createRelayInstruction);
           
-          // Set recent blockhash (can work offline if blockhash is cached)
+          // Set recent blockhash
           const { blockhash } = await connection.getLatestBlockhash();
           transaction.recentBlockhash = blockhash;
           transaction.feePayer = userPubkey;
           
-          // SIGN TRANSACTION (Works OFFLINE!)
+          // Sign and send transaction
           const signedTx = await wallet.signTransaction(transaction);
+          const signature = await connection.sendRawTransaction(signedTx.serialize());
           
-          console.log('✅ Transaction signed offline!', signedTx.signature);
+          console.log('✅ Smart contract relay request created:', signature);
           
-          // Encrypt transaction for multi-hop relay
-          const encryptedPayload = await encryptForRelay(signedTx, privacyLevel);
+          // Wait for confirmation
+          await connection.confirmTransaction(signature);
           
-          // Create relay request object
+          // Create relay request object for UI
           const relayRequest = {
             id: Date.now(),
-            signature: signedTx.signature ? Buffer.from(signedTx.signature).toString('base64') : null,
-            encryptedTx: encryptedPayload,
+            signature: signature,
             hops: privacyLevel,
-            fee: relayFee,
+            fee: relayFee / 1_000_000,
             created: new Date().toISOString(),
-            status: 'pending'
+            status: 'pending',
+            requestId: Number(totalRelayRequests) + 1
           };
           
           // Add to history
           setRelayHistory(prev => [relayRequest, ...prev]);
           
-          // If online and nodes available, submit to network
+          // Submit to relay network
           if (globalNodes.length > 0) {
             await submitToRelayNetwork(relayRequest);
-            pushToast(`✅ Relay request submitted (${privacyLevel} hops)`, 'ok');
+            pushToast(`✅ Relay request created (${privacyLevel} hops)`, 'ok');
           } else {
-            // Generate QR code for offline transmission
-            const qrData = JSON.stringify({
-              tx: btoa(String.fromCharCode(...signedTx.serialize())),
-              hops: privacyLevel,
-              fee: relayFee
-            });
-            setQRCodeData(qrData);
-            setShowQRCode(true);
-            pushToast('📱 QR code generated - scan to relay', 'info');
+            pushToast('✅ Relay request created - waiting for nodes', 'info');
           }
           
           // Clear form
@@ -13167,7 +13192,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                       <span className="text-cyan-500 font-mono text-xs">$</span>
                       <div className="text-xs text-slate-500 font-mono">PROGRAM_ID</div>
                     </div>
-                    <div className="text-sm font-mono text-cyan-400 break-all">2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq</div>
+                    <div className="text-sm font-mono text-cyan-400 break-all">Hf38P6icw2npaFneCJp4LbcPxJqmnD957FXjPCb9nCHs</div>
                   </div>
                   <a 
                     href="https://explorer.solana.com/address/2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq?cluster=mainnet"
