@@ -9354,6 +9354,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [wallet, setWallet] = useState(null);
       const [walletAddress, setWalletAddress] = useState(null);
       const [connecting, setConnecting] = useState(false);
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
       // Blockchain Data
       const [tokenBalance, setTokenBalance] = useState(0);
@@ -9377,6 +9378,18 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [lockPeriod, setLockPeriod] = useState(30);
       const [showStakeModal, setShowStakeModal] = useState(false);
       const [showWalletModal, setShowWalletModal] = useState(false);
+      // Sync with global/mobile wallet
+      useEffect(() => {
+        try {
+          const saved = localStorage.getItem('ghost_mobile_address');
+          if (saved) setWalletAddress(saved);
+        } catch {}
+        const onWalletUpdated = (e) => {
+          setWalletAddress(e && e.detail ? e.detail : null);
+        };
+        window.addEventListener('wallet-updated', onWalletUpdated);
+        return () => window.removeEventListener('wallet-updated', onWalletUpdated);
+      }, []);
       
       // Node System
       const [nodeActive, setNodeActive] = useState(false);
@@ -12484,7 +12497,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 </div>
               )}
             </>
-          ) : (
+          ) : (!isMobile ? (
             <div className="bg-white/80 dark:bg-slate-900/80 rounded-2xl p-12 border border-slate-200/50 dark:border-slate-700/50 text-center">
               <svg className="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -12500,7 +12513,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 Connect Wallet
               </button>
             </div>
-          )}
+          ) : null)}
 
           {/* GLOBAL NODE NETWORK - removed per request */}
 

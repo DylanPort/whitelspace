@@ -1,5 +1,5 @@
 // Ghost Whistle Service Worker
-const CACHE_NAME = 'ghost-whistle-v1';
+const CACHE_NAME = 'ghost-whistle-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
