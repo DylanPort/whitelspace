@@ -851,6 +851,16 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- EXIF Reader for metadata scrubbing -->
   <script src="https://cdn.jsdelivr.net/npm/exifreader@4.14.1/dist/exif-reader.js"></script>
+  <!-- Service Worker Registration for PWA -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('✅ Service Worker registered:', reg.scope))
+          .catch(err => console.error('❌ Service Worker registration failed:', err));
+      });
+    }
+  </script>
 </head>
 <body>
   <div id="root"></div>

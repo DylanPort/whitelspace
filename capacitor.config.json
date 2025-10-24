@@ -1,0 +1,28 @@
+{
+  "appId": "com.ghostwhistle.app",
+  "appName": "Ghost Whistle",
+  "webDir": "public",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https",
+    "hostname": "ghostwhistle.app",
+    "iosScheme": "https"
+  },
+  "android": {
+    "buildOptions": {
+      "keystorePath": "ghostwhistle.keystore",
+      "keystoreAlias": "ghostwhistle"
+    }
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#0b0f14",
+      "showSpinner": true,
+      "androidSpinnerStyle": "small",
+      "iosSpinnerStyle": "small",
+      "spinnerColor": "#10b981"
+    }
+  }
+}
+
