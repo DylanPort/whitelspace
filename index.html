@@ -10637,7 +10637,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       
       // ========== REAL UNSTAKE - BLOCKCHAIN TRANSACTION ==========
       const handleUnstake = async () => {
-        if (!wallet || nodeActive) {
+        // Only block if node is actually active; in-app wallet doesn't require provider
+        if (nodeActive) {
           pushToast('⚠️ Stop your node before unstaking', 'err');
           return;
         }
