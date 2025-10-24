@@ -3342,7 +3342,13 @@
               </div>
               
               <div className="bg-purple-500/10 border border-purple-400/30 rounded-lg p-4 text-sm text-white/80">
-                <strong className="text-purple-400">Coming Soon:</strong> Launch tokens on Pump.fun with enhanced privacy features. Bundle transactions, hide launch timing, and protect your trading strategies.
+                <p className="mb-4"><strong className="text-purple-400">Available Now:</strong> Launch tokens on Pump.fun with enhanced privacy features. Bundle transactions, hide launch timing, and protect your trading strategies.</p>
+                <button 
+                  onClick={() => window.open('https://pump.fun', '_blank')}
+                  className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-lg transition-all transform hover:scale-105"
+                >
+                  🚀 Launch on Pump.fun
+                </button>
               </div>
             </div>
           )}
@@ -3358,7 +3364,13 @@
               </div>
               
               <div className="bg-cyan-500/10 border border-cyan-400/30 rounded-lg p-4 text-sm text-white/80">
-                <strong className="text-cyan-400">Coming Soon:</strong> Exchange between Solana, Zcash, and other privacy coins without KYC. Privacy-preserving swaps with no data collection.
+                <p className="mb-4"><strong className="text-cyan-400">Available Now:</strong> Exchange between Solana, Zcash, and other privacy coins without KYC. Privacy-preserving swaps with no data collection.</p>
+                <button 
+                  onClick={() => window.open('https://zolana.org', '_blank')}
+                  className="w-full px-6 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold rounded-lg transition-all transform hover:scale-105"
+                >
+                  🔄 Open Zolana Exchange
+                </button>
               </div>
             </div>
           )}
@@ -3577,11 +3589,13 @@
                       </>
                     )}
                     <span className="relative z-10 flex items-center gap-3 w-full">
-                      {isGhostWhistle ? (
-                        <span className="text-lg animate-pulse">👻</span>
-                      ) : (
-                        <i data-lucide={x.icon} className={`w-5 h-5 ${isActive ? 'animate-pulse' : ''}`}></i>
-                      )}
+                      <span className={`flex items-center justify-center w-5 h-5 ${isActive ? 'animate-pulse' : ''}`}>
+                        {isGhostWhistle ? (
+                          <span className="text-lg">👻</span>
+                        ) : (
+                          <i data-lucide={x.icon} className="w-5 h-5"></i>
+                        )}
+                      </span>
                       <span className={isGhostWhistle ? 'font-bold' : ''}>{x.label}</span>
                       {isGhostWhistle && (
                         <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 font-bold uppercase tracking-wider border border-emerald-400/40">
