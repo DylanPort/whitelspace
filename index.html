@@ -20,7 +20,6 @@
   <script type="module">import { Buffer } from 'https://esm.sh/buffer@6.0.3'; window.Buffer = Buffer;</script>
   <script crossorigin src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/bs58@5.0.0/dist/bs58.min.js"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Solana Wallet Adapter & SPL Token -->
   <script src="https://unpkg.com/@solana/spl-token@0.3.8/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/@coral-xyz/anchor@0.29.0/dist/browser.js"></script>
@@ -15419,6 +15418,12 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
     root.render(<App />);
 
     // ============= SERVICE WORKER & PWA SETUP =============
+    // Platform helpers
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    const APK_DOWNLOAD_URL = '/ghost-whistle.apk'; // Update to your signed APK path or GitHub Releases URL
+
     // Register Service Worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -15443,14 +15448,13 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       e.preventDefault();
       deferredPrompt = e;
       
-      // Show install button/prompt for mobile users
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      if (isMobile && !window.matchMedia('(display-mode: standalone)').matches) {
-        showInstallPrompt();
+      // Show install button/prompt for Android users
+      if (isAndroid && !isStandalone) {
+        showInstallPrompt(true);
       }
     });
 
-    function showInstallPrompt() {
+    function showInstallPrompt(hasDeferred = false) {
       // Create install banner
       const installBanner = document.createElement('div');
       installBanner.id = 'install-banner';
@@ -15467,26 +15471,26 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             </div>
           </div>
           <div class="flex gap-2">
-            <button id="install-btn" class="px-4 py-2 bg-white text-emerald-600 rounded-lg font-semibold text-sm hover:bg-emerald-50">
-              Install
-            </button>
-            <button id="dismiss-install" class="px-3 py-2 bg-white/20 rounded-lg text-sm">
-              ✕
-            </button>
+            ${hasDeferred ? `<button id="install-btn" class="px-4 py-2 bg-white text-emerald-600 rounded-lg font-semibold text-sm hover:bg-emerald-50">Install PWA</button>` : ''}
+            <a id="apk-btn" class="px-4 py-2 bg-black/20 hover:bg-black/30 border border-white/30 rounded-lg font-semibold text-sm text-white" href="${APK_DOWNLOAD_URL}" download>Download APK</a>
+            <button id="dismiss-install" class="px-3 py-2 bg-white/20 rounded-lg text-sm">✕</button>
           </div>
         </div>
       `;
       document.body.appendChild(installBanner);
 
-      document.getElementById('install-btn').addEventListener('click', async () => {
-        if (deferredPrompt) {
-          deferredPrompt.prompt();
-          const { outcome } = await deferredPrompt.userChoice;
-          console.log('Install outcome:', outcome);
-          deferredPrompt = null;
-          document.getElementById('install-banner').remove();
-        }
-      });
+      const installBtn = document.getElementById('install-btn');
+      if (installBtn) {
+        installBtn.addEventListener('click', async () => {
+          if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log('Install outcome:', outcome);
+            deferredPrompt = null;
+            document.getElementById('install-banner').remove();
+          }
+        });
+      }
 
       document.getElementById('dismiss-install').addEventListener('click', () => {
         document.getElementById('install-banner').remove();
@@ -15512,100 +15516,55 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       document.documentElement.classList.add('pwa-mode');
     }
 
-    // ============= CROSS‑PLATFORM INSTALL MODAL (Android APK/Play/PWA + iOS PWA) =============
-    (function initCrossPlatformInstallModal(){
-      let deferredPrompt = null;
-      const DISMISS_KEY = 'installPromptDismissedAt_v2';
-      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-      const isAndroid = /Android/i.test(navigator.userAgent);
-      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-      const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.ghostwhistle.app';
-      const apkUrl = '/ghost-whistle.apk';
+    // iOS: show Add to Home Screen guidance since beforeinstallprompt is not supported
+    const dismissedTime = Number(localStorage.getItem('installPromptDismissed') || '0');
+    const sevenDays = 7 * 24 * 60 * 60 * 1000;
+    if (isIOS && !isStandalone && (!dismissedTime || (Date.now() - dismissedTime > sevenDays))) {
+      const banner = document.createElement('div');
+      banner.id = 'ios-a2hs-banner';
+      banner.className = 'fixed bottom-0 left-0 right-0 bg-gradient-to-r from-slate-800 to-slate-900 text-white p-4 shadow-2xl z-[9999]';
+      banner.innerHTML = `
+        <div class="container mx-auto flex items-center justify-between gap-4">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center">👻</div>
+            <div>
+              <div class="font-bold text-sm">Install on iPhone</div>
+              <div class="text-xs opacity-90">Open in Safari → Share → Add to Home Screen</div>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button id="ios-instructions" class="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm">Instructions</button>
+            <button id="ios-dismiss" class="px-3 py-2 bg-white/10 rounded-lg text-sm">✕</button>
+          </div>
+        </div>`;
+      document.body.appendChild(banner);
 
-      window.addEventListener('beforeinstallprompt', (e) => {
-        if (!isAndroid) return;
-        e.preventDefault();
-        deferredPrompt = e;
+      document.getElementById('ios-dismiss').addEventListener('click', () => {
+        banner.remove();
+        localStorage.setItem('installPromptDismissed', Date.now());
       });
 
-      function showInstallModal(){
+      document.getElementById('ios-instructions').addEventListener('click', () => {
         const modal = document.createElement('div');
-        modal.id = 'install-modal';
-        modal.className = 'fixed inset-0 z-[99999] bg-black/70 flex items-end sm:items-center justify-center p-4';
+        modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm z-[10000] flex items-center justify-center p-4';
         modal.innerHTML = `
-          <div class="w-full max-w-md rounded-2xl border border-white/15 bg-slate-900/95 backdrop-blur-xl shadow-2xl p-5">
-            <div class="flex items-center justify-between mb-3">
-              <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center"><span>👻</span></div>
-                <div class="text-white font-bold">Install Ghost Whistle</div>
-              </div>
-              <button id="install-close" class="text-white/60 hover:text-white">✕</button>
+          <div class="max-w-md w-full bg-slate-900 rounded-2xl border border-white/10 p-6">
+            <div class="flex items-center justify-between mb-4">
+              <div class="font-bold text-white">Install Ghost Whistle on iPhone</div>
+              <button id="ios-close" class="text-white/60 hover:text-white">✕</button>
             </div>
-            <div id="install-content" class="text-sm text-slate-300 space-y-3"></div>
-            <div id="install-actions" class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
-          </div>
-        `;
-        document.body.appendChild(modal);
-
-        const content = modal.querySelector('#install-content');
-        const actions = modal.querySelector('#install-actions');
-
-        if (isAndroid) {
-          content.innerHTML = `
-            <div>Install the app for the best mobile experience.</div>
-            <ul class="list-disc pl-5 space-y-1">
-              <li>Install PWA (instant)</li>
-              <li>Or get the Play Store app</li>
-              <li>Or download APK directly</li>
-            </ul>`;
-          const pwaBtn = document.createElement('button');
-          pwaBtn.className = 'px-4 py-3 rounded-xl bg-emerald-600 text-white font-semibold';
-          pwaBtn.textContent = deferredPrompt ? 'Install PWA' : 'Install PWA (Browser)';
-          pwaBtn.onclick = async () => {
-            if (deferredPrompt) {
-              deferredPrompt.prompt();
-              await deferredPrompt.userChoice; deferredPrompt = null; closeModal();
-            } else { alert('Use the browser menu → “Install app”'); }
-          };
-          const playBtn = document.createElement('a');
-          playBtn.className = 'px-4 py-3 rounded-xl bg-cyan-600 text-white font-semibold text-center';
-          playBtn.href = playStoreUrl; playBtn.target = '_blank'; playBtn.rel = 'noopener';
-          playBtn.textContent = 'Open in Play Store';
-          const apkBtn = document.createElement('a');
-          apkBtn.className = 'px-4 py-3 rounded-xl bg-slate-700 text-white font-semibold text-center';
-          apkBtn.href = apkUrl; apkBtn.download = ''; apkBtn.textContent = 'Download APK';
-          actions.appendChild(pwaBtn); actions.appendChild(playBtn);
-          const full = document.createElement('div'); full.className = 'sm:col-span-2'; full.appendChild(apkBtn); actions.appendChild(full);
-        }
-
-        if (isIOS) {
-          content.innerHTML = `
-            <div>Install Ghost Whistle on your iPhone:</div>
-            <ol class="list-decimal pl-5 space-y-1">
-              <li>Open this site in Safari</li>
-              <li>Tap the Share button (square with ↑)</li>
-              <li>Select “Add to Home Screen”</li>
-              <li>Tap “Add”</li>
+            <ol class="list-decimal list-inside space-y-2 text-sm text-slate-200">
+              <li>Open this site in <span class="text-white font-semibold">Safari</span>.</li>
+              <li>Tap the <span class="font-semibold">Share</span> icon at the bottom toolbar.</li>
+              <li>Scroll down and tap <span class="font-semibold">Add to Home Screen</span>.</li>
+              <li>Tap <span class="font-semibold">Add</span>. The app will appear on your Home Screen.</li>
             </ol>
-            <div class="text-xs text-slate-400">Tip: After installing, launch from the Home Screen icon for full‑screen app mode.</div>`;
-          const okBtn = document.createElement('button');
-          okBtn.className = 'px-4 py-3 rounded-xl bg-emerald-600 text-white font-semibold';
-          okBtn.textContent = 'Got it'; okBtn.onclick = closeModal; actions.appendChild(okBtn);
-        }
-
-        modal.querySelector('#install-close').onclick = closeModal;
-        function closeModal(){ localStorage.setItem(DISMISS_KEY, Date.now().toString()); modal.remove(); }
-      }
-
-      const DISMISS_KEY = 'installPromptDismissedAt_v2';
-      const lastDismiss = +(localStorage.getItem(DISMISS_KEY) || 0);
-      // reuse DISMISS_KEY defined above
-      const lastDismiss = +(localStorage.getItem(DISMISS_KEY) || 0);
-      if (!isStandalone && (Date.now() - lastDismiss) >= 3*24*60*60*1000 && (isAndroid || isIOS)) {
-        // show after short delay so UI has rendered
-        setTimeout(showInstallModal, 800);
-      }
-    })();
+            <div class="mt-4 text-xs text-slate-400">Note: iOS doesn’t allow PWAs to run indefinitely in the background. For 24/7 nodes, use the Android APK or upcoming iOS native app.</div>
+          </div>`;
+        document.body.appendChild(modal);
+        modal.querySelector('#ios-close').addEventListener('click', () => modal.remove());
+      });
+    }
 </script>
 <script defer type='text/javascript' src='https://changenow.io/embeds/exchange-widget/v2/stepper-connector.js'></script>
 </body>
