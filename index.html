@@ -3567,104 +3567,279 @@
       },[]);
       
       return (
-        <div className="space-y-6">
-          {/* Hero Section */}
-          <div className="fade-up text-center py-8 px-4">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 tracking-tight">
-              Privacy is a <span className="bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">right</span>, not a privilege
-            </h1>
-            <p className="text-base sm:text-lg md:text-xl text-white/70 max-w-3xl mx-auto mb-8">
-              Military-grade encryption. Zero-knowledge architecture. Open source. Built for activists, journalists, and anyone who values freedom.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 max-w-2xl mx-auto">
-              <button onClick={()=>setStep('webrtc')} className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-white font-bold text-base sm:text-lg shadow-lg shadow-cyan-500/50 transition-all hover:scale-105">
-                <div className="flex items-center justify-center gap-2">
-                  <i data-lucide="shield" className="w-5 h-5"></i>
-                  <span>Start Encrypted Transfer</span>
-                </div>
-              </button>
-              <button onClick={()=>setStep('steganography')} className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-xl border-2 border-white/20 hover:border-purple-400/50 bg-white/5 hover:bg-white/10 text-white font-bold text-base sm:text-lg transition-all hover:scale-105">
-                <div className="flex items-center justify-center gap-2">
-                  <i data-lucide="eye-off" className="w-5 h-5"></i>
-                  <span>Hide Messages</span>
-                </div>
-              </button>
+        <div className="space-y-8">
+          {/* Hero Section - Darker & Dynamic */}
+          <div className="relative fade-up text-center py-12 px-4 overflow-hidden">
+            {/* Animated Background Grid */}
+            <div className="absolute inset-0 opacity-20">
+              <div className="absolute inset-0" style={{
+                backgroundImage: 'linear-gradient(rgba(6,182,212,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(6,182,212,0.1) 1px, transparent 1px)',
+                backgroundSize: '50px 50px',
+                animation: 'gridMove 20s linear infinite'
+              }}></div>
             </div>
-          </div>
-
-          {/* Core Features - Premium Cards */}
-          <div className="grid md:grid-cols-3 gap-4 fade-up-2">
-            <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 p-6 hover:border-cyan-400/30 transition-all hover:scale-[1.02] cursor-pointer" onClick={()=>setStep('webrtc')}>
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center mb-4 shadow-lg shadow-cyan-500/50">
-                <i data-lucide="lock" className="w-7 h-7 text-white"></i>
+            
+            <div className="relative z-10">
+              <div className="inline-block px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-400/30 mb-6 animate-pulse">
+                <span className="text-cyan-400 font-mono text-sm">👻 GHOST WHISTLE NETWORK</span>
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">End-to-End Encrypted</h3>
-              <p className="text-white/60 text-sm mb-4">AES-256-GCM encryption. RSA-OAEP key exchange. Military-grade security for your sensitive data.</p>
-              <div className="flex items-center text-cyan-400 text-sm font-semibold">
-                <span>Learn more</span>
-                <i data-lucide="arrow-right" className="w-4 h-4 ml-1"></i>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-purple-500/10 to-purple-600/5 p-6 hover:border-purple-400/30 transition-all hover:scale-[1.02] cursor-pointer" onClick={()=>setStep('steganography')}>
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center mb-4 shadow-lg shadow-purple-500/50">
-                <i data-lucide="eye-off" className="w-7 h-7 text-white"></i>
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2">Steganography</h3>
-              <p className="text-white/60 text-sm mb-4">Hide messages in images, audio, and video. Compression-resistant spread spectrum technology.</p>
-              <div className="flex items-center text-purple-400 text-sm font-semibold">
-                <span>Explore tools</span>
-                <i data-lucide="arrow-right" className="w-4 h-4 ml-1"></i>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 p-6 hover:border-emerald-400/30 transition-all hover:scale-[1.02] cursor-pointer" onClick={()=>setStep('privacy-checkup')}>
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center mb-4 shadow-lg shadow-emerald-500/50">
-                <i data-lucide="shield-check" className="w-7 h-7 text-white"></i>
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2">Privacy Toolkit</h3>
-              <p className="text-white/60 text-sm mb-4">Browser leak detection, Tor bridges, censorship maps, and anonymous browsing tools.</p>
-              <div className="flex items-center text-emerald-400 text-sm font-semibold">
-                <span>Check privacy</span>
-                <i data-lucide="arrow-right" className="w-4 h-4 ml-1"></i>
+              
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 tracking-tight">
+                <span className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent animate-pulse">Decentralized</span>
+                <br className="hidden sm:block" />
+                <span className="text-white/90">Privacy Network</span>
+              </h1>
+              
+              <p className="text-lg sm:text-xl md:text-2xl text-white/50 max-w-4xl mx-auto mb-10 leading-relaxed">
+                Stake $WHISTLE • Run Privacy Nodes • Earn Rewards<br className="hidden sm:block" />
+                <span className="text-emerald-400">Anonymous Relay • Mobile Wallet • Live Leaderboard</span>
+              </p>
+              
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-3xl mx-auto">
+                <button onClick={()=>setStep('offline-network')} className="group relative w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-lg shadow-2xl shadow-emerald-500/50 transition-all hover:scale-105 overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000"></div>
+                  <div className="relative flex items-center justify-center gap-2">
+                    <span className="text-2xl">👻</span>
+                    <span>Launch Ghost Whistle</span>
+                  </div>
+                </button>
+                
+                <button onClick={()=>window.open('/howto', '_blank')} className="w-full sm:w-auto px-8 py-4 rounded-xl border-2 border-cyan-400/30 hover:border-cyan-400/60 bg-black/40 hover:bg-black/60 backdrop-blur-xl text-white font-bold text-lg transition-all hover:scale-105">
+                  <div className="flex items-center justify-center gap-2">
+                    <i data-lucide="book-open" className="w-5 h-5"></i>
+                    <span>How It Works</span>
+                  </div>
+                </button>
               </div>
             </div>
           </div>
 
+          {/* Stats Bar */}
+          <div className="grid grid-cols-3 gap-4 max-w-4xl mx-auto">
+            <div className="text-center p-4 rounded-xl bg-black/40 border border-emerald-400/20">
+              <div className="text-3xl font-bold text-emerald-400">8.3M+</div>
+              <div className="text-sm text-white/50 mt-1">$WHISTLE Staked</div>
+            </div>
+            <div className="text-center p-4 rounded-xl bg-black/40 border border-cyan-400/20">
+              <div className="text-3xl font-bold text-cyan-400">34</div>
+              <div className="text-sm text-white/50 mt-1">Active Stakers</div>
+            </div>
+            <div className="text-center p-4 rounded-xl bg-black/40 border border-blue-400/20">
+              <div className="text-3xl font-bold text-blue-400">100%</div>
+              <div className="text-sm text-white/50 mt-1">Decentralized</div>
+            </div>
+          </div>
 
-          {/* All Tools Grid */}
-          <div className="fade-up-3">
-            <h2 className="text-2xl font-bold text-white mb-4 text-center">Complete Privacy Arsenal</h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 hover:border-cyan-400/30 transition-all cursor-pointer" onClick={()=>setStep('censorship-map')}>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center">
-                    <i data-lucide="globe" className="w-5 h-5 text-white"></i>
+          {/* Featured Services - Ghost Whistle Ecosystem */}
+          <div className="fade-up-2">
+            <h2 className="text-3xl font-bold text-white mb-6 text-center">
+              <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">Ghost Whistle</span> Ecosystem
+            </h2>
+            
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Ghost Whistle - Staking & Nodes */}
+              <div className="group relative rounded-2xl border border-emerald-400/20 bg-black/60 backdrop-blur-xl p-6 hover:border-emerald-400/50 transition-all hover:scale-[1.02] cursor-pointer overflow-hidden" onClick={()=>setStep('offline-network')}>
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center mb-4 shadow-lg shadow-emerald-500/50 group-hover:scale-110 transition-transform">
+                    <span className="text-3xl">👻</span>
                   </div>
-                  <h3 className="text-white font-bold">Censorship Map</h3>
+                  <h3 className="text-2xl font-bold text-white mb-2">Ghost Whistle</h3>
+                  <p className="text-emerald-400 text-sm font-semibold mb-3">Stake & Earn Protocol</p>
+                  <p className="text-white/60 text-sm mb-4 leading-relaxed">
+                    Stake $WHISTLE tokens, run privacy nodes in your browser, and earn rewards for processing anonymous transactions.
+                  </p>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-2 text-xs text-white/50">
+                      <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
+                      <span>Min stake: 10,000 $WHISTLE</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-white/50">
+                      <div className="w-2 h-2 bg-cyan-400 rounded-full"></div>
+                      <span>Earn: 8 $WHISTLE per relay</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-white/50">
+                      <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                      <span>Live leaderboard & rewards</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center text-emerald-400 text-sm font-semibold group-hover:gap-3 gap-2 transition-all">
+                    <span>Start Staking</span>
+                    <i data-lucide="arrow-right" className="w-4 h-4"></i>
+                  </div>
                 </div>
-                <p className="text-white/50 text-xs">Live global censorship tracking</p>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 hover:border-purple-400/30 transition-all cursor-pointer" onClick={()=>setStep('tor-bridges')}>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
-                    <i data-lucide="shield-alert" className="w-5 h-5 text-white"></i>
+              {/* Ghost Terminal - Social Hub */}
+              <div className="group relative rounded-2xl border border-cyan-400/20 bg-black/60 backdrop-blur-xl p-6 hover:border-cyan-400/50 transition-all hover:scale-[1.02] cursor-pointer overflow-hidden" onClick={()=>setStep('social-hub')}>
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center mb-4 shadow-lg shadow-cyan-500/50 group-hover:scale-110 transition-transform">
+                    <i data-lucide="terminal" className="w-8 h-8 text-white"></i>
                   </div>
-                  <h3 className="text-white font-bold">Tor Bridges</h3>
+                  <h3 className="text-2xl font-bold text-white mb-2">Ghost Terminal</h3>
+                  <p className="text-cyan-400 text-sm font-semibold mb-3">Stakers-Only Social Hub</p>
+                  <p className="text-white/60 text-sm mb-4 leading-relaxed">
+                    Exclusive terminal for stakers to share insights, discuss strategies, and build the community. Min 100k $WHISTLE required.
+                  </p>
+                  <div className="inline-block px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-400/40 mb-4">
+                    <span className="text-cyan-400 text-xs font-bold">🔒 CULT MEMBER ACCESS</span>
+                  </div>
+                  <div className="flex items-center text-cyan-400 text-sm font-semibold group-hover:gap-3 gap-2 transition-all">
+                    <span>Enter Terminal</span>
+                    <i data-lucide="arrow-right" className="w-4 h-4"></i>
+                  </div>
                 </div>
-                <p className="text-white/50 text-xs">Access Tor in censored regions</p>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 hover:border-orange-400/30 transition-all cursor-pointer" onClick={()=>setStep('swap')}>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
-                    <i data-lucide="shuffle" className="w-5 h-5 text-white"></i>
+              {/* Mobile Wallet */}
+              <div className="group relative rounded-2xl border border-purple-400/20 bg-black/60 backdrop-blur-xl p-6 hover:border-purple-400/50 transition-all hover:scale-[1.02] cursor-pointer overflow-hidden" onClick={()=>alert('Create your mobile wallet from the navbar!')}>
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-purple-400 to-pink-600 flex items-center justify-center mb-4 shadow-lg shadow-purple-500/50 group-hover:scale-110 transition-transform">
+                    <i data-lucide="smartphone" className="w-8 h-8 text-white"></i>
                   </div>
-                  <h3 className="text-white font-bold">Privacy Swap</h3>
+                  <h3 className="text-2xl font-bold text-white mb-2">Mobile Wallet</h3>
+                  <p className="text-purple-400 text-sm font-semibold mb-3">In-App Wallet & PWA</p>
+                  <p className="text-white/60 text-sm mb-4 leading-relaxed">
+                    Create a secure Solana wallet in-app. Stake, run nodes, and manage funds directly from your mobile device.
+                  </p>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-2 text-xs text-white/50">
+                      <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                      <span>Encrypted local storage</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-white/50">
+                      <div className="w-2 h-2 bg-pink-400 rounded-full"></div>
+                      <span>PWA & APK support</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center text-purple-400 text-sm font-semibold group-hover:gap-3 gap-2 transition-all">
+                    <span>Create Wallet</span>
+                    <i data-lucide="arrow-right" className="w-4 h-4"></i>
+                  </div>
                 </div>
-                <p className="text-white/50 text-xs">Anonymous crypto exchange</p>
               </div>
+
+              {/* Anonymous Relay */}
+              <div className="group relative rounded-2xl border border-orange-400/20 bg-black/60 backdrop-blur-xl p-6 hover:border-orange-400/50 transition-all hover:scale-[1.02] cursor-pointer overflow-hidden" onClick={()=>setStep('services')}>
+                <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-red-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-orange-400 to-red-600 flex items-center justify-center mb-4 shadow-lg shadow-orange-500/50 group-hover:scale-110 transition-transform">
+                    <i data-lucide="shield" className="w-8 h-8 text-white"></i>
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-2">Anonymous Relay</h3>
+                  <p className="text-orange-400 text-sm font-semibold mb-3">Multi-Hop Privacy Transactions</p>
+                  <p className="text-white/60 text-sm mb-4 leading-relaxed">
+                    Send Solana transactions through multiple relay nodes for complete anonymity. Smart contract powered.
+                  </p>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-2 text-xs text-white/50">
+                      <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+                      <span>1-5 relay hops</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-white/50">
+                      <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                      <span>Onion routing protocol</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center text-orange-400 text-sm font-semibold group-hover:gap-3 gap-2 transition-all">
+                    <span>Use Relay</span>
+                    <i data-lucide="arrow-right" className="w-4 h-4"></i>
+                  </div>
+                </div>
+              </div>
+
+              {/* Privacy Tools */}
+              <div className="group relative rounded-2xl border border-blue-400/20 bg-black/60 backdrop-blur-xl p-6 hover:border-blue-400/50 transition-all hover:scale-[1.02] cursor-pointer overflow-hidden" onClick={()=>setStep('privacy-tools')}>
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center mb-4 shadow-lg shadow-blue-500/50 group-hover:scale-110 transition-transform">
+                    <i data-lucide="shield-check" className="w-8 h-8 text-white"></i>
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-2">Privacy Tools</h3>
+                  <p className="text-blue-400 text-sm font-semibold mb-3">Solana Privacy Suite</p>
+                  <p className="text-white/60 text-sm mb-4 leading-relaxed">
+                    Dead man's switch, vanishing payments, stealth addresses, and more privacy-preserving tools for Solana.
+                  </p>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-2 text-xs text-white/50">
+                      <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                      <span>Time-locked messages</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-white/50">
+                      <div className="w-2 h-2 bg-indigo-400 rounded-full"></div>
+                      <span>Burner addresses</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center text-blue-400 text-sm font-semibold group-hover:gap-3 gap-2 transition-all">
+                    <span>Explore Tools</span>
+                    <i data-lucide="arrow-right" className="w-4 h-4"></i>
+                  </div>
+                </div>
+              </div>
+
+              {/* Steganography */}
+              <div className="group relative rounded-2xl border border-pink-400/20 bg-black/60 backdrop-blur-xl p-6 hover:border-pink-400/50 transition-all hover:scale-[1.02] cursor-pointer overflow-hidden" onClick={()=>setStep('solana-privacy')}>
+                <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-pink-400 to-purple-600 flex items-center justify-center mb-4 shadow-lg shadow-pink-500/50 group-hover:scale-110 transition-transform">
+                    <i data-lucide="eye-off" className="w-8 h-8 text-white"></i>
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-2">Steganography</h3>
+                  <p className="text-pink-400 text-sm font-semibold mb-3">Hidden Message Encoding</p>
+                  <p className="text-white/60 text-sm mb-4 leading-relaxed">
+                    Hide encrypted messages in images, audio, and video. Compression-resistant spread spectrum technology.
+                  </p>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-2 text-xs text-white/50">
+                      <div className="w-2 h-2 bg-pink-400 rounded-full"></div>
+                      <span>Image/audio/video encoding</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-white/50">
+                      <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                      <span>AES-256 encrypted payloads</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center text-pink-400 text-sm font-semibold group-hover:gap-3 gap-2 transition-all">
+                    <span>Hide Messages</span>
+                    <i data-lucide="arrow-right" className="w-4 h-4"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Services Row */}
+          <div className="grid md:grid-cols-3 gap-4 fade-up-3">
+            <div className="rounded-xl border border-white/10 bg-black/40 p-4 hover:bg-black/60 hover:border-cyan-400/30 transition-all cursor-pointer" onClick={()=>setStep('webrtc')}>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center">
+                  <i data-lucide="radio" className="w-6 h-6 text-white"></i>
+                </div>
+                <h3 className="text-white font-bold">WebRTC Transfer</h3>
+              </div>
+              <p className="text-white/40 text-xs">Peer-to-peer encrypted file transfers</p>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-black/40 p-4 hover:bg-black/60 hover:border-orange-400/30 transition-all cursor-pointer" onClick={()=>setStep('swap')}>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-orange-400 to-red-600 flex items-center justify-center">
+                  <i data-lucide="shuffle" className="w-6 h-6 text-white"></i>
+                </div>
+                <h3 className="text-white font-bold">Privacy Swap</h3>
+              </div>
+              <p className="text-white/40 text-xs">Anonymous crypto exchange integration</p>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-black/40 p-4 hover:bg-black/60 hover:border-purple-400/30 transition-all cursor-pointer" onClick={()=>setStep('pump-portal')}>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-400 to-pink-600 flex items-center justify-center">
+                  <i data-lucide="trending-up" className="w-6 h-6 text-white"></i>
+                </div>
+                <h3 className="text-white font-bold">Pump Privacy Tools</h3>
+              </div>
+              <p className="text-white/40 text-xs">Anonymous token launches & trading</p>
             </div>
           </div>
     </div>
