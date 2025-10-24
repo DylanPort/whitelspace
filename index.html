@@ -9117,17 +9117,121 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [showQRCode, setShowQRCode] = useState(false);
       const [qrCodeData, setQRCodeData] = useState('');
       
-      // Connect Wallet (Phantom/Solflare)
+      // Mobile Wallet States
+      const [mobileWallet, setMobileWallet] = useState(null);
+      const [mobileWalletAddress, setMobileWalletAddress] = useState(null);
+      const [mobilePrivateKey, setMobilePrivateKey] = useState(null);
+      const [showMobileWalletModal, setShowMobileWalletModal] = useState(false);
+      const [mobileWalletCreated, setMobileWalletCreated] = useState(false);
+      const [showPrivateKeyModal, setShowPrivateKeyModal] = useState(false);
+      
+      // Check if user is on mobile
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      // Generate new Solana keypair for mobile wallet
+      const generateMobileWallet = () => {
+        try {
+          const keypair = solanaWeb3.Keypair.generate();
+          const publicKey = keypair.publicKey.toString();
+          const privateKey = Array.from(keypair.secretKey);
+          
+          setMobileWallet(keypair);
+          setMobileWalletAddress(publicKey);
+          setMobilePrivateKey(privateKey);
+          setMobileWalletCreated(true);
+          
+          // Save to secure storage
+          localStorage.setItem('mobileWalletAddress', publicKey);
+          localStorage.setItem('mobileWalletCreated', 'true');
+          
+          pushToast('✅ Mobile wallet created successfully!', 'ok');
+          console.log('📱 Mobile wallet created:', publicKey);
+          
+          // Load blockchain data for new wallet
+          loadBlockchainData(publicKey);
+          
+        } catch (err) {
+          console.error('❌ Mobile wallet creation error:', err);
+          pushToast('❌ Failed to create mobile wallet', 'err');
+        }
+      };
+      
+      // Import existing mobile wallet from private key
+      const importMobileWallet = (privateKeyString) => {
+        try {
+          const privateKeyArray = privateKeyString.split(',').map(x => parseInt(x.trim()));
+          const keypair = solanaWeb3.Keypair.fromSecretKey(new Uint8Array(privateKeyArray));
+          const publicKey = keypair.publicKey.toString();
+          
+          setMobileWallet(keypair);
+          setMobileWalletAddress(publicKey);
+          setMobilePrivateKey(privateKeyArray);
+          setMobileWalletCreated(true);
+          
+          // Save to secure storage
+          localStorage.setItem('mobileWalletAddress', publicKey);
+          localStorage.setItem('mobileWalletCreated', 'true');
+          
+          pushToast('✅ Mobile wallet imported successfully!', 'ok');
+          console.log('📱 Mobile wallet imported:', publicKey);
+          
+          // Load blockchain data
+          loadBlockchainData(publicKey);
+          
+        } catch (err) {
+          console.error('❌ Mobile wallet import error:', err);
+          pushToast('❌ Invalid private key format', 'err');
+        }
+      };
+      
+      // Sign transaction with mobile wallet
+      const signTransactionMobile = async (transaction) => {
+        if (!mobileWallet) {
+          throw new Error('Mobile wallet not available');
+        }
+        
+        try {
+          // Sign the transaction
+          transaction.sign(mobileWallet);
+          return transaction;
+        } catch (err) {
+          console.error('❌ Mobile wallet signing error:', err);
+          throw err;
+        }
+      };
+      
+      // Connect Wallet (Phantom/Solflare for desktop, Mobile wallet for mobile)
       const connectWallet = async (providerName = 'phantom') => {
         console.log('🔌 connectWallet called');
         setConnecting(true);
+        
+        // Check if mobile and mobile wallet exists
+        if (isMobile && localStorage.getItem('mobileWalletCreated') === 'true') {
+          const savedAddress = localStorage.getItem('mobileWalletAddress');
+          if (savedAddress) {
+            setMobileWalletAddress(savedAddress);
+            setWalletAddress(savedAddress);
+            setMobileWalletCreated(true);
+            await loadBlockchainData(savedAddress);
+            pushToast(`✅ Mobile wallet connected: ${savedAddress.slice(0, 4)}...${savedAddress.slice(-4)}`, 'ok');
+            setConnecting(false);
+            setShowWalletModal(false);
+            return;
+          }
+        }
+        
+        // For desktop or if no mobile wallet exists
         try {
           const provider = window.solana || window.phantom?.solana;
           
           if (!provider) {
             console.error('❌ No wallet provider found');
-            pushToast('❌ Please install Phantom wallet', 'err');
-            window.open('https://phantom.app/', '_blank');
+            if (isMobile) {
+              setShowMobileWalletModal(true);
+            } else {
+              pushToast('❌ Please install Phantom wallet', 'err');
+              window.open('https://phantom.app/', '_blank');
+            }
             return;
           }
           
@@ -9416,8 +9520,15 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       
       // ========== REAL STAKING - BLOCKCHAIN TRANSACTION ==========
       const handleStake = async () => {
-        if (!wallet || !walletAddress) {
-          setShowWalletModal(true);
+        const currentWallet = isMobile && mobileWalletCreated ? mobileWallet : wallet;
+        const currentAddress = isMobile && mobileWalletCreated ? mobileWalletAddress : walletAddress;
+        
+        if (!currentWallet || !currentAddress) {
+          if (isMobile) {
+            setShowMobileWalletModal(true);
+          } else {
+            setShowWalletModal(true);
+          }
           return;
         }
         
@@ -9530,8 +9641,13 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           transaction.feePayer = userPubkey;
           transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
           
-          // Sign and send via Phantom
-          const signed = await wallet.signTransaction(transaction);
+          // Sign and send transaction (mobile or desktop wallet)
+          let signed;
+          if (isMobile && mobileWalletCreated) {
+            signed = await signTransactionMobile(transaction);
+          } else {
+            signed = await wallet.signTransaction(transaction);
+          }
           const signature = await connection.sendRawTransaction(signed.serialize());
           
           pushToast('⏳ Confirming transaction...', 'info');
@@ -14138,6 +14254,92 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         </div>
       );
     }
+
+    // Mobile Wallet Modals for OfflineNetworkHub
+    const MobileWalletModals = () => (
+      <>
+        {/* Mobile Wallet Modal */}
+        {showMobileWalletModal && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowMobileWalletModal(false)}>
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+              <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-6">📱 Mobile Wallet</h2>
+              <p className="text-slate-600 dark:text-slate-400 mb-6">
+                Create or import a wallet to use Ghost Whistle services on mobile.
+              </p>
+              
+              <div className="space-y-4">
+                <button
+                  onClick={generateMobileWallet}
+                  className="w-full px-6 py-4 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3"
+                >
+                  <span className="text-xl">✨</span>
+                  Create New Wallet
+                </button>
+                
+                <button
+                  onClick={() => setShowPrivateKeyModal(true)}
+                  className="w-full px-6 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3"
+                >
+                  <span className="text-xl">🔑</span>
+                  Import Existing Wallet
+                </button>
+              </div>
+              
+              <button
+                onClick={() => setShowMobileWalletModal(false)}
+                className="w-full mt-4 px-6 py-3 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-bold transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Private Key Import Modal */}
+        {showPrivateKeyModal && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowPrivateKeyModal(false)}>
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+              <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-6">🔑 Import Wallet</h2>
+              <p className="text-slate-600 dark:text-slate-400 mb-6">
+                Enter your private key to import an existing wallet.
+              </p>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Private Key</label>
+                  <textarea
+                    placeholder="Enter private key array (comma-separated numbers)"
+                    className="w-full px-4 py-3 rounded-xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-blue-500 focus:outline-none transition-all font-mono text-sm"
+                    rows="4"
+                    onChange={(e) => {
+                      const privateKeyString = e.target.value;
+                      if (privateKeyString.trim()) {
+                        importMobileWallet(privateKeyString);
+                        setShowPrivateKeyModal(false);
+                        setShowMobileWalletModal(false);
+                      }
+                    }}
+                  />
+                </div>
+                
+                <div className="bg-yellow-100 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-xl p-4">
+                  <p className="text-yellow-800 dark:text-yellow-200 text-sm">
+                    ⚠️ <strong>Security Warning:</strong> Never share your private key. This app stores it locally on your device.
+                  </p>
+                </div>
+              </div>
+              
+              <button
+                onClick={() => setShowPrivateKeyModal(false)}
+                className="w-full mt-4 px-6 py-3 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-bold transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </>
+    );
 
     // Anonymous Relay Service - Terminal Theme
     function AnonymousRelayService({ setStep, pushToast }) {
