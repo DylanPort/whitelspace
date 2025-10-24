@@ -3491,15 +3491,15 @@
       const items = [
         { id:'home',    label:'Home', icon:'home' },
         { id:'webrtc',    label:'WebRTC Transfer', icon:'radio' },
-        { id:'offline-network', label:'👻 Ghost Whistle', icon:'network' },
-        { id:'social-hub', label:'👻 Ghost Terminal', icon:'terminal' },
-        { id:'services', label:'👻 Ghost Services', icon:'zap' },
+        { id:'offline-network', label:'Ghost Whistle', icon:'ghost', special: true },
+        { id:'social-hub', label:'Ghost Terminal', icon:'terminal' },
+        { id:'services', label:'Ghost Services', icon:'zap' },
         { id:'how-it-works', label:'How It Works', icon:'book-open' },
         { id:'swap', label:'Privacy Swap', iconImg:'4DqRlDPT_400x400.png.png' },
         { id:'solana-privacy', label:'Solana Privacy Tools', iconImg:'solana.png' },
         { id:'pump-portal', label:'Pump Privacy Tools', iconImg:'idrs8cZ-zg_logos.png' },
         { id:'zolana', label:'Zolana Exchange', iconImg:'zcash-3d-icon-png-download-10372070.png' },
-        { id:'privacy-tools', label:'🛡️ Privacy Tools', icon:'shield' },
+        { id:'privacy-tools', label:'Privacy Tools', icon:'shield' },
       ];
       
       useEffect(()=>{
@@ -3542,7 +3542,13 @@
                   {x.iconImg ? (
                     <img src={x.iconImg} alt={x.label} className="w-5 h-5 object-contain" />
                   ) : (
-                        <i data-lucide={x.icon} className={`w-5 h-5 ${isGhostWhistle ? 'animate-pulse' : ''}`}></i>
+                        <>
+                          {isGhostWhistle ? (
+                            <span className="text-lg">👻</span>
+                          ) : (
+                            <i data-lucide={x.icon} className="w-5 h-5"></i>
+                          )}
+                        </>
                       )}
                       <span className={isGhostWhistle ? 'font-bold' : ''}>{x.label}</span>
                       {isGhostWhistle && (
