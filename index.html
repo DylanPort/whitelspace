@@ -14470,16 +14470,51 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
 
       // Connect wallet
       const connectWallet = async () => {
-        if (!window.solana?.isPhantom) {
-          pushToast('Phantom wallet not found', 'error');
+        // Detect mobile and prefer in-app wallet
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const inAppAddress = localStorage.getItem('ghost_mobile_address');
+        
+        if (isMobile && inAppAddress) {
+          // Use in-app wallet automatically on mobile
+          setConnecting(true);
+          try {
+            setWalletAddress(inAppAddress);
+            const stakerStatus = await checkStakerStatus(inAppAddress);
+            setIsStaker(stakerStatus);
+            
+            if (stakerStatus) {
+              pushToast(`Welcome, Premium Staker! (${stakeAmount.toFixed(2)} WHISTLE staked)`, 'success');
+              await loadUserData();
+            } else {
+              pushToast('Access denied: Must stake minimum 100,000 WHISTLE to access Social Hub', 'error');
+            }
+          } catch (error) {
+            console.error('In-app wallet verification error:', error);
+            pushToast('Failed to verify stake', 'error');
+          } finally {
+            setConnecting(false);
+          }
+          return;
+        }
+        
+        // Desktop: use Phantom or Solflare
+        const provider = (window.solana?.isPhantom ? window.solana : null) || (window.solflare?.isSolflare ? window.solflare : null);
+        if (!provider) {
+          pushToast('Wallet not found - install Phantom or Solflare', 'error');
           return;
         }
 
         setConnecting(true);
         try {
-          const response = await window.solana.connect();
-          const address = response.publicKey.toString();
-          setWallet(response);
+          const response = await provider.connect();
+          const address = response?.publicKey?.toString
+            ? response.publicKey.toString()
+            : (provider?.publicKey?.toString ? provider.publicKey.toString() : provider?.publicKey);
+          if (!address) {
+            pushToast('Failed to get wallet address', 'error');
+            return;
+          }
+          setWallet(provider);
           setWalletAddress(address);
           
           // DEBUG: Run full verification
@@ -14834,25 +14869,33 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   Exclusive terminal for Ghost Whistle cult members
                 </p>
                 
-              {/* On mobile, don't show connect; ask to create/import navbar wallet */}
-              {(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) ? (
-                <div className="text-slate-400/80 text-sm">Create or import a mobile wallet from the navbar to enter.</div>
-              ) : (
-                <button
-                  onClick={connectWallet}
-                  disabled={connecting}
-                  className="group relative px-8 py-3.5 rounded-xl font-semibold transition-all duration-300 disabled:opacity-50 transform hover:scale-[1.02] overflow-hidden"
-                  style={{
-                    background: 'linear-gradient(135deg, #06b6d4 0%, #10b981 100%)',
-                    boxShadow: '0 10px 40px -10px rgba(6, 182, 212, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)'
-                  }}
-                >
-                  <span className="relative z-10 text-white flex items-center gap-2">
-                    <span>{connecting ? 'Connecting...' : 'Enter Terminal'}</span>
-                  </span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700"></div>
-                </button>
-              )}
+              {/* Mobile and Desktop both get Enter button */}
+              {(() => {
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                const hasInAppWallet = !!localStorage.getItem('ghost_mobile_address');
+                
+                return (
+                  <div>
+                    <button
+                      onClick={connectWallet}
+                      disabled={connecting || (isMobile && !hasInAppWallet)}
+                      className="group relative px-8 py-3.5 rounded-xl font-semibold transition-all duration-300 disabled:opacity-50 transform hover:scale-[1.02] overflow-hidden"
+                      style={{
+                        background: 'linear-gradient(135deg, #06b6d4 0%, #10b981 100%)',
+                        boxShadow: '0 10px 40px -10px rgba(6, 182, 212, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)'
+                      }}
+                    >
+                      <span className="relative z-10 text-white flex items-center gap-2">
+                        <span>{connecting ? 'Checking stake...' : 'Enter Terminal'}</span>
+                      </span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700"></div>
+                    </button>
+                    {isMobile && !hasInAppWallet && (
+                      <div className="mt-4 text-slate-400/80 text-sm">Create or import a mobile wallet from the navbar first.</div>
+                    )}
+                  </div>
+                );
+              })()}
               </div>
             </div>
           </div>
