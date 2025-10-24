@@ -1,16 +1,15 @@
 {
-  "name": "Ghost Whistle - Mobile",
+  "name": "Ghost Whistle - Decentralized Privacy Network",
   "short_name": "Ghost Whistle",
-  "description": "Decentralized privacy network with in-app wallet, staking, and relay services",
+  "description": "Stake WHISTLE, run privacy nodes, and earn rewards. Decentralized anonymous relay network.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#0b0f14",
-  "theme_color": "#0b0f14",
-  "orientation": "portrait-primary",
-  "categories": ["finance", "productivity", "utilities"],
-  "lang": "en",
-  "dir": "ltr",
+  "theme_color": "#10b981",
+  "lang": "en-US",
+  "categories": ["finance", "utilities", "productivity"],
   "icons": [
     {
       "src": "whistel_logo_top_right_2048.png",
@@ -22,39 +21,75 @@
       "src": "whistel_logo_top_right_2048.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "whistel_logo_top_right_2048.png",
-      "sizes": "1024x1024",
+      "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "maskable"
     }
   ],
   "screenshots": [
     {
       "src": "whistel_logo_top_right_2048.png",
-      "sizes": "1280x720",
+      "sizes": "540x720",
       "type": "image/png",
-      "form_factor": "wide"
+      "form_factor": "narrow"
     }
   ],
   "shortcuts": [
     {
       "name": "Ghost Whistle",
-      "short_name": "Ghost",
-      "description": "Access Ghost Whistle staking and relay services",
+      "short_name": "Stake & Earn",
+      "description": "Stake WHISTLE and run nodes",
       "url": "/?section=offline-network",
-      "icons": [
-        {
-          "src": "whistel_logo_top_right_2048.png",
-          "sizes": "96x96"
-        }
-      ]
+      "icons": [{ "src": "whistel_logo_top_right_2048.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Ghost Terminal",
+      "short_name": "Terminal",
+      "description": "Exclusive staker chat",
+      "url": "/?section=social-hub",
+      "icons": [{ "src": "whistel_logo_top_right_2048.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Anonymous Relay",
+      "short_name": "Relay",
+      "description": "Send anonymous transactions",
+      "url": "/?section=anonymous-relay",
+      "icons": [{ "src": "whistel_logo_top_right_2048.png", "sizes": "192x192" }]
     }
   ],
-  "related_applications": [],
-  "prefer_related_applications": false
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.ghostwhistle.app",
+      "id": "com.ghostwhistle.app"
+    }
+  ],
+  "prefer_related_applications": false,
+  "protocol_handlers": [
+    {
+      "protocol": "web+whistle",
+      "url": "/?action=%s"
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "/",
+      "accept": {
+        "text/plain": [".txt"]
+      }
+    }
+  ]
 }
-
-

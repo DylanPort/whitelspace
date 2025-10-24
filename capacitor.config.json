@@ -1,27 +1,29 @@
 {
   "appId": "com.ghostwhistle.app",
   "appName": "Ghost Whistle",
-  "webDir": "public",
+  "webDir": ".",
   "bundledWebRuntime": false,
-  "server": {
-    "androidScheme": "https",
-    "hostname": "ghostwhistle.app",
-    "iosScheme": "https"
-  },
+  "backgroundColor": "#0b0f14",
   "android": {
-    "buildOptions": {
-      "keystorePath": "ghostwhistle.keystore",
-      "keystoreAlias": "ghostwhistle"
-    }
+    "backgroundColor": "#0b0f14",
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  },
+  "server": {
+    "url": "https://whitelspace.netlify.app",
+    "cleartext": true
   },
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 2000,
       "backgroundColor": "#0b0f14",
       "showSpinner": true,
-      "androidSpinnerStyle": "small",
-      "iosSpinnerStyle": "small",
       "spinnerColor": "#10b981"
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_icon_config_sample",
+      "iconColor": "#10b981"
     }
   }
 }

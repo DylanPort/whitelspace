@@ -7,16 +7,7 @@
     "dev": "node server.js",
     "start": "node server.js",
     "signaling": "node signaling-server.js",
-    "deploy": "anchor deploy --provider.cluster mainnet",
-    "build": "echo 'Build complete - ready for mobile deployment'",
-    "android": "npx cap sync && npx cap open android",
-    "ios": "npx cap sync && npx cap open ios",
-    "mobile:install": "npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/ios",
-    "mobile:init": "npx cap init",
-    "mobile:add-android": "npx cap add android",
-    "mobile:add-ios": "npx cap add ios",
-    "mobile:sync": "npx cap sync",
-    "mobile:build-apk": "cd android && ./gradlew assembleRelease"
+    "deploy": "anchor deploy --provider.cluster mainnet"
   },
   "keywords": [
     "privacy",
