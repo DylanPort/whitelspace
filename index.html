@@ -9954,19 +9954,19 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         recentUnstakes: []
       });
       const [totalRelays, setTotalRelays] = useState(0);
-        const [successfulRelays, setSuccessfulRelays] = useState(0);
-        const [loading, setLoading] = useState(false);
-        
-        // Buy/Sell Modal State
-        const [showBuySellModal, setShowBuySellModal] = useState(false);
-        const [swapMode, setSwapMode] = useState('buy'); // 'buy' or 'sell'
-        const [fromAmount, setFromAmount] = useState('');
-        const [toAmount, setToAmount] = useState('');
-        const [isSwapping, setIsSwapping] = useState(false);
-        const [priceImpact, setPriceImpact] = useState(0);
-        const [solBalance, setSolBalance] = useState(0);
-        
-        // ===== In-App Wallet Helpers (no permission prompts) =====
+      const [successfulRelays, setSuccessfulRelays] = useState(0);
+      const [loading, setLoading] = useState(false);
+      
+      // Buy/Sell Modal State
+      const [showBuySellModal, setShowBuySellModal] = useState(false);
+      const [swapMode, setSwapMode] = useState('buy'); // 'buy' or 'sell'
+      const [fromAmount, setFromAmount] = useState('');
+      const [toAmount, setToAmount] = useState('');
+      const [isSwapping, setIsSwapping] = useState(false);
+      const [priceImpact, setPriceImpact] = useState(0);
+      const [solBalance, setSolBalance] = useState(0);
+      
+      // ===== In-App Wallet Helpers (no permission prompts) =====
       async function getInAppKeypair() {
         try {
           const stored = (typeof localStorage !== 'undefined') ? localStorage.getItem('ghost_mobile_wallet') : null;
