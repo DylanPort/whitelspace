@@ -1918,12 +1918,14 @@
       const [generatedWallet, setGeneratedWallet] = useState(null);
       
       useEffect(() => {
-        // Detect mobile device
+        // Detect mobile device or small viewport
         const checkMobile = () => {
-          const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-          setIsMobile(mobile);
+          const uaMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+          const smallViewport = typeof window !== 'undefined' && (window.innerWidth < 640 || (window.matchMedia && window.matchMedia('(max-width: 640px)').matches));
+          setIsMobile(uaMobile || smallViewport);
         };
         checkMobile();
+        window.addEventListener('resize', checkMobile);
         
         // Check if mobile wallet exists
         if (typeof localStorage !== 'undefined') {
@@ -1945,6 +1947,7 @@
         window.addEventListener('open-mobile-wallet', openHandler);
         return () => {
           window.removeEventListener('open-mobile-wallet', openHandler);
+          window.removeEventListener('resize', checkMobile);
         };
       }, []);
       
@@ -2014,7 +2017,16 @@
           // Generate new keypair
           const keypair = solanaWeb3.Keypair.generate();
           const publicKey = keypair.publicKey.toString();
-          const privateKey = bs58.encode(keypair.secretKey);
+          let privateKey;
+          try {
+            const b = (window && (window.bs58?.encode || window.bs58?.default?.encode)) || null;
+            privateKey = b ? (window.bs58.encode ? window.bs58.encode(keypair.secretKey) : window.bs58.default.encode(keypair.secretKey)) : null;
+          } catch {}
+          if (!privateKey) {
+            // Fallback to base64 if bs58 isn't available yet; still allows backup
+            const Buf = (window && window.Buffer) ? window.Buffer : undefined;
+            privateKey = Buf ? Buf.from(keypair.secretKey).toString('base64') + ':base64' : Array.from(keypair.secretKey).join(',');
+          }
           
           setGeneratedWallet({ publicKey, privateKey, keypair });
           setMobileWalletMode('create');
@@ -2178,7 +2190,7 @@
                       
                       {mobileWalletMode === 'menu' && (
                         <div className="space-y-3">
-                          <button onClick={handleCreateMobileWallet} className="w-full flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-400/30 hover:border-emerald-400/50 transition-all">
+                          <button onClick={handleCreateMobileWallet} className="w-full flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-400/30 hover:border-emerald-400/50 transition-all" id="btn-create-mobile-wallet">
                             <i data-lucide="plus-circle" className="w-8 h-8 text-emerald-400"></i>
                             <div className="text-left">
                               <div className="font-bold text-white">Create New Wallet</div>
@@ -2235,7 +2247,7 @@
                             />
                           </div>
                           
-                          <button onClick={handleSaveMobileWallet} className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold">
+                          <button onClick={handleSaveMobileWallet} className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold" id="btn-save-mobile-wallet">
                             Save Wallet
                           </button>
                           
@@ -12563,13 +12575,22 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowWalletModal(false)}>
               <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
                 <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-6">Connect Wallet</h2>
-                <button
-                  onClick={connectWallet}
-                  disabled={connecting}
-                  className="w-full px-6 py-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-                >
-                  {connecting ? 'Connecting...' : 'Phantom Wallet'}
-                </button>
+                {/* Desktop: Phantom; Mobile: In‑App */}
+                <div className="grid grid-cols-1 gap-3">
+                  <button
+                    onClick={connectWallet}
+                    disabled={connecting}
+                    className="hidden sm:flex w-full px-6 py-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold shadow-lg hover:shadow-xl transition-all items-center justify-center gap-3 disabled:opacity-50"
+                  >
+                    {connecting ? 'Connecting...' : 'Phantom Wallet'}
+                  </button>
+                  <button
+                    onClick={() => window.dispatchEvent(new Event('open-mobile-wallet'))}
+                    className="flex sm:hidden w-full px-6 py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold shadow-lg hover:shadow-xl transition-all items-center justify-center gap-3"
+                  >
+                    In‑App Wallet
+                  </button>
+                </div>
                 <button
                   onClick={() => setShowWalletModal(false)}
                   className="w-full mt-4 px-6 py-3 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-bold transition-all"
