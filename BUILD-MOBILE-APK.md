@@ -58,7 +58,7 @@ npx cap open android
 2. Wait for build to complete
 3. APK will be at: `android/app/build/outputs/apk/debug/app-debug.apk`
 
-### 8. Build Release APK (Signed)
+### 8. Build Release APK (Signed) and Play Store Listing
 1. In Android Studio: **Build → Generate Signed Bundle / APK**
 2. Select **APK**
 3. Create or select keystore
@@ -69,6 +69,15 @@ npx cap open android
 5. Select build variant: **release**
 6. Click **Finish**
 7. Release APK will be at: `android/app/build/outputs/apk/release/app-release.apk`
+
+### 9. Create Play Store Listing
+1. Open Google Play Console → Create app (package: `com.ghostwhistle.app`)
+2. Fill Store presence: title, short/long description, privacy policy URL
+3. Upload graphics: 512x512 icon, 1024x500 feature graphic, screenshots (phone / tablet)
+4. Fill Data safety + Content rating
+5. Upload `app-release.aab` (Build → Generate Signed Bundle → Android App Bundle)
+6. Complete Pre-launch report issues if any
+7. Rollout to Production
 
 ## Testing
 

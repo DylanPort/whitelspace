@@ -11324,37 +11324,44 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="bg-white/80 dark:bg-slate-800/80 rounded-xl px-4 py-2 border border-slate-200 dark:border-slate-700">
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Balance</div>
-                    <div className="text-lg font-black text-slate-900 dark:text-white">
-                      {tokenBalance.toLocaleString()} $W
+                <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 w-full">
+                  {/* Row 1 (mobile): Balance + Refresh */}
+                  <div className="flex w-full sm:w-auto items-center gap-2">
+                    <div className="flex-1 sm:flex-none bg-white/80 dark:bg-slate-800/80 rounded-xl px-4 py-2 border border-slate-200 dark:border-slate-700">
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5">Balance</div>
+                      <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                        {tokenBalance.toLocaleString()} $W
+                      </div>
                     </div>
+                    <button
+                      onClick={() => loadBlockchainData(walletAddress)}
+                      disabled={loading}
+                      className="px-3 py-2 rounded-xl bg-emerald-500/20 dark:bg-emerald-600/20 hover:bg-emerald-500/30 dark:hover:bg-emerald-600/30 text-emerald-700 dark:text-emerald-300 font-bold transition-all disabled:opacity-50 flex items-center gap-1"
+                      title="Refresh balance and staked amount"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <span className="text-sm">{loading ? '...' : 'Refresh'}</span>
+                    </button>
                   </div>
-                  <div className="bg-blue-500/10 dark:bg-blue-500/20 rounded-xl px-4 py-2 border border-blue-300/50 dark:border-blue-500/50">
-                    <div className="text-[10px] text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1 font-bold">Staked</div>
-                    <div className="text-lg font-black text-blue-700 dark:text-blue-300">
-                      {stakedAmount.toLocaleString()} $W
+
+                  {/* Row 2: Staked + Address */}
+                  <div className="flex w-full sm:w-auto items-center gap-2">
+                    <div className="flex-1 sm:flex-none bg-blue-500/10 dark:bg-blue-500/20 rounded-xl px-4 py-2 border border-blue-300/50 dark:border-blue-500/50">
+                      <div className="text-[10px] text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-0.5 font-bold">Staked</div>
+                      <div className="text-base sm:text-lg font-black text-blue-700 dark:text-blue-300">
+                        {stakedAmount.toLocaleString()} $W
+                      </div>
                     </div>
+                    <button
+                      onClick={disconnectWallet}
+                      className="px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-bold transition-all"
+                      title={walletAddress}
+                    >
+                      <span className="text-sm font-mono">{walletAddress.slice(0, 4)}...{walletAddress.slice(-4)}</span>
+                    </button>
                   </div>
-                  <button
-                    onClick={() => loadBlockchainData(walletAddress)}
-                    disabled={loading}
-                    className="px-4 py-3 rounded-xl bg-emerald-500/20 dark:bg-emerald-600/20 hover:bg-emerald-500/30 dark:hover:bg-emerald-600/30 text-emerald-700 dark:text-emerald-300 font-bold transition-all disabled:opacity-50 flex items-center gap-2"
-                    title="Refresh balance and staked amount"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    {loading ? 'Loading...' : 'Refresh'}
-                  </button>
-                  <button
-                    onClick={disconnectWallet}
-                    className="px-4 py-3 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-bold transition-all"
-                    title={walletAddress}
-                  >
-                    {walletAddress.slice(0, 4)}...{walletAddress.slice(-4)}
-                  </button>
                 </div>
               )}
             </div>
@@ -15503,6 +15510,99 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       console.log('✅ Running as PWA');
       document.documentElement.classList.add('pwa-mode');
     }
+
+    // ============= CROSS‑PLATFORM INSTALL MODAL (Android APK/Play/PWA + iOS PWA) =============
+    (function initCrossPlatformInstallModal(){
+      let deferredPrompt = null;
+      const DISMISS_KEY = 'installPromptDismissedAt_v2';
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.ghostwhistle.app';
+      const apkUrl = '/ghost-whistle.apk';
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        if (!isAndroid) return;
+        e.preventDefault();
+        deferredPrompt = e;
+      });
+
+      function showInstallModal(){
+        const modal = document.createElement('div');
+        modal.id = 'install-modal';
+        modal.className = 'fixed inset-0 z-[99999] bg-black/70 flex items-end sm:items-center justify-center p-4';
+        modal.innerHTML = `
+          <div class="w-full max-w-md rounded-2xl border border-white/15 bg-slate-900/95 backdrop-blur-xl shadow-2xl p-5">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center"><span>👻</span></div>
+                <div class="text-white font-bold">Install Ghost Whistle</div>
+              </div>
+              <button id="install-close" class="text-white/60 hover:text-white">✕</button>
+            </div>
+            <div id="install-content" class="text-sm text-slate-300 space-y-3"></div>
+            <div id="install-actions" class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+
+        const content = modal.querySelector('#install-content');
+        const actions = modal.querySelector('#install-actions');
+
+        if (isAndroid) {
+          content.innerHTML = `
+            <div>Install the app for the best mobile experience.</div>
+            <ul class="list-disc pl-5 space-y-1">
+              <li>Install PWA (instant)</li>
+              <li>Or get the Play Store app</li>
+              <li>Or download APK directly</li>
+            </ul>`;
+          const pwaBtn = document.createElement('button');
+          pwaBtn.className = 'px-4 py-3 rounded-xl bg-emerald-600 text-white font-semibold';
+          pwaBtn.textContent = deferredPrompt ? 'Install PWA' : 'Install PWA (Browser)';
+          pwaBtn.onclick = async () => {
+            if (deferredPrompt) {
+              deferredPrompt.prompt();
+              await deferredPrompt.userChoice; deferredPrompt = null; closeModal();
+            } else { alert('Use the browser menu → “Install app”'); }
+          };
+          const playBtn = document.createElement('a');
+          playBtn.className = 'px-4 py-3 rounded-xl bg-cyan-600 text-white font-semibold text-center';
+          playBtn.href = playStoreUrl; playBtn.target = '_blank'; playBtn.rel = 'noopener';
+          playBtn.textContent = 'Open in Play Store';
+          const apkBtn = document.createElement('a');
+          apkBtn.className = 'px-4 py-3 rounded-xl bg-slate-700 text-white font-semibold text-center';
+          apkBtn.href = apkUrl; apkBtn.download = ''; apkBtn.textContent = 'Download APK';
+          actions.appendChild(pwaBtn); actions.appendChild(playBtn);
+          const full = document.createElement('div'); full.className = 'sm:col-span-2'; full.appendChild(apkBtn); actions.appendChild(full);
+        }
+
+        if (isIOS) {
+          content.innerHTML = `
+            <div>Install Ghost Whistle on your iPhone:</div>
+            <ol class="list-decimal pl-5 space-y-1">
+              <li>Open this site in Safari</li>
+              <li>Tap the Share button (square with ↑)</li>
+              <li>Select “Add to Home Screen”</li>
+              <li>Tap “Add”</li>
+            </ol>
+            <div class="text-xs text-slate-400">Tip: After installing, launch from the Home Screen icon for full‑screen app mode.</div>`;
+          const okBtn = document.createElement('button');
+          okBtn.className = 'px-4 py-3 rounded-xl bg-emerald-600 text-white font-semibold';
+          okBtn.textContent = 'Got it'; okBtn.onclick = closeModal; actions.appendChild(okBtn);
+        }
+
+        modal.querySelector('#install-close').onclick = closeModal;
+        function closeModal(){ localStorage.setItem(DISMISS_KEY, Date.now().toString()); modal.remove(); }
+      }
+
+      const DISMISS_KEY = 'installPromptDismissedAt_v2';
+      const lastDismiss = +(localStorage.getItem(DISMISS_KEY) || 0);
+      if (!isStandalone && (Date.now() - lastDismiss) >= 3*24*60*60*1000 && (isAndroid || isIOS)) {
+        // show after short delay so UI has rendered
+        setTimeout(showInstallModal, 800);
+      }
+    })();
 </script>
 <script defer type='text/javascript' src='https://changenow.io/embeds/exchange-widget/v2/stepper-connector.js'></script>
 </body>
