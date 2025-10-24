@@ -1910,8 +1910,31 @@
       const [balance, setBalance] = useState(null);
       const [loadingBalance, setLoadingBalance] = useState(false);
       const [showDropdown, setShowDropdown] = useState(false);
+      const [isMobile, setIsMobile] = useState(false);
+      const [showMobileWalletModal, setShowMobileWalletModal] = useState(false);
+      const [mobileWalletMode, setMobileWalletMode] = useState('menu'); // 'menu', 'create', 'import'
+      const [walletPassword, setWalletPassword] = useState('');
+      const [privateKeyInput, setPrivateKeyInput] = useState('');
+      const [generatedWallet, setGeneratedWallet] = useState(null);
       
       useEffect(() => {
+        // Detect mobile device
+        const checkMobile = () => {
+          const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+          setIsMobile(mobile);
+        };
+        checkMobile();
+        
+        // Check if mobile wallet exists
+        if (typeof localStorage !== 'undefined') {
+          const hasWallet = localStorage.getItem('ghost_mobile_wallet');
+          const savedAddress = localStorage.getItem('ghost_mobile_address');
+          if (hasWallet && savedAddress) {
+            walletStore.pubkey = savedAddress;
+            walletStore.setPub(savedAddress);
+          }
+        }
+        
         walletStore.setPub = (pk) => {
           setIsConnected(!!pk);
           setWalletAddress(pk || '');
@@ -1962,46 +1985,305 @@
       
       useEffect(() => {
         if (window.lucide) window.lucide.createIcons();
-      }, [isConnected, showDropdown]);
+      }, [isConnected, showDropdown, showMobileWalletModal, mobileWalletMode]);
       
       const handleConnect = async (e) => {
-            ripple(e);
-            if (!window?.solana?.isPhantom) {
+        ripple(e);
+        if (!window?.solana?.isPhantom) {
           alert("Install Phantom to connect your wallet.");
-              return;
-            }
-            try {
-              const r = await window.solana.connect();
-              walletStore.pubkey = r.publicKey.toBase58();
-              walletStore.setPub(walletStore.pubkey);
+          return;
+        }
+        try {
+          const r = await window.solana.connect();
+          walletStore.pubkey = r.publicKey.toBase58();
+          walletStore.setPub(walletStore.pubkey);
         } catch (e) {
           console.error('Failed to connect:', e);
         }
       };
       
+      const handleCreateMobileWallet = async () => {
+        try {
+          // Generate new keypair
+          const keypair = solanaWeb3.Keypair.generate();
+          const publicKey = keypair.publicKey.toString();
+          const privateKey = bs58.encode(keypair.secretKey);
+          
+          setGeneratedWallet({ publicKey, privateKey, keypair });
+          setMobileWalletMode('create');
+        } catch (e) {
+          console.error('Error creating wallet:', e);
+          alert('Failed to create wallet');
+        }
+      };
+      
+      const handleSaveMobileWallet = async () => {
+        if (!walletPassword || walletPassword.length < 6) {
+          alert('Password must be at least 6 characters');
+          return;
+        }
+        
+        try {
+          // Encrypt and save
+          const encrypted = await encryptPrivateKey(generatedWallet.privateKey, walletPassword);
+          localStorage.setItem('ghost_mobile_wallet', encrypted);
+          localStorage.setItem('ghost_mobile_address', generatedWallet.publicKey);
+          
+          // Set as connected
+          walletStore.pubkey = generatedWallet.publicKey;
+          walletStore.setPub(generatedWallet.publicKey);
+          
+          setShowMobileWalletModal(false);
+          setMobileWalletMode('menu');
+          setWalletPassword('');
+          alert('✅ Mobile wallet created and saved!');
+        } catch (e) {
+          console.error('Error saving wallet:', e);
+          alert('Failed to save wallet');
+        }
+      };
+      
+      const handleImportMobileWallet = async () => {
+        if (!privateKeyInput || !walletPassword) {
+          alert('Please enter private key and password');
+          return;
+        }
+        
+        try {
+          // Validate private key
+          const secretKey = bs58.decode(privateKeyInput);
+          const keypair = solanaWeb3.Keypair.fromSecretKey(secretKey);
+          const publicKey = keypair.publicKey.toString();
+          
+          // Encrypt and save
+          const encrypted = await encryptPrivateKey(privateKeyInput, walletPassword);
+          localStorage.setItem('ghost_mobile_wallet', encrypted);
+          localStorage.setItem('ghost_mobile_address', publicKey);
+          
+          // Set as connected
+          walletStore.pubkey = publicKey;
+          walletStore.setPub(publicKey);
+          
+          setShowMobileWalletModal(false);
+          setMobileWalletMode('menu');
+          setWalletPassword('');
+          setPrivateKeyInput('');
+          alert('✅ Wallet imported successfully!');
+        } catch (e) {
+          console.error('Error importing wallet:', e);
+          alert('Invalid private key');
+        }
+      };
+      
       const handleDisconnect = async () => {
         try {
-          if (window?.solana?.disconnect) {
-            await window.solana.disconnect();
+          if (isMobile) {
+            // Mobile wallet
+            if (confirm('Are you sure you want to disconnect? (Your wallet will remain saved)')) {
+              walletStore.pubkey = null;
+              walletStore.setPub(null);
+              setShowDropdown(false);
+            }
+          } else {
+            // Phantom wallet
+            if (window?.solana?.disconnect) {
+              await window.solana.disconnect();
+            }
+            walletStore.pubkey = null;
+            walletStore.setPub(null);
+            setShowDropdown(false);
           }
-          walletStore.pubkey = null;
-          walletStore.setPub(null);
-          setShowDropdown(false);
         } catch (e) {
           console.error('Failed to disconnect:', e);
         }
       };
       
-      if (!isConnected) {
-        return (
-          <button
-            title="Connect Phantom Wallet"
-            className="w-11 h-11 rounded-full transition-all hover:scale-110 active:scale-95 flex items-center justify-center shadow-lg bg-gradient-to-br from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 shadow-cyan-500/30"
-            onClick={handleConnect}
-          >
-            <i data-lucide="wallet" className="w-6 h-6 text-white"></i>
-        </button>
+      const handleDeleteMobileWallet = () => {
+        if (confirm('⚠️ WARNING: This will permanently delete your mobile wallet. Make sure you have backed up your private key!')) {
+          localStorage.removeItem('ghost_mobile_wallet');
+          localStorage.removeItem('ghost_mobile_address');
+          walletStore.pubkey = null;
+          walletStore.setPub(null);
+          setShowDropdown(false);
+          alert('Wallet deleted');
+        }
+      };
+      
+      // Encryption helper
+      async function encryptPrivateKey(privateKey, password) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(privateKey);
+        const passwordKey = await crypto.subtle.importKey(
+          'raw',
+          encoder.encode(password),
+          { name: 'PBKDF2' },
+          false,
+          ['deriveBits', 'deriveKey']
         );
+        
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        const key = await crypto.subtle.deriveKey(
+          { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+          passwordKey,
+          { name: 'AES-GCM', length: 256 },
+          false,
+          ['encrypt']
+        );
+        
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, data);
+        
+        const combined = new Uint8Array(salt.length + iv.length + encrypted.byteLength);
+        combined.set(salt, 0);
+        combined.set(iv, salt.length);
+        combined.set(new Uint8Array(encrypted), salt.length + iv.length);
+        
+        return btoa(String.fromCharCode(...combined));
+      }
+      
+      if (!isConnected) {
+        if (isMobile) {
+          return (
+            <>
+              <button
+                title="Create Mobile Wallet"
+                className="flex items-center gap-2 px-3 py-2 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-lg bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 shadow-emerald-500/30"
+                onClick={() => setShowMobileWalletModal(true)}
+              >
+                <i data-lucide="smartphone" className="w-5 h-5 text-white"></i>
+                <span className="text-sm font-semibold text-white hidden sm:inline">Mobile Wallet</span>
+              </button>
+              
+              {showMobileWalletModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+                  <div className="bg-slate-900 rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto border border-white/10 shadow-2xl">
+                    <div className="p-6">
+                      <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-2xl font-bold text-white">Mobile Wallet</h2>
+                        <button onClick={() => {setShowMobileWalletModal(false); setMobileWalletMode('menu');}} className="text-white/60 hover:text-white">
+                          <i data-lucide="x" className="w-6 h-6"></i>
+                        </button>
+                      </div>
+                      
+                      {mobileWalletMode === 'menu' && (
+                        <div className="space-y-3">
+                          <button onClick={handleCreateMobileWallet} className="w-full flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-400/30 hover:border-emerald-400/50 transition-all">
+                            <i data-lucide="plus-circle" className="w-8 h-8 text-emerald-400"></i>
+                            <div className="text-left">
+                              <div className="font-bold text-white">Create New Wallet</div>
+                              <div className="text-xs text-white/60">Generate a new Solana wallet</div>
+                            </div>
+                          </button>
+                          
+                          <button onClick={() => setMobileWalletMode('import')} className="w-full flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-400/30 hover:border-cyan-400/50 transition-all">
+                            <i data-lucide="download" className="w-8 h-8 text-cyan-400"></i>
+                            <div className="text-left">
+                              <div className="font-bold text-white">Import Wallet</div>
+                              <div className="text-xs text-white/60">Import existing private key</div>
+                            </div>
+                          </button>
+                        </div>
+                      )}
+                      
+                      {mobileWalletMode === 'create' && generatedWallet && (
+                        <div className="space-y-4">
+                          <div className="bg-yellow-500/10 border border-yellow-400/30 rounded-lg p-4">
+                            <div className="flex items-start gap-2">
+                              <i data-lucide="alert-triangle" className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5"></i>
+                              <div className="text-sm text-yellow-200">
+                                <strong>Save your private key!</strong> You'll need it to restore your wallet.
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-sm text-white/80 font-semibold">Public Address</label>
+                            <div className="p-3 rounded-lg bg-white/5 border border-white/10 font-mono text-xs text-white break-all">
+                              {generatedWallet.publicKey}
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-sm text-white/80 font-semibold">Private Key (KEEP SECRET!)</label>
+                            <div className="p-3 rounded-lg bg-red-500/10 border border-red-400/30 font-mono text-xs text-red-300 break-all">
+                              {generatedWallet.privateKey}
+                            </div>
+                            <button onClick={() => navigator.clipboard.writeText(generatedWallet.privateKey)} className="text-xs text-cyan-400 hover:text-cyan-300">
+                              Copy to clipboard
+                            </button>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-sm text-white/80 font-semibold">Set Password</label>
+                            <input 
+                              type="password" 
+                              value={walletPassword}
+                              onChange={(e) => setWalletPassword(e.target.value)}
+                              placeholder="Enter password (min 6 characters)"
+                              className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:border-emerald-400/50 focus:outline-none"
+                            />
+                          </div>
+                          
+                          <button onClick={handleSaveMobileWallet} className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold">
+                            Save Wallet
+                          </button>
+                          
+                          <button onClick={() => {setMobileWalletMode('menu'); setGeneratedWallet(null);}} className="w-full py-2 text-white/60 hover:text-white text-sm">
+                            Cancel
+                          </button>
+                        </div>
+                      )}
+                      
+                      {mobileWalletMode === 'import' && (
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <label className="text-sm text-white/80 font-semibold">Private Key</label>
+                            <textarea 
+                              value={privateKeyInput}
+                              onChange={(e) => setPrivateKeyInput(e.target.value)}
+                              placeholder="Enter your private key (base58)"
+                              rows={4}
+                              className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:border-cyan-400/50 focus:outline-none font-mono text-xs"
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-sm text-white/80 font-semibold">Set Password</label>
+                            <input 
+                              type="password" 
+                              value={walletPassword}
+                              onChange={(e) => setWalletPassword(e.target.value)}
+                              placeholder="Enter password (min 6 characters)"
+                              className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:border-cyan-400/50 focus:outline-none"
+                            />
+                          </div>
+                          
+                          <button onClick={handleImportMobileWallet} className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold">
+                            Import Wallet
+                          </button>
+                          
+                          <button onClick={() => {setMobileWalletMode('menu'); setPrivateKeyInput(''); setWalletPassword('');}} className="w-full py-2 text-white/60 hover:text-white text-sm">
+                            Back
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          );
+        } else {
+          return (
+            <button
+              title="Connect Phantom Wallet"
+              className="w-11 h-11 rounded-full transition-all hover:scale-110 active:scale-95 flex items-center justify-center shadow-lg bg-gradient-to-br from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 shadow-cyan-500/30"
+              onClick={handleConnect}
+            >
+              <i data-lucide="wallet" className="w-6 h-6 text-white"></i>
+            </button>
+          );
+        }
       }
       
       return (
@@ -2010,7 +2292,7 @@
             onClick={() => setShowDropdown(!showDropdown)}
             className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 shadow-lg shadow-emerald-500/30 transition-all hover:scale-105"
           >
-            <i data-lucide="wallet" className="w-5 h-5 text-white"></i>
+            <i data-lucide={isMobile ? "smartphone" : "wallet"} className="w-5 h-5 text-white"></i>
             <div className="hidden sm:flex flex-col items-start">
               <span className="text-xs text-white/90 font-mono">{walletAddress.slice(0,4)}...{walletAddress.slice(-4)}</span>
               {loadingBalance ? (
@@ -2027,7 +2309,7 @@
           {showDropdown && (
             <div className="absolute right-0 top-full mt-2 w-64 rounded-xl bg-slate-900/95 backdrop-blur-xl border border-white/10 shadow-2xl z-[9999] overflow-hidden">
               <div className="p-4 border-b border-white/10">
-                <div className="text-xs text-white/60 mb-1">Connected Wallet</div>
+                <div className="text-xs text-white/60 mb-1">{isMobile ? 'Mobile Wallet' : 'Connected Wallet'}</div>
                 <div className="text-sm font-mono text-white break-all">{walletAddress}</div>
                 {balance !== null && (
                   <div className="mt-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-400/20">
@@ -2038,11 +2320,20 @@
               </div>
               <button
                 onClick={handleDisconnect}
-                className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-red-500/20 transition-all text-red-400"
+                className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-orange-500/20 transition-all text-orange-400 border-b border-white/5"
               >
                 <i data-lucide="log-out" className="w-4 h-4"></i>
                 <span className="text-sm font-semibold">Disconnect</span>
               </button>
+              {isMobile && (
+                <button
+                  onClick={handleDeleteMobileWallet}
+                  className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-red-500/20 transition-all text-red-400"
+                >
+                  <i data-lucide="trash-2" className="w-4 h-4"></i>
+                  <span className="text-sm font-semibold">Delete Wallet</span>
+                </button>
+              )}
             </div>
           )}
         </div>
