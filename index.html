@@ -1945,20 +1945,25 @@
         checkMobile();
         window.addEventListener('resize', checkMobile);
         
-        // Check if mobile wallet exists
-        if (typeof localStorage !== 'undefined') {
-          const hasWallet = localStorage.getItem('ghost_mobile_wallet');
-          const savedAddress = localStorage.getItem('ghost_mobile_address');
-          if (hasWallet && savedAddress) {
-            walletStore.pubkey = savedAddress;
-            walletStore.setPub(savedAddress);
-          }
-        }
-        
         walletStore.setPub = (pk) => {
           setIsConnected(!!pk);
           setWalletAddress(pk || '');
         };
+
+        // Auto-reconnect mobile wallet on page load
+        if (typeof localStorage !== 'undefined') {
+          const hasWallet = localStorage.getItem('ghost_mobile_wallet');
+          const savedAddress = localStorage.getItem('ghost_mobile_address');
+          const wasConnected = localStorage.getItem('walletConnected');
+          
+          if (hasWallet && savedAddress && wasConnected === 'true') {
+            console.log('👻 Auto-reconnecting mobile wallet:', savedAddress.slice(0, 8) + '...');
+            walletStore.pubkey = savedAddress;
+            setIsConnected(true);
+            setWalletAddress(savedAddress);
+            try { window.dispatchEvent(new CustomEvent('wallet-updated', { detail: savedAddress })); } catch {}
+          }
+        }
 
         // Open mobile wallet modal when requested from other sections
         const openHandler = () => setShowMobileWalletModal(true);
@@ -2334,17 +2339,17 @@
             className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 shadow-lg shadow-emerald-500/30 transition-all hover:scale-105"
           >
             <i data-lucide={isMobile ? "smartphone" : "wallet"} className="w-5 h-5 text-white"></i>
-            <div className="hidden sm:flex flex-col items-start">
+            <div className="flex flex-col items-start">
               <span className="text-xs text-white/90 font-mono">{walletAddress.slice(0,4)}...{walletAddress.slice(-4)}</span>
               {loadingBalance ? (
-                <span className="text-xs text-white/70">Loading...</span>
+                <span className="text-[10px] sm:text-xs text-white/70">Loading...</span>
               ) : balance !== null ? (
-                <span className="text-xs font-bold text-white">{balance.toFixed(4)} SOL</span>
+                <span className="text-[10px] sm:text-xs font-bold text-white">{balance.toFixed(2)} SOL</span>
               ) : (
-                <span className="text-xs text-white/70">--</span>
+                <span className="text-[10px] sm:text-xs text-white/70">--</span>
               )}
             </div>
-            <i data-lucide={showDropdown ? "chevron-up" : "chevron-down"} className="w-4 h-4 text-white hidden sm:block"></i>
+            <i data-lucide={showDropdown ? "chevron-up" : "chevron-down"} className="w-4 h-4 text-white"></i>
           </button>
           
           {showDropdown && (
