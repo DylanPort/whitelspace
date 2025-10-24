@@ -9941,6 +9941,90 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [totalRelays, setTotalRelays] = useState(0);
       const [successfulRelays, setSuccessfulRelays] = useState(0);
       const [loading, setLoading] = useState(false);
+      // ===== In-App Wallet Helpers (no permission prompts) =====
+      async function getInAppKeypair() {
+        try {
+          const stored = (typeof localStorage !== 'undefined') ? localStorage.getItem('ghost_mobile_wallet') : null;
+          if (!stored) return null;
+
+          // 1) Fallback formats saved by creator flow
+          if (stored.includes(':base64')) {
+            const b64 = stored.split(':')[0];
+            const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+            return solanaWeb3.Keypair.fromSecretKey(bytes);
+          }
+          if (stored.includes(',')) {
+            const arr = stored.split(',').map((n) => parseInt(n, 10));
+            return solanaWeb3.Keypair.fromSecretKey(new Uint8Array(arr));
+          }
+
+          // 2) Try bs58 (most common)
+          try {
+            const sk = bs58.decode(stored);
+            return solanaWeb3.Keypair.fromSecretKey(sk);
+          } catch (_) {}
+
+          // 3) Encrypted blob (PBKDF2 + AES-GCM as used by encryptPrivateKey)
+          try {
+            const password = (typeof localStorage !== 'undefined' && localStorage.getItem('ghost_mobile_password')) || prompt('Enter wallet password to sign');
+            if (!password) throw new Error('Password required');
+            const enc = new TextEncoder();
+            const bytes = Uint8Array.from(atob(stored), c => c.charCodeAt(0));
+            const salt = bytes.slice(0, 16);
+            const iv = bytes.slice(16, 28);
+            const ct = bytes.slice(28);
+            const passwordKey = await crypto.subtle.importKey('raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveKey']);
+            const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, passwordKey, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+            const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
+            const priv = new TextDecoder().decode(new Uint8Array(plain));
+            // decrypted private key may be bs58, base64-tagged, or comma bytes
+            try {
+              const sk = bs58.decode(priv);
+              return solanaWeb3.Keypair.fromSecretKey(sk);
+            } catch (_) {
+              if (priv.includes(':base64')) {
+                const b64 = priv.split(':')[0];
+                const bytes2 = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+                return solanaWeb3.Keypair.fromSecretKey(bytes2);
+              }
+              if (priv.includes(',')) {
+                const arr2 = priv.split(',').map((n) => parseInt(n, 10));
+                return solanaWeb3.Keypair.fromSecretKey(new Uint8Array(arr2));
+              }
+              throw new Error('Unsupported decrypted key format');
+            }
+          } catch (e) {
+            console.error('Failed to load in-app keypair:', e);
+            pushToast && pushToast('❌ Unable to access in-app wallet key', 'err');
+            return null;
+          }
+        } catch (e) {
+          console.error('In-app wallet unavailable:', e);
+          return null;
+        }
+      }
+
+      async function signAndSendTx(connection, transaction) {
+        // Prefer in-app wallet (no permission prompts)
+        const inApp = await getInAppKeypair();
+        if (inApp) {
+          transaction.feePayer = inApp.publicKey;
+          transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+          transaction.sign(inApp);
+          const sig = await connection.sendRawTransaction(transaction.serialize(), { skipPreflight: false });
+          await connection.confirmTransaction(sig, 'confirmed');
+          return sig;
+        }
+        // Fallback to Phantom if available
+        if (wallet && wallet.signTransaction) {
+          const signed = await wallet.signTransaction(transaction);
+          const sig = await connection.sendRawTransaction(signed.serialize(), { skipPreflight: false });
+          await connection.confirmTransaction(sig, 'confirmed');
+          return sig;
+        }
+        throw new Error('No wallet available to sign');
+      }
+
       
       // UI States
       const [stakeInput, setStakeInput] = useState('');
@@ -10320,7 +10404,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         try {
           const connection = new solanaWeb3.Connection(MAINNET_RPC, 'confirmed');
           const programId = new solanaWeb3.PublicKey(GHOST_PROGRAM_ID);
-          const userPubkey = new solanaWeb3.PublicKey(walletAddress);
+          const inApp = await getInAppKeypair();
+          const userPubkey = inApp ? inApp.publicKey : new solanaWeb3.PublicKey(walletAddress);
           const poolPDA = await getPoolPDA();
           const whistleMint = new solanaWeb3.PublicKey(WHISTLE_TOKEN_MINT);
           
@@ -10410,9 +10495,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           transaction.feePayer = userPubkey;
           transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
           
-          // Sign and send via Phantom
-          const signed = await wallet.signTransaction(transaction);
-          const signature = await connection.sendRawTransaction(signed.serialize());
+          // Sign and send (prefer in-app wallet)
+          const signature = await signAndSendTx(connection, transaction);
           
           pushToast('⏳ Confirming transaction...', 'info');
           await connection.confirmTransaction(signature, 'confirmed');
@@ -10437,7 +10521,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       
       // ========== REAL CLAIM REWARDS - BLOCKCHAIN TRANSACTION ==========
       const handleClaimRewards = async () => {
-        if (!wallet || pendingRewards === 0) {
+        if (pendingRewards === 0) {
           pushToast('⚠️ No rewards to claim', 'err');
           return;
         }
@@ -10446,7 +10530,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         try {
           const connection = new solanaWeb3.Connection(MAINNET_RPC, 'confirmed');
           const programId = new solanaWeb3.PublicKey(GHOST_PROGRAM_ID);
-          const userPubkey = new solanaWeb3.PublicKey(walletAddress);
+          const inApp = await getInAppKeypair();
+          const userPubkey = inApp ? inApp.publicKey : new solanaWeb3.PublicKey(walletAddress);
           const poolPDA = await getPoolPDA();
           const whistleMint = new solanaWeb3.PublicKey(WHISTLE_TOKEN_MINT);
           
@@ -10503,9 +10588,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           transaction.feePayer = userPubkey;
           transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
           
-          // Sign and send
-          const signed = await wallet.signTransaction(transaction);
-          const signature = await connection.sendRawTransaction(signed.serialize());
+          // Sign and send (prefer in-app wallet)
+          const signature = await signAndSendTx(connection, transaction);
           
           pushToast('⏳ Confirming transaction...', 'info');
           await connection.confirmTransaction(signature, 'confirmed');
@@ -10548,7 +10632,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         try {
           const connection = new solanaWeb3.Connection(MAINNET_RPC, 'confirmed');
           const programId = new solanaWeb3.PublicKey(GHOST_PROGRAM_ID);
-          const userPubkey = new solanaWeb3.PublicKey(walletAddress);
+          const inApp = await getInAppKeypair();
+          const userPubkey = inApp ? inApp.publicKey : new solanaWeb3.PublicKey(walletAddress);
           const poolPDA = await getPoolPDA();
           const whistleMint = new solanaWeb3.PublicKey(WHISTLE_TOKEN_MINT);
           
@@ -10615,9 +10700,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           transaction.feePayer = userPubkey;
           transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
           
-          // Sign and send
-          const signed = await wallet.signTransaction(transaction);
-          const signature = await connection.sendRawTransaction(signed.serialize());
+          // Sign and send (prefer in-app wallet)
+          const signature = await signAndSendTx(connection, transaction);
           
           pushToast('⏳ Confirming transaction...', 'info');
           await connection.confirmTransaction(signature, 'confirmed');
