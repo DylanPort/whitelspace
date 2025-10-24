@@ -2388,7 +2388,9 @@
         { id: "home", label: "Home", icon: "home" },
         { id: "webrtc", label: "WebRTC Transfer", icon: "radio" },
         { id: "offline-network", label: "👻 Ghost Whistle", icon: "network" },
-        { id: "services", label: "🌐 Services", icon: "box" },
+        { id: "social-hub", label: "👻 Ghost Terminal", icon: "terminal" },
+        { id: "services", label: "👻 Ghost Services", icon: "zap" },
+        { id: "how-it-works", label: "How It Works", icon: "book-open" },
         { id: "swap", label: "Privacy Swap", iconImg: "4DqRlDPT_400x400.png.png" },
         { id: "solana-privacy", label: "Solana Privacy Tools", iconImg: "solana.png" },
         { id: "pump-portal", label: "Pump Privacy Tools", iconImg: "idrs8cZ-zg_logos.png" },
@@ -2427,8 +2429,13 @@
                 <button
                   key={t.id}
                   onClick={() => {
-                    setStep(t.id);
-                    setIsOpen(false);
+                    if (t.id === 'how-it-works') {
+                      window.open('/howto', '_blank');
+                      setIsOpen(false);
+                    } else {
+                      setStep(t.id);
+                      setIsOpen(false);
+                    }
                   }}
                   className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all ${
                     step === t.id
