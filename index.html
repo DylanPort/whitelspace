@@ -9720,8 +9720,15 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       
       // ========== REAL STAKING - BLOCKCHAIN TRANSACTION ==========
       const handleStake = async () => {
-        if (!wallet || !walletAddress) {
-          setShowWalletModal(true);
+        // Use mobile/global wallet if available
+        if (!walletAddress) {
+          try {
+            const savedAddress = localStorage.getItem('ghost_mobile_address');
+            if (savedAddress) setWalletAddress(savedAddress);
+          } catch {}
+        }
+        if (!walletAddress) {
+          pushToast('⚠️ Create or import a mobile wallet first (navbar)', 'err');
           return;
         }
         
@@ -10942,9 +10949,17 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       
       // Create and sign relay request (OFFLINE CAPABLE)
       const createRelayRequest = async () => {
-        if (!wallet || !walletAddress) {
-          pushToast('⚠️ Connect wallet first', 'err');
-          setShowWalletModal(true);
+        // Prefer global/mobile wallet if available
+        if (!walletAddress) {
+          try {
+            const savedAddress = localStorage.getItem('ghost_mobile_address');
+            if (savedAddress) {
+              setWalletAddress(savedAddress);
+            }
+          } catch {}
+        }
+        if (!walletAddress) {
+          pushToast('⚠️ Create or import a mobile wallet first (navbar)', 'err');
           return;
         }
         
@@ -12506,12 +12521,14 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
               <p className="text-slate-600 dark:text-slate-400 mb-6">
                 Connect your Solana wallet to stake $WHISTLE and start earning by running a privacy node
               </p>
-              <button
-                onClick={() => setShowWalletModal(true)}
-                className="px-8 py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold shadow-lg hover:shadow-xl transition-all"
-              >
-                Connect Wallet
-              </button>
+              {!isMobile && (
+                <button
+                  onClick={() => setShowWalletModal(true)}
+                  className="px-8 py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold shadow-lg hover:shadow-xl transition-all"
+                >
+                  Connect Wallet
+                </button>
+              )}
             </div>
           ) : null)}
 
@@ -13987,7 +14004,15 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       // DEBUG: Log current state
       console.log('🔍 SocialHub render - isStaker:', isStaker, 'walletAddress:', walletAddress, 'stakeAmount:', stakeAmount);
       
-      // If no wallet connected, show connect screen
+      // If no wallet connected, prefer mobile wallet (navbar)
+      if (!walletAddress) {
+        try {
+          const saved = localStorage.getItem('ghost_mobile_address');
+          if (saved) {
+            walletAddress = saved;
+          }
+        } catch {}
+      }
       if (!walletAddress) {
         console.log('🔌 Showing connect wallet screen');
         return (
@@ -14024,6 +14049,10 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   Ghost Terminal
                 </h1>
                 <p className="text-white/70 mb-6 font-mono">Exclusive terminal for Ghost Whistle cult members</p>
+              {/* On mobile, don't show connect; ask to create/import navbar wallet */}
+              {(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) ? (
+                <div className="text-white/70 text-sm">Create or import a mobile wallet from the navbar to enter.</div>
+              ) : (
                 <button
                   onClick={connectWallet}
                   disabled={connecting}
@@ -14031,6 +14060,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 >
                   {connecting ? 'Connecting...' : 'Enter Terminal'}
                 </button>
+              )}
               </div>
             </div>
           </div>
