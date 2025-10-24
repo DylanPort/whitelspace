@@ -2460,7 +2460,7 @@
     }
 
     // Solana Privacy Toolkit - 5 Production Tools
-    function SolanaPrivacyToolkit({ pushToast }) {
+    function SolanaPrivacyToolkit({ pushToast, setStep }) {
       // Check if library is available
       const libAvailable = typeof solanaWeb3 !== 'undefined';
       
@@ -3344,10 +3344,10 @@
               <div className="bg-purple-500/10 border border-purple-400/30 rounded-lg p-4 text-sm text-white/80">
                 <p className="mb-4"><strong className="text-purple-400">Available Now:</strong> Launch tokens on Pump.fun with enhanced privacy features. Bundle transactions, hide launch timing, and protect your trading strategies.</p>
                 <button 
-                  onClick={() => window.open('https://pump.fun', '_blank')}
+                  onClick={() => setStep('pump-portal')}
                   className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-lg transition-all transform hover:scale-105"
                 >
-                  🚀 Launch on Pump.fun
+                  🚀 Open Pump Privacy Tools
                 </button>
               </div>
             </div>
@@ -3366,7 +3366,7 @@
               <div className="bg-cyan-500/10 border border-cyan-400/30 rounded-lg p-4 text-sm text-white/80">
                 <p className="mb-4"><strong className="text-cyan-400">Available Now:</strong> Exchange between Solana, Zcash, and other privacy coins without KYC. Privacy-preserving swaps with no data collection.</p>
                 <button 
-                  onClick={() => window.open('https://zolana.org', '_blank')}
+                  onClick={() => setStep('zolana')}
                   className="w-full px-6 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold rounded-lg transition-all transform hover:scale-105"
                 >
                   🔄 Open Zolana Exchange
@@ -15620,7 +15620,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                       case 'privacy-checkup': return <PrivacyCheckup pushToast={push} />;
                       case 'censorship-map': return <CensorshipMap pushToast={push} />;
                       case 'swap': return <PrivacySwap />;
-                      case 'solana-privacy': return <SolanaPrivacyToolkit pushToast={push} />;
+                      case 'solana-privacy': return <SolanaPrivacyToolkit pushToast={push} setStep={setStepGuarded} />;
                       case 'pump-portal': return <PumpPortalLaunch pushToast={push} />;
                       case 'zolana': return <ZolanaExchange pushToast={push} />;
                       default: return (
@@ -16485,7 +16485,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                       case 'privacy-checkup': return <PrivacyCheckup pushToast={push} />;
                       case 'censorship-map': return <CensorshipMap pushToast={push} />;
                       case 'swap': return <PrivacySwap />;
-                      case 'solana-privacy': return <SolanaPrivacyToolkit pushToast={push} />;
+                      case 'solana-privacy': return <SolanaPrivacyToolkit pushToast={push} setStep={setStepGuarded} />;
                       case 'pump-portal': return <PumpPortalLaunch pushToast={push} />;
                       case 'zolana': return <ZolanaExchange pushToast={push} />;
                       default: return (
