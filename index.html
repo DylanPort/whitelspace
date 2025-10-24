@@ -1939,6 +1939,13 @@
           setIsConnected(!!pk);
           setWalletAddress(pk || '');
         };
+
+        // Open mobile wallet modal when requested from other sections
+        const openHandler = () => setShowMobileWalletModal(true);
+        window.addEventListener('open-mobile-wallet', openHandler);
+        return () => {
+          window.removeEventListener('open-mobile-wallet', openHandler);
+        };
       }, []);
       
       // Fetch balance when connected
@@ -2028,10 +2035,12 @@
           const encrypted = await encryptPrivateKey(generatedWallet.privateKey, walletPassword);
           localStorage.setItem('ghost_mobile_wallet', encrypted);
           localStorage.setItem('ghost_mobile_address', generatedWallet.publicKey);
+          localStorage.setItem('walletConnected', 'true');
           
           // Set as connected
           walletStore.pubkey = generatedWallet.publicKey;
           walletStore.setPub(generatedWallet.publicKey);
+          try { window.dispatchEvent(new CustomEvent('wallet-updated', { detail: generatedWallet.publicKey })); } catch {}
           
           setShowMobileWalletModal(false);
           setMobileWalletMode('menu');
@@ -2059,10 +2068,12 @@
           const encrypted = await encryptPrivateKey(privateKeyInput, walletPassword);
           localStorage.setItem('ghost_mobile_wallet', encrypted);
           localStorage.setItem('ghost_mobile_address', publicKey);
+          localStorage.setItem('walletConnected', 'true');
           
           // Set as connected
           walletStore.pubkey = publicKey;
           walletStore.setPub(publicKey);
+          try { window.dispatchEvent(new CustomEvent('wallet-updated', { detail: publicKey })); } catch {}
           
           setShowMobileWalletModal(false);
           setMobileWalletMode('menu');
@@ -11277,16 +11288,29 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
               </div>
               
               {!walletAddress ? (
-                <button
-                  onClick={() => setShowWalletModal(true)}
-                  disabled={connecting}
-                  className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2 disabled:opacity-50"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                  {connecting ? 'Connecting...' : 'Connect Wallet'}
-                </button>
+                <div className="flex gap-2">
+                  {/* Desktop: connect with Phantom */}
+                  <button
+                    onClick={() => setShowWalletModal(true)}
+                    disabled={connecting}
+                    className="hidden sm:flex px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold shadow-lg hover:shadow-xl transition-all items-center gap-2 disabled:opacity-50"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    {connecting ? 'Connecting...' : 'Connect Wallet'}
+                  </button>
+                  {/* Mobile: connect with in-app wallet */}
+                  <button
+                    onClick={() => window.dispatchEvent(new Event('open-mobile-wallet'))}
+                    className="flex sm:hidden px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold shadow-lg hover:shadow-xl transition-all items-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7h18M3 12h18M3 17h18" />
+                    </svg>
+                    In‑App Wallet
+                  </button>
+                </div>
               ) : (
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="bg-white/80 dark:bg-slate-800/80 rounded-xl px-4 py-2 border border-slate-200 dark:border-slate-700">
