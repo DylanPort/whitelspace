@@ -15281,3 +15281,722 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
 </script>
+<script defer type='text/javascript' src='https://changenow.io/embeds/exchange-widget/v2/stepper-connector.js'></script>
+</body>
+</html>
+
+<!-- OLD JUNK BELOW TO DELETE
+                {nearbyNodes.length === 0 ? (
+                  <div className="text-center py-16">
+                    <svg className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+                    </svg>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">
+                      {nodeActive ? 'Scanning network...' : 'Node offline'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {nearbyNodes.map((node, i) => (
+                      <div key={node.id} className="group hover:bg-slate-100/50 dark:hover:bg-slate-800/50 rounded-lg p-3 transition-all">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${node.signal >= 80 ? 'bg-emerald-500' : node.signal >= 50 ? 'bg-orange-500' : 'bg-red-500'}`}></div>
+                            <span className="text-sm font-bold text-slate-900 dark:text-white font-mono">{node.name}</span>
+                          </div>
+                          <span className={`text-xs font-bold ${node.signal >= 80 ? 'text-emerald-600 dark:text-emerald-400' : node.signal >= 50 ? 'text-orange-600 dark:text-orange-400' : 'text-red-600 dark:text-red-400'}`}>
+                            {node.signal}%
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] text-slate-600 dark:text-slate-400 font-medium">
+                          <span>{node.distance}</span>
+                          <span>{node.uptime}</span>
+                          <span>{node.relayed} relays</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Transaction Queue - Minimalist */}
+            <div className="backdrop-blur-sm bg-white/70 dark:bg-slate-900/70 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 overflow-hidden shadow-xl">
+              <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Transaction Queue · {pendingTxs.length}</h3>
+              </div>
+              <div className="p-3">
+                {pendingTxs.length === 0 ? (
+                  <div className="text-center py-16">
+                    <svg className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 font-medium mb-4">No pending transactions</p>
+                    <button 
+                      onClick={() => setShowCreateTx(true)}
+                      disabled={!nodeActive}
+                      className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-slate-400 disabled:opacity-40 text-white text-xs font-bold transition-all"
+                    >
+                      + NEW
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {pendingTxs.map((tx) => (
+                      <div key={tx.id} className="group hover:bg-slate-100/50 dark:hover:bg-slate-800/50 rounded-lg p-3 transition-all">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${tx.status === 'confirmed' ? 'bg-emerald-500' : tx.status === 'relaying' ? 'bg-blue-500 animate-pulse' : 'bg-orange-500'}`}></div>
+                            <span className="text-xs font-bold text-slate-900 dark:text-white font-mono">{tx.id}</span>
+                          </div>
+                          <span className="text-xs font-bold text-slate-900 dark:text-white">{tx.amount} SOL</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] text-slate-600 dark:text-slate-400 font-medium mb-1">
+                          <span className="truncate max-w-[120px]">{tx.recipient}</span>
+                          <span>{tx.hops} hops</span>
+                          <span>{tx.created}</span>
+                        </div>
+                        {tx.memo && (
+                          <div className="text-[10px] text-slate-500 dark:text-slate-500 italic mt-1 truncate">{tx.memo}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Node Operators & Staking Protocol */}
+          <div className="backdrop-blur-sm bg-white/70 dark:bg-slate-900/70 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 overflow-hidden shadow-xl">
+            <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/50 dark:to-cyan-950/50">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">Node Operators & Staking</h3>
+              <p className="text-[10px] text-slate-600 dark:text-slate-400 mt-0.5">Earn $WHISTLE by running nodes and staking tokens</p>
+            </div>
+            
+            <div className="p-4">
+              {/* How It Works - 2 Column */}
+              <div className="grid md:grid-cols-2 gap-4 mb-4">
+                {/* Node Operators */}
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-sm font-black">1</span>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white mb-1">RUN A NODE</h4>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                        Keep your device online with the WHISTLE app running. Your node will automatically relay encrypted transactions through the mesh network.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-sm font-black">2</span>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white mb-1">RELAY MESSAGES</h4>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                        Each transaction you relay earns you $WHISTLE tokens. The more uptime and relays, the higher your rewards.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-sm font-black">3</span>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white mb-1">EARN REWARDS</h4>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                        Automatic payouts every 24h. Top node operators earn bonus multipliers for reliability and performance.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Staking Protocol */}
+                <div className="space-y-3">
+                  <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
+                    <h4 className="text-xs font-black text-blue-900 dark:text-blue-300 mb-2 uppercase tracking-wider">Base Staking APY</h4>
+                    <div className="text-3xl font-black text-blue-600 dark:text-blue-400 mb-1">45%</div>
+                    <p className="text-[10px] text-slate-600 dark:text-slate-400">Up to 60% APY with node boost</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between py-2 border-b border-slate-200 dark:border-slate-700">
+                      <span className="text-xs text-slate-600 dark:text-slate-400">Minimum Stake</span>
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">10,000 $WHISTLE</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b border-slate-200 dark:border-slate-700">
+                      <span className="text-xs text-slate-600 dark:text-slate-400">Lock Period</span>
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">30 / 90 / 180 days</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b border-slate-200 dark:border-slate-700">
+                      <span className="text-xs text-slate-600 dark:text-slate-400">Node Operator Boost</span>
+                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">+15% APY</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b border-slate-200 dark:border-slate-700">
+                      <span className="text-xs text-slate-600 dark:text-slate-400">Reward per Relay</span>
+                      <span className="text-xs font-bold text-orange-600 dark:text-orange-400">8 $WHISTLE</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2">
+                      <span className="text-xs text-slate-600 dark:text-slate-400">Rewards Claim</span>
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">Daily</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Requirements & Benefits */}
+              <div className="grid md:grid-cols-3 gap-3">
+                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-200 dark:border-slate-700">
+                  <h5 className="text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-400 mb-2">Node Requirements</h5>
+                  <ul className="space-y-1 text-xs text-slate-600 dark:text-slate-400">
+                    <li className="flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-blue-500"></div>
+                      <span>WiFi or Bluetooth enabled</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-blue-500"></div>
+                      <span>Device stays online</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-blue-500"></div>
+                      <span>WHISTLE app running</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-200 dark:border-slate-700">
+                  <h5 className="text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-400 mb-2">Earning Factors</h5>
+                  <ul className="space-y-1 text-xs text-slate-600 dark:text-slate-400">
+                    <li className="flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-emerald-500"></div>
+                      <span>Uptime percentage</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-emerald-500"></div>
+                      <span>Messages relayed</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-emerald-500"></div>
+                      <span>Network contribution</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-200 dark:border-slate-700">
+                  <h5 className="text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-400 mb-2">Staker Benefits</h5>
+                  <ul className="space-y-1 text-xs text-slate-600 dark:text-slate-400">
+                    <li className="flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-orange-500"></div>
+                      <span>Daily compound rewards</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-orange-500"></div>
+                      <span>Node operator bonus</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-orange-500"></div>
+                      <span>Governance rights</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Tokenomics Info */}
+              <div className="mt-4 bg-gradient-to-r from-slate-100 to-slate-50 dark:from-slate-800/50 dark:to-slate-900/50 rounded-xl p-3 border border-slate-200 dark:border-slate-700">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+                  <div>
+                    <div className="text-[9px] text-slate-500 dark:text-slate-500 mb-1 uppercase tracking-wider">Total Supply</div>
+                    <div className="text-sm font-black text-slate-900 dark:text-white">1B $WHISTLE</div>
+                  </div>
+                  <div>
+                    <div className="text-[9px] text-slate-500 dark:text-slate-500 mb-1 uppercase tracking-wider">Market Cap</div>
+                    <div className="text-sm font-black text-slate-900 dark:text-white">$130K</div>
+                  </div>
+                  <div>
+                    <div className="text-[9px] text-slate-500 dark:text-slate-500 mb-1 uppercase tracking-wider">Token Price</div>
+                    <div className="text-sm font-black text-slate-900 dark:text-white">$0.00013</div>
+                  </div>
+                  <div>
+                    <div className="text-[9px] text-slate-500 dark:text-slate-500 mb-1 uppercase tracking-wider">Contract</div>
+                    <div className="text-[10px] font-mono font-bold text-blue-600 dark:text-blue-400">6Hb...pump</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Reward Calculation Example */}
+              <div className="mt-3 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
+                <h5 className="text-xs font-black text-slate-900 dark:text-white mb-3 uppercase tracking-wider">💰 Example Earnings Calculator</h5>
+                
+                {/* Scenario 1: Small Holder */}
+                <div className="mb-4 pb-4 border-b border-slate-200 dark:border-slate-700">
+                  <div className="text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wider">📊 Entry Level (100K $WHISTLE Staked = $13 USD)</div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                      <div className="text-[9px] text-slate-600 dark:text-slate-400 mb-1">Base Staking (45% APY)</div>
+                      <div className="text-base font-black text-blue-600 dark:text-blue-400">123 $W/day</div>
+                      <div className="text-[8px] text-slate-500 dark:text-slate-500">~$0.016/day</div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-slate-600 dark:text-slate-400 mb-1">Node Rewards (50 relays)</div>
+                      <div className="text-base font-black text-emerald-600 dark:text-emerald-400">400 $W/day</div>
+                      <div className="text-[8px] text-slate-500 dark:text-slate-500">~$0.052/day</div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-slate-600 dark:text-slate-400 mb-1">w/ Node Boost (60% APY)</div>
+                      <div className="text-base font-black text-orange-600 dark:text-orange-400">564 $W/day</div>
+                      <div className="text-[8px] text-slate-500 dark:text-slate-500">~$0.073/day</div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-slate-600 dark:text-slate-400 mb-1">Monthly Total</div>
+                      <div className="text-base font-black text-slate-900 dark:text-white">~16.9K $W</div>
+                      <div className="text-[8px] text-emerald-600 dark:text-emerald-400">~$2.20 (17% gain)</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Scenario 2: Power User */}
+                <div>
+                  <div className="text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wider">🚀 Power User (500K $WHISTLE Staked = $65 USD)</div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                      <div className="text-[9px] text-slate-600 dark:text-slate-400 mb-1">Base Staking (45% APY)</div>
+                      <div className="text-base font-black text-blue-600 dark:text-blue-400">616 $W/day</div>
+                      <div className="text-[8px] text-slate-500 dark:text-slate-500">~$0.080/day</div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-slate-600 dark:text-slate-400 mb-1">Node Rewards (200 relays)</div>
+                      <div className="text-base font-black text-emerald-600 dark:text-emerald-400">1,600 $W/day</div>
+                      <div className="text-[8px] text-slate-500 dark:text-slate-500">~$0.208/day</div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-slate-600 dark:text-slate-400 mb-1">w/ Node Boost (60% APY)</div>
+                      <div className="text-base font-black text-orange-600 dark:text-orange-400">2,422 $W/day</div>
+                      <div className="text-[8px] text-slate-500 dark:text-slate-500">~$0.315/day</div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] text-slate-600 dark:text-slate-400 mb-1">Monthly Total</div>
+                      <div className="text-base font-black text-slate-900 dark:text-white">~72.7K $W</div>
+                      <div className="text-[8px] text-emerald-600 dark:text-emerald-400">~$9.45 (14.5% gain)</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 text-center">
+                  <p className="text-[9px] text-slate-600 dark:text-slate-500 italic">* Price assumes current $130K market cap. Actual earnings in USD will increase with market cap growth.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Create Transaction Modal */}
+          {showCreateTx && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowCreateTx(false)}>
+              <div className="rounded-3xl border border-white/20 bg-slate-900/95 p-8 max-w-lg w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                <h2 className="text-2xl font-bold text-white mb-6">Create Offline Transaction</h2>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-white/70 text-sm mb-2">Recipient Address</label>
+                    <input
+                      type="text"
+                      value={txRecipient}
+                      onChange={(e) => setTxRecipient(e.target.value)}
+                      placeholder="Enter Solana wallet address..."
+                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-cyan-400 focus:outline-none transition-all"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-white/70 text-sm mb-2">Amount (SOL)</label>
+                    <input
+                      type="number"
+                      step="0.001"
+                      value={txAmount}
+                      onChange={(e) => setTxAmount(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-cyan-400 focus:outline-none transition-all"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-white/70 text-sm mb-2">Memo (Optional)</label>
+                    <input
+                      type="text"
+                      value={txMemo}
+                      onChange={(e) => setTxMemo(e.target.value)}
+                      placeholder="Add a note..."
+                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-cyan-400 focus:outline-none transition-all"
+                    />
+                  </div>
+                  
+                  <div className="bg-cyan-500/10 border border-cyan-400/30 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div className="text-sm text-white/70">
+                        Your transaction will be signed offline and broadcast through the mesh network. 
+                        It may take several minutes to reach an internet-connected node.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex gap-3 mt-6">
+                  <button
+                    onClick={createOfflineTx}
+                    className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-white font-bold transition-all hover:scale-105 shadow-lg shadow-cyan-500/50"
+                  >
+                    Create & Broadcast
+                  </button>
+                  <button
+                    onClick={() => setShowCreateTx(false)}
+                    className="px-6 py-3 rounded-xl border-2 border-white/20 hover:border-white/30 bg-white/5 hover:bg-white/10 text-white font-bold transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Info Modal */}
+          {showNodeInfo && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowNodeInfo(false)}>
+              <div className="rounded-3xl border border-white/20 bg-slate-900/95 p-8 max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                <h2 className="text-3xl font-bold text-white mb-6">How Offline Network Works</h2>
+                
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-xl font-bold text-cyan-400 mb-3">🌐 Mesh Network Protocol</h3>
+                    <p className="text-white/70 leading-relaxed">
+                      Every device running WHISTLE becomes a relay node. Transactions hop from device to device 
+                      using WiFi Direct and Bluetooth, creating a decentralized mesh network that works completely offline.
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-xl font-bold text-purple-400 mb-3">💰 Earn $WHISTLE Rewards</h3>
+                    <p className="text-white/70 leading-relaxed">
+                      Every time you relay a transaction, you earn $WHISTLE tokens. The more you help the network, 
+                      the more you earn. Rewards are automatically distributed when transactions confirm on-chain.
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-xl font-bold text-emerald-400 mb-3">🔒 Privacy & Security</h3>
+                    <p className="text-white/70 leading-relaxed">
+                      All messages are end-to-end encrypted. Relay nodes can't read transaction contents. 
+                      Your keys never leave your device. Transactions are signed offline and verified on-chain.
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-xl font-bold text-yellow-400 mb-3">🚀 Use Cases</h3>
+                    <ul className="text-white/70 space-y-2 list-disc list-inside">
+                      <li>Send crypto during internet outages</li>
+                      <li>Censorship-resistant transactions</li>
+                      <li>Emergency disaster communications</li>
+                      <li>Rural areas with poor connectivity</li>
+                      <li>Privacy-focused offline payments</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border border-cyan-400/30 rounded-xl p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-400 to-purple-400 flex items-center justify-center shrink-0">
+                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4 className="text-white font-bold mb-2">Coming Soon: Mobile App</h4>
+                        <p className="text-white/70 text-sm">
+                          Native iOS & Android apps with true WiFi Direct and Bluetooth mesh capabilities. 
+                          Join the waitlist to be the first to access global offline Solana transactions.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={() => setShowNodeInfo(false)}
+                  className="w-full mt-6 px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-bold transition-all hover:scale-105 shadow-lg"
+                >
+                  Got It!
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Stake Modal */}
+          {showStakeModal && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowStakeModal(false)}>
+              <div className="rounded-2xl bg-white dark:bg-slate-900 max-w-lg w-full shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                {/* Header */}
+                <div className="bg-gradient-to-r from-blue-600 to-cyan-600 p-6">
+                  <h2 className="text-2xl font-black text-white mb-1">STAKE $WHISTLE</h2>
+                  <p className="text-blue-100 text-sm">Lock tokens to activate your node</p>
+                </div>
+
+                {/* Content */}
+                <div className="p-6 space-y-5">
+                  {/* Wallet Balance */}
+                  <div className="bg-slate-100 dark:bg-slate-800 rounded-xl p-4">
+                    <div className="text-xs text-slate-600 dark:text-slate-400 mb-1 uppercase tracking-wider">Wallet Balance</div>
+                    <div className="text-2xl font-black text-slate-900 dark:text-white">{tokenBalance.toLocaleString()} $WHISTLE</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-500 mt-1">≈ ${(tokenBalance * 0.00013).toFixed(2)} USD</div>
+                  </div>
+
+                  {/* Amount Input */}
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Stake Amount</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={stakeInput}
+                        onChange={(e) => setStakeInput(e.target.value)}
+                        placeholder="10,000 minimum"
+                        className="w-full px-4 py-3 rounded-xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-blue-500 focus:outline-none transition-all font-bold"
+                      />
+                      <button
+                        onClick={() => setStakeInput(tokenBalance.toString())}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all"
+                      >
+                        MAX
+                      </button>
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <button onClick={() => setStakeInput('10000')} className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all">10K</button>
+                      <button onClick={() => setStakeInput('50000')} className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all">50K</button>
+                      <button onClick={() => setStakeInput('100000')} className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all">100K</button>
+                      <button onClick={() => setStakeInput('250000')} className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all">250K</button>
+                    </div>
+                  </div>
+
+                  {/* Lock Period */}
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">Lock Period</label>
+                    <div className="grid grid-cols-3 gap-3">
+                      <button
+                        onClick={() => setLockPeriod(30)}
+                        className={`py-3 px-4 rounded-xl border-2 transition-all font-bold ${
+                          lockPeriod === 30
+                            ? 'bg-blue-600 border-blue-600 text-white'
+                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-blue-400'
+                        }`}
+                      >
+                        <div className="text-xs mb-1">30 Days</div>
+                        <div className="text-[10px] opacity-70">45% APY</div>
+                      </button>
+                      <button
+                        onClick={() => setLockPeriod(90)}
+                        className={`py-3 px-4 rounded-xl border-2 transition-all font-bold ${
+                          lockPeriod === 90
+                            ? 'bg-blue-600 border-blue-600 text-white'
+                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-blue-400'
+                        }`}
+                      >
+                        <div className="text-xs mb-1">90 Days</div>
+                        <div className="text-[10px] opacity-70">52% APY</div>
+                      </button>
+                      <button
+                        onClick={() => setLockPeriod(180)}
+                        className={`py-3 px-4 rounded-xl border-2 transition-all font-bold ${
+                          lockPeriod === 180
+                            ? 'bg-blue-600 border-blue-600 text-white'
+                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-blue-400'
+                        }`}
+                      >
+                        <div className="text-xs mb-1">180 Days</div>
+                        <div className="text-[10px] opacity-70">60% APY</div>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Expected Returns */}
+                  {stakeInput && parseFloat(stakeInput) >= 10000 && (
+                    <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 rounded-xl p-4 border border-emerald-200 dark:border-emerald-800">
+                      <div className="text-xs font-bold text-emerald-900 dark:text-emerald-300 mb-3 uppercase tracking-wider">Expected Returns</div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-[10px] text-emerald-700 dark:text-emerald-400 mb-1">Daily Rewards</div>
+                          <div className="text-lg font-black text-emerald-900 dark:text-emerald-300">
+                            {(parseFloat(stakeInput) * (lockPeriod === 30 ? 0.45 : lockPeriod === 90 ? 0.52 : 0.60) / 365).toFixed(0)} $W
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-emerald-700 dark:text-emerald-400 mb-1">Total at Unlock</div>
+                          <div className="text-lg font-black text-emerald-900 dark:text-emerald-300">
+                            {(parseFloat(stakeInput) * (1 + (lockPeriod === 30 ? 0.45 : lockPeriod === 90 ? 0.52 : 0.60) * (lockPeriod / 365))).toFixed(0)} $W
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={() => setShowStakeModal(false)}
+                      className="flex-1 px-6 py-3 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-bold transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleStake}
+                      className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold transition-all shadow-lg hover:shadow-xl"
+                    >
+                      Stake Now
+                    </button>
+                  </div>
+
+                  {/* Info Note */}
+                  <div className="text-[10px] text-slate-600 dark:text-slate-500 text-center italic pt-2">
+                    ⚠️ Tokens will be locked for {lockPeriod} days. Early withdrawal not available.
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function App() {
+      const { toasts, push } = useToasts();
+      const [step, setStep] = usePersistentState('uiStep', "home");
+      const lastNavRef = React.useRef(0);
+      const pendingNavRef = React.useRef(null);
+
+      // Guarded setter to debounce rapid section changes
+      const setStepGuarded = React.useCallback((next) => {
+        const now = Date.now();
+        const minGapMs = 250; // throttle interval
+        if (now - lastNavRef.current < minGapMs) {
+          // schedule the latest desired step after the gap
+          pendingNavRef.current = next;
+          clearTimeout(setStepGuarded._t);
+          setStepGuarded._t = setTimeout(() => {
+            lastNavRef.current = Date.now();
+            const target = typeof pendingNavRef.current === 'function' ? pendingNavRef.current(step) : pendingNavRef.current;
+            pendingNavRef.current = null;
+            setStep(target);
+          }, minGapMs - (now - lastNavRef.current));
+          return;
+        }
+        lastNavRef.current = now;
+        setStep(next);
+      }, [step, setStep]);
+      const [hashFromFlow, setHashFromFlow] = useState("");
+      
+      // Ensure step is always valid, default to 'home' if not
+      const validSteps = ['home', 'webrtc', 'offline-network', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
+      const currentStep = validSteps.includes(step) ? step : 'home';
+      
+      return (
+        <div className="relative min-h-screen text-white">
+          {/* animated gradient blobs */}
+          <div className="sky"></div>
+          <div className="sky-dim"></div>
+          <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+            <div className="cloud c1"></div>
+            <div className="cloud c2"></div>
+            <div className="cloud c3"></div>
+            <div className="cloud c4"></div>
+            <div className="cloud c5"></div>
+            <div className="cloud c6"></div>
+            <div className="cloud c7"></div>
+            <div className="cloud c8"></div>
+            <div className="cloud c9"></div>
+          </div>
+          <div className="max-w-6xl mx-auto p-6 sm:p-4 md:p-6">
+            <SectionHeader />
+            <div className="mt-5 flex gap-6">
+              <Sidebar step={currentStep} setStep={setStepGuarded} />
+              <main className="flex-1 min-w-0">
+                <div className="mb-4 md:hidden">
+                  <StepPills step={currentStep} setStep={setStepGuarded} />
+                </div>
+                <ErrorBoundary key={currentStep}>
+                  {(() => {
+                    console.log('🎯 Current step:', currentStep);
+                    console.log('🎯 SocialHub case check:', currentStep === 'social-hub');
+                    switch(currentStep) {
+                      case 'home': return <Home setStep={setStepGuarded} />;
+                      case 'webrtc': return <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />;
+                      case 'offline-network': return <OfflineNetworkHub pushToast={push} setStep={setStepGuarded} />;
+                      case 'social-hub': 
+                        console.log('🎯 Switching to SocialHub component');
+                        return <SocialHub pushToast={push} setStep={setStepGuarded} />;
+                      case 'services': return <Services setStep={setStepGuarded} pushToast={push} />;
+                      case 'how-it-works': return <HowItWorks pushToast={push} setStep={setStepGuarded} />;
+                      case 'anonymous-relay': return <AnonymousRelayService setStep={setStepGuarded} pushToast={push} />;
+                      case 'privacy-tools': return <PrivacyToolsHub setStep={setStepGuarded} />;
+                      case 'steganography': return <UnifiedSteganography pushToast={push} />;
+                      case 'privacy-checkup': return <PrivacyCheckup pushToast={push} />;
+                      case 'censorship-map': return <CensorshipMap pushToast={push} />;
+                      case 'swap': return <PrivacySwap />;
+                      case 'solana-privacy': return <SolanaPrivacyToolkit pushToast={push} />;
+                      case 'pump-portal': return <PumpPortalLaunch pushToast={push} />;
+                      case 'zolana': return <ZolanaExchange pushToast={push} />;
+                      default: return (
+                        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6">
+                          <h2 className="text-white text-xl font-bold mb-2">Section Not Found</h2>
+                          <p className="text-white/70">The section "{currentStep}" could not be loaded.</p>
+                        </div>
+                      );
+                    }
+                  })()}
+                </ErrorBoundary>
+              </main>
+            </div>
+          </div>
+
+          {/* Toasts */}
+          <div className="fixed top-20 right-4 space-y-3 z-50">
+            {toasts.map((t) => (
+              <div key={t.id} className={`toast-enter rounded-2xl border-2 px-6 py-4 text-base font-semibold backdrop-blur-xl shadow-2xl min-w-[320px] ${
+                t.tone === "ok"
+                  ? "bg-emerald-500/90 border-emerald-300/50 text-white shadow-emerald-500/50"
+                  : t.tone === "err"
+                  ? "bg-rose-500/90 border-rose-300/50 text-white shadow-rose-500/50"
+                  : "bg-cyan-500/90 border-cyan-300/50 text-white shadow-cyan-500/50"
+              }`}>
+                <div className="flex items-center gap-3">
+                  {t.tone === "ok" && (
+                    <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m7 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  {t.tone === "err" && (
+                    <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  {t.tone !== "ok" && t.tone !== "err" && (
+                    <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
+                    </svg>
+                  )}
+                  <span className="flex-1">{t.msg}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+</script>
+<script defer type='text/javascript' src='https://changenow.io/embeds/exchange-widget/v2/stepper-connector.js'></script>
+</body>
+</html>
