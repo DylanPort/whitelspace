@@ -1975,15 +1975,36 @@
       }, [isConnected, showDropdown]);
       
       const handleConnect = async (e) => {
-            ripple(e);
-            if (!window?.solana?.isPhantom) {
-          alert("Install Phantom to connect your wallet.");
-              return;
-            }
-            try {
-              const r = await window.solana.connect();
-              walletStore.pubkey = r.publicKey.toBase58();
-              walletStore.setPub(walletStore.pubkey);
+        ripple(e);
+        
+        // Check if mobile and mobile wallet exists
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        if (isMobile && localStorage.getItem('mobileWalletCreated') === 'true') {
+          const savedAddress = localStorage.getItem('mobileWalletAddress');
+          if (savedAddress) {
+            walletStore.pubkey = savedAddress;
+            walletStore.setPub(savedAddress);
+            return;
+          }
+        }
+        
+        // For desktop or if no mobile wallet exists
+        if (!window?.solana?.isPhantom) {
+          if (isMobile) {
+            // Show mobile wallet creation modal
+            alert("Mobile wallet not found. Please go to Ghost Whistle section to create a mobile wallet.");
+            return;
+          } else {
+            alert("Install Phantom to connect your wallet.");
+            return;
+          }
+        }
+        
+        try {
+          const r = await window.solana.connect();
+          walletStore.pubkey = r.publicKey.toBase58();
+          walletStore.setPub(walletStore.pubkey);
         } catch (e) {
           console.error('Failed to connect:', e);
         }
@@ -9153,6 +9174,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           // Save to secure storage
           localStorage.setItem('mobileWalletAddress', publicKey);
           localStorage.setItem('mobileWalletCreated', 'true');
+          // Store private key in sessionStorage for security (cleared on browser close)
+          sessionStorage.setItem('mobilePrivateKey', JSON.stringify(privateKey));
           
           pushToast('✅ Mobile wallet created successfully!', 'ok');
           console.log('📱 Mobile wallet created:', publicKey);
@@ -9181,6 +9204,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           // Save to secure storage
           localStorage.setItem('mobileWalletAddress', publicKey);
           localStorage.setItem('mobileWalletCreated', 'true');
+          // Store private key in sessionStorage for security (cleared on browser close)
+          sessionStorage.setItem('mobilePrivateKey', JSON.stringify(privateKeyArray));
           
           pushToast('✅ Mobile wallet imported successfully!', 'ok');
           console.log('📱 Mobile wallet imported:', publicKey);
@@ -14469,10 +14494,29 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       };
 
       const connectWallet = async () => {
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        // Check if mobile and mobile wallet exists
+        if (isMobile && localStorage.getItem('mobileWalletCreated') === 'true') {
+          const savedAddress = localStorage.getItem('mobileWalletAddress');
+          if (savedAddress) {
+            setWalletAddress(savedAddress);
+            await loadTokenBalance(new solanaWeb3.PublicKey(savedAddress));
+            pushToast('Mobile wallet connected!', 'ok');
+            return;
+          }
+        }
+        
+        // For desktop or if no mobile wallet exists
         if (!window.solana) {
-          pushToast('Please install Phantom wallet', 'err');
+          if (isMobile) {
+            pushToast('Mobile wallet not found. Please go to Ghost Whistle section to create a mobile wallet.', 'err');
+          } else {
+            pushToast('Please install Phantom wallet', 'err');
+          }
           return;
         }
+        
         setConnecting(true);
         try {
           const resp = await window.solana.connect();
@@ -14723,8 +14767,26 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           relayTransaction.recentBlockhash = blockhash;
           relayTransaction.feePayer = userPubkey;
           
-          // Sign and send relay request creation
-          const signedRelayTx = await wallet.signTransaction(relayTransaction);
+          // Sign and send relay request creation (mobile or desktop wallet)
+          let signedRelayTx;
+          const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+          
+          if (isMobile && localStorage.getItem('mobileWalletCreated') === 'true') {
+            // Mobile wallet signing - need to get the mobile wallet keypair
+            const mobilePrivateKey = sessionStorage.getItem('mobilePrivateKey');
+            if (mobilePrivateKey) {
+              const keypair = solanaWeb3.Keypair.fromSecretKey(new Uint8Array(JSON.parse(mobilePrivateKey)));
+              relayTransaction.sign(keypair);
+              signedRelayTx = relayTransaction;
+            } else {
+              pushToast('❌ Mobile wallet not available', 'err');
+              return;
+            }
+          } else {
+            // Desktop wallet signing
+            signedRelayTx = await wallet.signTransaction(relayTransaction);
+          }
+          
           const relaySignature = await connection.sendRawTransaction(signedRelayTx.serialize());
           await connection.confirmTransaction(relaySignature, 'confirmed');
           
