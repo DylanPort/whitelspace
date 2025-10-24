@@ -10435,13 +10435,17 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         }
       };
       
-      // Fetch swap quote using Solana Tracker API
+      // Fetch swap quote using Jupiter API (better reliability)
       const getSwapQuote = async (fromMint, toMint, amount, slippage = 10) => {
         try {
-          // Solana Tracker expects amount in token units, not smallest units
-          const url = `https://swap-v2.solanatracker.io/rate?from=${fromMint}&to=${toMint}&amount=${amount}&slippage=${slippage}`;
+          // Convert amount to lamports/smallest unit
+          const amountInSmallestUnit = fromMint === 'So11111111111111111111111111111111111111112'
+            ? Math.floor(amount * 1e9) // SOL has 9 decimals
+            : Math.floor(amount * 1e6); // WHISTLE has 6 decimals
           
-          console.log('Fetching quote:', { fromMint, toMint, amount, slippage });
+          const url = `https://quote-api.jup.ag/v6/quote?inputMint=${fromMint}&outputMint=${toMint}&amount=${amountInSmallestUnit}&slippageBps=${slippage * 100}`;
+          
+          console.log('Fetching quote from Jupiter:', { fromMint, toMint, amount, amountInSmallestUnit, slippage });
           
           const response = await fetch(url, {
             method: 'GET',
@@ -10452,20 +10456,29 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           
           if (!response.ok) {
             const errorText = await response.text();
-            console.error('Quote API error:', errorText);
+            console.error('Quote API error:', response.status, errorText);
             throw new Error('Failed to fetch quote');
           }
           
           const quote = await response.json();
           console.log('Quote response:', quote);
-          return quote;
+          
+          // Convert Jupiter format to our format
+          const outputDecimals = toMint === 'So11111111111111111111111111111111111111112' ? 9 : 6;
+          const outAmount = parseInt(quote.outAmount) / Math.pow(10, outputDecimals);
+          
+          return {
+            outAmount: outAmount,
+            priceImpact: parseFloat(quote.priceImpactPct || 0) / 100,
+            rawQuote: quote
+          };
         } catch (error) {
           console.error('Error fetching swap quote:', error);
           throw error;
         }
       };
       
-      // Execute swap using Solana Tracker API
+      // Execute swap using Jupiter API directly
       const executeSwap = async () => {
         if (!fromAmount || parseFloat(fromAmount) <= 0) {
           pushToast('Please enter an amount', 'error');
@@ -10487,7 +10500,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           const fromMint = swapMode === 'buy' ? SOL_MINT : WHISTLE_MINT;
           const toMint = swapMode === 'buy' ? WHISTLE_MINT : SOL_MINT;
           
-          pushToast('🔍 Getting best route...', 'info');
+          pushToast('🔍 Finding best route...', 'info');
           
           // Get private key for signing
           const inAppKeypair = await getInAppKeypair();
@@ -10510,20 +10523,26 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             return;
           }
           
-          // Get swap transaction from Solana Tracker
+          // Get quote first
+          const quoteData = await getSwapQuote(fromMint, toMint, parseFloat(fromAmount), 1);
+          
+          if (!quoteData || !quoteData.rawQuote) {
+            throw new Error('Failed to get quote');
+          }
+          
           pushToast('📝 Building transaction...', 'info');
           
-          const swapUrl = 'https://swap-v2.solanatracker.io/swap';
+          // Get swap transaction from Jupiter
+          const swapUrl = 'https://quote-api.jup.ag/v6/swap';
           const swapPayload = {
-            from: fromMint,
-            to: toMint,
-            fromAmount: parseFloat(fromAmount),
-            slippage: 10,
-            payer: walletAddress,
-            priorityFee: 0.0001
+            quoteResponse: quoteData.rawQuote,
+            userPublicKey: walletAddress,
+            wrapAndUnwrapSol: true,
+            dynamicComputeUnitLimit: true,
+            prioritizationFeeLamports: 'auto'
           };
           
-          console.log('Swap request:', swapPayload);
+          console.log('Swap request to Jupiter:', swapPayload);
           
           const swapResponse = await fetch(swapUrl, {
             method: 'POST',
@@ -10543,14 +10562,14 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           const swapData = await swapResponse.json();
           console.log('Swap response:', swapData);
           
-          if (!swapData || !swapData.txn) {
+          if (!swapData || !swapData.swapTransaction) {
             throw new Error('Invalid swap response');
           }
           
           pushToast('✍️ Signing transaction...', 'info');
           
           // Deserialize and sign transaction
-          const txBuffer = Buffer.from(swapData.txn, 'base64');
+          const txBuffer = Buffer.from(swapData.swapTransaction, 'base64');
           const transaction = solanaWeb3.VersionedTransaction.deserialize(txBuffer);
           
           // Sign with in-app wallet
@@ -10590,7 +10609,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           
           // Show Jupiter fallback option
           setTimeout(() => {
-            if (confirm('Swap failed. Would you like to try on Jupiter?')) {
+            if (confirm('Swap failed. Would you like to try on Jupiter website?')) {
               const amount = swapMode === 'buy' ? Math.floor(parseFloat(fromAmount) * 1e9) : Math.floor(parseFloat(fromAmount) * 1e6);
               const jupiterUrl = swapMode === 'buy'
                 ? `https://jup.ag/swap/SOL-6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump?inAmount=${amount}`
@@ -10626,32 +10645,32 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
               const fromMint = swapMode === 'buy' ? SOL_MINT : WHISTLE_MINT;
               const toMint = swapMode === 'buy' ? WHISTLE_MINT : SOL_MINT;
               
-              const quote = await getSwapQuote(fromMint, toMint, parseFloat(fromAmount), 10);
+              const quote = await getSwapQuote(fromMint, toMint, parseFloat(fromAmount), 1);
               
-              console.log('Quote data:', quote);
+              console.log('Real quote data received:', quote);
               
-              if (quote) {
-                // Solana Tracker returns outAmount in token units
-                const outputAmount = quote.outAmount || quote.amountOut || 0;
-                setToAmount(outputAmount.toFixed(swapMode === 'buy' ? 2 : 6));
+              if (quote && quote.outAmount) {
+                // Display the real output amount
+                setToAmount(quote.outAmount.toFixed(swapMode === 'buy' ? 2 : 6));
                 
-                // Calculate price impact from quote
+                // Display real price impact percentage
                 const priceImpactPct = quote.priceImpact ? Math.abs(quote.priceImpact) * 100 : 0;
                 setPriceImpact(priceImpactPct);
+                
+                console.log('Set amounts:', {
+                  from: fromAmount,
+                  to: quote.outAmount,
+                  priceImpact: priceImpactPct
+                });
               }
             } catch (error) {
-              console.error('Error fetching quote:', error);
-              // Use approximate calculation as fallback
-              if (swapMode === 'buy') {
-                // Approximate: 1 SOL = 7500 WHISTLE (depends on market price)
-                setToAmount((parseFloat(fromAmount) * 7500).toFixed(2));
-              } else {
-                // Approximate: 1 WHISTLE = 0.000133 SOL
-                setToAmount((parseFloat(fromAmount) * 0.000133).toFixed(6));
-              }
-              setPriceImpact(0.5); // Estimate
+              console.error('Error fetching real quote:', error);
+              // Don't show fallback - show error in UI
+              setToAmount('');
+              setPriceImpact(0);
+              pushToast('Failed to fetch price quote', 'error');
             }
-          }, 500);
+          }, 800); // Slightly longer debounce to avoid too many requests
           
           return () => clearTimeout(debounce);
         } else {
@@ -13888,7 +13907,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <span>Powered by Solana Tracker • Multi-DEX routing • Best prices</span>
+                    <span>Powered by Jupiter • Real-time prices • Best execution</span>
                   </div>
                 </div>
               </div>
