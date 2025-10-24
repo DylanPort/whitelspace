@@ -15598,6 +15598,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
 
       const DISMISS_KEY = 'installPromptDismissedAt_v2';
       const lastDismiss = +(localStorage.getItem(DISMISS_KEY) || 0);
+      // reuse DISMISS_KEY defined above
+      const lastDismiss = +(localStorage.getItem(DISMISS_KEY) || 0);
       if (!isStandalone && (Date.now() - lastDismiss) >= 3*24*60*60*1000 && (isAndroid || isIOS)) {
         // show after short delay so UI has rendered
         setTimeout(showInstallModal, 800);
