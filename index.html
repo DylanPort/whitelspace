@@ -18,17 +18,35 @@
   <!-- Ensure Buffer exists before Solana Web3 (fixes Buffer issues in browser) -->
   <script>window.global = window.global || window;</script>
   <script type="module">import { Buffer } from 'https://esm.sh/buffer@6.0.3'; window.Buffer = Buffer;</script>
-  <script crossorigin src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
-  <script src="https://unpkg.com/bs58@5.0.0/dist/bs58.min.js"></script>
+  <script crossorigin src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bs58@5.0.0/dist/bs58.min.js"></script>
   <!-- Solana Wallet Adapter & SPL Token -->
   <script src="https://unpkg.com/@solana/spl-token@0.3.8/lib/index.iife.min.js"></script>
-  <script src="https://unpkg.com/@coral-xyz/anchor@0.29.0/dist/browser.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@coral-xyz/anchor@0.29.0/dist/browser.min.js"></script>
   <script src="https://unpkg.com/bn.js@5.2.1/lib/bn.js"></script>
   <!-- Leaflet for Interactive World Map -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <!-- QR Code Generator -->
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <!-- Lucide Icons (UMD) -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script>
+    // Make lucide.createIcons safe if icons mapping is not present
+    (function ensureSafeLucide(){
+      const patch = () => {
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+          const orig = window.lucide.createIcons;
+          window.lucide.createIcons = function(){
+            if (!window.lucide.icons) return;
+            try { return orig.apply(window.lucide, arguments); } catch(e) { console.warn('lucide createIcons suppressed error', e); }
+          };
+        }
+      };
+      patch();
+      const iv = setInterval(() => { if (window.lucide) { patch(); clearInterval(iv); } }, 100);
+    })();
+  </script>
   <!-- Optional: Solana Mobile Wallet Adapter (deep link-friendly) -->
   <script type="module">
     // Simple feature flag for Solana Mobile deep link environments
