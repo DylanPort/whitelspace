@@ -1,5 +1,5 @@
 // Ghost Whistle Service Worker
-const CACHE_NAME = 'ghost-whistle-v2';
+const CACHE_NAME = 'ghost-whistle-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -14,7 +14,11 @@ const ASSETS_TO_CACHE = [
   'https://unpkg.com/react@18/umd/react.production.min.js',
   'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
   'https://unpkg.com/@babel/standalone/babel.min.js',
-  'https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js'
+  'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.3/lib/index.iife.min.js',
+  'https://cdn.jsdelivr.net/npm/bs58@5.0.0/dist/bs58.min.js',
+  'https://cdn.jsdelivr.net/npm/@coral-xyz/anchor@0.29.0/dist/browser.min.js',
+  'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js',
+  'https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js'
 ];
 
 // Install event - cache assets
@@ -49,13 +53,31 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
-  // Skip cross-origin requests
-  if (!event.request.url.startsWith(self.location.origin) && 
-      !event.request.url.includes('cdn.') && 
-      !event.request.url.includes('unpkg.com')) {
+  // Network-first strategy for index.html to always get latest
+  if (event.request.url.includes('index.html') || event.request.url.endsWith('/')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
     return;
   }
 
+  // Skip cross-origin requests not in our CDN list
+  if (!event.request.url.startsWith(self.location.origin) && 
+      !event.request.url.includes('cdn.') && 
+      !event.request.url.includes('unpkg.com') &&
+      !event.request.url.includes('jsdelivr.net')) {
+    return;
+  }
+
+  // Cache-first for everything else
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
