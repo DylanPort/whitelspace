@@ -98,6 +98,8 @@
     @keyframes glitchMove{0%{transform:translate(0)}20%{transform:translate(-2px,2px)}40%{transform:translate(-2px,-2px)}60%{transform:translate(2px,2px)}80%{transform:translate(2px,-2px)}100%{transform:translate(0)}}
     @keyframes dataFlow{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
     @keyframes digitalRain{0%{transform:translateY(-100%);opacity:0}50%{opacity:1}100%{transform:translateY(100%);opacity:0}}
+    @keyframes dropdownSlide{0%{opacity:0;transform:translateY(-10px)}100%{opacity:1;transform:translateY(0)}}
+    @keyframes menuItemFade{0%{opacity:0;transform:translateX(-10px)}100%{opacity:1;transform:translateX(0)}}
     .cyberpunk-card{position:relative}
     .cyberpunk-card::before,.cyberpunk-card::after{content:'';position:absolute;width:20px;height:20px;opacity:0.6;transition:all 0.3s}
     .cyberpunk-card::before{top:0;left:0;border-top:2px solid currentColor;border-left:2px solid currentColor}
@@ -2469,11 +2471,17 @@
       
       return (
         <div className="relative md:hidden mb-4">
-          {/* Dropdown Button */}
+          {/* Dropdown Button with 3D Effect */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-white/[0.04] border border-white/10 text-white hover:bg-white/[0.08] transition-all"
+            className="relative w-full flex items-center justify-between px-4 py-3 rounded-xl bg-black/60 backdrop-blur-xl border border-cyan-400/20 text-white hover:border-cyan-400/40 transition-all shadow-lg hover:shadow-xl"
+            style={{
+              boxShadow: isOpen 
+                ? '0 10px 30px rgba(0,0,0,0.5), 0 0 20px rgba(6,182,212,0.2), inset 0 1px 0 rgba(255,255,255,0.1)' 
+                : '0 4px 15px rgba(0,0,0,0.3), 0 0 10px rgba(6,182,212,0.1), inset 0 1px 0 rgba(255,255,255,0.05)'
+            }}
           >
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent"></div>
             <div className="flex items-center gap-3">
               {currentTab.image ? (
                 <img src={currentTab.image} alt={currentTab.label} className="w-5 h-5 object-contain rounded" />
@@ -2481,14 +2489,49 @@
                 <span className="text-lg">{currentTab.emoji}</span>
               )}
               <span className="font-semibold text-sm sm:text-base">{currentTab.label}</span>
-  </div>
-            <i data-lucide={isOpen ? "chevron-up" : "chevron-down"} className="w-5 h-5 text-white/60"></i>
+            </div>
+            <svg 
+              className={`w-5 h-5 text-cyan-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+            </svg>
           </button>
           
-          {/* Dropdown Menu */}
+          {/* Arrow Indicator */}
           {isOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 rounded-xl bg-slate-900/95 backdrop-blur-xl border border-white/10 shadow-2xl z-50 overflow-hidden max-h-[70vh] overflow-y-auto">
-              {tabs.map((t) => (
+            <div className="absolute top-full left-1/2 -translate-x-1/2 -translate-y-1 z-[51]">
+              <div 
+                className="w-4 h-4 bg-black/60 backdrop-blur-xl border-t border-l border-cyan-400/20 rotate-45"
+                style={{
+                  boxShadow: '-2px -2px 8px rgba(0,0,0,0.3)'
+                }}
+              ></div>
+            </div>
+          )}
+          
+          {/* Dropdown Menu with 3D Depth */}
+          {isOpen && (
+            <div 
+              className="absolute top-full left-0 right-0 mt-3 rounded-xl bg-black/95 backdrop-blur-2xl border border-cyan-400/20 z-50 overflow-hidden max-h-[70vh] overflow-y-auto"
+              style={{
+                boxShadow: `
+                  0 20px 60px rgba(0,0,0,0.7),
+                  0 10px 30px rgba(0,0,0,0.5),
+                  0 0 30px rgba(6,182,212,0.15),
+                  inset 0 1px 0 rgba(255,255,255,0.05),
+                  inset 0 -1px 0 rgba(0,0,0,0.5)
+                `,
+                transform: 'translateY(0)',
+                animation: 'dropdownSlide 0.3s ease-out'
+              }}
+            >
+              {/* Top glow */}
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent"></div>
+              
+              {tabs.map((t, index) => (
                 <button
                   key={t.id}
                   onClick={() => {
@@ -2500,11 +2543,16 @@
                       setIsOpen(false);
                     }
                   }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all ${
+                  className={`relative w-full flex items-center gap-3 px-4 py-3 text-left transition-all ${
                     step === t.id
-                      ? "bg-cyan-400/20 text-cyan-200 border-l-4 border-cyan-400"
-                      : "text-white/80 hover:bg-white/[0.08] border-l-4 border-transparent"
+                      ? "bg-cyan-400/20 text-cyan-200 border-l-4 border-cyan-400 shadow-lg"
+                      : "text-white/80 hover:bg-cyan-400/10 border-l-4 border-transparent hover:border-cyan-400/30"
                   }`}
+                  style={{
+                    animationDelay: `${index * 30}ms`,
+                    animation: 'menuItemFade 0.3s ease-out forwards',
+                    opacity: 0
+                  }}
                 >
                   {t.image ? (
                     <img src={t.image} alt={t.label} className="w-5 h-5 object-contain rounded" />
@@ -2512,11 +2560,16 @@
                     <span className="text-lg">{t.emoji}</span>
                   )}
                   <span className="font-medium text-sm">{t.label}</span>
+                  {step === t.id && (
+                    <svg className="w-4 h-4 ml-auto text-cyan-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
                 </button>
               ))}
-    </div>
+            </div>
           )}
-    </div>
+        </div>
       );
     }
 
