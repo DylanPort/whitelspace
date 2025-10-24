@@ -10025,6 +10025,26 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         throw new Error('No wallet available to sign');
       }
 
+      // Live query of on-chain staked amount for the current wallet
+      async function fetchStakedAmountNow(address) {
+        try {
+          if (!address) return 0;
+          const connection = new solanaWeb3.Connection(MAINNET_RPC, 'confirmed');
+          const pub = new solanaWeb3.PublicKey(address);
+          const [nodePDA] = await solanaWeb3.PublicKey.findProgramAddress(
+            [new TextEncoder().encode('node'), pub.toBuffer()],
+            new solanaWeb3.PublicKey(GHOST_PROGRAM_ID)
+          );
+          const info = await connection.getAccountInfo(nodePDA);
+          if (!info || !info.data) return 0;
+          const raw = new DataView(info.data.buffer, 40, 8).getBigUint64(0, true);
+          return Number(raw) / 1e6; // 6 decimals
+        } catch (e) {
+          console.warn('fetchStakedAmountNow failed:', e?.message);
+          return 0;
+        }
+      }
+
       
       // UI States
       const [stakeInput, setStakeInput] = useState('');
@@ -10504,9 +10524,10 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           pushToast(`✅ Staked ${amount.toLocaleString()} $WHISTLE!`, 'ok');
           console.log('Stake TX:', signature);
           
-          // Refresh data
-          setStakedAmount(prev => prev + amount);
-          setTokenBalance(prev => prev - amount);
+          // Refresh data using on-chain read
+          const newStaked = await fetchStakedAmountNow(userPubkey.toString());
+          if (newStaked > 0) setStakedAmount(newStaked);
+          setTokenBalance(prev => Math.max(0, prev - amount));
           setShowStakeModal(false);
           setStakeInput('');
           await loadBlockchainData(); // Reload from chain
@@ -10601,6 +10622,9 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           // Update state
           setTokenBalance(prev => prev + pendingRewards);
           setPendingRewards(0);
+          // Re-read stake after claim in case contract updated it
+          const postClaimStake = await fetchStakedAmountNow(userPubkey.toString());
+          if (postClaimStake >= 0) setStakedAmount(postClaimStake);
           await loadBlockchainData();
           
         } catch (err) {
@@ -10712,7 +10736,9 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           
           // Update state
           setTokenBalance(prev => prev + stakedAmount);
-          setStakedAmount(0);
+          // Confirm from chain that stake is now zero
+          const afterUnstake = await fetchStakedAmountNow(userPubkey.toString());
+          setStakedAmount(afterUnstake || 0);
           setReputation(0);
           await loadBlockchainData();
           fetchGlobalStats(); // Update global stats
@@ -10890,7 +10916,13 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
 
       // Browser-based Node System (WebRTC)
       const toggleNode = async () => {
-        if (!wallet || stakedAmount < 10000) {
+        // Re-check stake live from chain using current in-app/connected wallet
+        const currentAddr = (await getInAppKeypair())?.publicKey?.toString() || walletAddress;
+        const latestStake = await fetchStakedAmountNow(currentAddr);
+        if (latestStake && latestStake !== stakedAmount) {
+          setStakedAmount(latestStake);
+        }
+        if (!currentAddr || latestStake < 10000) {
           pushToast('⚠️ Stake $WHISTLE to run a node', 'err');
           setShowStakeModal(true);
           return;
