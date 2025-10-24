@@ -1,5 +1,5 @@
 // Ghost Whistle Service Worker
-const CACHE_NAME = 'ghost-whistle-v3';
+const CACHE_NAME = 'ghost-whistle-v4';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -14,11 +14,11 @@ const ASSETS_TO_CACHE = [
   'https://unpkg.com/react@18/umd/react.production.min.js',
   'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
   'https://unpkg.com/@babel/standalone/babel.min.js',
-  'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.3/lib/index.iife.min.js',
-  'https://cdn.jsdelivr.net/npm/bs58@5.0.0/dist/bs58.min.js',
-  'https://cdn.jsdelivr.net/npm/@coral-xyz/anchor@0.29.0/dist/browser.min.js',
-  'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js',
-  'https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js'
+  'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.3/lib/index.iife.js',
+  'https://unpkg.com/bs58@5.0.0/index.js',
+  'https://unpkg.com/@coral-xyz/anchor@0.29.0/dist/browser/index.js',
+  'https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js',
+  'https://unpkg.com/lucide@latest/dist/umd/lucide.min.js'
 ];
 
 // Install event - cache assets
