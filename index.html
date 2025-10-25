@@ -2180,12 +2180,15 @@
       };
       
       const handleImportMobileWallet = async () => {
-        const input = (privateKeyInput || '').trim();
+        let input = (privateKeyInput || '').trim();
         
         if (!input) {
           alert('Please enter your private key');
           return;
         }
+        
+        // Remove our own storage markers if present
+        input = input.replace(/:base64$/, '').replace(/:encrypted$/, '');
         
         console.log('🔍 IMPORT ATTEMPT - Input length:', input.length);
         console.log('🔍 First 20 chars:', input.substring(0, 20));
@@ -2194,7 +2197,7 @@
         let method = '';
         
         // Method 1: Base58 (Phantom/Solflare export format)
-        if (!keypair) {
+        if (!keypair && typeof bs58 !== 'undefined') {
           try {
             const decoded = bs58.decode(input);
             console.log('✅ Base58 decoded, length:', decoded.length);
