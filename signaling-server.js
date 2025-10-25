@@ -10,12 +10,13 @@ const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
+app.use(express.json());
 
 // Enable CORS for all routes
 app.use(cors({
   origin: '*', // Allow all origins (or specify 'http://localhost:3000')
   methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type']
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 const server = http.createServer(app);
@@ -226,9 +227,18 @@ async function loadNodeHistoricalData(nodeId) {
 }
 
 // WebSocket connection handler
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
   console.log('🔌 New WebSocket connection');
-  
+
+  // Optional: read token from query param for early close
+  try {
+    const url = new URL(req.url, 'http://localhost');
+    const qpToken = url.searchParams.get('token');
+    if (!qpToken) {
+      // Allow but will fail at register without token
+    }
+  } catch {}
+
   let currentNode = null;
 
   ws.on('message', (data) => {
@@ -304,8 +314,33 @@ wss.on('connection', (ws) => {
     console.error('❌ WebSocket error:', err);
   });
 
-  function handleRegister(ws, message) {
-    const { nodeId, walletAddress, region } = message;
+  async function validateX402Token(token) {
+    try {
+      const resp = await fetch('http://localhost:3001/x402/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken: token })
+      });
+      const json = await resp.json();
+      return json && json.ok === true;
+    } catch (e) {
+      console.error('❌ x402 validate error:', e);
+      return false;
+    }
+  }
+
+  async function handleRegister(ws, message) {
+    const { nodeId, walletAddress, region, accessToken } = message;
+
+    // Gate registration via x402 token
+    const valid = await validateX402Token(accessToken);
+    if (!valid) {
+      try {
+        ws.send(JSON.stringify({ type: 'error', reason: 'x402_required' }));
+      } catch {}
+      ws.close(1008, 'x402 token required');
+      return;
+    }
     
     currentNode = new Node(ws, nodeId, walletAddress);
     currentNode.region = region || 'unknown';
@@ -604,8 +639,25 @@ setInterval(() => {
   }
 }, HEARTBEAT_INTERVAL);
 
-// REST API endpoints
-app.get('/api/stats', (req, res) => {
+// x402 auth middleware for REST
+async function requireX402(req, res, next) {
+  try {
+    const auth = req.headers['authorization'] || '';
+    const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+    if (!token) return res.status(401).json({ error: 'x402_token_required' });
+    const resp = await fetch('http://localhost:3001/x402/validate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken: token })
+    });
+    const json = await resp.json();
+    if (!json.ok) return res.status(401).json({ error: 'x402_token_invalid' });
+    next();
+  } catch (e) {
+    return res.status(401).json({ error: 'x402_validate_failed' });
+  }
+}
+
+// REST API endpoints (gated)
+app.get('/api/stats', requireX402, (req, res) => {
   const stats = {
     totalNodes: activeNodes.size,
     totalRelays: Array.from(activeNodes.values()).reduce((sum, node) => sum + node.relayCount, 0),
@@ -629,7 +681,7 @@ app.get('/api/stats', (req, res) => {
   res.json(stats);
 });
 
-app.get('/api/nodes', (req, res) => {
+app.get('/api/nodes', requireX402, (req, res) => {
   res.json({
     nodes: getNodeList(),
     totalNodes: activeNodes.size
@@ -641,7 +693,7 @@ app.get('/health', (req, res) => {
 });
 
 // Leaderboard API endpoints
-app.get('/api/leaderboard', async (req, res) => {
+app.get('/api/leaderboard', requireX402, async (req, res) => {
   try {
     // Immediately save active nodes to database before fetching leaderboard
     console.log('💾 Saving active nodes before leaderboard fetch...');
@@ -754,7 +806,7 @@ app.get('/api/leaderboard', async (req, res) => {
   }
 });
 
-app.get('/api/leaderboard/snapshots', async (req, res) => {
+app.get('/api/leaderboard/snapshots', requireX402, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('leaderboard_snapshots')
@@ -775,7 +827,7 @@ app.get('/api/leaderboard/snapshots', async (req, res) => {
 });
 
 // Manual endpoint to populate leaderboard with test data
-app.post('/api/leaderboard/populate', async (req, res) => {
+app.post('/api/leaderboard/populate', requireX402, async (req, res) => {
   try {
     console.log('🏆 Manually populating leaderboard with test data...');
     

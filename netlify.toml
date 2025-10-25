@@ -1,10 +1,20 @@
 [build]
   publish = "."
-  command = ""
+  command = "npm install"
+  functions = "netlify/functions"
 
 [template.environment]
   SOLANA_TRACKER_API_KEY = ""
   SOLANA_MAINNET_RPC = ""
+  SOLANA_RPC_URL = "https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba"
+
+[functions]
+  node_bundler = "esbuild"
+  
+[[redirects]]
+  from = "/x402/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
 
 [[redirects]]
   from = "/whitepaper.html"

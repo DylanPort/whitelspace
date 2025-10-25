@@ -24,6 +24,20 @@
   <script src="https://unpkg.com/@solana/spl-token@0.3.8/lib/index.iife.js"></script>
   <script src="https://unpkg.com/@coral-xyz/anchor@0.29.0/dist/browser/index.js"></script>
   <script src="https://unpkg.com/bn.js@5.2.1/lib/bn.js"></script>
+  <script src="/x402-client.js?v=10"></script>
+  <script>
+    // Configure x402 gateway - auto-detect environment
+    if (window.location.hostname === 'localhost') {
+      window.X402_GATEWAY = 'http://localhost:3001'; // Local development
+    } else {
+      window.X402_GATEWAY = window.location.origin; // Production (Netlify functions)
+    }
+    
+    // Clear any testing bypass
+    localStorage.removeItem('x402_bypass');
+    console.log('💳 x402 payment system ENABLED');
+    console.log('🌐 x402 Gateway:', window.X402_GATEWAY);
+  </script>
   <!-- Leaflet for Interactive World Map -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -118,6 +132,12 @@
     @keyframes floatSlow{0%{transform:translateY(0)}50%{transform:translateY(-4px)}100%{transform:translateY(0)}}
     @keyframes ripple{0%{transform:scale(0);opacity:.5}100%{transform:scale(4);opacity:0}}
     @keyframes toastIn{0%{transform:translateY(8px);opacity:0}100%{transform:translateY(0);opacity:1}}
+    @keyframes fadeIn{0%{opacity:0}100%{opacity:1}}
+    @keyframes fadeOut{0%{opacity:1}100%{opacity:0}}
+    @keyframes slideUp{0%{transform:translateY(20px) scale(0.95);opacity:0}100%{transform:translateY(0) scale(1);opacity:1}}
+    .animate-fadeIn{animation:fadeIn 0.3s ease-out}
+    .animate-fadeOut{animation:fadeOut 0.3s ease-out}
+    .animate-slideUp{animation:slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)}
     @keyframes scanline{0%{transform:translateY(-100%)}100%{transform:translateY(100%)}}
     @keyframes neonPulse{0%,100%{box-shadow:0 0 5px rgba(6,182,212,0.4),0 0 10px rgba(6,182,212,0.3),0 0 15px rgba(6,182,212,0.2),0 0 20px rgba(6,182,212,0.1)}50%{box-shadow:0 0 10px rgba(6,182,212,0.6),0 0 20px rgba(6,182,212,0.5),0 0 30px rgba(6,182,212,0.4),0 0 40px rgba(6,182,212,0.3)}}
     @keyframes glitchMove{0%{transform:translate(0)}20%{transform:translate(-2px,2px)}40%{transform:translate(-2px,-2px)}60%{transform:translate(2px,2px)}80%{transform:translate(2px,-2px)}100%{transform:translate(0)}}
@@ -2058,7 +2078,7 @@
           
           setLoadingBalance(true);
           try {
-            const rpc = 'https://api.mainnet-beta.solana.com';
+            const rpc = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
             const response = await fetch(rpc, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -2945,6 +2965,13 @@
       
       // 1. DEAD MAN'S SWITCH
       async function activateDeadMansSwitch(){
+        // 🔐 X402 GATE: Payment required for Dead Man's Switch
+        try {
+          await requireX402Payment('Dead Man\'s Switch', 1);
+        } catch (e) {
+          return; // Stop if payment fails
+        }
+        
         if(!dmsMessage) return alert('Enter a message to encrypt');
         if(!dmsPassword) return alert('Enter an encryption password');
         if(!dmsDestWallet) return alert('Enter destination wallet address');
@@ -3035,6 +3062,13 @@
       
       // 2. VANISHING PAYMENTS
       async function createVanishingPayment(){
+        // 🔐 X402 GATE: Payment required for Vanishing Payment
+        try {
+          await requireX402Payment('Vanishing Payment', 1);
+        } catch (e) {
+          return; // Stop if payment fails
+        }
+        
         const burner = solanaWeb3.Keypair.generate();
         const expiryTime = Date.now() + (parseInt(vanishHours) * 60 * 60 * 1000);
         const secret = toB58(burner.secretKey);
@@ -3104,6 +3138,13 @@
       
       // 3. DEAD DROP MESSAGES
       async function sendDeadDrop(){
+        // 🔐 X402 GATE: Payment required for Dead Drop
+        try {
+          await requireX402Payment('Dead Drop Message', 1);
+        } catch (e) {
+          return; // Stop if payment fails
+        }
+        
         if(!dropRecipient) return alert('Enter recipient wallet address');
         if(!dropMessage) return alert('Enter a message');
         if(!dropPassword) return alert('Enter encryption password');
@@ -3133,6 +3174,13 @@
       
       // 4. VERIFIABLE COIN FLIP
       async function commitFlip(){
+        // 🔐 X402 GATE: Payment required for Coin Flip
+        try {
+          await requireX402Payment('Verifiable Coin Flip', 1);
+        } catch (e) {
+          return; // Stop if payment fails
+        }
+        
         setIsFlipping(true);
         
         const secret = Math.random().toString(36).substring(2, 15);
@@ -3205,6 +3253,13 @@
       }
       
       async function sweepDonations(){
+        // 🔐 X402 GATE: Payment required for Sweep Donations
+        try {
+          await requireX402Payment('Sweep Donations', 1);
+        } catch (e) {
+          return; // Stop if payment fails
+        }
+        
         if(!donationSweepTo) return alert('Enter sweep destination address');
         if(donationWallets.length === 0) return alert('No donation wallets created');
         
@@ -6595,7 +6650,7 @@
           
           setLoadingBalance(true);
           try {
-            const rpc = 'https://api.mainnet-beta.solana.com';
+            const rpc = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
             const response = await fetch(rpc, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -6966,7 +7021,7 @@
         
         // Fetch token data from chain
         try{
-          const rpc = 'https://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0';
+          const rpc = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
           
           // Get token supply
           const supplyResp = await fetch(rpc, {
@@ -8829,6 +8884,13 @@
 
       // Run Full Checkup
       const runCheckup = async () => {
+        // 🔐 X402 GATE: Payment required to run checkup
+        try {
+          await requireX402Payment('Privacy Checkup', 1);
+        } catch (e) {
+          return; // Stop if payment fails
+        }
+        
         setChecking(true);
         setResults(null);
 
@@ -10025,9 +10087,239 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
     ];
     const MAINNET_RPC = RPC_ENDPOINTS[0];
     
-    const SIGNALING_SERVER_URL = 'wss://whitelspace.onrender.com'; // Production signaling server
+    const SIGNALING_SERVER_URL = (window.location.hostname === 'localhost' ? 'ws://localhost:8080' : 'wss://whitelspace.onrender.com'); // Env-aware
     const TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
     const SYSTEM_PROGRAM_ID = solanaWeb3.SystemProgram.programId;
+    // x402 helpers
+    async function getX402Token(hops = 3) {
+      try {
+        const now = Math.floor(Date.now() / 1000);
+        const cached = localStorage.getItem('x402_token');
+        const exp = parseInt(localStorage.getItem('x402_exp') || '0', 10);
+        if (cached && exp > now + 30) {
+          console.log('✅ Using cached x402 token');
+          return cached;
+        }
+        
+        // Show premium x402 payment modal
+        console.log('💳 x402: Payment required, requesting quote...');
+        await showX402PaymentModal('preparing');
+        
+        if (!window.requestX402AndPay) throw new Error('x402 client not loaded');
+        
+        // Ensure wallet is connected
+        let wallet = window.wallet || window.solana;
+        if (!wallet) {
+          alert('❌ No wallet detected! Please install Phantom wallet.');
+          throw new Error('No wallet detected');
+        }
+        
+        if (!wallet.publicKey || !wallet.isConnected) {
+          console.log('🔐 x402: Connecting wallet...');
+          await showX402PaymentModal('connecting');
+          try {
+            const response = await wallet.connect();
+            console.log('✅ Wallet connected:', response.publicKey.toString().slice(0, 8) + '...');
+          } catch (e) {
+            await showX402PaymentModal('error', 'Wallet connection rejected');
+            throw new Error('Wallet connection rejected');
+          }
+        }
+        
+        console.log('🔐 x402: Initiating payment...');
+        await showX402PaymentModal('processing');
+        const { accessToken, ttlSeconds } = await window.requestX402AndPay({ wallet, hops });
+        localStorage.setItem('x402_token', accessToken);
+        localStorage.setItem('x402_exp', String(now + (ttlSeconds || 900)));
+        
+        await showX402PaymentModal('success', `Access granted for ${Math.floor(ttlSeconds/60)} minutes`);
+        console.log('✅ x402: Payment confirmed');
+        return accessToken;
+      } catch (e) {
+        console.error('❌ x402 payment failed:', e);
+        await showX402PaymentModal('error', e.message || 'Unknown error');
+        throw e;
+      }
+    }
+    
+    // Premium x402 Payment Modal
+    function showX402PaymentModal(state, message = '') {
+      return new Promise((resolve) => {
+        // Remove existing modal
+        const existing = document.getElementById('x402-modal');
+        if (existing) existing.remove();
+        
+        const modal = document.createElement('div');
+        modal.id = 'x402-modal';
+        modal.className = 'fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn';
+        
+        let content = '';
+        let autoClose = false;
+        
+        if (state === 'preparing') {
+          content = `
+            <div class="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl p-8 max-w-md w-full border border-cyan-500/30 shadow-2xl shadow-cyan-500/20 animate-slideUp">
+              <div class="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-purple-500/10 rounded-3xl blur-xl"></div>
+              <div class="relative">
+                <div class="flex justify-center mb-6">
+                  <img src="/whistel_logo_top_right_2048.png" alt="Ghost Whistle" class="w-20 h-20 animate-pulse">
+                </div>
+                <h2 class="text-2xl font-black text-white text-center mb-2 bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
+                  X402 PAYMENT REQUIRED
+                </h2>
+                <p class="text-slate-300 text-center mb-6">Premium access requires payment</p>
+                <div class="bg-slate-800/50 rounded-xl p-4 border border-cyan-500/20 mb-6">
+                  <div class="flex justify-between items-center mb-2">
+                    <span class="text-slate-400">Amount:</span>
+                    <span class="text-2xl font-bold text-white">10,000 WHISTLE</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-slate-400">Protocol:</span>
+                    <span class="text-cyan-400 font-mono">x402</span>
+                  </div>
+                </div>
+                <div class="flex items-center justify-center gap-2 text-slate-400 text-sm">
+                  <div class="animate-spin rounded-full h-4 w-4 border-2 border-cyan-400 border-t-transparent"></div>
+                  <span>Preparing payment...</span>
+                </div>
+              </div>
+            </div>
+          `;
+        } else if (state === 'connecting') {
+          content = `
+            <div class="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl p-8 max-w-md w-full border border-cyan-500/30 shadow-2xl shadow-cyan-500/20 animate-slideUp">
+              <div class="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-purple-500/10 rounded-3xl blur-xl"></div>
+              <div class="relative">
+                <div class="flex justify-center mb-6">
+                  <img src="/whistel_logo_top_right_2048.png" alt="Ghost Whistle" class="w-20 h-20 animate-pulse">
+                </div>
+                <h2 class="text-2xl font-black text-white text-center mb-4">Connecting Wallet</h2>
+                <div class="flex items-center justify-center gap-2 text-slate-400">
+                  <div class="animate-spin rounded-full h-5 w-5 border-2 border-cyan-400 border-t-transparent"></div>
+                  <span>Please approve in your wallet...</span>
+                </div>
+              </div>
+            </div>
+          `;
+        } else if (state === 'processing') {
+          content = `
+            <div class="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl p-8 max-w-md w-full border border-cyan-500/30 shadow-2xl shadow-cyan-500/20 animate-slideUp">
+              <div class="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-purple-500/10 rounded-3xl blur-xl"></div>
+              <div class="relative">
+                <div class="flex justify-center mb-6">
+                  <img src="/whistel_logo_top_right_2048.png" alt="Ghost Whistle" class="w-20 h-20 animate-pulse">
+                </div>
+                <h2 class="text-2xl font-black text-white text-center mb-4">Processing Payment</h2>
+                <div class="bg-slate-800/50 rounded-xl p-4 border border-cyan-500/20 mb-4">
+                  <div class="text-center mb-3">
+                    <span class="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">10,000 WHISTLE</span>
+                  </div>
+                  <div class="flex items-center justify-center gap-2 text-slate-400 text-sm">
+                    <div class="animate-spin rounded-full h-4 w-4 border-2 border-cyan-400 border-t-transparent"></div>
+                    <span>Confirming transaction...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        } else if (state === 'success') {
+          autoClose = true;
+          content = `
+            <div class="relative bg-gradient-to-br from-emerald-900 via-slate-800 to-slate-900 rounded-3xl p-8 max-w-md w-full border border-emerald-500/30 shadow-2xl shadow-emerald-500/20 animate-slideUp">
+              <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-cyan-500/10 rounded-3xl blur-xl"></div>
+              <div class="relative">
+                <div class="flex justify-center mb-6">
+                  <div class="relative">
+                    <img src="/whistel_logo_top_right_2048.png" alt="Ghost Whistle" class="w-20 h-20">
+                    <div class="absolute -top-2 -right-2 bg-emerald-500 rounded-full p-1">
+                      <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <h2 class="text-2xl font-black text-white text-center mb-2">PAYMENT CONFIRMED!</h2>
+                <p class="text-emerald-400 text-center mb-6">${message}</p>
+                <div class="bg-slate-800/50 rounded-xl p-4 border border-emerald-500/20">
+                  <div class="flex justify-between items-center">
+                    <span class="text-slate-400">Paid:</span>
+                    <span class="text-xl font-bold text-white">10,000 WHISTLE</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        } else if (state === 'error') {
+          autoClose = true;
+          content = `
+            <div class="relative bg-gradient-to-br from-red-900 via-slate-800 to-slate-900 rounded-3xl p-8 max-w-md w-full border border-red-500/30 shadow-2xl shadow-red-500/20 animate-slideUp">
+              <div class="absolute inset-0 bg-gradient-to-br from-red-500/20 to-slate-500/10 rounded-3xl blur-xl"></div>
+              <div class="relative">
+                <div class="flex justify-center mb-6">
+                  <div class="relative">
+                    <img src="/whistel_logo_top_right_2048.png" alt="Ghost Whistle" class="w-20 h-20 opacity-50">
+                    <div class="absolute -top-2 -right-2 bg-red-500 rounded-full p-1">
+                      <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <h2 class="text-2xl font-black text-white text-center mb-2">PAYMENT FAILED</h2>
+                <p class="text-red-400 text-center mb-6">${message}</p>
+                <button onclick="document.getElementById('x402-modal').remove()" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-xl transition-all">
+                  Close
+                </button>
+              </div>
+            </div>
+          `;
+        }
+        
+        modal.innerHTML = content;
+        document.body.appendChild(modal);
+        
+        if (autoClose) {
+          setTimeout(() => {
+            modal.style.animation = 'fadeOut 0.3s ease-out';
+            setTimeout(() => {
+              modal.remove();
+              resolve();
+            }, 300);
+          }, 3000);
+        } else {
+          setTimeout(() => resolve(), 500);
+        }
+      });
+    }
+    
+    // x402-gate ALL privacy features
+    async function requireX402Payment(featureName, hops = 1) {
+      // 🧪 TESTING BYPASS: Disable x402 if flag is set
+      const bypassMode = localStorage.getItem('x402_bypass') === 'true';
+      if (bypassMode) {
+        console.log(`🧪 x402 BYPASS: "${featureName}" - payment skipped (testing mode)`);
+        if (window.pushToast) {
+          window.pushToast(`🧪 Testing mode: ${featureName} unlocked`, 'info');
+        }
+        return 'bypass_token';
+      }
+      
+      try {
+        console.log(`🔐 x402: "${featureName}" requires payment`);
+        if (window.pushToast) {
+          window.pushToast(`💳 "${featureName}" requires payment...`, 'info');
+        }
+        const token = await getX402Token(hops);
+        console.log(`✅ x402: Payment confirmed for "${featureName}"`);
+        return token;
+      } catch (e) {
+        console.error(`❌ x402: Payment failed for "${featureName}"`, e);
+        if (window.pushToast) {
+          window.pushToast(`❌ Payment required to use "${featureName}"`, 'err');
+        }
+        throw new Error('Payment required');
+      }
+    }
     
     // Helper function to get Pool PDA
     async function getPoolPDA() {
@@ -10096,6 +10388,76 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [isSwapping, setIsSwapping] = useState(false);
       const [priceImpact, setPriceImpact] = useState(0);
       const [solBalance, setSolBalance] = useState(0);
+      
+      // Solana Tracker Swap State
+      const [swapFromAmount, setSwapFromAmount] = useState('');
+      const [swapToAmount, setSwapToAmount] = useState('');
+      const [swapDirection, setSwapDirection] = useState('sol-to-whistle'); // 'sol-to-whistle' or 'whistle-to-sol'
+      const [swapQuoteData, setSwapQuoteData] = useState(null); // Store full quote data
+      const [fetchingQuote, setFetchingQuote] = useState(false);
+      
+      // Real-time quote fetching for swap
+      React.useEffect(() => {
+        if (swapFromAmount && parseFloat(swapFromAmount) > 0) {
+          const debounce = setTimeout(async () => {
+            try {
+              setFetchingQuote(true);
+              const SOL_MINT = 'So11111111111111111111111111111111111111112';
+              const WHISTLE_MINT = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';
+              
+              const fromToken = swapDirection === 'sol-to-whistle' ? SOL_MINT : WHISTLE_MINT;
+              const toToken = swapDirection === 'sol-to-whistle' ? WHISTLE_MINT : SOL_MINT;
+              
+              const apiKey = localStorage.getItem('solanaTrackerApiKey') || 'e09b9726-e693-4f07-a502-b2915a6563d2';
+              const payerAddr = walletAddress || '11111111111111111111111111111111';
+              const quoteUrl = `https://swap-v2.solanatracker.io/swap?from=${fromToken}&to=${toToken}&fromAmount=${swapFromAmount}&slippage=1&payer=${payerAddr}&priorityFee=0.00001`;
+              
+              console.log('📊 Fetching real-time quote...', { from: fromToken.slice(0,8), to: toToken.slice(0,8), amount: swapFromAmount });
+              
+              const response = await fetch(quoteUrl, {
+                method: 'GET',
+                headers: { 'x-api-key': apiKey }
+              });
+              
+              if (response.ok) {
+                const data = await response.json();
+                console.log('✅ Quote data received:', data);
+                
+                // Extract all the data we need
+                const output = data.rate?.outputAmount || data.outputAmount || 0;
+                const priceImpact = data.rate?.priceImpact || data.priceImpact || 0;
+                const inputAmount = data.rate?.inputAmount || parseFloat(swapFromAmount);
+                const rate = output / inputAmount;
+                
+                setSwapQuoteData({
+                  outputAmount: output,
+                  inputAmount: inputAmount,
+                  priceImpact: priceImpact,
+                  rate: rate,
+                  slippage: 1,
+                  networkFee: 0.00001,
+                  rawData: data
+                });
+                
+                setSwapToAmount(output.toFixed(swapDirection === 'sol-to-whistle' ? 2 : 6));
+              } else {
+                console.warn('Quote fetch failed:', response.status);
+                setSwapQuoteData(null);
+              }
+            } catch (e) {
+              console.warn('Quote fetch error:', e);
+              setSwapQuoteData(null);
+            } finally {
+              setFetchingQuote(false);
+            }
+          }, 800);
+          
+          return () => clearTimeout(debounce);
+        } else {
+          setSwapToAmount('');
+          setSwapQuoteData(null);
+        }
+      }, [swapFromAmount, swapDirection, walletAddress]);
       
       // ===== In-App Wallet Helpers (no permission prompts) =====
       async function getInAppKeypair() {
@@ -10770,6 +11132,13 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       
       // ========== REAL STAKING - BLOCKCHAIN TRANSACTION ==========
       const handleStake = async () => {
+        // 🔐 X402 GATE: Payment required to stake
+        try {
+          await requireX402Payment('Stake Tokens', 2);
+        } catch (e) {
+          return; // Stop if payment fails
+        }
+        
         // Use mobile/global wallet if available
         if (!walletAddress) {
           try {
@@ -10919,6 +11288,13 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       
       // ========== REAL CLAIM REWARDS - BLOCKCHAIN TRANSACTION ==========
       const handleClaimRewards = async () => {
+        // 🔐 X402 GATE: Payment required to claim rewards
+        try {
+          await requireX402Payment('Claim Rewards', 1);
+        } catch (e) {
+          return; // Stop if payment fails
+        }
+        
         if (pendingRewards === 0) {
           pushToast('⚠️ No rewards to claim', 'err');
           return;
@@ -11014,6 +11390,13 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       
       // ========== REAL UNSTAKE - BLOCKCHAIN TRANSACTION ==========
       const handleUnstake = async () => {
+        // 🔐 X402 GATE: Payment required to unstake
+        try {
+          await requireX402Payment('Unstake Tokens', 2);
+        } catch (e) {
+          return; // Stop if payment fails
+        }
+        
         // Only block if node is actually active; in-app wallet doesn't require provider
         if (nodeActive) {
           pushToast('⚠️ Stop your node before unstaking', 'err');
@@ -11307,6 +11690,13 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         }
 
         if (!nodeActive) {
+          // 🔐 X402 GATE: Payment required for running node
+          try {
+            await requireX402Payment('Privacy Node', 3);
+          } catch (e) {
+            return; // Stop if payment fails
+          }
+          
           setNodeActive(true);
           localStorage.setItem('nodeWasActive', 'true');
           pushToast('🌐 Activating node...', 'info');
@@ -11314,7 +11704,10 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           // Connect to real signaling server
           try {
             console.log('🔌 Connecting to signaling server:', SIGNALING_SERVER_URL);
-            const ws = new WebSocket(SIGNALING_SERVER_URL);
+            // Ensure x402 token then connect WS
+            const token = await getX402Token(3);
+            const wsUrl = SIGNALING_SERVER_URL + (SIGNALING_SERVER_URL.includes('?') ? `&` : `?`) + `token=${encodeURIComponent(token)}`;
+            const ws = new WebSocket(wsUrl);
             const nodeId = `GW-${walletAddress.slice(0, 8)}-${Date.now()}`;
             
             ws.onopen = () => {
@@ -11328,7 +11721,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 type: 'register',
                 nodeId: nodeId,
                 walletAddress: walletAddress,
-                region: detectedRegion
+                region: detectedRegion,
+                accessToken: token
               }));
               pushToast('✅ Node registered on network!', 'ok');
             };
@@ -12013,6 +12407,13 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       
       // Create and sign relay request (OFFLINE CAPABLE)
       const createRelayRequest = async () => {
+        // 🔐 X402 GATE: Payment required for Anonymous Relay
+        try {
+          await requireX402Payment('Anonymous Relay', privacyLevel || 3);
+        } catch (e) {
+          return; // Stop if payment fails
+        }
+        
         // Prefer global/mobile wallet if available
         if (!walletAddress) {
           try {
@@ -12509,6 +12910,320 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                     {networkStats.totalRelays.toLocaleString()}
                   </div>
                   <div className="text-[10px] md:text-xs text-purple-400 font-mono mt-1 text-center">PROCESSED</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* SOLANA TRACKER TOKEN SWAP SECTION */}
+          <div className="mt-6 relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-slate-950/95 via-emerald-950/20 to-slate-950/95 backdrop-blur-xl p-6 shadow-2xl">
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-cyan-500/5"></div>
+            <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-emerald-500/20 via-cyan-500/20 to-emerald-500/20 blur-xl opacity-30 animate-pulse"></div>
+            
+            <div className="relative z-10">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-white">Token Swap</h3>
+                    <p className="text-xs text-emerald-400">Powered by Solana Tracker</p>
+                  </div>
+                </div>
+                <div className="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+                  <span className="text-xs text-emerald-300 font-bold">0.5% Fee</span>
+                </div>
+              </div>
+
+              {/* Swap Interface */}
+              <div className="space-y-4">
+                {/* From Token */}
+                <div className="rounded-xl bg-slate-900/60 border border-slate-700 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-slate-400">You Pay</span>
+                    <span className="text-xs text-slate-400">Balance: {solBalance.toFixed(4)} SOL</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      placeholder="0.0"
+                      value={swapFromAmount}
+                      onChange={(e) => setSwapFromAmount(e.target.value)}
+                      className="flex-1 bg-transparent text-2xl font-bold text-white outline-none placeholder-slate-600"
+                    />
+                    <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 border border-slate-600 transition-all">
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                        <span className="text-xs font-bold">◎</span>
+                      </div>
+                      <span className="text-sm font-bold text-white">{swapDirection === 'sol-to-whistle' ? 'SOL' : 'WHISTLE'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Swap Direction Button */}
+                <div className="flex justify-center -my-2 relative z-10">
+                  <button
+                    onClick={() => {
+                      // Toggle swap direction
+                      setSwapDirection(prev => 
+                        prev === 'sol-to-whistle' ? 'whistle-to-sol' : 'sol-to-whistle'
+                      );
+                      // Swap the amounts
+                      const temp = swapFromAmount;
+                      setSwapFromAmount(swapToAmount);
+                      setSwapToAmount(temp);
+                      pushToast('🔄 Swapped direction', 'info');
+                    }}
+                    className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 flex items-center justify-center shadow-lg transition-all hover:scale-110 hover:rotate-180"
+                  >
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* To Token */}
+                <div className="rounded-xl bg-slate-900/60 border border-slate-700 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-slate-400">You Receive (est.)</span>
+                    <span className="text-xs text-slate-400">Balance: {tokenBalance.toLocaleString()} WHISTLE</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 text-2xl font-bold text-white">
+                      {swapToAmount || '0.0'}
+                    </div>
+                    <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 border border-slate-600 transition-all">
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
+                        <span className="text-xs font-bold">{swapDirection === 'sol-to-whistle' ? 'W' : '◎'}</span>
+                      </div>
+                      <span className="text-sm font-bold text-white">{swapDirection === 'sol-to-whistle' ? 'WHISTLE' : 'SOL'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Swap Details */}
+                <div className="rounded-xl bg-slate-900/40 border border-slate-700/50 p-4 space-y-2">
+                  {fetchingQuote && (
+                    <div className="flex items-center justify-center gap-2 text-xs text-cyan-400">
+                      <svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>Fetching quote...</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">Slippage</span>
+                    <span className="text-white font-mono">{swapQuoteData?.slippage || 1.0}%</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">Rate</span>
+                    <span className="text-white font-mono">
+                      {swapQuoteData ? (
+                        swapDirection === 'sol-to-whistle' 
+                          ? `1 SOL ≈ ${swapQuoteData.rate.toLocaleString(undefined, {maximumFractionDigits: 2})} WHISTLE`
+                          : `1 WHISTLE ≈ ${swapQuoteData.rate.toFixed(8)} SOL`
+                      ) : '—'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">Price Impact</span>
+                    <span className={`font-mono ${swapQuoteData?.priceImpact > 1 ? 'text-orange-400' : 'text-emerald-400'}`}>
+                      {swapQuoteData ? `${Math.abs(swapQuoteData.priceImpact * 100).toFixed(2)}%` : '—'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">Network Fee</span>
+                    <span className="text-white font-mono">~{swapQuoteData?.networkFee || 0.00001} SOL</span>
+                  </div>
+                  {swapQuoteData && (
+                    <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-700/50">
+                      <span className="text-slate-400">Min. Received</span>
+                      <span className="text-emerald-400 font-mono font-bold">
+                        {(swapQuoteData.outputAmount * 0.99).toFixed(swapDirection === 'sol-to-whistle' ? 2 : 6)} {swapDirection === 'sol-to-whistle' ? 'WHISTLE' : 'SOL'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Swap Button */}
+                <button
+                  onClick={async () => {
+                    if (!walletAddress) {
+                      pushToast('Please connect your wallet first', 'error');
+                      return;
+                    }
+                    if (!swapFromAmount || parseFloat(swapFromAmount) <= 0) {
+                      pushToast('Please enter an amount', 'error');
+                      return;
+                    }
+                    
+                    setIsSwapping(true);
+                    
+                    try {
+                      console.log('🔄 Starting Solana Tracker swap...');
+                      
+                      const SOL_MINT = 'So11111111111111111111111111111111111111112';
+                      const WHISTLE_MINT = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';
+                      
+                      const fromToken = swapDirection === 'sol-to-whistle' ? SOL_MINT : WHISTLE_MINT;
+                      const toToken = swapDirection === 'sol-to-whistle' ? WHISTLE_MINT : SOL_MINT;
+                      
+                      pushToast('🔍 Getting swap quote from Solana Tracker...', 'info');
+                      
+                      // Get API key
+                      const apiKey = localStorage.getItem('solanaTrackerApiKey') || 'e09b9726-e693-4f07-a502-b2915a6563d2';
+                      
+                      // IMPORTANT: Verify we're using the correct wallet address
+                      const actualWallet = inAppKeypair.publicKey.toString();
+                      console.log('🔑 Using wallet address:', actualWallet);
+                      console.log('🔑 State wallet address:', walletAddress);
+                      
+                      if (actualWallet !== walletAddress) {
+                        console.warn('⚠️ Wallet mismatch! Using actual keypair address:', actualWallet);
+                      }
+                      
+                      // Call Solana Tracker API to get swap instructions - use actual wallet from keypair
+                      const quoteUrl = `https://swap-v2.solanatracker.io/swap?from=${fromToken}&to=${toToken}&fromAmount=${swapFromAmount}&slippage=1&payer=${actualWallet}&priorityFee=0.00001`;
+                      
+                      console.log('📡 Fetching quote from:', quoteUrl);
+                      
+                      const quoteResponse = await fetch(quoteUrl, {
+                        method: 'GET',
+                        headers: {
+                          'x-api-key': apiKey,
+                          'Content-Type': 'application/json'
+                        }
+                      });
+                      
+                      if (!quoteResponse.ok) {
+                        const errorText = await quoteResponse.text();
+                        throw new Error(`Quote failed: ${quoteResponse.status} - ${errorText}`);
+                      }
+                      
+                      const quoteData = await quoteResponse.json();
+                      console.log('📊 Quote received:', quoteData);
+                      
+                      if (!quoteData?.txn && !quoteData?.transaction) {
+                        throw new Error('No transaction returned from Solana Tracker');
+                      }
+                      
+                      pushToast('✍️ Signing transaction...', 'info');
+                      
+                      // Get keypair for signing
+                      const inAppKeypair = await getInAppKeypair();
+                      
+                      if (!inAppKeypair) {
+                        throw new Error('In-app wallet not available. Please import or create a wallet.');
+                      }
+                      
+                      // Deserialize and sign transaction
+                      const txnBase64 = quoteData.txn || quoteData.transaction;
+                      const connection = new solanaWeb3.Connection(RPC_ENDPOINTS[0], 'confirmed');
+                      
+                      const txBuffer = Buffer.from(txnBase64, 'base64');
+                      let tx = solanaWeb3.VersionedTransaction.deserialize(txBuffer);
+                      
+                      // Check transaction type and sign appropriately
+                      console.log('🔍 Transaction type:', quoteData.type);
+                      console.log('🔑 Signing with wallet:', inAppKeypair.publicKey.toString());
+                      
+                      try {
+                        // For versioned transactions, we need to sign carefully
+                        if (tx.message) {
+                          tx.sign([inAppKeypair]);
+                        }
+                      } catch (signError) {
+                        console.warn('⚠️ Direct signing failed, trying alternative method:', signError.message);
+                        
+                        // Alternative: Reconstruct transaction with correct fee payer
+                        // This is a fallback for when the payer in the transaction doesn't match
+                        try {
+                          // Get the transaction message
+                          const message = tx.message;
+                          
+                          // Create new transaction with our keypair as signer
+                          tx = new solanaWeb3.VersionedTransaction(message);
+                          tx.sign([inAppKeypair]);
+                        } catch (reconstructError) {
+                          console.error('❌ Reconstruction failed:', reconstructError);
+                          throw new Error('Unable to sign transaction. The wallet address may not match the quote payer.');
+                        }
+                      }
+                      
+                      pushToast('📤 Sending transaction to Solana...', 'info');
+                      
+                      // Send transaction
+                      const signature = await connection.sendRawTransaction(tx.serialize(), {
+                        skipPreflight: true,
+                        maxRetries: 3
+                      });
+                      
+                      console.log('✅ Transaction sent:', signature);
+                      pushToast('⏳ Confirming transaction...', 'info');
+                      
+                      // Wait for confirmation
+                      await connection.confirmTransaction(signature, 'confirmed');
+                      
+                      console.log('✅ Transaction confirmed:', signature);
+                      pushToast(`✅ Swap successful! Tx: ${signature.slice(0, 8)}...`, 'success');
+                      
+                      // Refresh balances
+                      await loadBlockchainData(walletAddress);
+                      await getSolBalance(walletAddress);
+                      
+                      // Clear inputs
+                      setSwapFromAmount('');
+                      setSwapToAmount('');
+                      
+                    } catch (error) {
+                      console.error('❌ Swap error:', error);
+                      pushToast(`❌ Swap failed: ${error.message}`, 'error');
+                    } finally {
+                      setIsSwapping(false);
+                    }
+                  }}
+                  disabled={!walletAddress || !swapFromAmount || parseFloat(swapFromAmount) <= 0 || isSwapping}
+                  className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 disabled:from-slate-700 disabled:to-slate-700 text-white font-bold text-lg shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000"></div>
+                  <span className="relative z-10 flex items-center justify-center gap-2">
+                    {!walletAddress ? (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        Connect Wallet to Swap
+                      </>
+                    ) : isSwapping ? (
+                      <>
+                        <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Swapping...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        Swap Tokens
+                      </>
+                    )}
+                  </span>
+                </button>
+
+                {/* Info Footer */}
+                <div className="flex items-center justify-center gap-2 text-xs text-slate-400 pt-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Secured by Solana Tracker • Best execution • Multi-DEX routing</span>
                 </div>
               </div>
             </div>
@@ -16176,6 +16891,13 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       };
 
       const createRelayRequest = async () => {
+        // 🔐 X402 GATE: Payment required for Anonymous Relay
+        try {
+          await requireX402Payment('Anonymous Relay', 3);
+        } catch (e) {
+          return; // Stop if payment fails
+        }
+        
         if (!walletAddress) {
           const saved = localStorage.getItem('ghost_mobile_address');
           if (saved) setWalletAddress(saved);
