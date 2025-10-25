@@ -10501,27 +10501,34 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         }
       };
       
-      // Fetch swap quote using SolanaTracker only
+      // Fetch swap quote using SolanaTracker HTTP API
       const getSwapQuote = async (fromMint, toMint, amount, slippage = 10) => {
         try {
-          if (!window.SolanaTrackerSDK) throw new Error('SolanaTracker SDK not loaded');
           const apiKey = localStorage.getItem('solanaTrackerApiKey') || 'e09b9726-e693-4f07-a502-b2915a6563d2';
-          const rpcUrl = localStorage.getItem('rpcHttpUrl') || 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
           
-          // Instantiate SDK with API key and RPC URL
-          const tracker = new window.SolanaTrackerSDK(apiKey, rpcUrl);
+          // Use Solana Tracker REST API for quote
+          const quoteUrl = `https://swap-v2.solanatracker.io/swap?from=${fromMint}&to=${toMint}&fromAmount=${amount}&slippage=${slippage}&payer=placeholder&priorityFee=0.0001`;
           
-          const qt = await tracker.getRate({
-            from: fromMint,
-            to: toMint,
-            amount: parseFloat(amount),
-            slippage: slippage
+          const response = await fetch(quoteUrl, {
+            headers: {
+              'x-api-key': apiKey,
+              'Content-Type': 'application/json'
+            }
           });
-          if (!qt) throw new Error('No quote from tracker');
+          
+          if (!response.ok) {
+            throw new Error(`Tracker API error: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          console.log('📊 Tracker quote response:', data);
+          
+          if (!data) throw new Error('No quote from tracker');
+          
           return {
-            outAmount: qt.amountOut,
-            priceImpact: qt.priceImpact || 0,
-            rawQuote: { tracker: true, ...qt }
+            outAmount: data.outputAmount || data.outAmount || 0,
+            priceImpact: data.priceImpact || 0,
+            rawQuote: data
           };
         } catch (error) {
           console.error('Error fetching swap quote:', error);
@@ -10558,23 +10565,51 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           
           if (!inAppKeypair) throw new Error('In-app wallet not available');
 
-          if (!window.SolanaTrackerSDK) throw new Error('SolanaTracker SDK not loaded');
           const apiKey = localStorage.getItem('solanaTrackerApiKey') || 'e09b9726-e693-4f07-a502-b2915a6563d2';
-          const rpcUrl = localStorage.getItem('rpcHttpUrl') || 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
           
-          const tracker = new window.SolanaTrackerSDK(apiKey, rpcUrl);
           pushToast('📝 Building tracker transaction...', 'info');
-          const swap = await tracker.swap({
+          
+          // Use Solana Tracker REST API for swap
+          const swapUrl = `https://swap-v2.solanatracker.io/swap`;
+          
+          const swapPayload = {
             from: fromMint,
             to: toMint,
             fromAmount: parseFloat(fromAmount),
             slippage: 10,
-            payer: walletAddress
+            payer: walletAddress,
+            priorityFee: 0.0001,
+            forceLegacy: false
+          };
+          
+          console.log('🔄 Swap request:', swapPayload);
+          
+          const swapResponse = await fetch(swapUrl, {
+            method: 'POST',
+            headers: {
+              'x-api-key': apiKey,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(swapPayload)
           });
-          if (!swap?.txn) throw new Error('Tracker swap failed');
+          
+          if (!swapResponse.ok) {
+            const errorText = await swapResponse.text();
+            throw new Error(`Tracker swap API error: ${swapResponse.status} - ${errorText}`);
+          }
+          
+          const swapData = await swapResponse.json();
+          console.log('📦 Swap response:', swapData);
+          
+          if (!swapData?.txn && !swapData?.transaction) {
+            throw new Error('No transaction data from Tracker');
+          }
+          
+          const txnBase64 = swapData.txn || swapData.transaction;
+          
           pushToast('✍️ Signing (in-app)...', 'info');
           const connection = new solanaWeb3.Connection(RPC_ENDPOINTS[0], 'confirmed');
-          const tx = solanaWeb3.VersionedTransaction.deserialize(Buffer.from(swap.txn, 'base64'));
+          const tx = solanaWeb3.VersionedTransaction.deserialize(Buffer.from(txnBase64, 'base64'));
           tx.sign([inAppKeypair]);
           const sig = await connection.sendRawTransaction(tx.serialize(), { skipPreflight: false, maxRetries: 3 });
           await connection.confirmTransaction(sig, 'confirmed');
