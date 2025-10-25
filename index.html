@@ -2269,9 +2269,29 @@
           }
         }
         
+        // Method 5: Hex string (0x... or plain hex)
+        if (!keypair && /^(0x)?[0-9a-fA-F]+$/.test(input)) {
+          try {
+            const hex = input.replace(/^0x/, '');
+            const decoded = new Uint8Array(hex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+            console.log('✅ Hex decoded, length:', decoded.length);
+            if (decoded.length === 64) {
+              keypair = solanaWeb3.Keypair.fromSecretKey(decoded);
+              method = 'Hex-64byte';
+            } else if (decoded.length === 32) {
+              keypair = solanaWeb3.Keypair.fromSeed(decoded);
+              method = 'Hex-32byte';
+            }
+            if (keypair) console.log('✅', method, 'success!');
+          } catch (e) {
+            console.log('⏭️ Hex skip:', e.message);
+          }
+        }
+        
         if (!keypair) {
           console.error('❌ ALL METHODS FAILED');
-          alert('❌ Could not import key\n\nTry:\n• Base58 from Phantom\n• [1,2,3...] array\n• 1,2,3... numbers');
+          console.error('Input was:', input);
+          alert('❌ Could not import key\n\nTry:\n• Base58 from Phantom\n• [1,2,3...] array\n• 1,2,3... numbers\n\nCheck console (F12) for details');
           return;
         }
         
