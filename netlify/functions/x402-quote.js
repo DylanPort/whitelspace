@@ -7,9 +7,6 @@ const FEE_COLLECTOR_WALLET = 'G1RHSMtZVZLafmZ9man8anb2HXf7JP5Kh5sbrGZKM6Pg';
 const WHISTLE_MINT = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';
 const TOKEN_PROGRAM = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
 
-// In-memory storage (will be replaced by proper DB in production)
-const pendingQuotes = new Map();
-
 exports.handler = async (event, context) => {
   // CORS headers
   const headers = {
@@ -42,8 +39,7 @@ exports.handler = async (event, context) => {
     const quoteId = 'q_' + crypto.randomBytes(8).toString('hex');
     const expiresAt = Math.floor(Date.now() / 1000) + 5 * 60;
 
-    // Store quote (in production, use Redis or DB)
-    pendingQuotes.set(quoteId, { amount: totalAmount, expiresAt });
+    // Stateless quote - verification happens on-chain
 
     const quote = {
       protocol: 'x402',
@@ -81,7 +77,4 @@ exports.handler = async (event, context) => {
     };
   }
 };
-
-// Export pending quotes for confirm function (in production, use shared storage)
-exports.pendingQuotes = pendingQuotes;
 

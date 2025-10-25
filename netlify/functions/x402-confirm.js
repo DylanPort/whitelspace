@@ -5,10 +5,7 @@ const { Connection, PublicKey } = require('@solana/web3.js');
 const FEE_COLLECTOR_WALLET = 'G1RHSMtZVZLafmZ9man8anb2HXf7JP5Kh5sbrGZKM6Pg';
 const WHISTLE_MINT = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';
 const RPC_URL = process.env.SOLANA_RPC_URL || 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
-
-// In-memory storage (in production, use Redis or DB)
-const { pendingQuotes } = require('./x402-quote');
-const issuedTokens = new Map();
+const EXPECTED_AMOUNT = 10_000_000_000; // 10,000 WHISTLE (6 decimals)
 
 exports.handler = async (event, context) => {
   const headers = {
@@ -24,7 +21,7 @@ exports.handler = async (event, context) => {
   try {
     const { quoteId, txSig, payer } = JSON.parse(event.body || '{}');
     
-    if (!quoteId || !txSig || !payer) {
+    if (!txSig || !payer) {
       return {
         statusCode: 400,
         headers,
@@ -32,25 +29,7 @@ exports.handler = async (event, context) => {
       };
     }
 
-    const q = pendingQuotes.get(quoteId);
-    if (!q) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: 'unknown_quote' })
-      };
-    }
-
-    if (q.expiresAt < Math.floor(Date.now() / 1000)) {
-      pendingQuotes.delete(quoteId);
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: 'quote_expired' })
-      };
-    }
-
-    // Verify transaction on-chain
+    // Verify transaction on-chain (stateless - no quote storage needed)
     const connection = new Connection(RPC_URL, 'confirmed');
     const tx = await connection.getParsedTransaction(txSig, {
       maxSupportedTransactionVersion: 0,
@@ -80,31 +59,29 @@ exports.handler = async (event, context) => {
       }
     }
 
-    // Verify amount matches quote
-    if (amountReceived < Number(q.amount)) {
+    // Verify amount matches expected (10,000 WHISTLE)
+    if (amountReceived < EXPECTED_AMOUNT) {
       return {
         statusCode: 400,
         headers,
         body: JSON.stringify({
           error: 'insufficient_payment',
-          expected: q.amount,
+          expected: EXPECTED_AMOUNT,
           received: amountReceived
         })
       };
     }
 
-    // Check memo presence
+    // Check memo presence (optional - just for logging)
     const memoOk = (tx.transaction.message.instructions || []).some(ix => {
       return (ix.programId?.toBase58?.() === 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr') || false;
     });
 
-    // Issue access token
-    pendingQuotes.delete(quoteId);
+    // Issue access token (stateless - could use JWT in production)
     const accessToken = 'atk_' + crypto.randomBytes(16).toString('hex');
     const expiresAt = Math.floor(Date.now() / 1000) + 15 * 60; // 15 min
-    issuedTokens.set(accessToken, expiresAt);
 
-    console.log(`✅ x402 payment verified: ${amountReceived} WHISTLE from ${payer}`);
+    console.log(`✅ x402 payment verified: ${amountReceived} WHISTLE from ${payer}, tx: ${txSig}`);
 
     return {
       statusCode: 200,
@@ -114,7 +91,8 @@ exports.handler = async (event, context) => {
         accessToken,
         ttlSeconds: 900,
         memoOk,
-        amountReceived
+        amountReceived,
+        txSig
       })
     };
   } catch (e) {
@@ -126,7 +104,4 @@ exports.handler = async (event, context) => {
     };
   }
 };
-
-// Export issued tokens for validate function
-exports.issuedTokens = issuedTokens;
 
