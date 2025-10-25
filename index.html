@@ -31,17 +31,30 @@
   <script src="https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- Lucide Icons (UMD) - Using stable version -->
   <script src="https://unpkg.com/lucide@0.263.1/dist/umd/lucide.min.js"></script>
-  <!-- Solana Tracker Swap SDK (ESM via CDN) -->
+  <!-- Solana Tracker Swap SDK (ESM via CDN) + ENV bootstrap -->
   <script type="module">
     try {
       const mod = await import('https://esm.sh/solana-swap@latest');
-      // Expose for Babel/UMD runtime
       window.SolanaTrackerSDK = mod?.SolanaTracker || mod?.default || null;
       console.log('✅ SolanaTracker SDK loaded:', !!window.SolanaTrackerSDK);
     } catch (e) {
       console.warn('⚠️ Failed to load SolanaTracker SDK', e);
       window.SolanaTrackerSDK = null;
     }
+    // ENV bootstrap: supports Netlify-style injected envs
+    try {
+      const injected = window?.ENV || {};
+      const trackerKey = injected.SOLANA_TRACKER_API_KEY || (typeof process !== 'undefined' && process.env && process.env.SOLANA_TRACKER_API_KEY);
+      const rpcUrl = injected.SOLANA_MAINNET_RPC || (typeof process !== 'undefined' && process.env && process.env.SOLANA_MAINNET_RPC);
+      if (trackerKey && !localStorage.getItem('solanaTrackerApiKey')) {
+        localStorage.setItem('solanaTrackerApiKey', trackerKey);
+        console.log('🔐 Loaded SOLANA_TRACKER_API_KEY from ENV');
+      }
+      if (rpcUrl) {
+        try { localStorage.setItem('rpcHttpUrl', rpcUrl); } catch {}
+        console.log('🔌 Using RPC from ENV:', rpcUrl);
+      }
+    } catch {}
   </script>
   <script>
     // Make lucide.createIcons safe and always available
@@ -2167,13 +2180,13 @@
       };
       
       const handleImportMobileWallet = async () => {
-        if (!privateKeyInput || !walletPassword) {
-          alert('Please enter private key and password');
+        if (!privateKeyInput) {
+          alert('Please enter your private key');
           return;
         }
         
         try {
-          // Flexible private key parsing: supports base58, base64, and CSV/JSON array
+          // Flexible private key parsing: supports base58, base64 (incl. URL-safe), and CSV/JSON array
           const raw = (privateKeyInput || '').trim().replace(/^"|"$/g, '');
           let secretBytes = null;
 
@@ -2182,10 +2195,13 @@
             secretBytes = bs58.decode(raw);
           } catch (_) {}
 
-          // 2) Try base64
+          // 2) Try base64 (normalize URL-safe variants and padding)
           if (!secretBytes) {
             try {
-              const b = atob(raw);
+              const cleaned = raw.replace(/\s+/g, '');
+              let b64 = cleaned.replace(/-/g, '+').replace(/_/g, '/');
+              while (b64.length % 4 !== 0) b64 += '=';
+              const b = atob(b64);
               secretBytes = Uint8Array.from(b, c => c.charCodeAt(0));
             } catch (_) {}
           }
@@ -2193,8 +2209,8 @@
           // 3) Try CSV / JSON array of numbers
           if (!secretBytes) {
             try {
-              const cleaned = raw.replace(/^[\[\s]*/,'').replace(/[\]\s]*$/,'');
-              const arr = cleaned.split(/\s*,\s*/).map(n => parseInt(n, 10)).filter(n => !Number.isNaN(n));
+              const cleanedArr = raw.replace(/^[\[\s]*/,'').replace(/[\]\s]*$/,'');
+              const arr = cleanedArr.split(/\s*,\s*/).map(n => parseInt(n, 10)).filter(n => !Number.isNaN(n));
               if (arr.length > 0) secretBytes = new Uint8Array(arr);
             } catch (_) {}
           }
@@ -2213,10 +2229,16 @@
           }
           const publicKey = keypair.publicKey.toString();
           
-          // Normalize storage as bs58-encoded secret for compatibility
+          // Normalize storage; encrypt only if password provided, else store unencrypted base64 (with marker)
           const normalizedBs58 = bs58.encode(keypair.secretKey);
-          const encrypted = await encryptPrivateKey(normalizedBs58, walletPassword);
+          const normalizedB64 = btoa(String.fromCharCode.apply(null, Array.from(keypair.secretKey)));
+          if (walletPassword && walletPassword.length >= 1) {
+            const encrypted = await encryptPrivateKey(normalizedBs58, walletPassword);
           localStorage.setItem('ghost_mobile_wallet', encrypted);
+            localStorage.setItem('ghost_mobile_password', walletPassword);
+          } else {
+            localStorage.setItem('ghost_mobile_wallet', `${normalizedB64}:base64`);
+          }
           localStorage.setItem('ghost_mobile_address', publicKey);
           localStorage.setItem('walletConnected', 'true');
           
@@ -9934,10 +9956,10 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
     
     // RPC endpoints with fallback
     const RPC_ENDPOINTS = [
-      'https://api.mainnet-beta.solana.com',
       'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba',
+      'https://rpc.ankr.com/solana',
       'https://solana-api.projectserum.com',
-      'https://rpc.ankr.com/solana'
+      'https://api.mainnet-beta.solana.com'
     ];
     const MAINNET_RPC = RPC_ENDPOINTS[0];
     
@@ -10463,7 +10485,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         console.error('Error stack:', lastError?.stack);
       };
       
-      // ========== SWAP FUNCTIONALITY - SOLANA TRACKER FIRST, JUPITER FALLBACK ==========
+      // ========== SWAP FUNCTIONALITY - SOLANA TRACKER ONLY ==========
       // Get SOL balance
       const getSolBalance = async (address) => {
         try {
@@ -10479,46 +10501,35 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         }
       };
       
-      // Fetch swap quote using SolanaTracker first, fallback to Jupiter
+      // Fetch swap quote using SolanaTracker only
       const getSwapQuote = async (fromMint, toMint, amount, slippage = 10) => {
         try {
-          // Try SolanaTracker SDK
-          if (window.SolanaTrackerSDK) {
-            const apiKey = localStorage.getItem('solanaTrackerApiKey') || 'demo';
-            const tracker = new window.SolanaTrackerSDK(apiKey);
-            const qt = await tracker.getRate({
-              from: fromMint,
-              to: toMint,
-              amount: parseFloat(amount),
-              slippage: slippage
-            });
-            if (qt) {
-              return {
-                outAmount: qt.amountOut,
-                priceImpact: qt.priceImpact || 0,
-                rawQuote: { tracker: true, ...qt }
-              };
-            }
-          }
-
-          // Fallback to Jupiter API
-          const amountInSmallestUnit = fromMint === 'So11111111111111111111111111111111111111112'
-            ? Math.floor(amount * 1e9)
-            : Math.floor(amount * 1e6);
-          const url = `https://quote-api.jup.ag/v6/quote?inputMint=${fromMint}&outputMint=${toMint}&amount=${amountInSmallestUnit}&slippageBps=${slippage * 100}`;
-          const response = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' } });
-          if (!response.ok) throw new Error('Failed to fetch quote');
-          const quote = await response.json();
-          const outputDecimals = toMint === 'So11111111111111111111111111111111111111112' ? 9 : 6;
-          const outAmount = parseInt(quote.outAmount) / Math.pow(10, outputDecimals);
-          return { outAmount, priceImpact: parseFloat(quote.priceImpactPct || 0) / 100, rawQuote: quote };
+          if (!window.SolanaTrackerSDK) throw new Error('SolanaTracker SDK not loaded');
+          const apiKey = localStorage.getItem('solanaTrackerApiKey') || 'e09b9726-e693-4f07-a502-b2915a6563d2';
+          const rpcUrl = localStorage.getItem('rpcHttpUrl') || 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
+          
+          // Instantiate SDK with API key and RPC URL
+          const tracker = new window.SolanaTrackerSDK(apiKey, rpcUrl);
+          
+          const qt = await tracker.getRate({
+            from: fromMint,
+            to: toMint,
+            amount: parseFloat(amount),
+            slippage: slippage
+          });
+          if (!qt) throw new Error('No quote from tracker');
+          return {
+            outAmount: qt.amountOut,
+            priceImpact: qt.priceImpact || 0,
+            rawQuote: { tracker: true, ...qt }
+          };
         } catch (error) {
           console.error('Error fetching swap quote:', error);
           throw error;
         }
       };
       
-      // Execute swap using SolanaTracker first, fallback to Jupiter
+      // Execute swap using SolanaTracker only
       const executeSwap = async () => {
         if (!fromAmount || parseFloat(fromAmount) <= 0) {
           pushToast('Please enter an amount', 'error');
@@ -10547,136 +10558,35 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           
           if (!inAppKeypair) throw new Error('In-app wallet not available');
 
-          // Try SolanaTracker direct swap
-          if (window.SolanaTrackerSDK) {
-            try {
-              const apiKey = localStorage.getItem('solanaTrackerApiKey') || 'demo';
-              const tracker = new window.SolanaTrackerSDK(apiKey);
-              pushToast('📝 Building tracker transaction...', 'info');
-              const swap = await tracker.swap({
-                from: fromMint,
-                to: toMint,
-                fromAmount: parseFloat(fromAmount),
-                slippage: 10,
-                payer: walletAddress
-              });
-              if (swap?.txn) {
-                pushToast('✍️ Signing (in-app)...', 'info');
-                const connection = new solanaWeb3.Connection(RPC_ENDPOINTS[0], 'confirmed');
-                const tx = solanaWeb3.VersionedTransaction.deserialize(Buffer.from(swap.txn, 'base64'));
-                tx.sign([inAppKeypair]);
-                const sig = await connection.sendRawTransaction(tx.serialize(), { skipPreflight: false, maxRetries: 3 });
-                await connection.confirmTransaction(sig, 'confirmed');
-                pushToast('✅ Swap successful (Tracker)!', 'success');
-                await loadBlockchainData(walletAddress);
-                await getSolBalance(walletAddress);
-                setTimeout(()=>{ setShowBuySellModal(false); setFromAmount(''); setToAmount(''); }, 1200);
-                return;
-              }
-            } catch (trackerErr) {
-              console.warn('Tracker swap failed, falling back to Jupiter:', trackerErr);
-            }
-          }
+          if (!window.SolanaTrackerSDK) throw new Error('SolanaTracker SDK not loaded');
+          const apiKey = localStorage.getItem('solanaTrackerApiKey') || 'e09b9726-e693-4f07-a502-b2915a6563d2';
+          const rpcUrl = localStorage.getItem('rpcHttpUrl') || 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
           
-          // Get quote first
-          const quoteData = await getSwapQuote(fromMint, toMint, parseFloat(fromAmount), 1);
-          
-          if (!quoteData || !quoteData.rawQuote) {
-            throw new Error('Failed to get quote');
-          }
-          
-          pushToast('📝 Building transaction...', 'info');
-          
-          // Get swap transaction from Jupiter
-          const swapUrl = 'https://quote-api.jup.ag/v6/swap';
-          const swapPayload = {
-            quoteResponse: quoteData.rawQuote,
-            userPublicKey: walletAddress,
-            wrapAndUnwrapSol: true,
-            dynamicComputeUnitLimit: true,
-            prioritizationFeeLamports: 'auto'
-          };
-          
-          console.log('Swap request to Jupiter:', swapPayload);
-          
-          const swapResponse = await fetch(swapUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
-            body: JSON.stringify(swapPayload)
+          const tracker = new window.SolanaTrackerSDK(apiKey, rpcUrl);
+          pushToast('📝 Building tracker transaction...', 'info');
+          const swap = await tracker.swap({
+            from: fromMint,
+            to: toMint,
+            fromAmount: parseFloat(fromAmount),
+            slippage: 10,
+            payer: walletAddress
           });
-          
-          if (!swapResponse.ok) {
-            const errorText = await swapResponse.text();
-            console.error('Swap API error:', errorText);
-            throw new Error('Failed to get swap transaction');
-          }
-          
-          const swapData = await swapResponse.json();
-          console.log('Swap response:', swapData);
-          
-          if (!swapData || !swapData.swapTransaction) {
-            throw new Error('Invalid swap response');
-          }
-          
-          pushToast('✍️ Signing transaction...', 'info');
-          
-          // Deserialize and sign transaction
-          const txBuffer = Buffer.from(swapData.swapTransaction, 'base64');
-          const transaction = solanaWeb3.VersionedTransaction.deserialize(txBuffer);
-          
-          // Sign with in-app wallet
-          transaction.sign([inAppKeypair]);
-          
-          pushToast('⏳ Sending transaction...', 'info');
-          
-          // Send transaction
+          if (!swap?.txn) throw new Error('Tracker swap failed');
+          pushToast('✍️ Signing (in-app)...', 'info');
           const connection = new solanaWeb3.Connection(RPC_ENDPOINTS[0], 'confirmed');
-          const signature = await connection.sendRawTransaction(transaction.serialize(), {
-            skipPreflight: false,
-            maxRetries: 3
-          });
-          
-          console.log('Transaction sent:', signature);
-          pushToast('⏳ Confirming...', 'info');
-          
-          // Wait for confirmation
-          await connection.confirmTransaction(signature, 'confirmed');
-          
-          pushToast(`✅ Swap successful!`, 'success');
-          
-          // Refresh balances
+          const tx = solanaWeb3.VersionedTransaction.deserialize(Buffer.from(swap.txn, 'base64'));
+          tx.sign([inAppKeypair]);
+          const sig = await connection.sendRawTransaction(tx.serialize(), { skipPreflight: false, maxRetries: 3 });
+          await connection.confirmTransaction(sig, 'confirmed');
+          pushToast('✅ Swap successful (Tracker)!', 'success');
           await loadBlockchainData(walletAddress);
           await getSolBalance(walletAddress);
-          
-          // Close modal after short delay
-          setTimeout(() => {
-            setShowBuySellModal(false);
-            setFromAmount('');
-            setToAmount('');
-          }, 2000);
+          setTimeout(()=>{ setShowBuySellModal(false); setFromAmount(''); setToAmount(''); }, 1200);
+          return;
           
         } catch (error) {
           console.error('Swap error:', error);
           pushToast(`❌ ${error.message}`, 'error');
-          
-          // Show Jupiter fallback option
-          setTimeout(() => {
-            if (confirm('Swap failed. Would you like to try on Jupiter website?')) {
-              const amount = swapMode === 'buy' ? Math.floor(parseFloat(fromAmount) * 1e9) : Math.floor(parseFloat(fromAmount) * 1e6);
-              const jupiterUrl = swapMode === 'buy'
-                ? `https://jup.ag/swap/SOL-6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump?inAmount=${amount}`
-                : `https://jup.ag/swap/6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump-SOL?inAmount=${amount}`;
-              
-              window.open(jupiterUrl, '_blank');
-              
-              setShowBuySellModal(false);
-              setFromAmount('');
-              setToAmount('');
-            }
-          }, 500);
         } finally {
           setIsSwapping(false);
         }

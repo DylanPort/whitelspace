@@ -53,6 +53,11 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
+  // Never cache POST/PUT/PATCH/DELETE
+  const method = event.request.method;
+  if (method && method !== 'GET') {
+    return; // Let network handle non-GET requests
+  }
   // Network-first strategy for index.html to always get latest
   if (event.request.url.includes('index.html') || event.request.url.endsWith('/')) {
     event.respondWith(
@@ -69,12 +74,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Skip cross-origin requests not in our CDN list
-  if (!event.request.url.startsWith(self.location.origin) && 
-      !event.request.url.includes('cdn.') && 
-      !event.request.url.includes('unpkg.com') &&
-      !event.request.url.includes('jsdelivr.net')) {
-    return;
+  // Skip caching for RPC/Swap endpoints (always network)
+  const url = event.request.url;
+  const skipCacheOrigins = [
+    'api.mainnet-beta.solana.com',
+    'mainnet.helius-rpc.com',
+    'jup.ag',
+    'quote-api.jup.ag',
+  ];
+  if (skipCacheOrigins.some(host => url.includes(host))) {
+    return; // allow default fetch, no caching
   }
 
   // Cache-first for everything else

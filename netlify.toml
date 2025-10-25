@@ -2,6 +2,10 @@
   publish = "."
   command = ""
 
+[template.environment]
+  SOLANA_TRACKER_API_KEY = ""
+  SOLANA_MAINNET_RPC = ""
+
 [[redirects]]
   from = "/whitepaper.html"
   to = "/whitepaper.html"
