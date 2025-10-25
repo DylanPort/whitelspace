@@ -10529,9 +10529,13 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           
           if (!data) throw new Error('No quote from tracker');
           
+          // Extract output amount from the rate object
+          const outAmount = data.rate?.outputAmount || data.rate?.outAmount || data.outputAmount || data.outAmount || 0;
+          const priceImpact = data.rate?.priceImpact || data.priceImpact || 0;
+          
           return {
-            outAmount: data.outputAmount || data.outAmount || 0,
-            priceImpact: data.priceImpact || 0,
+            outAmount: outAmount,
+            priceImpact: priceImpact,
             rawQuote: data
           };
         } catch (error) {
@@ -10613,9 +10617,28 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           
           pushToast('✍️ Signing (in-app)...', 'info');
           const connection = new solanaWeb3.Connection(RPC_ENDPOINTS[0], 'confirmed');
-          const tx = solanaWeb3.VersionedTransaction.deserialize(Buffer.from(txnBase64, 'base64'));
-          tx.sign([inAppKeypair]);
-          const sig = await connection.sendRawTransaction(tx.serialize(), { skipPreflight: false, maxRetries: 3 });
+          
+          // Deserialize the transaction
+          const txBuffer = Buffer.from(txnBase64, 'base64');
+          let tx = solanaWeb3.VersionedTransaction.deserialize(txBuffer);
+          
+          // The transaction from Tracker is unsigned - we need to sign it with our keypair
+          // Check if transaction uses v0 (versioned) or legacy format
+          if (tx.message) {
+            // Sign the transaction with the fee payer (in-app wallet)
+            tx.sign([inAppKeypair]);
+          }
+          
+          console.log('📝 Transaction signed, sending...');
+          
+          const sig = await connection.sendRawTransaction(tx.serialize(), { 
+            skipPreflight: true, // Skip preflight for better success rate
+            maxRetries: 3 
+          });
+          
+          console.log('📡 Transaction sent:', sig);
+          pushToast('⏳ Confirming swap...', 'info');
+          
           await connection.confirmTransaction(sig, 'confirmed');
           pushToast('✅ Swap successful (Tracker)!', 'success');
           await loadBlockchainData(walletAddress);
