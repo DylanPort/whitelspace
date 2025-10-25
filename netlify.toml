@@ -12,8 +12,18 @@
   node_bundler = "esbuild"
   
 [[redirects]]
-  from = "/x402/*"
-  to = "/.netlify/functions/:splat"
+  from = "/x402/quote"
+  to = "/.netlify/functions/x402-quote"
+  status = 200
+
+[[redirects]]
+  from = "/x402/confirm"
+  to = "/.netlify/functions/x402-confirm"
+  status = 200
+
+[[redirects]]
+  from = "/x402/validate"
+  to = "/.netlify/functions/x402-validate"
   status = 200
 
 [[redirects]]
