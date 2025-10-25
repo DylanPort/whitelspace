@@ -10506,18 +10506,22 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         try {
           const apiKey = localStorage.getItem('solanaTrackerApiKey') || 'e09b9726-e693-4f07-a502-b2915a6563d2';
           
-          // Use Solana Tracker REST API for quote
-          const quoteUrl = `https://swap-v2.solanatracker.io/swap?from=${fromMint}&to=${toMint}&fromAmount=${amount}&slippage=${slippage}&payer=placeholder&priorityFee=0.0001`;
+          // Use Solana Tracker REST API for quote (GET request with query params)
+          const quoteUrl = `https://swap-v2.solanatracker.io/swap?from=${fromMint}&to=${toMint}&fromAmount=${amount}&slippage=${slippage}&payer=11111111111111111111111111111111&priorityFee=0.00001`;
+          
+          console.log('🔍 Fetching quote from:', quoteUrl);
           
           const response = await fetch(quoteUrl, {
+            method: 'GET',
             headers: {
-              'x-api-key': apiKey,
-              'Content-Type': 'application/json'
+              'x-api-key': apiKey
             }
           });
           
           if (!response.ok) {
-            throw new Error(`Tracker API error: ${response.status}`);
+            const errorText = await response.text();
+            console.error('❌ Tracker quote error:', response.status, errorText);
+            throw new Error(`Tracker API error: ${response.status} - ${errorText}`);
           }
           
           const data = await response.json();
