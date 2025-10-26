@@ -1,5 +1,5 @@
 // Ghost Whistle Service Worker
-const CACHE_NAME = 'ghost-whistle-v4';
+const CACHE_NAME = 'ghost-whistle-v5';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -74,7 +74,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Skip caching for RPC/Swap endpoints (always network)
+  // Skip caching for critical dynamic scripts/endpoints (always network)
   const url = event.request.url;
   const skipCacheOrigins = [
     'api.mainnet-beta.solana.com',
@@ -82,7 +82,7 @@ self.addEventListener('fetch', (event) => {
     'jup.ag',
     'quote-api.jup.ag',
   ];
-  if (skipCacheOrigins.some(host => url.includes(host))) {
+  if (skipCacheOrigins.some(host => url.includes(host)) || url.includes('/x402-client.js')) {
     return; // allow default fetch, no caching
   }
 
