@@ -3378,24 +3378,40 @@
             
             try {
               // Decode private key (handle different formats)
+              console.log('🔑 Decoding mobile private key...');
+              console.log('🔑 Key format check:', {
+                endsWithBase64: mobilePrivateKey.endsWith(':base64'),
+                hasCommas: mobilePrivateKey.includes(','),
+                length: mobilePrivateKey.length
+              });
+              
               let secretKey;
               if (mobilePrivateKey.endsWith(':base64')) {
+                console.log('🔑 Using base64 format');
                 const base64Key = mobilePrivateKey.replace(':base64', '');
                 const Buf = window.Buffer || Buffer;
                 secretKey = Buf.from(base64Key, 'base64');
               } else if (mobilePrivateKey.includes(',')) {
+                console.log('🔑 Using array format');
                 secretKey = new Uint8Array(mobilePrivateKey.split(',').map(n => parseInt(n)));
               } else {
+                console.log('🔑 Using bs58 format');
                 const bs58Decoder = window.bs58?.decode || window.bs58?.default?.decode;
-                if (!bs58Decoder) throw new Error('bs58 library not loaded');
+                if (!bs58Decoder) {
+                  console.error('❌ bs58 library not available');
+                  throw new Error('bs58 library not loaded');
+                }
                 secretKey = bs58Decoder(mobilePrivateKey);
               }
               
+              console.log('🔑 Secret key decoded, length:', secretKey.length);
               userKeypair = solanaWeb3.Keypair.fromSecretKey(secretKey);
               console.log('✅ Mobile wallet keypair reconstructed for claim');
+              console.log('🔑 Public key:', userKeypair.publicKey.toBase58());
             } catch (e) {
               console.error('❌ Failed to reconstruct mobile wallet:', e);
-              throw new Error('Failed to load mobile wallet. Please re-import your wallet.');
+              console.error('❌ Error details:', e.message, e.stack);
+              throw new Error(`Failed to load mobile wallet: ${e.message}`);
             }
           } else if (!wallet) {
             throw new Error('No wallet connected');
@@ -3418,9 +3434,20 @@
           }
           
           // Deserialize the partially signed transaction
-          const transaction = solanaWeb3.Transaction.from(
-            Buffer.from(data.transaction, 'base64')
-          );
+          console.log('📦 Deserializing transaction...');
+          console.log('📦 Transaction data length:', data.transaction.length);
+          
+          let transaction;
+          try {
+            const Buf = window.Buffer || Buffer;
+            const txBuffer = Buf.from(data.transaction, 'base64');
+            console.log('📦 Buffer created, length:', txBuffer.length);
+            transaction = solanaWeb3.Transaction.from(txBuffer);
+            console.log('✅ Transaction deserialized successfully');
+          } catch (e) {
+            console.error('❌ Deserialization error:', e);
+            throw new Error(`Failed to deserialize transaction: ${e.message}`);
+          }
           
           let signed;
           
@@ -3430,16 +3457,21 @@
             pushToast('Signing transaction...', 'ok');
             transaction.partialSign(userKeypair);
             signed = transaction;
+            console.log('✅ Transaction signed with mobile wallet');
           } else {
             // DESKTOP: Request signature from extension wallet
             console.log('🖥️ Requesting signature from extension wallet...');
             pushToast('Please sign the transaction in your wallet...', 'ok');
             signed = await wallet.signTransaction(transaction);
+            console.log('✅ Transaction signed with extension wallet');
           }
           
           // Send transaction
           const connection = new solanaWeb3.Connection(RPC_URL, 'confirmed');
-          const signature = await connection.sendRawTransaction(signed.serialize());
+          console.log('📤 Sending transaction...');
+          const serialized = signed.serialize();
+          console.log('📤 Serialized transaction length:', serialized.length);
+          const signature = await connection.sendRawTransaction(serialized);
           
           pushToast('Transaction submitted! Confirming...', 'ok');
           console.log('📤 Transaction sent:', signature);
