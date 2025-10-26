@@ -5,7 +5,7 @@ const { Connection, PublicKey } = require('@solana/web3.js');
 const PROGRAM_ID = '2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq';
 const WHISTLE_MINT = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';
 const RPC_URL = process.env.SOLANA_RPC_URL || 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
-const EXPECTED_AMOUNT = 10_000_000_000; // 10,000 WHISTLE (9 decimals)
+const EXPECTED_AMOUNT = 10_000_000_000; // 10,000 WHISTLE (6 decimals)
 
 exports.handler = async (event, context) => {
   const headers = {
@@ -49,22 +49,34 @@ exports.handler = async (event, context) => {
       [Buffer.from('pool')],
       new PublicKey(PROGRAM_ID)
     );
-    
-    // Verify deposit_fees instruction was called to pool
+
+    // Also compute Fee Collector ATA (legacy direct transfer path)
+    const feeCollectorWallet = new PublicKey('G1RHSMtZVZLafmZ9man8anb2HXf7JP5Kh5sbrGZKM6Pg');
+
+    // Verify payment either to the pool PDA vault (deposit_fees) OR to fee collector ATA (direct SPL transfer)
     const postBalances = tx.meta.postTokenBalances || [];
     const preBalances = tx.meta.preTokenBalances || [];
-    
-    let amountReceived = 0;
+
+    let amountToPool = 0n;
+    let amountToCollector = 0n;
+
     for (const post of postBalances) {
-      // Check if pool vault received tokens
-      if (post.owner === poolPda.toBase58() && post.mint === WHISTLE_MINT) {
-        const pre = preBalances.find(p => p.accountIndex === post.accountIndex);
-        const preAmount = pre ? BigInt(pre.uiTokenAmount.amount) : 0n;
-        const postAmount = BigInt(post.uiTokenAmount.amount);
-        amountReceived = Number(postAmount - preAmount);
-        break;
+      if (post.mint !== WHISTLE_MINT) continue;
+      const pre = preBalances.find(p => p.accountIndex === post.accountIndex);
+      const preAmount = pre ? BigInt(pre.uiTokenAmount.amount) : 0n;
+      const postAmount = BigInt(post.uiTokenAmount.amount);
+      const delta = postAmount - preAmount;
+      if (delta <= 0n) continue;
+
+      if (post.owner === poolPda.toBase58()) {
+        amountToPool += delta;
+      }
+      if (post.owner === feeCollectorWallet.toBase58()) {
+        amountToCollector += delta;
       }
     }
+
+    const amountReceived = Number(amountToPool + amountToCollector);
 
     // Verify amount matches expected (10,000 WHISTLE)
     if (amountReceived < EXPECTED_AMOUNT) {
@@ -89,7 +101,7 @@ exports.handler = async (event, context) => {
     const accessToken = 'atk_' + crypto.randomBytes(16).toString('hex');
     const expiresAt = Math.floor(Date.now() / 1000) + 15 * 60; // 15 min
 
-    console.log(`✅ x402 payment verified: ${amountReceived} WHISTLE deposited to pool from ${payer}, tx: ${txSig}`);
+    console.log(`✅ x402 payment verified: ${amountReceived} WHISTLE deposited (pool or collector) from ${payer}, tx: ${txSig}`);
 
     return {
       statusCode: 200,
