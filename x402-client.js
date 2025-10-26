@@ -7,6 +7,8 @@
   const MEMO_PROGRAM_ID = 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr';
   const PROGRAM_ID = '2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq';
   const SYSTEM_PROGRAM = '11111111111111111111111111111111';
+  // Direct transfer mode: send fees to this fee collector wallet (not a program)
+  const FEE_COLLECTOR_WALLET = 'G1RHSMtZVZLafmZ9man8anb2HXf7JP5Kh5sbrGZKM6Pg';
   const RPC_URL = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
   const RPC_ENDPOINTS = [
     RPC_URL,
@@ -111,20 +113,14 @@
     }
     
     const whistleMint = new solanaWeb3.PublicKey(WHISTLE_MINT);
-    const programId = new solanaWeb3.PublicKey(PROGRAM_ID);
     const TOKEN_PROGRAM = new solanaWeb3.PublicKey(TOKEN_PROGRAM_ID);
     const ASSOCIATED_TOKEN_PROGRAM = new solanaWeb3.PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
+    const feeCollector = new solanaWeb3.PublicKey(FEE_COLLECTOR_WALLET);
     
-    // Derive pool PDA
-    const [poolPda, poolBump] = await solanaWeb3.PublicKey.findProgramAddress(
-      [Buffer.from('pool')],
-      programId
-    );
-    
-    // Derive pool vault (ATA for pool PDA)
-    const [poolVault] = await solanaWeb3.PublicKey.findProgramAddress(
+    // Derive fee collector associated token account
+    const [collectorAta] = await solanaWeb3.PublicKey.findProgramAddress(
       [
-        poolPda.toBuffer(),
+        feeCollector.toBuffer(),
         TOKEN_PROGRAM.toBuffer(),
         whistleMint.toBuffer()
       ],
@@ -133,8 +129,8 @@
     
     console.log('💳 Payment details:', {
       amount: quote.pricing.totalAmount,
-      poolPda: poolPda.toString(),
-      poolVault: poolVault.toString(),
+      collector: feeCollector.toString(),
+      collectorAta: collectorAta.toString(),
       quoteId: quote.quoteId,
       walletType: isMobileWallet ? 'mobile' : 'desktop'
     });
@@ -151,26 +147,47 @@
       data: Buffer.from(`x402:${quote.quoteId}`, 'utf8')
     });
 
-    // Create deposit_fees instruction
-    // deposit_fees discriminator = first 8 bytes of sha256("global:deposit_fees")
-    const discriminator = Buffer.from([0xf2, 0x23, 0xc6, 0x8b, 0x8f, 0x7c, 0x4e, 0x91]);
-    const amountBuffer = Buffer.alloc(8);
-    amountBuffer.writeBigUInt64LE(BigInt(quote.pricing.totalAmount));
-    
-    const depositFeesIx = new solanaWeb3.TransactionInstruction({
-      programId: programId,
-      keys: [
-        { pubkey: poolPda, isSigner: false, isWritable: true },              // pool
-        { pubkey: wallet.publicKey, isSigner: true, isWritable: false },     // user
-        { pubkey: userTokenAccount, isSigner: false, isWritable: true },     // user_token_account
-        { pubkey: poolVault, isSigner: false, isWritable: true },            // pool_vault
-        { pubkey: TOKEN_PROGRAM, isSigner: false, isWritable: false }        // token_program
-      ],
-      data: Buffer.concat([discriminator, amountBuffer])
-    });
+    // Before building the instruction, ensure user has enough $WHISTLE
+    try {
+      const balResp = await connection.getTokenAccountBalance(userTokenAccount);
+      const userBalanceRaw = BigInt(balResp?.value?.amount || '0');
+      const requiredRaw = BigInt(quote.pricing.totalAmount);
+      if (userBalanceRaw < requiredRaw) {
+        throw new Error(`Insufficient $WHISTLE: need ${Number(requiredRaw) / 1e6} but have ${Number(userBalanceRaw) / 1e6}`);
+      }
+    } catch (balErr) {
+      console.error('❌ Balance check failed:', balErr);
+      throw balErr;
+    }
+
+    // Create SPL Token transfer to the fee collector ATA (no CPI)
+    let transferIx;
+    if (window.splToken?.createTransferCheckedInstruction) {
+      transferIx = window.splToken.createTransferCheckedInstruction(
+        userTokenAccount,
+        whistleMint,
+        collectorAta,
+        wallet.publicKey,
+        BigInt(quote.pricing.totalAmount),
+        6 // WHISTLE has 6 decimals
+      );
+    } else {
+      const data = Buffer.alloc(1 + 8);
+      data.writeUInt8(3, 0); // Token Program Transfer instruction
+      data.writeBigUInt64LE(BigInt(quote.pricing.totalAmount), 1);
+      transferIx = new solanaWeb3.TransactionInstruction({
+        programId: TOKEN_PROGRAM,
+        keys: [
+          { pubkey: userTokenAccount, isSigner: false, isWritable: true },
+          { pubkey: collectorAta, isSigner: false, isWritable: true },
+          { pubkey: wallet.publicKey, isSigner: true, isWritable: false }
+        ],
+        data
+      });
+    }
 
     tx.add(memoIx);
-    tx.add(depositFeesIx);
+    tx.add(transferIx);
     tx.feePayer = wallet.publicKey;
     
     const { blockhash } = await connection.getLatestBlockhash('confirmed');
