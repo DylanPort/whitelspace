@@ -3325,6 +3325,37 @@
           setLoadingFeeRewards(true);
           console.log('🔍 Checking fee rewards eligibility for:', walletAddress);
           
+          // Check localStorage cooldown as frontend backup
+          const localTimestamp = localStorage.getItem(`claim_timestamp_${walletAddress}`);
+          if (localTimestamp) {
+            const lastClaimTime = parseInt(localTimestamp);
+            const now = Date.now();
+            const timeSinceClaim = now - lastClaimTime;
+            const cooldownMs = 24 * 60 * 60 * 1000;
+            
+            if (timeSinceClaim < cooldownMs) {
+              const timeUntilNextClaim = cooldownMs - timeSinceClaim;
+              const hoursRemaining = Math.ceil(timeUntilNextClaim / (60 * 60 * 1000));
+              const nextClaimDate = new Date(lastClaimTime + cooldownMs).toISOString();
+              
+              console.log(`⏰ localStorage cooldown active: ${hoursRemaining}h remaining`);
+              
+              setFeeRewardsClaimable({
+                claimable: 0,
+                claimableFormatted: '0',
+                onCooldown: true,
+                hoursRemaining,
+                nextClaimAvailable: nextClaimDate,
+                message: `You can claim again in ${hoursRemaining} hours`
+              });
+              setLoadingFeeRewards(false);
+              return;
+            } else {
+              // Cooldown expired, clear localStorage
+              localStorage.removeItem(`claim_timestamp_${walletAddress}`);
+            }
+          }
+          
           const response = await fetch('/.netlify/functions/claim-reward', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -3371,6 +3402,20 @@
         try {
           setClaimingFeeRewards(true);
           console.log('💰 Claiming fee rewards...');
+          
+          // Check localStorage cooldown as frontend backup
+          const localTimestamp = localStorage.getItem(`claim_timestamp_${walletAddress}`);
+          if (localTimestamp) {
+            const lastClaimTime = parseInt(localTimestamp);
+            const now = Date.now();
+            const timeSinceClaim = now - lastClaimTime;
+            const cooldownMs = 24 * 60 * 60 * 1000;
+            
+            if (timeSinceClaim < cooldownMs) {
+              const hoursRemaining = Math.ceil((cooldownMs - timeSinceClaim) / (60 * 60 * 1000));
+              throw new Error(`Please wait ${hoursRemaining} more hours before claiming again (24h cooldown)`);
+            }
+          }
           
           // Check if user has mobile in-app wallet
           const mobilePrivateKey = localStorage.getItem('ghost_mobile_wallet');
@@ -3488,24 +3533,32 @@
           pushToast(`🎉 Successfully claimed ${feeRewardsClaimable.claimableFormatted} $WHISTLE!`, 'ok');
           console.log('✅ Claim successful! Tx:', `https://solscan.io/tx/${signature}`);
           
-          // Record claim timestamp for 24h cooldown (MUST complete before allowing any refresh)
-          console.log('📝 Recording claim timestamp...');
-          const recordResponse = await fetch('/.netlify/functions/record-claim', {
+          // Record claim timestamp for 24h cooldown
+          const claimTimestamp = Date.now();
+          
+          // Store in localStorage as backup (in case Netlify Blobs fails)
+          localStorage.setItem(`claim_timestamp_${walletAddress}`, claimTimestamp.toString());
+          console.log('💾 Claim timestamp saved to localStorage');
+          
+          // Also try to record to backend (non-blocking - errors don't stop the UI)
+          console.log('📝 Recording claim timestamp to backend...');
+          fetch('/.netlify/functions/record-claim', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               walletAddress: walletAddress,
               signature: signature
             })
+          }).then(async (recordResponse) => {
+            if (recordResponse.ok) {
+              const recordData = await recordResponse.json();
+              console.log('✅ Claim timestamp recorded to backend:', recordData);
+            } else {
+              console.warn('⚠️ Failed to record to backend (using localStorage fallback)');
+            }
+          }).catch((err) => {
+            console.warn('⚠️ Backend recording error (using localStorage fallback):', err);
           });
-          
-          if (!recordResponse.ok) {
-            console.error('❌ Failed to record claim timestamp!');
-            throw new Error('Failed to record claim timestamp. Please contact support.');
-          }
-          
-          const recordData = await recordResponse.json();
-          console.log('✅ Claim timestamp recorded:', recordData);
           
           // Calculate next claim time (24 hours from now)
           const now = Date.now();
