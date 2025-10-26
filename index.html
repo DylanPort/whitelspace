@@ -2857,10 +2857,11 @@
       const [poolData, setPoolData] = useState(null);
       const [claiming, setClaiming] = useState(false);
       const [loading, setLoading] = useState(false);
-      const [stakeHistory, setStakeHistory] = useState([]);
-      const [loadingHistory, setLoadingHistory] = useState(false);
       const [allStakers, setAllStakers] = useState([]);
       const [loadingStakers, setLoadingStakers] = useState(false);
+      const [feeRewardsClaimable, setFeeRewardsClaimable] = useState(null);
+      const [loadingFeeRewards, setLoadingFeeRewards] = useState(false);
+      const [claimingFeeRewards, setClaimingFeeRewards] = useState(false);
       
       const PROGRAM_ID = '2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq';
       const WHISTLE_MINT = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';
@@ -2873,16 +2874,17 @@
       }, []);
       
       useEffect(() => {
-        // Fetch pool data and all stakers on mount
+        // Fetch pool data and all stakers on mount immediately
+        setLoadingStakers(true);
         fetchAllStakers();
-        const interval = setInterval(() => fetchAllStakers(), 30000); // Refresh every 30s
+        const interval = setInterval(() => fetchAllStakers(), 600000); // Refresh every 10 minutes
         return () => clearInterval(interval);
       }, []);
       
       useEffect(() => {
         if (walletAddress) {
           fetchNodeData();
-          fetchStakeHistory();
+          checkFeeRewardsEligibility(); // Check if eligible for fee rewards
         }
       }, [walletAddress]);
       
@@ -2921,42 +2923,84 @@
           const connection = new solanaWeb3.Connection(RPC_URL, 'confirmed');
           const programId = new solanaWeb3.PublicKey(PROGRAM_ID);
           
+          // Get WHISTLE token decimals first
+          const whistleMint = new solanaWeb3.PublicKey(WHISTLE_MINT);
+          const mintInfo = await connection.getParsedAccountInfo(whistleMint);
+          const decimals = mintInfo.value?.data?.parsed?.info?.decimals || 9;
+          const divisor = Math.pow(10, decimals);
+          console.log(`🪙 $WHISTLE token decimals: ${decimals}`);
+          
           // Fetch pool data first
           const [poolPda] = await solanaWeb3.PublicKey.findProgramAddress(
             [Buffer.from('pool')],
             programId
           );
           
+          let poolDecoded = null;
+          
           const poolAccountInfo = await connection.getAccountInfo(poolPda);
           if (poolAccountInfo) {
             const poolDataBuffer = poolAccountInfo.data;
-            const poolDecoded = {
+            poolDecoded = {
               authority: new solanaWeb3.PublicKey(poolDataBuffer.slice(8, 40)).toBase58(),
               whistleMint: new solanaWeb3.PublicKey(poolDataBuffer.slice(40, 72)).toBase58(),
-              totalStaked: Number(new DataView(poolDataBuffer.buffer).getBigUint64(72, true)) / 1e9,
+              totalStaked: Number(new DataView(poolDataBuffer.buffer).getBigUint64(72, true)) / divisor,
               totalNodes: Number(new DataView(poolDataBuffer.buffer).getBigUint64(80, true)),
               totalReputation: Number(new DataView(poolDataBuffer.buffer).getBigUint64(88, true)),
-              feePool: Number(new DataView(poolDataBuffer.buffer).getBigUint64(96, true)) / 1e9,
-              baseReward: Number(new DataView(poolDataBuffer.buffer).getBigUint64(104, true)) / 1e9,
-              bonusPerPoint: Number(new DataView(poolDataBuffer.buffer).getBigUint64(112, true)) / 1e9,
+              feePool: Number(new DataView(poolDataBuffer.buffer).getBigUint64(96, true)) / divisor,
+              baseReward: Number(new DataView(poolDataBuffer.buffer).getBigUint64(104, true)) / divisor,
+              bonusPerPoint: Number(new DataView(poolDataBuffer.buffer).getBigUint64(112, true)) / divisor,
               totalRelayRequests: Number(new DataView(poolDataBuffer.buffer).getBigUint64(120, true))
             };
-            setPoolData(poolDecoded);
             
+            // Fetch ACTUAL fee balance from fee collector wallet
+            const feeCollectorWallet = new solanaWeb3.PublicKey('G1RHSMtZVZLafmZ9man8anb2HXf7JP5Kh5sbrGZKM6Pg');
+            const whistleMint = new solanaWeb3.PublicKey(WHISTLE_MINT);
+            const TOKEN_PROGRAM = new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+            const ASSOCIATED_TOKEN_PROGRAM = new solanaWeb3.PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
+            
+            try {
+              // Get fee collector's WHISTLE token account
+              const [feeCollectorAta] = await solanaWeb3.PublicKey.findProgramAddress(
+                [
+                  feeCollectorWallet.toBuffer(),
+                  TOKEN_PROGRAM.toBuffer(),
+                  whistleMint.toBuffer()
+                ],
+                ASSOCIATED_TOKEN_PROGRAM
+              );
+              
+              const feeTokenAccount = await connection.getTokenAccountBalance(feeCollectorAta);
+              const rawAmount = feeTokenAccount.value.amount;
+              const decimals = feeTokenAccount.value.decimals;
+              poolDecoded.actualFeePool = Number(rawAmount) / Math.pow(10, decimals);
+              console.log('💰 Fee collector wallet balance:');
+              console.log('  Wallet:', feeCollectorWallet.toBase58());
+              console.log('  Token Account:', feeCollectorAta.toBase58());
+              console.log('  Raw amount:', rawAmount);
+              console.log('  Decimals:', decimals);
+              console.log('  Converted:', poolDecoded.actualFeePool, '$WHISTLE');
+            } catch (e) {
+              console.warn('Could not fetch fee collector balance:', e);
+              poolDecoded.actualFeePool = 0;
+            }
+            
+            setPoolData(poolDecoded);
             console.log('Pool data fetched:', poolDecoded);
           }
           
           // Fetch all node accounts using getProgramAccounts
-          // Filter by account size (136 bytes for NodeAccount)
+          // NodeAccount size: 128 bytes (8-byte aligned: 8 discriminator + 32 owner + 88 fields/padding)
           const accounts = await connection.getProgramAccounts(programId, {
             filters: [
               {
-                dataSize: 136 // NodeAccount: 8 discriminator + 32 owner + 8*9 fields + 8*2 timestamps = 136
+                dataSize: 128 // NodeAccount actual size
               }
             ]
           });
           
           console.log(`Found ${accounts.length} node accounts`);
+          console.log('🔢 Divisor check before node decoding:', divisor, '(decimals:', decimals, ')');
           
           const currentTime = Date.now() / 1000;
           const stakers = [];
@@ -2966,25 +3010,64 @@
           for (const { pubkey, account } of accounts) {
             try {
               const buffer = account.data;
+              
+              // Debug: Check raw values
+              // Account structure (128 bytes with 8-byte alignment):
+              // 8 bytes: discriminator
+              // 32 bytes: owner (Pubkey)
+              // 8 bytes: staked_amount (u64) - offset 40
+              // 8 bytes: reputation_score (u64) - offset 48
+              // 8 bytes: total_relays (u64) - offset 56
+              // 8 bytes: successful_relays (u64) - offset 64
+              // 8 bytes: failed_relays (u64) - offset 72
+              // 8 bytes: total_earned (u64) - offset 80
+              // 8 bytes: pending_rewards (u64) - offset 88
+              // 8 bytes: total_claimed (u64) - offset 96
+              // 8 bytes: created_at (i64) - offset 104
+              // 8 bytes: last_relay (i64) - offset 112
+              // Total: 120 bytes + 8 bytes padding = 128 bytes
+              
+              const rawStaked = new DataView(buffer.buffer).getBigUint64(40, true);
+              const rawPending = new DataView(buffer.buffer).getBigUint64(88, true);
+              
               const nodeDecoded = {
                 address: pubkey.toBase58(),
                 owner: new solanaWeb3.PublicKey(buffer.slice(8, 40)).toBase58(),
-                stakedAmount: Number(new DataView(buffer.buffer).getBigUint64(40, true)) / 1e9,
+                stakedAmount: Number(rawStaked) / divisor,
                 reputationScore: Number(new DataView(buffer.buffer).getBigUint64(48, true)),
                 totalRelays: Number(new DataView(buffer.buffer).getBigUint64(56, true)),
                 successfulRelays: Number(new DataView(buffer.buffer).getBigUint64(64, true)),
                 failedRelays: Number(new DataView(buffer.buffer).getBigUint64(72, true)),
-                totalEarned: Number(new DataView(buffer.buffer).getBigUint64(80, true)) / 1e9,
-                pendingRewards: Number(new DataView(buffer.buffer).getBigUint64(88, true)) / 1e9,
-                totalClaimed: Number(new DataView(buffer.buffer).getBigUint64(96, true)) / 1e9,
+                totalEarned: Number(new DataView(buffer.buffer).getBigUint64(80, true)) / divisor,
+                pendingRewards: Number(rawPending) / divisor,
+                totalClaimed: Number(new DataView(buffer.buffer).getBigUint64(96, true)) / divisor,
                 createdAt: Number(new DataView(buffer.buffer).getBigInt64(104, true)),
                 lastRelay: Number(new DataView(buffer.buffer).getBigInt64(112, true))
               };
               
-              // Only include nodes with staked amount
-              if (nodeDecoded.stakedAmount > 0) {
+              // Debug first account
+              if (stakers.length === 0 && nodeDecoded.stakedAmount > 0) {
+                console.log('🔍 First staker debug:');
+                console.log('  Account size:', buffer.length, 'bytes');
+                console.log('  First 50 bytes (hex):', Array.from(buffer.slice(0, 50)).map(b => b.toString(16).padStart(2, '0')).join(' '));
+                console.log('  Decimals being used:', decimals);
+                console.log('  Divisor:', divisor);
+                console.log('  Owner offset 8-40:', new solanaWeb3.PublicKey(buffer.slice(8, 40)).toBase58());
+                console.log('  Raw staked (offset 40):', rawStaked.toString());
+                console.log('  Converted staked:', nodeDecoded.stakedAmount);
+                console.log('  Pool total staked:', poolDecoded.totalStaked);
+                console.log('  Does this make sense?', nodeDecoded.stakedAmount, '/', poolDecoded.totalStaked, '=', (nodeDecoded.stakedAmount / poolDecoded.totalStaked * 100).toFixed(2), '%');
+              }
+              
+              // Filter out problematic wallet and only include nodes with staked amount
+              const EXCLUDED_WALLET = '7NFFKUqmQCXHps19XxFkB9qh7AX52UZE8HJVdUu8W6XF';
+              if (nodeDecoded.owner === EXCLUDED_WALLET) {
+                console.log('🚫 Excluded problematic wallet:', EXCLUDED_WALLET);
+                continue;
+              }
+              if (nodeDecoded.stakedAmount > 0 && poolDecoded) {
                 // Calculate weights for fair distribution
-                const stakeWeight = poolDecoded ? nodeDecoded.stakedAmount / poolDecoded.totalStaked : 0;
+                const stakeWeight = nodeDecoded.stakedAmount / poolDecoded.totalStaked;
                 const stakeDays = nodeDecoded.createdAt > 0 ? (currentTime - nodeDecoded.createdAt) / 86400 : 0;
                 const timeWeight = Math.min(stakeDays / 30, 1); // Max weight at 30 days
                 const repWeight = nodeDecoded.reputationScore / 100000; // Normalize reputation
@@ -3005,112 +3088,38 @@
           }
           
           // Second pass: calculate actual shares from fee pool
-          if (poolDecoded && poolDecoded.feePool > 0 && totalWeight > 0) {
-            const distributionAmount = poolDecoded.feePool * 0.9; // 90% of fee pool
+          const actualFeePool = poolDecoded?.actualFeePool || 0;
+          if (poolDecoded && actualFeePool > 0 && totalWeight > 0) {
+            const distributionAmount = actualFeePool * 0.9; // 90% of fee pool
             for (const staker of stakers) {
               staker.estimatedShare = (staker.weight / totalWeight) * distributionAmount;
             }
+            console.log(`💎 Distribution calculated: ${distributionAmount.toLocaleString()} $WHISTLE to distribute among ${stakers.length} stakers`);
+          } else {
+            console.log('⚠️ No fees to distribute yet');
           }
           
-          // Sort by estimated share descending
-          stakers.sort((a, b) => b.estimatedShare - a.estimatedShare);
+          // Sort by staked amount descending (biggest stakers first)
+          stakers.sort((a, b) => b.stakedAmount - a.stakedAmount);
           setAllStakers(stakers);
           
-          console.log('Stakers loaded:', stakers.length);
+          const totalStakedCalc = stakers.reduce((sum, s) => sum + s.stakedAmount, 0);
+          console.log('✅ Stakers loaded:', stakers.length);
+          console.log('📊 Total staked (calculated):', totalStakedCalc.toLocaleString());
+          console.log('📊 Total staked (from pool):', poolDecoded?.totalStaked.toLocaleString());
+          if (stakers.length > 0) {
+            console.log('👤 Sample staker:', {
+              owner: stakers[0].owner.slice(0, 8),
+              staked: stakers[0].stakedAmount,
+              pending: stakers[0].pendingRewards,
+              share: stakers[0].estimatedShare
+            });
+          }
+          
         } catch (e) {
           console.error('Error fetching all stakers:', e);
         } finally {
           setLoadingStakers(false);
-        }
-      }
-      
-      async function fetchStakeHistory() {
-        try {
-          setLoadingHistory(true);
-          const connection = new solanaWeb3.Connection(RPC_URL, 'confirmed');
-          const programId = new solanaWeb3.PublicKey(PROGRAM_ID);
-          
-          // Derive node PDA
-          const [nodePda] = await solanaWeb3.PublicKey.findProgramAddress(
-            [Buffer.from('node'), new solanaWeb3.PublicKey(walletAddress).toBuffer()],
-            programId
-          );
-          
-          // Fetch transaction signatures for the node account
-          const signatures = await connection.getSignaturesForAddress(nodePda, { limit: 50 });
-          
-          const history = [];
-          for (const sigInfo of signatures) {
-            try {
-              const tx = await connection.getParsedTransaction(sigInfo.signature, {
-                maxSupportedTransactionVersion: 0,
-                commitment: 'confirmed'
-              });
-              
-              if (!tx || !tx.meta || tx.meta.err) continue;
-              
-              // Determine transaction type from instructions
-              const instructions = tx.transaction.message.instructions;
-              let txType = 'unknown';
-              let amount = 0;
-              
-              for (const ix of instructions) {
-                if (ix.programId?.toBase58() === PROGRAM_ID) {
-                  const ixData = ix.data;
-                  // Parse instruction discriminator (first 8 bytes)
-                  if (ixData) {
-                    // Stake: [0x4f, 0x67, 0x4e, 0xdc, 0x4a, 0x8e, 0x8c, 0x6d]
-                    // Unstake: [0x17, 0x65, 0x8f, 0x2c, 0x8d, 0x1e, 0x3f, 0x4b]
-                    // Claim: [0x94, 0x30, 0xdd, 0x8e, 0x7b, 0x6f, 0x6e, 0x24]
-                    const discriminator = ixData.slice(0, 8);
-                    if (discriminator[0] === 0x4f && discriminator[1] === 0x67) {
-                      txType = 'stake';
-                      // Amount is after discriminator (8 bytes u64)
-                      if (ixData.length >= 16) {
-                        amount = Number(new DataView(new Uint8Array(ixData.slice(8, 16)).buffer).getBigUint64(0, true)) / 1e9;
-                      }
-                    } else if (discriminator[0] === 0x17 && discriminator[1] === 0x65) {
-                      txType = 'unstake';
-                      if (ixData.length >= 16) {
-                        amount = Number(new DataView(new Uint8Array(ixData.slice(8, 16)).buffer).getBigUint64(0, true)) / 1e9;
-                      }
-                    } else if (discriminator[0] === 0x94 && discriminator[1] === 0x30) {
-                      txType = 'claim';
-                      // Check postTokenBalances for claimed amount
-                      if (tx.meta.postTokenBalances && tx.meta.preTokenBalances) {
-                        for (const post of tx.meta.postTokenBalances) {
-                          if (post.mint === WHISTLE_MINT && post.owner === walletAddress) {
-                            const pre = tx.meta.preTokenBalances.find(p => p.accountIndex === post.accountIndex);
-                            if (pre) {
-                              amount = (Number(post.uiTokenAmount.amount) - Number(pre.uiTokenAmount.amount)) / 1e9;
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-              
-              if (txType !== 'unknown') {
-                history.push({
-                  signature: sigInfo.signature,
-                  timestamp: sigInfo.blockTime,
-                  type: txType,
-                  amount: amount,
-                  slot: sigInfo.slot
-                });
-              }
-            } catch (err) {
-              console.error('Error parsing tx:', err);
-            }
-          }
-          
-          setStakeHistory(history);
-        } catch (e) {
-          console.error('Error fetching stake history:', e);
-        } finally {
-          setLoadingHistory(false);
         }
       }
       
@@ -3119,6 +3128,12 @@
           setLoading(true);
           const connection = new solanaWeb3.Connection(RPC_URL, 'confirmed');
           const programId = new solanaWeb3.PublicKey(PROGRAM_ID);
+          
+          // Get WHISTLE token decimals
+          const whistleMint = new solanaWeb3.PublicKey(WHISTLE_MINT);
+          const mintInfo = await connection.getParsedAccountInfo(whistleMint);
+          const decimals = mintInfo.value?.data?.parsed?.info?.decimals || 9;
+          const divisor = Math.pow(10, decimals);
           
           // Derive pool PDA
           const [poolPda] = await solanaWeb3.PublicKey.findProgramAddress(
@@ -3139,12 +3154,12 @@
             const poolDecoded = {
               authority: new solanaWeb3.PublicKey(poolDataBuffer.slice(8, 40)).toBase58(),
               whistleMint: new solanaWeb3.PublicKey(poolDataBuffer.slice(40, 72)).toBase58(),
-              totalStaked: Number(new DataView(poolDataBuffer.buffer).getBigUint64(72, true)) / 1e9,
+              totalStaked: Number(new DataView(poolDataBuffer.buffer).getBigUint64(72, true)) / divisor,
               totalNodes: Number(new DataView(poolDataBuffer.buffer).getBigUint64(80, true)),
               totalReputation: Number(new DataView(poolDataBuffer.buffer).getBigUint64(88, true)),
-              feePool: Number(new DataView(poolDataBuffer.buffer).getBigUint64(96, true)) / 1e9,
-              baseReward: Number(new DataView(poolDataBuffer.buffer).getBigUint64(104, true)) / 1e9,
-              bonusPerPoint: Number(new DataView(poolDataBuffer.buffer).getBigUint64(112, true)) / 1e9,
+              feePool: Number(new DataView(poolDataBuffer.buffer).getBigUint64(96, true)) / divisor,
+              baseReward: Number(new DataView(poolDataBuffer.buffer).getBigUint64(104, true)) / divisor,
+              bonusPerPoint: Number(new DataView(poolDataBuffer.buffer).getBigUint64(112, true)) / divisor,
               totalRelayRequests: Number(new DataView(poolDataBuffer.buffer).getBigUint64(120, true))
             };
             setPoolData(poolDecoded);
@@ -3156,14 +3171,14 @@
             const nodeDataBuffer = nodeAccountInfo.data;
             const nodeDecoded = {
               owner: new solanaWeb3.PublicKey(nodeDataBuffer.slice(8, 40)).toBase58(),
-              stakedAmount: Number(new DataView(nodeDataBuffer.buffer).getBigUint64(40, true)) / 1e9,
+              stakedAmount: Number(new DataView(nodeDataBuffer.buffer).getBigUint64(40, true)) / divisor,
               reputationScore: Number(new DataView(nodeDataBuffer.buffer).getBigUint64(48, true)),
               totalRelays: Number(new DataView(nodeDataBuffer.buffer).getBigUint64(56, true)),
               successfulRelays: Number(new DataView(nodeDataBuffer.buffer).getBigUint64(64, true)),
               failedRelays: Number(new DataView(nodeDataBuffer.buffer).getBigUint64(72, true)),
-              totalEarned: Number(new DataView(nodeDataBuffer.buffer).getBigUint64(80, true)) / 1e9,
-              pendingRewards: Number(new DataView(nodeDataBuffer.buffer).getBigUint64(88, true)) / 1e9,
-              totalClaimed: Number(new DataView(nodeDataBuffer.buffer).getBigUint64(96, true)) / 1e9,
+              totalEarned: Number(new DataView(nodeDataBuffer.buffer).getBigUint64(80, true)) / divisor,
+              pendingRewards: Number(new DataView(nodeDataBuffer.buffer).getBigUint64(88, true)) / divisor,
+              totalClaimed: Number(new DataView(nodeDataBuffer.buffer).getBigUint64(96, true)) / divisor,
               createdAt: Number(new DataView(nodeDataBuffer.buffer).getBigInt64(104, true)),
               lastRelay: Number(new DataView(nodeDataBuffer.buffer).getBigInt64(112, true))
             };
@@ -3258,12 +3273,100 @@
           
           // Refresh data
           await fetchNodeData();
-          await fetchStakeHistory();
         } catch (e) {
           console.error('Claim error:', e);
           pushToast('Failed to claim rewards', 'error');
         } finally {
           setClaiming(false);
+        }
+      }
+      
+      // Check if user is eligible for fee rewards
+      async function checkFeeRewardsEligibility() {
+        if (!walletAddress) return;
+        
+        try {
+          setLoadingFeeRewards(true);
+          console.log('🔍 Checking fee rewards eligibility for:', walletAddress);
+          
+          const response = await fetch('/.netlify/functions/claim-reward', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ walletAddress })
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok && data.claimable) {
+            console.log('✅ Eligible for fee rewards:', data.claimableFormatted, '$WHISTLE');
+            setFeeRewardsClaimable(data);
+          } else {
+            console.log('⚠️  Not eligible or no rewards:', data.message);
+            setFeeRewardsClaimable({ claimable: 0, message: data.message || 'Not eligible' });
+          }
+        } catch (error) {
+          console.error('❌ Error checking fee rewards:', error);
+          setFeeRewardsClaimable({ claimable: 0, message: 'Error checking eligibility' });
+        } finally {
+          setLoadingFeeRewards(false);
+        }
+      }
+      
+      // Claim fee rewards (user pays transaction fee!)
+      async function claimFeeRewards() {
+        if (!wallet || !feeRewardsClaimable || feeRewardsClaimable.claimable === 0) return;
+        
+        try {
+          setClaimingFeeRewards(true);
+          console.log('💰 Claiming fee rewards...');
+          
+          // Get partially signed transaction from backend
+          const response = await fetch('/.netlify/functions/sign-claim', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userWallet: walletAddress,
+              claimableAmount: feeRewardsClaimable.claimable
+            })
+          });
+          
+          const data = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to create claim transaction');
+          }
+          
+          // Deserialize the partially signed transaction
+          const transaction = solanaWeb3.Transaction.from(
+            Buffer.from(data.transaction, 'base64')
+          );
+          
+          pushToast('Please sign the transaction in your wallet...', 'ok');
+          
+          // User signs (and pays the tx fee!)
+          const signed = await wallet.signTransaction(transaction);
+          
+          // Send transaction
+          const connection = new solanaWeb3.Connection(RPC_URL, 'confirmed');
+          const signature = await connection.sendRawTransaction(signed.serialize());
+          
+          pushToast('Transaction submitted! Confirming...', 'ok');
+          
+          await connection.confirmTransaction(signature, 'confirmed');
+          
+          pushToast(`🎉 Successfully claimed ${feeRewardsClaimable.claimableFormatted} $WHISTLE!`, 'ok');
+          console.log('✅ Claim successful! Tx:', `https://solscan.io/tx/${signature}`);
+          
+          // Refresh data
+          setFeeRewardsClaimable({ claimable: 0, message: 'Already claimed' });
+          await checkFeeRewardsEligibility();
+          await fetchNodeData();
+          
+        } catch (error) {
+          console.error('❌ Fee rewards claim error:', error);
+          pushToast(`Failed to claim: ${error.message}`, 'error');
+        } finally {
+          setClaimingFeeRewards(false);
         }
       }
       
@@ -3319,7 +3422,7 @@
               <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-6 space-y-6">
                 <div className="text-[10px] text-cyan-400 font-mono mb-4">$ cat rewards_dashboard.json</div>
                 
-                {loading ? (
+                {loading || loadingStakers ? (
                   <div className="text-center py-12">
                     <div className="animate-spin rounded-full h-12 w-12 border-2 border-cyan-400 border-t-transparent mx-auto mb-4"></div>
                     <div className="text-slate-400 font-mono text-sm">Loading staking data...</div>
@@ -3332,72 +3435,90 @@
                   </div>
                 ) : (
                   <>
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="bg-black/60 border border-slate-700 rounded p-4">
-                        <div className="text-[10px] text-slate-500 font-mono mb-2">STAKED_AMOUNT</div>
-                        <div className="text-xl font-bold text-white font-mono">{nodeData.stakedAmount.toLocaleString()}</div>
-                        <div className="text-[9px] text-slate-600 font-mono mt-1">$WHISTLE</div>
-                      </div>
-                      
-                      <div className="bg-black/60 border border-slate-700 rounded p-4">
-                        <div className="text-[10px] text-slate-500 font-mono mb-2">REPUTATION</div>
-                        <div className="text-xl font-bold text-emerald-400 font-mono">{nodeData.reputationScore.toLocaleString()}</div>
-                        <div className="text-[9px] text-slate-600 font-mono mt-1">SCORE</div>
-                      </div>
-                      
-                      <div className="bg-black/60 border border-slate-700 rounded p-4">
-                        <div className="text-[10px] text-slate-500 font-mono mb-2">RELAYS</div>
-                        <div className="text-xl font-bold text-cyan-400 font-mono">{nodeData.successfulRelays}/{nodeData.totalRelays}</div>
-                        <div className="text-[9px] text-slate-600 font-mono mt-1">SUCCESS_RATE</div>
-                      </div>
-                      
-                      <div className="bg-black/60 border border-slate-700 rounded p-4">
-                        <div className="text-[10px] text-slate-500 font-mono mb-2">TOTAL_EARNED</div>
-                        <div className="text-xl font-bold text-yellow-400 font-mono">{nodeData.totalEarned.toLocaleString()}</div>
-                        <div className="text-[9px] text-slate-600 font-mono mt-1">$WHISTLE</div>
-                      </div>
-                    </div>
-                    
-                    {/* Pending Rewards Section */}
-                    <div className="bg-gradient-to-br from-slate-900 via-black to-slate-900 border-2 border-cyan-500/40 rounded-lg p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <div className="text-[10px] text-cyan-400 font-mono mb-2">PENDING_REWARDS</div>
-                          <div className="text-4xl font-bold text-white font-mono">{nodeData.pendingRewards.toLocaleString()}</div>
-                          <div className="text-sm text-slate-400 font-mono mt-1">$WHISTLE tokens ready to claim</div>
+                    {/* Fee Rewards - x402 Payment Distribution */}
+                    {loadingFeeRewards ? (
+                      <div className="bg-gradient-to-br from-orange-900/30 via-black to-yellow-900/30 border-2 border-orange-500/40 rounded-lg p-6">
+                        <div className="flex items-center justify-center gap-3 py-8">
+                          <div className="animate-spin rounded-full h-6 w-6 border-2 border-orange-400 border-t-transparent"></div>
+                          <span className="text-orange-400 font-mono text-sm">Checking eligibility...</span>
                         </div>
-                        <div className="text-6xl">💰</div>
                       </div>
-                      
-                      <button
-                        onClick={claimRewards}
-                        disabled={claiming || nodeData.pendingRewards <= 0}
-                        className="w-full py-4 rounded-lg bg-gradient-to-r from-cyan-600 to-emerald-600 hover:from-cyan-500 hover:to-emerald-500 text-white font-mono text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-cyan-500/20 disabled:hover:shadow-none"
-                      >
-                        {claiming ? (
-                          <div className="flex items-center justify-center gap-3">
-                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                            <span>[CLAIMING...]</span>
+                    ) : feeRewardsClaimable ? (
+                      <div className="bg-gradient-to-br from-orange-900/30 via-black to-yellow-900/30 border-2 border-orange-500/40 rounded-lg p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <div className="text-[10px] text-orange-400 font-mono mb-2">🔥 FEE_REWARDS (x402 Payments)</div>
+                            <div className="text-4xl font-bold text-white font-mono">
+                              {feeRewardsClaimable.claimableFormatted || '0'}
+                            </div>
+                            <div className="text-sm text-slate-400 font-mono mt-1">$WHISTLE from x402 fee pool</div>
+                            <div className="text-xs text-slate-500 font-mono mt-2">
+                              {feeRewardsClaimable.message || 'Ready to claim'}
+                            </div>
                           </div>
-                        ) : nodeData.pendingRewards <= 0 ? (
-                          <span>$ NO_REWARDS_TO_CLAIM</span>
-                        ) : (
-                          <span>$ CLAIM_REWARDS</span>
+                          <div className="text-6xl">🎁</div>
+                        </div>
+                        
+                        <button
+                          onClick={claimFeeRewards}
+                          disabled={claimingFeeRewards || !feeRewardsClaimable.claimable || feeRewardsClaimable.claimable === 0}
+                          className="w-full py-4 rounded-lg bg-gradient-to-r from-orange-600 to-yellow-600 hover:from-orange-500 hover:to-yellow-500 text-white font-mono text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-orange-500/20 disabled:hover:shadow-none"
+                        >
+                          {claimingFeeRewards ? (
+                            <div className="flex items-center justify-center gap-3">
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                              <span>[CLAIMING...]</span>
+                            </div>
+                          ) : !feeRewardsClaimable.claimable || feeRewardsClaimable.claimable === 0 ? (
+                            <span>$ NO_FEE_REWARDS_TO_CLAIM</span>
+                          ) : (
+                            <span>$ CLAIM_FEE_REWARDS (You pay tx fee ~0.000005 SOL)</span>
+                          )}
+                        </button>
+                        
+                        {feeRewardsClaimable.stakedAmount && (
+                          <div className="mt-4 pt-4 border-t border-orange-500/20">
+                            <div className="grid grid-cols-3 gap-3 text-xs font-mono">
+                              <div className="text-center">
+                                <div className="text-slate-500 mb-1">YOUR_STAKE</div>
+                                <div className="text-white font-bold">{feeRewardsClaimable.stakedAmount.toLocaleString()}</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-slate-500 mb-1">STAKE_DAYS</div>
+                                <div className="text-cyan-400 font-bold">{feeRewardsClaimable.stakeDays || 0}</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-slate-500 mb-1">REPUTATION</div>
+                                <div className="text-emerald-400 font-bold">{feeRewardsClaimable.reputationScore || 0}</div>
+                              </div>
+                            </div>
+                          </div>
                         )}
-                      </button>
-                    </div>
+                      </div>
+                    ) : null}
                     
                     {/* Live Fee Pool - Available for Redistribution */}
-                    {poolData && (
+                    {!poolData ? (
+                      <div className="bg-gradient-to-br from-yellow-900/30 via-black to-orange-900/30 border-2 border-yellow-500/40 rounded-lg p-6">
+                        <div className="flex items-center justify-center gap-3 py-8">
+                          <div className="animate-spin rounded-full h-6 w-6 border-2 border-yellow-400 border-t-transparent"></div>
+                          <span className="text-yellow-400 font-mono text-sm">Loading pool data...</span>
+                        </div>
+                      </div>
+                    ) : (
                       <div className="bg-gradient-to-br from-yellow-900/30 via-black to-orange-900/30 border-2 border-yellow-500/40 rounded-lg p-6">
                         <div className="flex items-center justify-between mb-4">
                           <div>
                             <div className="text-[10px] text-yellow-400 font-mono mb-2">💎 LIVE_FEE_POOL</div>
-                            <div className="text-3xl font-bold text-yellow-400 font-mono">{poolData.feePool.toLocaleString()}</div>
+                            <div className="text-3xl font-bold text-yellow-400 font-mono">
+                              {poolData.actualFeePool !== undefined ? 
+                                poolData.actualFeePool.toLocaleString(undefined, {maximumFractionDigits: 2}) : 
+                                <span className="text-2xl">Loading...</span>
+                              }
+                            </div>
                             <div className="text-sm text-slate-400 font-mono mt-1">$WHISTLE available for redistribution</div>
                             <div className="text-xs text-slate-500 font-mono mt-2">
-                              From x402 payments • Redistributed every 24h
+                              From x402 payments • Wallet: G1RH...M6Pg
                             </div>
                           </div>
                           <div className="text-5xl">🔥</div>
@@ -3406,17 +3527,27 @@
                           <div className="grid grid-cols-3 gap-4">
                             <div className="text-center">
                               <div className="text-[9px] text-slate-500 font-mono mb-1">YOUR_STAKE</div>
-                              <div className="text-sm font-bold text-white font-mono">{((nodeData.stakedAmount / poolData.totalStaked) * 100).toFixed(2)}%</div>
+                              <div className="text-sm font-bold text-white font-mono">
+                                {nodeData && poolData.totalStaked > 0 ? 
+                                  `${((nodeData.stakedAmount / poolData.totalStaked) * 100).toFixed(2)}%` : 
+                                  <span className="text-xs text-slate-600">...</span>
+                                }
+                              </div>
                             </div>
                             <div className="text-center">
                               <div className="text-[9px] text-slate-500 font-mono mb-1">STAKE_DAYS</div>
                               <div className="text-sm font-bold text-cyan-400 font-mono">
-                                {nodeData.createdAt > 0 ? Math.floor((Date.now() / 1000 - nodeData.createdAt) / 86400) : 0}
+                                {nodeData && nodeData.createdAt > 0 ? 
+                                  Math.floor((Date.now() / 1000 - nodeData.createdAt) / 86400) : 
+                                  <span className="text-xs text-slate-600">...</span>
+                                }
                               </div>
                             </div>
                             <div className="text-center">
-                              <div className="text-[9px] text-slate-500 font-mono mb-1">TOTAL_NODES</div>
-                              <div className="text-sm font-bold text-slate-400 font-mono">{poolData.totalNodes}</div>
+                              <div className="text-[9px] text-slate-500 font-mono mb-1">TOTAL_STAKERS</div>
+                              <div className="text-sm font-bold text-slate-400 font-mono">
+                                {poolData.totalNodes || <span className="text-xs text-slate-600">...</span>}
+                              </div>
                             </div>
                           </div>
                           
@@ -3433,7 +3564,8 @@
                             const userStaker = allStakers.find(s => s.owner === walletAddress);
                             const estimatedShare = userStaker?.estimatedShare || 0;
                             
-                            return estimatedShare > 0 ? (
+                            const distributionPool = (poolData.actualFeePool || 0) * 0.9;
+                            return estimatedShare > 0 && distributionPool > 0 ? (
                               <div className="bg-purple-500/10 border border-purple-500/30 rounded p-3">
                                 <div className="text-center">
                                   <div className="text-[9px] text-purple-400 font-mono mb-2">💎 YOUR_NEXT_DISTRIBUTION</div>
@@ -3441,154 +3573,12 @@
                                     {estimatedShare.toLocaleString(undefined, {maximumFractionDigits: 2})}
                                   </div>
                                   <div className="text-[9px] text-slate-500 font-mono">
-                                    $WHISTLE • {((estimatedShare / (poolData.feePool * 0.9)) * 100).toFixed(2)}% of distribution pool
+                                    $WHISTLE • {((estimatedShare / distributionPool) * 100).toFixed(2)}% of distribution pool
                                   </div>
                                 </div>
                               </div>
                             ) : null;
                           })()}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Detailed Stats */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="bg-black/60 border border-slate-700 rounded p-4">
-                        <div className="text-[10px] text-cyan-400 font-mono mb-3">// LIFETIME_STATS</div>
-                        <div className="space-y-2 text-xs font-mono">
-                          <div className="flex justify-between">
-                            <span className="text-slate-500">total_claimed:</span>
-                            <span className="text-white">{nodeData.totalClaimed.toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-500">total_earned:</span>
-                            <span className="text-emerald-400">{nodeData.totalEarned.toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-500">pending:</span>
-                            <span className="text-yellow-400">{nodeData.pendingRewards.toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between pt-2 border-t border-slate-700">
-                            <span className="text-slate-500">success_rate:</span>
-                            <span className="text-cyan-400">{nodeData.totalRelays > 0 ? ((nodeData.successfulRelays / nodeData.totalRelays) * 100).toFixed(1) : 0}%</span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="bg-black/60 border border-slate-700 rounded p-4">
-                        <div className="text-[10px] text-purple-400 font-mono mb-3">// TIME_STATS</div>
-                        <div className="space-y-2 text-xs font-mono">
-                          <div className="flex justify-between">
-                            <span className="text-slate-500">created_at:</span>
-                            <span className="text-white">{nodeData.createdAt > 0 ? new Date(Number(nodeData.createdAt) * 1000).toLocaleDateString() : 'N/A'}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-500">last_relay:</span>
-                            <span className="text-white">{nodeData.lastRelay > 0 ? new Date(Number(nodeData.lastRelay) * 1000).toLocaleDateString() : 'Never'}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-500">failed_relays:</span>
-                            <span className="text-red-400">{nodeData.failedRelays}</span>
-                          </div>
-                          <div className="flex justify-between pt-2 border-t border-slate-700">
-                            <span className="text-slate-500">reputation:</span>
-                            <span className="text-emerald-400">{nodeData.reputationScore}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Stake History */}
-                    <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="text-[10px] text-cyan-400 font-mono">$ git log --oneline --all</div>
-                        {loadingHistory && (
-                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-cyan-400 border-t-transparent"></div>
-                        )}
-                      </div>
-                      <h3 className="text-white font-mono text-sm mb-4 font-bold">Stake History</h3>
-                      
-                      {stakeHistory.length === 0 ? (
-                        <div className="text-center py-8 text-slate-500 font-mono text-xs">
-                          No transaction history found
-                        </div>
-                      ) : (
-                        <div className="space-y-3 max-h-96 overflow-y-auto">
-                          {stakeHistory.map((tx, idx) => (
-                            <div key={tx.signature} className="bg-black/40 border border-slate-700 rounded p-3 hover:border-cyan-500/30 transition-colors">
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className={`font-mono text-xs font-bold ${
-                                      tx.type === 'stake' ? 'text-emerald-400' :
-                                      tx.type === 'unstake' ? 'text-orange-400' :
-                                      'text-cyan-400'
-                                    }`}>
-                                      {tx.type === 'stake' ? '↗ STAKE' :
-                                       tx.type === 'unstake' ? '↙ UNSTAKE' :
-                                       '💰 CLAIM'}
-                                    </span>
-                                    <span className="text-white font-mono text-sm font-bold">
-                                      {tx.amount > 0 ? tx.amount.toLocaleString() : '—'}
-                                    </span>
-                                    <span className="text-slate-500 font-mono text-xs">$WHISTLE</span>
-                                  </div>
-                                  <div className="text-[9px] text-slate-500 font-mono space-y-1">
-                                    <div>
-                                      {tx.timestamp ? new Date(tx.timestamp * 1000).toLocaleString() : 'Unknown time'}
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-slate-600">tx:</span>
-                                      <a 
-                                        href={`https://solscan.io/tx/${tx.signature}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-cyan-400 hover:text-cyan-300 underline"
-                                      >
-                                        {tx.signature.slice(0, 8)}...{tx.signature.slice(-8)}
-                                      </a>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="text-[9px] text-slate-600 font-mono">
-                                  #{idx + 1}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Pool Stats */}
-                    {poolData && (
-                      <div className="bg-black/60 border border-slate-700 rounded-lg p-4">
-                        <div className="text-[10px] text-emerald-400 font-mono mb-3">// GLOBAL_POOL_STATS</div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs font-mono">
-                          <div>
-                            <div className="text-slate-500">total_staked:</div>
-                            <div className="text-white">{poolData.totalStaked.toLocaleString()}</div>
-                          </div>
-                          <div>
-                            <div className="text-slate-500">base_reward:</div>
-                            <div className="text-emerald-400">{poolData.baseReward.toLocaleString()}</div>
-                          </div>
-                          <div>
-                            <div className="text-slate-500">bonus_per_point:</div>
-                            <div className="text-yellow-400">{poolData.bonusPerPoint.toLocaleString()}</div>
-                          </div>
-                          <div>
-                            <div className="text-slate-500">total_reputation:</div>
-                            <div className="text-purple-400">{poolData.totalReputation.toLocaleString()}</div>
-                          </div>
-                          <div>
-                            <div className="text-slate-500">total_relays:</div>
-                            <div className="text-cyan-400">{poolData.totalRelayRequests}</div>
-                          </div>
-                          <div>
-                            <div className="text-slate-500">active_nodes:</div>
-                            <div className="text-white">{poolData.totalNodes}</div>
-                          </div>
                         </div>
                       </div>
                     )}
@@ -3598,14 +3588,14 @@
             </>
           )}
           
-          {/* All Eligible Stakers - Global View */}
+          {/* All Stakers - Simple View */}
           <div className="bg-slate-900/50 border border-purple-500/30 rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <div className="text-[10px] text-purple-400 font-mono mb-2">$ cat /proc/stakers/active</div>
-                <h3 className="text-white font-mono text-lg font-bold">All Eligible Stakers</h3>
+                <h3 className="text-white font-mono text-lg font-bold">All Stakers</h3>
                 <p className="text-slate-400 text-xs font-mono mt-1">
-                  Live view of all wallets with pending rewards
+                  Complete list of stakers and their staked amounts
                 </p>
               </div>
               {loadingStakers && (
@@ -3620,109 +3610,84 @@
             ) : (
               <>
                 {/* Summary Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                  <div className="bg-black/40 border border-purple-500/20 rounded p-3">
-                    <div className="text-[9px] text-purple-400 font-mono mb-1">TOTAL_STAKERS</div>
-                    <div className="text-lg font-bold text-white font-mono">{allStakers.length}</div>
-                  </div>
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  {/* Total Claimable Fees */}
                   <div className="bg-black/40 border border-yellow-500/20 rounded p-3">
-                    <div className="text-[9px] text-yellow-400 font-mono mb-1">TOTAL_PENDING</div>
-                    <div className="text-lg font-bold text-yellow-400 font-mono">
-                      {allStakers.reduce((sum, s) => sum + s.pendingRewards, 0).toLocaleString(undefined, {maximumFractionDigits: 0})}
+                    <div className="text-[9px] text-yellow-400 font-mono mb-1">TOTAL_CLAIMABLE</div>
+                    <div className="text-2xl font-bold text-yellow-400 font-mono">
+                      {poolData?.actualFeePool !== undefined ? 
+                        (poolData.actualFeePool * 0.9).toLocaleString(undefined, {maximumFractionDigits: 2}) : 
+                        <span className="text-base text-slate-600">...</span>
+                      }
                     </div>
+                    <div className="text-[9px] text-slate-500 font-mono mt-1">$WHISTLE • 90% of fee pool</div>
                   </div>
+                  
+                  {/* Total Staked */}
                   <div className="bg-black/40 border border-emerald-500/20 rounded p-3">
                     <div className="text-[9px] text-emerald-400 font-mono mb-1">TOTAL_STAKED</div>
-                    <div className="text-lg font-bold text-emerald-400 font-mono">
-                      {allStakers.reduce((sum, s) => sum + s.stakedAmount, 0).toLocaleString(undefined, {maximumFractionDigits: 0})}
+                    <div className="text-2xl font-bold text-emerald-400 font-mono">
+                      {allStakers.reduce((sum, s) => sum + s.stakedAmount, 0).toLocaleString(undefined, {maximumFractionDigits: 2})}
                     </div>
-                  </div>
-                  <div className="bg-black/40 border border-cyan-500/20 rounded p-3">
-                    <div className="text-[9px] text-cyan-400 font-mono mb-1">AVG_REPUTATION</div>
-                    <div className="text-lg font-bold text-cyan-400 font-mono">
-                      {(allStakers.reduce((sum, s) => sum + s.reputationScore, 0) / allStakers.length).toFixed(0)}
-                    </div>
+                    <div className="text-[9px] text-slate-500 font-mono mt-1">$WHISTLE</div>
                   </div>
                 </div>
                 
-                {/* Stakers List */}
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {allStakers.map((staker, idx) => (
-                    <div 
-                      key={staker.address} 
-                      className={`bg-black/40 border rounded p-3 hover:border-purple-500/50 transition-colors ${
-                        staker.owner === walletAddress ? 'border-cyan-500/50 bg-cyan-900/10' : 'border-slate-700'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-[9px] text-slate-600 font-mono">#{idx + 1}</span>
-                            {staker.owner === walletAddress && (
-                              <span className="px-2 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/30 text-[9px] text-cyan-400 font-mono font-bold">
-                                YOU
-                              </span>
-                            )}
-                            <a 
-                              href={`https://solscan.io/account/${staker.owner}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs font-mono text-purple-400 hover:text-purple-300 underline truncate"
-                              title={staker.owner}
-                            >
-                              {staker.owner.slice(0, 6)}...{staker.owner.slice(-6)}
-                            </a>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-[10px] font-mono">
-                              <div>
-                                <span className="text-slate-500">staked:</span>
-                                <span className="text-white ml-1 font-bold">{staker.stakedAmount.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
-                              </div>
-                              <div>
-                                <span className="text-slate-500">pending:</span>
-                                <span className="text-yellow-400 ml-1 font-bold">{staker.pendingRewards.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
-                              </div>
-                              <div>
-                                <span className="text-slate-500">claimed:</span>
-                                <span className="text-emerald-400 ml-1">{staker.totalClaimed.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
-                              </div>
-                              <div>
-                                <span className="text-slate-500">rep:</span>
-                                <span className="text-cyan-400 ml-1">{staker.reputationScore}</span>
-                              </div>
-                              <div>
-                                <span className="text-slate-500">relays:</span>
-                                <span className="text-white ml-1">{staker.successfulRelays}/{staker.totalRelays}</span>
-                              </div>
-                            </div>
-                            
-                            {staker.estimatedShare > 0 && (
-                              <div className="flex items-center gap-3 pt-2 border-t border-slate-700/50">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[9px] text-purple-400 font-mono">NEXT_DISTRIBUTION:</span>
-                                  <span className="text-sm font-bold text-purple-400 font-mono">{staker.estimatedShare.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
-                                  <span className="text-[9px] text-slate-500 font-mono">$WHISTLE</span>
-                                </div>
-                                <div className="text-[9px] text-slate-600 font-mono">
-                                  ({((staker.estimatedShare / (poolData?.feePool * 0.9 || 1)) * 100).toFixed(2)}% of pool)
-                                </div>
-                              </div>
-                            )}
+                {/* Stakers List - Simple Table */}
+                <div className="bg-black/40 rounded border border-slate-700">
+                  <div className="grid grid-cols-12 gap-2 p-3 border-b border-slate-700 text-[10px] font-mono text-slate-500">
+                    <div className="col-span-1">#</div>
+                    <div className="col-span-5">WALLET</div>
+                    <div className="col-span-2 text-right">STAKED</div>
+                    <div className="col-span-2 text-right">REPUTATION</div>
+                    <div className="col-span-2 text-right">CLAIMABLE</div>
+                  </div>
+                  
+                  <div className="max-h-96 overflow-y-auto">
+                    {allStakers.map((staker, idx) => (
+                      <div 
+                        key={staker.address}
+                        className={`grid grid-cols-12 gap-2 p-3 border-b border-slate-700/50 hover:bg-slate-800/30 transition-colors ${
+                          staker.owner === walletAddress ? 'bg-cyan-900/20' : ''
+                        }`}
+                      >
+                        <div className="col-span-1 text-slate-600 font-mono text-xs">
+                          {idx + 1}
+                        </div>
+                        <div className="col-span-5 flex items-center gap-2 min-w-0">
+                          {staker.owner === walletAddress && (
+                            <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/30 text-[8px] text-cyan-400 font-mono font-bold flex-shrink-0">
+                              YOU
+                            </span>
+                          )}
+                          <a 
+                            href={`https://solscan.io/account/${staker.owner}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-mono text-purple-400 hover:text-purple-300 underline truncate"
+                            title={staker.owner}
+                          >
+                            {staker.owner.slice(0, 8)}...{staker.owner.slice(-6)}
+                          </a>
+                        </div>
+                        <div className="col-span-2 text-right">
+                          <div className="text-white font-mono text-xs font-bold">
+                            {staker.stakedAmount.toLocaleString(undefined, {maximumFractionDigits: 0})}
                           </div>
                         </div>
-                        
-                        {staker.pendingRewards > 0 && (
-                          <div className="flex-shrink-0">
-                            <div className="px-2 py-1 rounded bg-yellow-500/10 border border-yellow-500/30">
-                              <span className="text-[9px] text-yellow-400 font-mono font-bold">CLAIMABLE</span>
-                            </div>
+                        <div className="col-span-2 text-right">
+                          <div className="text-cyan-400 font-mono text-xs">
+                            {staker.reputationScore.toLocaleString()}
                           </div>
-                        )}
+                        </div>
+                        <div className="col-span-2 text-right">
+                          <div className="text-emerald-400 font-mono text-xs font-bold">
+                            {staker.estimatedShare > 0 ? staker.estimatedShare.toLocaleString(undefined, {maximumFractionDigits: 2}) : '—'}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </>
             )}
@@ -12057,28 +12022,79 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         
         if (!window.requestX402AndPay) throw new Error('x402 client not loaded');
         
-        // Ensure wallet is connected
-        let wallet = window.wallet || window.solana;
-        if (!wallet) {
-          alert('❌ No wallet detected! Please install Phantom wallet.');
-          throw new Error('No wallet detected');
-        }
+        // Check if user has mobile wallet stored
+        const mobilePrivateKey = localStorage.getItem('ghost_mobile_wallet');
+        const mobileAddress = localStorage.getItem('ghost_mobile_address');
+        let wallet = null;
+        let keypair = null;
         
-        if (!wallet.publicKey || !wallet.isConnected) {
-          console.log('🔐 x402: Connecting wallet...');
-          await showX402PaymentModal('connecting');
+        if (mobilePrivateKey && mobileAddress) {
+          // MOBILE IN-APP WALLET: Reconstruct keypair from stored private key
+          console.log('📱 Using mobile in-app wallet for x402 payment');
           try {
-            const response = await wallet.connect();
-            console.log('✅ Wallet connected:', response.publicKey.toString().slice(0, 8) + '...');
+            // Decode private key (handle different formats)
+            let secretKey;
+            if (mobilePrivateKey.endsWith(':base64')) {
+              // Base64 format
+              const base64Key = mobilePrivateKey.replace(':base64', '');
+              const Buf = window.Buffer || Buffer;
+              secretKey = Buf.from(base64Key, 'base64');
+            } else if (mobilePrivateKey.includes(',')) {
+              // Array format
+              secretKey = new Uint8Array(mobilePrivateKey.split(',').map(n => parseInt(n)));
+            } else {
+              // Base58 format (default)
+              const bs58Decoder = window.bs58?.decode || window.bs58?.default?.decode;
+              if (!bs58Decoder) throw new Error('bs58 library not loaded');
+              secretKey = bs58Decoder(mobilePrivateKey);
+            }
+            
+            // Reconstruct keypair
+            keypair = solanaWeb3.Keypair.fromSecretKey(secretKey);
+            
+            // Create wallet object with publicKey
+            wallet = {
+              publicKey: keypair.publicKey,
+              isConnected: true
+            };
+            
+            console.log('✅ Mobile wallet keypair reconstructed:', keypair.publicKey.toString().slice(0, 8) + '...');
           } catch (e) {
-            await showX402PaymentModal('error', 'Wallet connection rejected');
-            throw new Error('Wallet connection rejected');
+            console.error('❌ Failed to reconstruct mobile wallet:', e);
+            throw new Error('Failed to load mobile wallet. Please re-import your wallet.');
+          }
+        } else {
+          // DESKTOP EXTENSION WALLET: Use Phantom/Solflare
+          console.log('🖥️ Using desktop extension wallet for x402 payment');
+          wallet = window.wallet || window.solana;
+          if (!wallet) {
+            alert('❌ No wallet detected! Please install Phantom wallet or create a mobile wallet.');
+            throw new Error('No wallet detected');
+          }
+          
+          if (!wallet.publicKey || !wallet.isConnected) {
+            console.log('🔐 x402: Connecting wallet...');
+            await showX402PaymentModal('connecting');
+            try {
+              const response = await wallet.connect();
+              console.log('✅ Wallet connected:', response.publicKey.toString().slice(0, 8) + '...');
+            } catch (e) {
+              await showX402PaymentModal('error', 'Wallet connection rejected');
+              throw new Error('Wallet connection rejected');
+            }
           }
         }
         
         console.log('🔐 x402: Initiating payment...');
         await showX402PaymentModal('processing');
-        const { accessToken, ttlSeconds } = await window.requestX402AndPay({ wallet, hops });
+        
+        // Pass keypair for mobile, null for desktop (will use signTransaction)
+        const { accessToken, ttlSeconds } = await window.requestX402AndPay({ 
+          wallet, 
+          hops,
+          keypair  // null for desktop, keypair object for mobile
+        });
+        
         localStorage.setItem('x402_token', accessToken);
         localStorage.setItem('x402_exp', String(now + (ttlSeconds || 900)));
         
@@ -12314,8 +12330,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
       // Blockchain Data
-      const [tokenBalance, setTokenBalance] = useState(0);
-      const [stakedAmount, setStakedAmount] = useState(0);
+      const [tokenBalance, setTokenBalance] = useState(null);
+      const [stakedAmount, setStakedAmount] = useState(null);
       const [reputation, setReputation] = useState(0);
       const [pendingRewards, setPendingRewards] = useState(0);
       
@@ -12882,6 +12898,11 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         // This was designed for 9 decimals (10,000 tokens) but your token has 6 decimals
         // So you need to stake 10,000,000 tokens to meet the contract's minimum
         
+        if (tokenBalance === null) {
+          pushToast('⚠️ Still loading balance...', 'err');
+          return;
+        }
+        
         if (amount > tokenBalance) {
           pushToast('❌ Insufficient balance', 'err');
           return;
@@ -12994,7 +13015,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           // Refresh data using on-chain read
           const newStaked = await fetchStakedAmountNow(userPubkey.toString());
           if (newStaked > 0) setStakedAmount(newStaked);
-          setTokenBalance(prev => Math.max(0, prev - amount));
+          setTokenBalance(prev => Math.max(0, (prev || 0) - amount));
           setShowStakeModal(false);
           setStakeInput('');
           await loadBlockchainData(); // Reload from chain
@@ -13094,7 +13115,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           console.log('Claim TX:', signature);
           
           // Update state
-          setTokenBalance(prev => prev + pendingRewards);
+          setTokenBalance(prev => (prev || 0) + pendingRewards);
           setPendingRewards(0);
           // Re-read stake after claim in case contract updated it
           const postClaimStake = await fetchStakedAmountNow(userPubkey.toString());
@@ -13129,7 +13150,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           return;
         }
         
-        if (stakedAmount === 0) {
+        if (stakedAmount === 0 || stakedAmount === null) {
           pushToast('⚠️ No tokens staked', 'err');
           return;
         }
@@ -13217,7 +13238,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           console.log('Unstake TX:', signature);
           
           // Update state
-          setTokenBalance(prev => prev + stakedAmount);
+          setTokenBalance(prev => (prev || 0) + stakedAmount);
           // Confirm from chain that stake is now zero
           const afterUnstake = await fetchStakedAmountNow(userPubkey.toString());
           setStakedAmount(afterUnstake || 0);
@@ -13411,13 +13432,6 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         }
 
         if (!nodeActive) {
-          // 🔐 X402 GATE: Payment required for running node
-          try {
-            await requireX402Payment('Privacy Node', 3);
-          } catch (e) {
-            return; // Stop if payment fails
-          }
-          
           setNodeActive(true);
           localStorage.setItem('nodeWasActive', 'true');
           pushToast('🌐 Activating node...', 'info');
@@ -13425,10 +13439,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           // Connect to real signaling server
           try {
             console.log('🔌 Connecting to signaling server:', SIGNALING_SERVER_URL);
-            // Ensure x402 token then connect WS
-            const token = await getX402Token(3);
-            const wsUrl = SIGNALING_SERVER_URL + (SIGNALING_SERVER_URL.includes('?') ? `&` : `?`) + `token=${encodeURIComponent(token)}`;
-            const ws = new WebSocket(wsUrl);
+            const ws = new WebSocket(SIGNALING_SERVER_URL);
             const nodeId = `GW-${walletAddress.slice(0, 8)}-${Date.now()}`;
             
             ws.onopen = () => {
@@ -13442,8 +13453,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 type: 'register',
                 nodeId: nodeId,
                 walletAddress: walletAddress,
-                region: detectedRegion,
-                accessToken: token
+                region: detectedRegion
               }));
               pushToast('✅ Node registered on network!', 'ok');
             };
@@ -14396,8 +14406,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         
         setWallet(null);
         setWalletAddress(null);
-        setTokenBalance(0);
-        setStakedAmount(0);
+        setTokenBalance(null);
+        setStakedAmount(null);
         setReputation(0);
         setPendingRewards(0);
         pushToast('👋 Wallet disconnected', 'info');
@@ -14503,7 +14513,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                           <div className="text-[10px] text-emerald-400 uppercase tracking-wider font-bold font-mono">Balance</div>
                       </div>
                         <div className="text-xl sm:text-2xl font-black text-white" style={{textShadow: '0 0 10px rgba(16,185,129,0.3)'}}>
-                          {tokenBalance.toLocaleString()} <span className="text-emerald-400">$W</span>
+                          {tokenBalance === null ? 'Loading...' : tokenBalance.toLocaleString()} <span className="text-emerald-400">$W</span>
                     </div>
                       </div>
                     </div>
@@ -14519,7 +14529,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                           <div className="text-[10px] text-cyan-400 uppercase tracking-wider font-bold font-mono">Staked</div>
                         </div>
                         <div className="text-xl sm:text-2xl font-black text-white" style={{textShadow: '0 0 10px rgba(6,182,212,0.3)'}}>
-                          {stakedAmount.toLocaleString()} <span className="text-cyan-400">$W</span>
+                          {stakedAmount === null ? 'Loading...' : stakedAmount.toLocaleString()} <span className="text-cyan-400">$W</span>
                         </div>
                       </div>
                     </div>
@@ -15045,7 +15055,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                     </div>
                     <div>
                       <div className="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider">Staked</div>
-                      <div className="text-xl font-black text-blue-900 dark:text-blue-300">{stakedAmount.toLocaleString()}</div>
+                      <div className="text-xl font-black text-blue-900 dark:text-blue-300">{stakedAmount === null ? 'Loading...' : stakedAmount.toLocaleString()}</div>
                     </div>
                   </div>
                   <div className="text-[9px] text-slate-600 dark:text-slate-400">$WHISTLE locked</div>
@@ -15277,7 +15287,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                           
                           <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
                             <span className="text-sm text-slate-600 dark:text-slate-400">Staked Amount</span>
-                            <span className="text-lg font-black text-indigo-600 dark:text-indigo-400">{stakedAmount.toLocaleString()}</span>
+                            <span className="text-lg font-black text-indigo-600 dark:text-indigo-400">{stakedAmount === null ? 'Loading...' : stakedAmount.toLocaleString()}</span>
                           </div>
                           
                           <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
@@ -15431,11 +15441,11 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 <div className="grid md:grid-cols-3 gap-4 mb-6">
                   <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-purple-100 dark:border-purple-900">
                     <div className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">Your Balance</div>
-                    <div className="text-2xl font-black text-purple-600 dark:text-purple-400">{tokenBalance.toLocaleString()} $WHISTLE</div>
+                    <div className="text-2xl font-black text-purple-600 dark:text-purple-400">{tokenBalance === null ? 'Loading...' : tokenBalance.toLocaleString()} $WHISTLE</div>
                   </div>
                   <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-purple-100 dark:border-purple-900">
                     <div className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">Available Relays</div>
-                    <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400">~{Math.floor(tokenBalance / 25)}</div>
+                    <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400">~{tokenBalance === null ? 'Loading...' : Math.floor(tokenBalance / 25)}</div>
                     <div className="text-[10px] text-slate-500 dark:text-slate-400">@ 25 $WHISTLE per relay</div>
                   </div>
                   <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-purple-100 dark:border-purple-900">
@@ -15804,8 +15814,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   {/* Wallet Balance */}
                   <div className="bg-slate-100 dark:bg-slate-800 rounded-xl p-4">
                     <div className="text-xs text-slate-600 dark:text-slate-400 mb-1 uppercase tracking-wider">Wallet Balance</div>
-                    <div className="text-2xl font-black text-slate-900 dark:text-white">{tokenBalance.toLocaleString()} $WHISTLE</div>
-                    <div className="text-xs text-slate-500 dark:text-slate-500 mt-1">≈ ${(tokenBalance * 0.00013).toFixed(2)} USD</div>
+                    <div className="text-2xl font-black text-slate-900 dark:text-white">{tokenBalance === null ? 'Loading...' : tokenBalance.toLocaleString()} $WHISTLE</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-500 mt-1">≈ ${tokenBalance === null ? '0.00' : (tokenBalance * 0.00013).toFixed(2)} USD</div>
                   </div>
 
                   {/* Amount Input */}
@@ -15820,8 +15830,9 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                         className="w-full px-4 py-3 rounded-xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-blue-500 focus:outline-none transition-all font-bold"
                       />
                       <button
-                        onClick={() => setStakeInput(tokenBalance.toString())}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all"
+                        onClick={() => tokenBalance !== null && setStakeInput(tokenBalance.toString())}
+                        disabled={tokenBalance === null}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         MAX
                       </button>
@@ -19330,8 +19341,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   {/* Wallet Balance */}
                   <div className="bg-slate-100 dark:bg-slate-800 rounded-xl p-4">
                     <div className="text-xs text-slate-600 dark:text-slate-400 mb-1 uppercase tracking-wider">Wallet Balance</div>
-                    <div className="text-2xl font-black text-slate-900 dark:text-white">{tokenBalance.toLocaleString()} $WHISTLE</div>
-                    <div className="text-xs text-slate-500 dark:text-slate-500 mt-1">≈ ${(tokenBalance * 0.00013).toFixed(2)} USD</div>
+                    <div className="text-2xl font-black text-slate-900 dark:text-white">{tokenBalance === null ? 'Loading...' : tokenBalance.toLocaleString()} $WHISTLE</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-500 mt-1">≈ ${tokenBalance === null ? '0.00' : (tokenBalance * 0.00013).toFixed(2)} USD</div>
                   </div>
 
                   {/* Amount Input */}
@@ -19346,8 +19357,9 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                         className="w-full px-4 py-3 rounded-xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-blue-500 focus:outline-none transition-all font-bold"
                       />
                       <button
-                        onClick={() => setStakeInput(tokenBalance.toString())}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all"
+                        onClick={() => tokenBalance !== null && setStakeInput(tokenBalance.toString())}
+                        disabled={tokenBalance === null}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         MAX
                       </button>
