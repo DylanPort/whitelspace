@@ -12528,8 +12528,17 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       });
     }
     
-    // x402-gate ALL privacy features
+    // x402-gate ALL privacy features (EXCEPT staking/nodes which are FREE)
     async function requireX402Payment(featureName, hops = 1) {
+      // 🆓 FREE FEATURES: Staking and Node Operations
+      const freeFeatures = ['stake', 'unstake', 'staking', 'node', 'run node', 'run-node', 'privacy node'];
+      const isFreeFeature = freeFeatures.some(f => featureName.toLowerCase().includes(f));
+      
+      if (isFreeFeature) {
+        console.log(`🆓 "${featureName}" is FREE - no payment required`);
+        return 'FREE_ACCESS';
+      }
+      
       // 🧪 TESTING BYPASS: Disable x402 if flag is set
       const bypassMode = localStorage.getItem('x402_bypass') === 'true';
       if (bypassMode) {
@@ -12545,7 +12554,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         if (window.pushToast) {
           window.pushToast(`💳 "${featureName}" requires payment...`, 'info');
         }
-        const token = await getX402Token(hops);
+        const token = await getX402Token(hops, featureName);
         console.log(`✅ x402: Payment confirmed for "${featureName}"`);
         return token;
       } catch (e) {
