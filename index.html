@@ -2855,6 +2855,29 @@
       const [selectedLocation, setSelectedLocation] = useState(null);
       const [customLat, setCustomLat] = useState('');
       const [customLon, setCustomLon] = useState('');
+      const [targetUrl, setTargetUrl] = useState('');
+      
+      // Check if we're on a spoof URL route
+      useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const lat = urlParams.get('lat');
+        const lon = urlParams.get('lon');
+        const locationName = urlParams.get('location');
+        const redirect = urlParams.get('redirect');
+        
+        if (lat && lon && redirect) {
+          const loc = {
+            name: locationName || 'Custom Location',
+            lat: parseFloat(lat),
+            lon: parseFloat(lon),
+            emoji: '📍'
+          };
+          setSelectedLocation(loc);
+          setTargetUrl(redirect);
+          setSpoofing(true);
+          pushToast(`🌍 Spoof ready for ${loc.name}!`, 'ok');
+        }
+      }, []);
       
       // Famous locations for quick selection
       const presetLocations = [
@@ -2868,6 +2891,68 @@
         { name: 'Singapore', lat: 1.3521, lon: 103.8198, emoji: '🦁', desc: 'Lion City' }
       ];
       
+      // Initialize geolocation override on mount
+      useEffect(() => {
+        // Store original geolocation globally
+        if (!window._originalGeolocation && navigator.geolocation) {
+          window._originalGeolocation = {
+            getCurrentPosition: navigator.geolocation.getCurrentPosition.bind(navigator.geolocation),
+            watchPosition: navigator.geolocation.watchPosition.bind(navigator.geolocation),
+            clearWatch: navigator.geolocation.clearWatch.bind(navigator.geolocation)
+          };
+          
+          // Override with our interceptor
+          navigator.geolocation.getCurrentPosition = function(success, error, options) {
+            const spoofData = window._locationSpoofData;
+            if (spoofData && spoofData.active) {
+              console.log('🌍 Intercepted geolocation request, returning spoofed location:', spoofData.location.name);
+              setTimeout(() => {
+                success({
+                  coords: {
+                    latitude: spoofData.location.lat,
+                    longitude: spoofData.location.lon,
+                    accuracy: 10,
+                    altitude: null,
+                    altitudeAccuracy: null,
+                    heading: null,
+                    speed: null
+                  },
+                  timestamp: Date.now()
+                });
+              }, 100);
+            } else {
+              console.log('🌍 Geolocation request, using real location');
+              window._originalGeolocation.getCurrentPosition(success, error, options);
+            }
+          };
+          
+          navigator.geolocation.watchPosition = function(success, error, options) {
+            const spoofData = window._locationSpoofData;
+            if (spoofData && spoofData.active) {
+              const id = setInterval(() => {
+                success({
+                  coords: {
+                    latitude: spoofData.location.lat,
+                    longitude: spoofData.location.lon,
+                    accuracy: 10,
+                    altitude: null,
+                    altitudeAccuracy: null,
+                    heading: null,
+                    speed: null
+                  },
+                  timestamp: Date.now()
+                });
+              }, 1000);
+              return id;
+            } else {
+              return window._originalGeolocation.watchPosition(success, error, options);
+            }
+          };
+          
+          console.log('🌍 Location spoofer initialized and ready');
+        }
+      }, []);
+      
       const activateSpoofer = async (location) => {
         // X402 Payment Gate
         try {
@@ -2877,62 +2962,59 @@
           return;
         }
         
+        // Set global spoof data
+        window._locationSpoofData = {
+          active: true,
+          location: location
+        };
+        
         setSpoofing(true);
         setSelectedLocation(location);
+        pushToast(`📍 Location activated! Copy the bookmarklet below and click it on any website.`, 'ok');
+        console.log('🌍 Spoofer activated:', location);
+      };
+      
+      const generateBookmarklet = (location) => {
+        if (!location) return '';
         
-        // Override geolocation API
-        if (navigator.geolocation) {
-          const originalGeolocation = navigator.geolocation;
-          
-          // Mock getCurrentPosition
-          navigator.geolocation.getCurrentPosition = function(success, error, options) {
-            setTimeout(() => {
-              success({
-                coords: {
-                  latitude: location.lat,
-                  longitude: location.lon,
-                  accuracy: 10,
-                  altitude: null,
-                  altitudeAccuracy: null,
-                  heading: null,
-                  speed: null
-                },
-                timestamp: Date.now()
-              });
-            }, 100);
-          };
-          
-          // Mock watchPosition
-          navigator.geolocation.watchPosition = function(success, error, options) {
-            const id = setInterval(() => {
-              success({
-                coords: {
-                  latitude: location.lat,
-                  longitude: location.lon,
-                  accuracy: 10,
-                  altitude: null,
-                  altitudeAccuracy: null,
-                  heading: null,
-                  speed: null
-                },
-                timestamp: Date.now()
-              });
-            }, 1000);
-            return id;
-          };
-          
-          pushToast(`📍 Location spoofed to ${location.name}`, 'ok');
-        } else {
-          pushToast('Geolocation API not available', 'err');
-        }
+        const code = `
+(function() {
+  if (!navigator.geolocation._spoofed) {
+    const originalGeo = {
+      getCurrentPosition: navigator.geolocation.getCurrentPosition.bind(navigator.geolocation),
+      watchPosition: navigator.geolocation.watchPosition.bind(navigator.geolocation)
+    };
+    navigator.geolocation.getCurrentPosition = function(success, error) {
+      setTimeout(() => success({
+        coords: { latitude: ${location.lat}, longitude: ${location.lon}, accuracy: 10, altitude: null, altitudeAccuracy: null, heading: null, speed: null },
+        timestamp: Date.now()
+      }), 50);
+    };
+    navigator.geolocation.watchPosition = function(success, error) {
+      return setInterval(() => success({
+        coords: { latitude: ${location.lat}, longitude: ${location.lon}, accuracy: 10, altitude: null, altitudeAccuracy: null, heading: null, speed: null },
+        timestamp: Date.now()
+      }), 1000);
+    };
+    navigator.geolocation._spoofed = true;
+    alert('📍 Location spoofed to ${location.name}! Refresh the page.');
+  } else {
+    alert('✅ Already spoofed to ${location.name}');
+  }
+})();
+        `.trim();
+        
+        return `javascript:${encodeURIComponent(code)}`;
       };
       
       const deactivateSpoofer = () => {
+        // Deactivate spoof
+        window._locationSpoofData = { active: false, location: null };
+        
         setSpoofing(false);
         setSelectedLocation(null);
-        
-        // Reload page to restore original geolocation
-        pushToast('⚠️ Reload page to restore real location', 'info');
+        pushToast('✅ Real location restored!', 'ok');
+        console.log('🌍 Spoofer deactivated');
       };
       
       const spoofCustomLocation = async () => {
@@ -2994,6 +3076,69 @@
             </div>
           </div>
           
+          {/* Bookmarklet Display (when active) */}
+          {spoofing && selectedLocation && (
+            <div className="bg-gradient-to-br from-emerald-900/30 via-black to-cyan-900/30 border-2 border-emerald-500/50 rounded-lg p-6 animate-pulse">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="text-3xl">🔗</div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-emerald-400 font-mono mb-2">📍 SPOOFING ACTIVE</h3>
+                  <p className="text-white font-mono text-sm mb-4">
+                    Current location: <span className="text-cyan-400">{selectedLocation.emoji} {selectedLocation.name}</span>
+                  </p>
+                  
+                  <div className="bg-black/80 border border-emerald-500/30 rounded-lg p-4 mb-3">
+                    <div className="text-yellow-400 font-mono text-xs mb-2">⚡ BOOKMARKLET CODE:</div>
+                    <div className="bg-slate-900 rounded p-3 mb-3 max-h-32 overflow-y-auto custom-scrollbar">
+                      <code className="text-cyan-400 text-xs break-all">{generateBookmarklet(selectedLocation)}</code>
+                    </div>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(generateBookmarklet(selectedLocation));
+                        pushToast('📋 Bookmarklet copied!', 'ok');
+                      }}
+                      className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-sm py-2 rounded transition-all"
+                    >
+                      📋 COPY BOOKMARKLET
+                    </button>
+                  </div>
+                  
+                  <div className="bg-slate-900/50 border border-purple-500/30 rounded-lg p-4 mb-3">
+                    <div className="text-purple-400 font-mono text-xs font-bold mb-3">🔖 METHOD 1: DRAG BOOKMARKLET (EASIEST)</div>
+                    <div className="bg-black border border-purple-500/20 rounded-lg p-4 text-center">
+                      <p className="text-slate-400 text-xs mb-3 font-mono">Drag this button to your bookmarks bar ↓</p>
+                      <a
+                        href={generateBookmarklet(selectedLocation)}
+                        className="inline-block bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-mono font-bold px-6 py-3 rounded-lg transition-all shadow-lg cursor-move"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          pushToast('💡 Drag this button to your bookmarks bar!', 'info');
+                        }}
+                      >
+                        📍 Spoof to {selectedLocation.name}
+                      </a>
+                      <p className="text-emerald-400 text-xs mt-3 font-mono">
+                        Then click the bookmark on any website!
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-slate-900/50 border border-cyan-500/20 rounded-lg p-3">
+                    <div className="text-cyan-400 font-mono text-xs font-bold mb-2">⚡ METHOD 2: CONSOLE (ADVANCED)</div>
+                    <ol className="text-slate-300 text-xs space-y-1 ml-4 list-decimal font-mono">
+                      <li>Click "📋 COPY BOOKMARKLET" above</li>
+                      <li>Go to mylocation.org (or any website)</li>
+                      <li>Open browser console (F12)</li>
+                      <li className="text-yellow-400">Type: <code className="bg-black px-2 py-1 rounded">allow pasting</code> (Chrome only)</li>
+                      <li>Paste the code and press Enter</li>
+                      <li>Refresh the page → Location shows: {selectedLocation.name} ✅</li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* How It Works */}
           <div className="bg-gradient-to-br from-yellow-900/20 via-black to-orange-900/20 border-2 border-yellow-500/30 rounded-lg p-6">
             <div className="flex items-start gap-3 mb-4">
@@ -3015,7 +3160,7 @@
                     <li>Apps with advanced detection</li>
                   </ul>
                   <p className="text-cyan-400 mt-3 text-xs">
-                    💡 This spoofs browser geolocation API only. Reload page to restore real location.
+                    💡 Copy the bookmarklet and paste in console (F12) on any website to spoof location.
                   </p>
                 </div>
               </div>
@@ -3044,6 +3189,106 @@
             </div>
           </div>
           
+          {/* URL Generator */}
+          <div className="bg-black/80 border-2 border-cyan-500/30 rounded-lg p-6">
+            <h3 className="text-lg font-bold text-cyan-400 font-mono mb-4">🔗 GENERATE_SPOOF_URL</h3>
+            <p className="text-slate-400 text-sm font-mono mb-4">
+              Create a shareable link that spoofs location on any website
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="text-slate-400 font-mono text-sm mb-2 block">TARGET WEBSITE URL</label>
+                <input
+                  type="url"
+                  value={targetUrl}
+                  onChange={(e) => setTargetUrl(e.target.value)}
+                  placeholder="https://mylocation.org"
+                  className="w-full bg-slate-900 border border-slate-700 rounded px-4 py-3 text-white font-mono focus:border-cyan-500 focus:outline-none"
+                />
+                <p className="text-slate-500 text-xs mt-2 font-mono">Example: https://tinder.com or https://mylocation.org</p>
+              </div>
+              
+              {selectedLocation && targetUrl && (
+                <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-lg p-4">
+                  <div className="text-emerald-400 font-mono text-xs mb-2">✅ GENERATED SPOOF LINK:</div>
+                  <div className="bg-black rounded p-3 mb-3 break-all">
+                    <code className="text-cyan-400 text-xs">
+                      {window.location.origin}?lat={selectedLocation.lat}&lon={selectedLocation.lon}&location={encodeURIComponent(selectedLocation.name)}&redirect={encodeURIComponent(targetUrl)}#location-spoofer
+                    </code>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <button
+                      onClick={() => {
+                        const spoofUrl = `${window.location.origin}?lat=${selectedLocation.lat}&lon=${selectedLocation.lon}&location=${encodeURIComponent(selectedLocation.name)}&redirect=${encodeURIComponent(targetUrl)}#location-spoofer`;
+                        navigator.clipboard.writeText(spoofUrl);
+                        pushToast('🔗 Spoof URL copied!', 'ok');
+                      }}
+                      className="bg-cyan-600 hover:bg-cyan-500 text-white font-mono text-sm py-3 rounded transition-all font-bold"
+                    >
+                      📋 COPY URL
+                    </button>
+                    <button
+                      onClick={() => {
+                        const bookmarklet = generateBookmarklet(selectedLocation);
+                        const newWindow = window.open(targetUrl, '_blank');
+                        if (newWindow) {
+                          pushToast(`🌍 Opening ${targetUrl.split('/')[2]}... Paste bookmarklet in console!`, 'ok');
+                        } else {
+                          pushToast('❌ Popup blocked! Enable popups for this site.', 'err');
+                        }
+                      }}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-sm py-3 rounded transition-all font-bold"
+                    >
+                      🚀 OPEN SITE
+                    </button>
+                  </div>
+                  <p className="text-slate-400 text-xs font-mono text-center">
+                    📌 Share the URL above! When opened, it shows spoofer instructions for {targetUrl.split('/')[2]}
+                  </p>
+                </div>
+              )}
+              
+              {selectedLocation && targetUrl && spoofing && (
+                <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-5">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="text-3xl">🎯</div>
+                    <div>
+                      <h4 className="text-purple-400 font-bold font-mono">READY TO SPOOF</h4>
+                      <p className="text-slate-300 text-xs font-mono">Location: {selectedLocation.emoji} {selectedLocation.name}</p>
+                    </div>
+                  </div>
+                  
+                  <button
+                    onClick={() => {
+                      const bookmarklet = generateBookmarklet(selectedLocation);
+                      navigator.clipboard.writeText(bookmarklet);
+                      const newWindow = window.open(targetUrl, '_blank');
+                      if (newWindow) {
+                        pushToast(`📍 Opening ${targetUrl.split('/')[2]}... Bookmarklet copied! Paste in console (F12)`, 'ok');
+                      } else {
+                        pushToast('Bookmarklet copied! Enable popups and try again.', 'warn');
+                      }
+                    }}
+                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-mono font-bold py-4 rounded-lg transition-all shadow-lg"
+                  >
+                    🚀 OPEN {targetUrl.split('/')[2]?.toUpperCase() || 'WEBSITE'} WITH SPOOFER
+                  </button>
+                  <p className="text-slate-400 text-xs mt-3 font-mono text-center">
+                    ⚡ Opens website + auto-copies bookmarklet to clipboard
+                  </p>
+                </div>
+              )}
+              
+              {!selectedLocation && (
+                <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-3">
+                  <p className="text-yellow-400 text-xs font-mono text-center">
+                    ⚠️ Select a location from the presets above first
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+          
           {/* Custom Coordinates */}
           <div className="bg-black/80 border-2 border-purple-500/30 rounded-lg p-6">
             <h3 className="text-lg font-bold text-purple-400 font-mono mb-4">$ CUSTOM_COORDINATES</h3>
@@ -3056,8 +3301,8 @@
                     step="0.0001"
                     min="-90"
                     max="90"
-                    value={customLat}
-                    onChange={(e) => setCustomLat(e.target.value)}
+                    value={customLon}
+                    onChange={(e) => setCustomLon(e.target.value)}
                     placeholder="e.g. 40.7128"
                     disabled={spoofing}
                     className="w-full bg-slate-900 border border-slate-700 rounded px-4 py-3 text-white font-mono focus:border-purple-500 focus:outline-none disabled:opacity-50"
@@ -3070,8 +3315,8 @@
                     step="0.0001"
                     min="-180"
                     max="180"
-                    value={customLon}
-                    onChange={(e) => setCustomLon(e.target.value)}
+                    value={customLat}
+                    onChange={(e) => setCustomLat(e.target.value)}
                     placeholder="e.g. -74.0060"
                     disabled={spoofing}
                     className="w-full bg-slate-900 border border-slate-700 rounded px-4 py-3 text-white font-mono focus:border-purple-500 focus:outline-none disabled:opacity-50"
@@ -19124,7 +19369,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'offline-network', 'claim-rewards', 'ghost-identity', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
+      const validSteps = ['home', 'webrtc', 'offline-network', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -19993,7 +20238,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'offline-network', 'claim-rewards', 'ghost-identity', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
+      const validSteps = ['home', 'webrtc', 'offline-network', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
