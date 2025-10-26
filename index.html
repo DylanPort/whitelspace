@@ -12324,14 +12324,20 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             console.log('✅ Mobile wallet keypair reconstructed:', keypair.publicKey.toString().slice(0, 8) + '...');
           } catch (e) {
             console.error('❌ Failed to reconstruct mobile wallet:', e);
-            throw new Error('Failed to load mobile wallet. Please re-import your wallet.');
+            console.warn('⚠️ Falling back to desktop extension wallet...');
+            // Clear mobile wallet flag and fall through to desktop wallet
+            wallet = null;
+            keypair = null;
           }
-        } else {
+        }
+        
+        // If mobile wallet failed or doesn't exist, use desktop extension wallet
+        if (!wallet) {
           // DESKTOP EXTENSION WALLET: Use Phantom/Solflare
           console.log('🖥️ Using desktop extension wallet for x402 payment');
           wallet = window.wallet || window.solana;
           if (!wallet) {
-            alert('❌ No wallet detected! Please install Phantom wallet or create a mobile wallet.');
+            await showX402PaymentModal('error', 'No wallet detected! Please install Phantom wallet or create a mobile wallet.');
             throw new Error('No wallet detected');
           }
           
