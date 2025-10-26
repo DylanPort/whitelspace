@@ -1,7 +1,10 @@
 // x402 client helper for Ghost Whistle - Trustless Distribution via Smart Contract
 // Sends fees to staking pool for automatic distribution to stakers!
+// VERSION: v11 - deposit_fees() to pool vault
 
 (function () {
+  console.log('💳 x402-client.js v11 loaded - Using deposit_fees() to pool vault');
+  
   const WHISTLE_MINT = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';
   const TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
   const MEMO_PROGRAM_ID = 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr';
