@@ -55,8 +55,12 @@
     }
   }
 
-  async function requestX402AndPay({ wallet, hops = 3 }) {
+  async function requestX402AndPay({ wallet, hops = 3, keypair = null }) {
     if (!wallet || !wallet.publicKey) throw new Error('Wallet not connected');
+
+    // Detect wallet type: mobile in-app (has keypair) vs desktop extension (needs signTransaction)
+    const isMobileWallet = !!keypair;
+    console.log(`💼 Wallet type: ${isMobileWallet ? 'Mobile In-App' : 'Desktop Extension'}`);
 
     // 1) Request quote
     const gateway = (window.X402_GATEWAY || window.location.origin);
@@ -119,7 +123,8 @@
       amount: quote.pricing.totalAmount,
       poolPda: poolPda.toString(),
       poolVault: poolVault.toString(),
-      quoteId: quote.quoteId
+      quoteId: quote.quoteId,
+      walletType: isMobileWallet ? 'mobile' : 'desktop'
     });
 
     // Get user's WHISTLE token account
@@ -160,8 +165,22 @@
     tx.recentBlockhash = blockhash;
 
     console.log('📤 Sending payment...');
-    const signed = await wallet.signTransaction(tx);
-    const sig = await connection.sendRawTransaction(signed.serialize(), { skipPreflight: false });
+    let sig;
+    
+    // MOBILE IN-APP WALLET: Sign and send with keypair (no user interaction needed)
+    if (isMobileWallet) {
+      console.log('📱 Using mobile in-app wallet (auto-signing)...');
+      sig = await connection.sendTransaction(tx, [keypair], { 
+        skipPreflight: false,
+        preflightCommitment: 'confirmed'
+      });
+    }
+    // DESKTOP EXTENSION WALLET: Request signature from user via wallet popup
+    else {
+      console.log('🖥️ Using desktop extension wallet (requesting signature)...');
+      const signed = await wallet.signTransaction(tx);
+      sig = await connection.sendRawTransaction(signed.serialize(), { skipPreflight: false });
+    }
     
     console.log('⏳ Confirming payment:', sig);
     await connection.confirmTransaction(sig, 'confirmed');

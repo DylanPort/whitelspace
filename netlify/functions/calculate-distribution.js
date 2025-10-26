@@ -23,6 +23,13 @@ exports.handler = async (event, context) => {
     const connection = new Connection(RPC_URL, 'confirmed');
     const programId = new PublicKey(PROGRAM_ID);
     
+    // Get WHISTLE token decimals first
+    const whistleMint = new PublicKey(WHISTLE_MINT);
+    const mintInfo = await connection.getParsedAccountInfo(whistleMint);
+    const decimals = mintInfo.value?.data?.parsed?.info?.decimals || 9;
+    const divisor = Math.pow(10, decimals);
+    console.log(`🪙 $WHISTLE token decimals: ${decimals}`);
+    
     // 1. Fetch pool data
     const [poolPda] = await PublicKey.findProgramAddress(
       [Buffer.from('pool')],
@@ -42,22 +49,48 @@ exports.handler = async (event, context) => {
     const poolData = {
       authority: new PublicKey(poolDataBuffer.slice(8, 40)).toBase58(),
       whistleMint: new PublicKey(poolDataBuffer.slice(40, 72)).toBase58(),
-      totalStaked: Number(new DataView(poolDataBuffer.buffer).getBigUint64(72, true)) / 1e9,
+      totalStaked: Number(new DataView(poolDataBuffer.buffer).getBigUint64(72, true)) / divisor,
       totalNodes: Number(new DataView(poolDataBuffer.buffer).getBigUint64(80, true)),
       totalReputation: Number(new DataView(poolDataBuffer.buffer).getBigUint64(88, true)),
-      feePool: Number(new DataView(poolDataBuffer.buffer).getBigUint64(96, true)) / 1e9,
-      baseReward: Number(new DataView(poolDataBuffer.buffer).getBigUint64(104, true)) / 1e9,
-      bonusPerPoint: Number(new DataView(poolDataBuffer.buffer).getBigUint64(112, true)) / 1e9,
+      feePool: Number(new DataView(poolDataBuffer.buffer).getBigUint64(96, true)) / divisor,
+      baseReward: Number(new DataView(poolDataBuffer.buffer).getBigUint64(104, true)) / divisor,
+      bonusPerPoint: Number(new DataView(poolDataBuffer.buffer).getBigUint64(112, true)) / divisor,
       totalRelayRequests: Number(new DataView(poolDataBuffer.buffer).getBigUint64(120, true))
     };
     
-    console.log(`📊 Pool: ${poolData.totalStaked.toLocaleString()} staked, ${poolData.feePool.toLocaleString()} in fee pool`);
+    console.log(`📊 Pool: ${poolData.totalStaked.toLocaleString()} staked, ${poolData.feePool.toLocaleString()} in contract fee pool`);
     
-    // 2. Fetch all node accounts (filter by size = 136 bytes)
+    // 1.5. Fetch ACTUAL fee balance from fee collector wallet
+    const feeCollectorWallet = new PublicKey(FEE_COLLECTOR);
+    const whistleMint = new PublicKey(WHISTLE_MINT);
+    const TOKEN_PROGRAM = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+    const ASSOCIATED_TOKEN_PROGRAM = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
+    
+    let actualFeePool = 0;
+    try {
+      // Get fee collector's WHISTLE token account
+      const [feeCollectorAta] = await PublicKey.findProgramAddress(
+        [
+          feeCollectorWallet.toBuffer(),
+          TOKEN_PROGRAM.toBuffer(),
+          whistleMint.toBuffer()
+        ],
+        ASSOCIATED_TOKEN_PROGRAM
+      );
+      
+      const feeTokenAccount = await connection.getTokenAccountBalance(feeCollectorAta);
+      actualFeePool = Number(feeTokenAccount.value.amount) / divisor;
+      console.log(`💰 Actual fee collector balance: ${actualFeePool.toLocaleString()} $WHISTLE`);
+    } catch (e) {
+      console.warn('Could not fetch fee collector balance:', e.message);
+    }
+    
+    // 2. Fetch all node accounts (filter by size = 128 bytes)
+    // NodeAccount: 128 bytes (8-byte aligned structure)
     const accounts = await connection.getProgramAccounts(programId, {
       filters: [
         {
-          dataSize: 136 // NodeAccount size
+          dataSize: 128 // NodeAccount actual size
         }
       ]
     });
@@ -75,14 +108,14 @@ exports.handler = async (event, context) => {
         const nodeData = {
           address: pubkey.toBase58(),
           owner: new PublicKey(buffer.slice(8, 40)).toBase58(),
-          stakedAmount: Number(new DataView(buffer.buffer).getBigUint64(40, true)) / 1e9,
+          stakedAmount: Number(new DataView(buffer.buffer).getBigUint64(40, true)) / divisor,
           reputationScore: Number(new DataView(buffer.buffer).getBigUint64(48, true)),
           totalRelays: Number(new DataView(buffer.buffer).getBigUint64(56, true)),
           successfulRelays: Number(new DataView(buffer.buffer).getBigUint64(64, true)),
           failedRelays: Number(new DataView(buffer.buffer).getBigUint64(72, true)),
-          totalEarned: Number(new DataView(buffer.buffer).getBigUint64(80, true)) / 1e9,
-          pendingRewards: Number(new DataView(buffer.buffer).getBigUint64(88, true)) / 1e9,
-          totalClaimed: Number(new DataView(buffer.buffer).getBigUint64(96, true)) / 1e9,
+          totalEarned: Number(new DataView(buffer.buffer).getBigUint64(80, true)) / divisor,
+          pendingRewards: Number(new DataView(buffer.buffer).getBigUint64(88, true)) / divisor,
+          totalClaimed: Number(new DataView(buffer.buffer).getBigUint64(96, true)) / divisor,
           createdAt: Number(new DataView(buffer.buffer).getBigInt64(104, true)),
           lastRelay: Number(new DataView(buffer.buffer).getBigInt64(112, true))
         };
@@ -119,7 +152,7 @@ exports.handler = async (event, context) => {
     }
     
     // 4. Second pass: calculate actual shares from fee pool
-    const distributionAmount = poolData.feePool * 0.9; // 90% of fee pool
+    const distributionAmount = actualFeePool * 0.9; // 90% of actual fee pool
     for (const dist of distributions) {
       dist.share = totalWeight > 0 ? (dist.weight / totalWeight) * distributionAmount : 0;
       dist.sharePercentage = totalWeight > 0 ? (dist.weight / totalWeight) * 100 : 0;
@@ -128,7 +161,7 @@ exports.handler = async (event, context) => {
     // Sort by share descending
     distributions.sort((a, b) => b.share - a.share);
     
-    console.log(`✅ Distribution calculated: ${distributionAmount.toLocaleString()} $WHISTLE to distribute`);
+    console.log(`✅ Distribution calculated: ${distributionAmount.toLocaleString()} $WHISTLE to distribute from ${actualFeePool.toLocaleString()} fee pool`);
     
     // 5. Return distribution data
     return {
@@ -137,17 +170,19 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({
         timestamp: new Date().toISOString(),
         epoch: Math.floor(Date.now() / 86400000), // Daily epoch
+        feeCollectorWallet: FEE_COLLECTOR,
         poolData: {
           totalStaked: poolData.totalStaked,
           totalNodes: poolData.totalNodes,
-          feePool: poolData.feePool,
+          contractFeePool: poolData.feePool,
+          actualFeePool: actualFeePool,
           distributionAmount
         },
         distributions,
         summary: {
           totalStakers: distributions.length,
           totalDistributing: distributionAmount,
-          averageShare: distributionAmount / distributions.length,
+          averageShare: distributions.length > 0 ? distributionAmount / distributions.length : 0,
           topShare: distributions[0]?.share || 0,
           totalWeight
         }

@@ -9,6 +9,7 @@
 
 const { Connection, PublicKey, Transaction, SystemProgram } = require('@solana/web3.js');
 const { getAssociatedTokenAddressSync, createTransferInstruction } = require('@solana/spl-token');
+const { getStore } = require('@netlify/blobs');
 
 // Configuration
 const PROGRAM_ID = '2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq';
@@ -16,6 +17,7 @@ const WHISTLE_MINT = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';
 const FEE_COLLECTOR_WALLET = 'G1RHSMtZVZLafmZ9man8anb2HXf7JP5Kh5sbrGZKM6Pg';
 const RPC_URL = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
 const EXCLUDED_WALLET = '7NFFKUqmQCXHps19XxFkB9qh7AX52UZE8HJVdUu8W6XF';
+const COOLDOWN_HOURS = 24;
 
 exports.handler = async (event) => {
   // CORS headers
@@ -51,6 +53,46 @@ exports.handler = async (event) => {
     }
 
     console.log('💰 Calculating claimable reward for:', walletAddress);
+
+    // Check 24h cooldown
+    try {
+      const store = getStore('claim-timestamps');
+      const lastClaimData = await store.get(walletAddress);
+      
+      if (lastClaimData) {
+        const claimInfo = JSON.parse(lastClaimData);
+        const now = Date.now();
+        const timeSinceClaim = now - claimInfo.lastClaim;
+        const cooldownMs = COOLDOWN_HOURS * 60 * 60 * 1000;
+        
+        if (timeSinceClaim < cooldownMs) {
+          const timeUntilNextClaim = cooldownMs - timeSinceClaim;
+          const hoursRemaining = Math.ceil(timeUntilNextClaim / (60 * 60 * 1000));
+          const nextClaimDate = new Date(claimInfo.lastClaim + cooldownMs);
+          
+          console.log(`⏰ Wallet ${walletAddress.slice(0, 8)}... on cooldown. ${hoursRemaining}h remaining`);
+          
+          return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({
+              claimable: 0,
+              claimableFormatted: '0',
+              onCooldown: true,
+              lastClaim: claimInfo.lastClaim,
+              lastClaimDate: new Date(claimInfo.lastClaim).toISOString(),
+              timeUntilNextClaim,
+              hoursRemaining,
+              nextClaimAvailable: nextClaimDate.toISOString(),
+              message: `You can claim again in ${hoursRemaining} hours (${nextClaimDate.toLocaleString()})`
+            })
+          };
+        }
+      }
+    } catch (cooldownError) {
+      console.warn('⚠️ Error checking cooldown, allowing claim:', cooldownError.message);
+      // If cooldown check fails, allow claim (fail open)
+    }
 
     const connection = new Connection(RPC_URL, 'confirmed');
     const programId = new PublicKey(PROGRAM_ID);

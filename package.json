@@ -7,7 +7,8 @@
     "dev": "node server.js",
     "start": "node server.js",
     "signaling": "node signaling-server.js",
-    "deploy": "anchor deploy --provider.cluster mainnet"
+    "deploy": "anchor deploy --provider.cluster mainnet",
+    "distribute": "node distribute-rewards-local.js"
   },
   "keywords": [
     "privacy",
@@ -18,11 +19,14 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@supabase/supabase-js": "^2.76.1",
+    "@netlify/blobs": "^8.1.0",
     "@solana/spl-token": "^0.4.7",
     "@solana/web3.js": "^1.95.3",
+    "@supabase/supabase-js": "^2.76.1",
+    "bs58": "^5.0.0",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
     "express": "^4.18.2",
     "helmet": "^8.1.0",
     "morgan": "^1.10.1",
