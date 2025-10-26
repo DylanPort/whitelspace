@@ -3314,11 +3314,47 @@
       
       // Claim fee rewards (user pays transaction fee!)
       async function claimFeeRewards() {
-        if (!wallet || !feeRewardsClaimable || feeRewardsClaimable.claimable === 0) return;
+        if (!feeRewardsClaimable || feeRewardsClaimable.claimable === 0) return;
         
         try {
           setClaimingFeeRewards(true);
           console.log('💰 Claiming fee rewards...');
+          
+          // Check if user has mobile in-app wallet
+          const mobilePrivateKey = localStorage.getItem('ghost_mobile_wallet');
+          const mobileAddress = localStorage.getItem('ghost_mobile_address');
+          let userKeypair = null;
+          let isUsingMobileWallet = false;
+          
+          if (mobilePrivateKey && mobileAddress && mobileAddress === walletAddress) {
+            // MOBILE IN-APP WALLET: Reconstruct keypair
+            console.log('📱 Using mobile in-app wallet for claim');
+            isUsingMobileWallet = true;
+            
+            try {
+              // Decode private key (handle different formats)
+              let secretKey;
+              if (mobilePrivateKey.endsWith(':base64')) {
+                const base64Key = mobilePrivateKey.replace(':base64', '');
+                const Buf = window.Buffer || Buffer;
+                secretKey = Buf.from(base64Key, 'base64');
+              } else if (mobilePrivateKey.includes(',')) {
+                secretKey = new Uint8Array(mobilePrivateKey.split(',').map(n => parseInt(n)));
+              } else {
+                const bs58Decoder = window.bs58?.decode || window.bs58?.default?.decode;
+                if (!bs58Decoder) throw new Error('bs58 library not loaded');
+                secretKey = bs58Decoder(mobilePrivateKey);
+              }
+              
+              userKeypair = solanaWeb3.Keypair.fromSecretKey(secretKey);
+              console.log('✅ Mobile wallet keypair reconstructed for claim');
+            } catch (e) {
+              console.error('❌ Failed to reconstruct mobile wallet:', e);
+              throw new Error('Failed to load mobile wallet. Please re-import your wallet.');
+            }
+          } else if (!wallet) {
+            throw new Error('No wallet connected');
+          }
           
           // Get partially signed transaction from backend
           const response = await fetch('/.netlify/functions/sign-claim', {
@@ -3341,16 +3377,27 @@
             Buffer.from(data.transaction, 'base64')
           );
           
-          pushToast('Please sign the transaction in your wallet...', 'ok');
+          let signed;
           
-          // User signs (and pays the tx fee!)
-          const signed = await wallet.signTransaction(transaction);
+          if (isUsingMobileWallet && userKeypair) {
+            // MOBILE: Sign with keypair directly
+            console.log('📱 Signing with mobile wallet keypair...');
+            pushToast('Signing transaction...', 'ok');
+            transaction.partialSign(userKeypair);
+            signed = transaction;
+          } else {
+            // DESKTOP: Request signature from extension wallet
+            console.log('🖥️ Requesting signature from extension wallet...');
+            pushToast('Please sign the transaction in your wallet...', 'ok');
+            signed = await wallet.signTransaction(transaction);
+          }
           
           // Send transaction
           const connection = new solanaWeb3.Connection(RPC_URL, 'confirmed');
           const signature = await connection.sendRawTransaction(signed.serialize());
           
           pushToast('Transaction submitted! Confirming...', 'ok');
+          console.log('📤 Transaction sent:', signature);
           
           await connection.confirmTransaction(signature, 'confirmed');
           
