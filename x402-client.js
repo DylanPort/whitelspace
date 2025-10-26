@@ -1,19 +1,18 @@
-// x402 client helper for Ghost Whistle - Simple SPL Transfer Version
-// No smart contract calls - just direct token transfers to fee collector!
+// x402 client helper for Ghost Whistle - Trustless Distribution via Smart Contract
+// Sends fees to staking pool for automatic distribution to stakers!
 
 (function () {
   const WHISTLE_MINT = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';
   const TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
   const MEMO_PROGRAM_ID = 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr';
+  const PROGRAM_ID = '2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq';
+  const SYSTEM_PROGRAM = '11111111111111111111111111111111';
   const RPC_URL = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
   const RPC_ENDPOINTS = [
     RPC_URL,
     'https://rpc.ankr.com/solana',
     'https://api.mainnet-beta.solana.com'
   ];
-  
-  // Fee collector wallet - receives all x402 fees
-  const FEE_COLLECTOR_WALLET = 'G1RHSMtZVZLafmZ9man8anb2HXf7JP5Kh5sbrGZKM6Pg';
 
   async function getOrCreateTokenAccount(connection, ownerPubkey, mintPubkey) {
     // Try multiple RPCs due to rate limiting
@@ -72,7 +71,7 @@
     }
     const quote = await quoteResp.json();
 
-    // 2) Simple SPL token transfer to fee collector
+    // 2) Call deposit_fees() to send x402 fees to staking pool (trustless!)
     // Use fallback RPCs to avoid rate limiting
     let connection = null;
     console.log('🔌 Testing RPC connections...');
@@ -96,83 +95,65 @@
     }
     
     const whistleMint = new solanaWeb3.PublicKey(WHISTLE_MINT);
-    const feeCollector = new solanaWeb3.PublicKey(FEE_COLLECTOR_WALLET);
-    
-    console.log('💳 Payment details:', {
-      amount: quote.pricing.totalAmount,
-      collector: FEE_COLLECTOR_WALLET,
-      quoteId: quote.quoteId
-    });
-
-    // Get user's WHISTLE token account
-    const userTokenAccount = await getOrCreateTokenAccount(connection, wallet.publicKey, whistleMint);
-    
-    // Calculate fee collector's WHISTLE token account (ATA)
-    // Don't look it up - just calculate the address. It will be auto-created on first transfer.
+    const programId = new solanaWeb3.PublicKey(PROGRAM_ID);
     const TOKEN_PROGRAM = new solanaWeb3.PublicKey(TOKEN_PROGRAM_ID);
     const ASSOCIATED_TOKEN_PROGRAM = new solanaWeb3.PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
     
-    const [collectorTokenAccount] = await solanaWeb3.PublicKey.findProgramAddress(
+    // Derive pool PDA
+    const [poolPda, poolBump] = await solanaWeb3.PublicKey.findProgramAddress(
+      [Buffer.from('pool')],
+      programId
+    );
+    
+    // Derive pool vault (ATA for pool PDA)
+    const [poolVault] = await solanaWeb3.PublicKey.findProgramAddress(
       [
-        feeCollector.toBuffer(),
+        poolPda.toBuffer(),
         TOKEN_PROGRAM.toBuffer(),
         whistleMint.toBuffer()
       ],
       ASSOCIATED_TOKEN_PROGRAM
     );
     
-    console.log('📍 Collector ATA (calculated):', collectorTokenAccount.toString());
+    console.log('💳 Payment details:', {
+      amount: quote.pricing.totalAmount,
+      poolPda: poolPda.toString(),
+      poolVault: poolVault.toString(),
+      quoteId: quote.quoteId
+    });
 
-    // Check if collector ATA exists, if not create it
-    const collectorAccountInfo = await connection.getAccountInfo(collectorTokenAccount);
+    // Get user's WHISTLE token account
+    const userTokenAccount = await getOrCreateTokenAccount(connection, wallet.publicKey, whistleMint);
     
     const tx = new solanaWeb3.Transaction();
-    
-    if (!collectorAccountInfo) {
-      console.log('🔨 Creating ATA for fee collector...');
-      // Create Associated Token Account instruction
-      const createATAIx = new solanaWeb3.TransactionInstruction({
-        programId: ASSOCIATED_TOKEN_PROGRAM,
-        keys: [
-          { pubkey: wallet.publicKey, isSigner: true, isWritable: true },        // payer
-          { pubkey: collectorTokenAccount, isSigner: false, isWritable: true },  // associatedToken
-          { pubkey: feeCollector, isSigner: false, isWritable: false },          // owner
-          { pubkey: whistleMint, isSigner: false, isWritable: false },           // mint
-          { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
-          { pubkey: TOKEN_PROGRAM, isSigner: false, isWritable: false }
-        ],
-        data: Buffer.from([])
-      });
-      tx.add(createATAIx);
-    } else {
-      console.log('✅ Collector ATA already exists');
-    }
 
-    // Create memo with quote reference
+    // Create memo with quote reference for tracking
     const memoIx = new solanaWeb3.TransactionInstruction({
       programId: new solanaWeb3.PublicKey(MEMO_PROGRAM_ID),
       keys: [],
       data: Buffer.from(`x402:${quote.quoteId}`, 'utf8')
     });
 
-    // Create SPL token transfer instruction
-    const transferIx = new solanaWeb3.TransactionInstruction({
-      programId: new solanaWeb3.PublicKey(TOKEN_PROGRAM_ID),
+    // Create deposit_fees instruction
+    // deposit_fees discriminator = first 8 bytes of sha256("global:deposit_fees")
+    const discriminator = Buffer.from([0xf2, 0x23, 0xc6, 0x8b, 0x8f, 0x7c, 0x4e, 0x91]);
+    const amountBuffer = Buffer.alloc(8);
+    amountBuffer.writeBigUInt64LE(BigInt(quote.pricing.totalAmount));
+    
+    const depositFeesIx = new solanaWeb3.TransactionInstruction({
+      programId: programId,
       keys: [
-        { pubkey: userTokenAccount, isSigner: false, isWritable: true },          // source
-        { pubkey: collectorTokenAccount, isSigner: false, isWritable: true },     // destination
-        { pubkey: wallet.publicKey, isSigner: true, isWritable: false }           // authority
+        { pubkey: poolPda, isSigner: false, isWritable: true },              // pool
+        { pubkey: wallet.publicKey, isSigner: true, isWritable: false },     // user
+        { pubkey: userTokenAccount, isSigner: false, isWritable: true },     // user_token_account
+        { pubkey: poolVault, isSigner: false, isWritable: true },            // pool_vault
+        { pubkey: TOKEN_PROGRAM, isSigner: false, isWritable: false }        // token_program
       ],
-      data: Buffer.from(
-        Uint8Array.of(
-          3, // Transfer instruction
-          ...new Uint8Array(new BigUint64Array([BigInt(quote.pricing.totalAmount)]).buffer)
-        )
-      )
+      data: Buffer.concat([discriminator, amountBuffer])
     });
 
     tx.add(memoIx);
-    tx.add(transferIx);
+    tx.add(depositFeesIx);
     tx.feePayer = wallet.publicKey;
     
     const { blockhash } = await connection.getLatestBlockhash('confirmed');
