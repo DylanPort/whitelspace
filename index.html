@@ -12703,6 +12703,12 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       // ===== In-App Wallet Helpers (no permission prompts) =====
       async function getInAppKeypair() {
         try {
+          // 🖥️ SKIP on desktop if Phantom/Solflare is connected (avoid password prompts)
+          if (window.solana?.isPhantom || window.solflare?.isConnected) {
+            console.log('🖥️ Desktop wallet detected, skipping in-app keypair');
+            return null;
+          }
+          
           const stored = (typeof localStorage !== 'undefined') ? localStorage.getItem('ghost_mobile_wallet') : null;
           if (!stored) return null;
 
