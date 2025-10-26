@@ -7,6 +7,9 @@
   SOLANA_TRACKER_API_KEY = ""
   SOLANA_MAINNET_RPC = ""
   SOLANA_RPC_URL = "https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba"
+  # Set PERPLEXITY_API_KEY in Netlify UI: Site settings > Environment variables
+  # Get your API key at: https://www.perplexity.ai/settings/api
+  PERPLEXITY_API_KEY = ""
 
 [functions]
   node_bundler = "esbuild"
@@ -24,6 +27,11 @@
 [[redirects]]
   from = "/x402/validate"
   to = "/.netlify/functions/x402-validate"
+  status = 200
+
+[[redirects]]
+  from = "/api/generate-backstory"
+  to = "/.netlify/functions/generate-backstory"
   status = 200
 
 [[redirects]]

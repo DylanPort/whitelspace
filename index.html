@@ -145,6 +145,8 @@
     @keyframes digitalRain{0%{transform:translateY(-100%);opacity:0}50%{opacity:1}100%{transform:translateY(100%);opacity:0}}
     @keyframes dropdownSlide{0%{opacity:0;transform:translateY(-10px)}100%{opacity:1;transform:translateY(0)}}
     @keyframes menuItemFade{0%{opacity:0;transform:translateX(-10px)}100%{opacity:1;transform:translateX(0)}}
+    @keyframes scan{0%{background-position:0 0}100%{background-position:0 100%}}
+    @keyframes scan-line{0%{transform:translateY(-100%)}100%{transform:translateY(4000%)}}
     .cyberpunk-card{position:relative}
     .cyberpunk-card::before,.cyberpunk-card::after{content:'';position:absolute;width:20px;height:20px;opacity:0.6;transition:all 0.3s}
     .cyberpunk-card::before{top:0;left:0;border-top:2px solid currentColor;border-left:2px solid currentColor}
@@ -2727,6 +2729,7 @@
       const tabs = [
         { id: "home", label: "Home", emoji: "🏛️" },
         { id: "offline-network", label: "Ghost Whistle", emoji: "👻", special: true },
+        { id: "ghost-identity", label: "Ghost Identity", icon: "alert-circle", special: true },
         { id: "social-hub", label: "Ghost Terminal", emoji: "🖥️" },
         { id: "services", label: "Ghost Services", emoji: "✨" },
         { id: "how-it-works", label: "How It Works", emoji: "💡" },
@@ -2841,6 +2844,1031 @@
               ))}
     </div>
           )}
+    </div>
+      );
+    }
+
+    // ============= GHOST IDENTITY GENERATOR =============
+    function GhostIdentityGenerator({ pushToast }) {
+      const [identity, setIdentity] = useState(null);
+      const [generating, setGenerating] = useState(false);
+      const [burnerEmail, setBurnerEmail] = useState(null);
+      const [emailMessages, setEmailMessages] = useState([]);
+      const [selectedMessage, setSelectedMessage] = useState(null);
+      const [messageBody, setMessageBody] = useState('');
+      const [currentFingerprint, setCurrentFingerprint] = useState(null);
+      const [showFingerprintModal, setShowFingerprintModal] = useState(false);
+      const [showEmailModal, setShowEmailModal] = useState(false);
+      
+      // Backstory generation endpoint
+      const BACKSTORY_API_ENDPOINT = '/api/generate-backstory';
+      
+      useEffect(() => {
+        if (window.lucide) window.lucide.createIcons();
+      }, [identity, generating, burnerEmail, emailMessages, selectedMessage, currentFingerprint, showFingerprintModal, showEmailModal]);
+      
+      // Generate strong password
+      const generatePassword = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+        let password = '';
+        for (let i = 0; i < 16; i++) {
+          password += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return password;
+      };
+      
+      // Generate username
+      const generateUsername = (firstName, lastName) => {
+        const prefixes = ['ghost', 'phantom', 'shadow', 'anon', 'priv', 'secure'];
+        const suffixes = ['user', 'dev', 'pro', '404', 'x'];
+        const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+        const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
+        const num = Math.floor(Math.random() * 9999);
+        return `${prefix}_${firstName.toLowerCase()}${num}_${suffix}`;
+      };
+      
+      // Generate burner email using 1secmail
+      const generateBurnerEmail = async () => {
+        try {
+          const response = await fetch('https://www.1secmail.com/api/v1/?action=genRandomMailbox&count=1');
+          const emails = await response.json();
+          return emails[0];
+        } catch (error) {
+          console.error('Error generating email:', error);
+          return null;
+        }
+      };
+      
+      // Check email messages
+      const checkEmailMessages = async (email) => {
+        try {
+          const [login, domain] = email.split('@');
+          const response = await fetch(`https://www.1secmail.com/api/v1/?action=getMessages&login=${login}&domain=${domain}`);
+          const messages = await response.json();
+          setEmailMessages(messages);
+          pushToast(`${messages.length} message(s) found`, 'ok');
+          return messages;
+        } catch (error) {
+          console.error('Error checking messages:', error);
+          pushToast('Failed to check messages', 'err');
+          return [];
+        }
+      };
+      
+      // Read specific message content
+      const readMessage = async (email, messageId) => {
+        try {
+          const [login, domain] = email.split('@');
+          const response = await fetch(`https://www.1secmail.com/api/v1/?action=readMessage&login=${login}&domain=${domain}&id=${messageId}`);
+          const message = await response.json();
+          setSelectedMessage(message);
+          setMessageBody(message.textBody || message.htmlBody || 'No content');
+          pushToast('Message loaded', 'ok');
+        } catch (error) {
+          console.error('Error reading message:', error);
+          pushToast('Failed to read message', 'err');
+        }
+      };
+      
+      // Generate AI backstory using serverless function
+      const generateBackstory = async (name, age, location) => {
+        try {
+          const response = await fetch(BACKSTORY_API_ENDPOINT, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ name, age, location })
+          });
+          
+          if (!response.ok) {
+            throw new Error('Backstory API error');
+          }
+          
+          const data = await response.json();
+          return data.backstory;
+        } catch (error) {
+          console.error('Error generating backstory:', error);
+          // Fallback to template-based backstory
+          const occupations = ['software developer', 'graphic designer', 'freelance writer', 'marketing consultant', 'data analyst', 'teacher', 'photographer', 'musician'];
+          const hobbies = ['hiking', 'photography', 'reading', 'gaming', 'cooking', 'travel', 'yoga', 'painting'];
+          const occupation = occupations[Math.floor(Math.random() * occupations.length)];
+          const hobby1 = hobbies[Math.floor(Math.random() * hobbies.length)];
+          const hobby2 = hobbies[Math.floor(Math.random() * hobbies.length)];
+          
+          return `${name} is a ${age}-year-old ${occupation} from ${location}. Growing up in a supportive family environment, they developed a passion for ${hobby1} and ${hobby2} early on. Currently working remotely, they enjoy the flexibility to pursue personal projects and maintain a balanced lifestyle. Known for being creative and detail-oriented, they value authenticity and meaningful connections. Their most memorable experience was a transformative solo trip that shaped their worldview.`;
+        }
+      };
+      
+      // Generate complete identity
+      const generateIdentity = async () => {
+        // X402 Payment Gate
+        try {
+          await requireX402Payment('Ghost Identity Generator');
+        } catch (e) {
+          pushToast('Payment required to generate identity', 'err');
+          return;
+        }
+        
+        setGenerating(true);
+        
+        try {
+          // Generate random person data
+          const firstNames = ['Alex', 'Jordan', 'Morgan', 'Casey', 'Riley', 'Taylor', 'Drew', 'Sage', 'River', 'Phoenix'];
+          const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez'];
+          const cities = ['Austin, TX', 'Portland, OR', 'Denver, CO', 'Seattle, WA', 'Boston, MA', 'San Diego, CA', 'Chicago, IL', 'Miami, FL'];
+          
+          const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+          const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+          const age = Math.floor(Math.random() * (45 - 25 + 1)) + 25;
+          const location = cities[Math.floor(Math.random() * cities.length)];
+          
+          // Generate face image
+          const faceImageUrl = `https://thispersondoesnotexist.com/?${Date.now()}`;
+          
+          // Generate burner email
+          const email = await generateBurnerEmail();
+          
+          // Generate backstory with AI
+          pushToast('Generating AI backstory...', 'info');
+          const backstory = await generateBackstory(firstName + ' ' + lastName, age, location);
+          
+          const newIdentity = {
+            name: `${firstName} ${lastName}`,
+            age,
+            location,
+            email: email || `${firstName.toLowerCase()}.${lastName.toLowerCase()}@tempmail.com`,
+            username: generateUsername(firstName, lastName),
+            password: generatePassword(),
+            faceImage: faceImageUrl,
+            backstory,
+            generatedAt: new Date().toISOString(),
+            fingerprint: {
+              canvas: Math.random().toString(36).substring(7),
+              webgl: Math.random().toString(36).substring(7),
+              userAgent: 'Randomize: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+          };
+          
+          setIdentity(newIdentity);
+          setBurnerEmail(email);
+          pushToast('✅ Ghost identity generated!', 'ok');
+          
+        } catch (error) {
+          console.error('Error generating identity:', error);
+          pushToast('Failed to generate identity', 'err');
+        } finally {
+          setGenerating(false);
+        }
+      };
+      
+      // Export identity as JSON
+      const exportIdentity = () => {
+        if (!identity) return;
+        
+        const dataStr = JSON.stringify(identity, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `ghost-identity-${Date.now()}.json`;
+        link.click();
+        URL.revokeObjectURL(url);
+        
+        pushToast('Identity exported!', 'ok');
+      };
+      
+      // Copy to clipboard
+      const copyToClipboard = (text, label) => {
+        navigator.clipboard.writeText(text);
+        pushToast(`${label} copied!`, 'ok');
+      };
+      
+      // Spoofing script constant
+      const SPOOFING_SCRIPT = `// Spoof User Agent
+Object.defineProperty(navigator, 'userAgent', {
+  get: () => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+});
+
+// Spoof Platform
+Object.defineProperty(navigator, 'platform', {
+  get: () => 'Win32'
+});
+
+// Spoof Language
+Object.defineProperty(navigator, 'language', {
+  get: () => 'en-US'
+});
+
+// Canvas Randomization
+const originalToDataURL = HTMLCanvasElement.prototype.toDataURL;
+HTMLCanvasElement.prototype.toDataURL = function() {
+  const context = this.getContext('2d');
+  const imageData = context.getImageData(0, 0, this.width, this.height);
+  for(let i = 0; i < imageData.data.length; i += 4) {
+    imageData.data[i] += Math.floor(Math.random() * 10) - 5;
+  }
+  context.putImageData(imageData, 0, 0);
+  return originalToDataURL.apply(this, arguments);
+};
+
+console.log('✅ Fingerprint spoofing active!');`;
+      
+      // Detect current browser fingerprint
+      const detectFingerprint = async () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          ctx.textBaseline = 'top';
+          ctx.font = '14px Arial';
+          ctx.fillText('fingerprint', 2, 2);
+          const canvasHash = canvas.toDataURL().slice(-50);
+          
+          const fingerprint = {
+            userAgent: navigator.userAgent,
+            platform: navigator.platform,
+            language: navigator.language,
+            languages: navigator.languages?.join(',') || '',
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            timezoneOffset: new Date().getTimezoneOffset(),
+            screenResolution: `${screen.width}x${screen.height}`,
+            colorDepth: screen.colorDepth,
+            pixelRatio: window.devicePixelRatio,
+            hardwareConcurrency: navigator.hardwareConcurrency,
+            deviceMemory: navigator.deviceMemory || 'N/A',
+            canvasFingerprint: canvasHash,
+            cookiesEnabled: navigator.cookieEnabled,
+            doNotTrack: navigator.doNotTrack || 'N/A'
+          };
+          
+          setCurrentFingerprint(fingerprint);
+          return fingerprint;
+        } catch (error) {
+          console.error('Error detecting fingerprint:', error);
+          return null;
+        }
+      };
+      
+      // Generate new random fingerprint
+      const generateNewFingerprint = () => {
+        const userAgents = [
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15'
+        ];
+        
+        const platforms = ['Win32', 'MacIntel', 'Linux x86_64'];
+        const timezones = ['America/New_York', 'America/Los_Angeles', 'Europe/London', 'Asia/Tokyo', 'Australia/Sydney'];
+        const languages = ['en-US', 'en-GB', 'es-ES', 'fr-FR', 'de-DE'];
+        const resolutions = ['1920x1080', '2560x1440', '1366x768', '1440x900', '3840x2160'];
+        const colorDepths = [24, 32];
+        const cores = [4, 8, 12, 16];
+        const memory = [4, 8, 16, 32];
+        
+        return {
+          userAgent: userAgents[Math.floor(Math.random() * userAgents.length)],
+          platform: platforms[Math.floor(Math.random() * platforms.length)],
+          language: languages[Math.floor(Math.random() * languages.length)],
+          timezone: timezones[Math.floor(Math.random() * timezones.length)],
+          screenResolution: resolutions[Math.floor(Math.random() * resolutions.length)],
+          colorDepth: colorDepths[Math.floor(Math.random() * colorDepths.length)],
+          hardwareConcurrency: cores[Math.floor(Math.random() * cores.length)],
+          deviceMemory: memory[Math.floor(Math.random() * memory.length)],
+          canvasFingerprint: Math.random().toString(36).substring(7),
+          webglFingerprint: Math.random().toString(36).substring(7)
+        };
+      };
+      
+      // Apply fingerprint spoofing
+      const applyFingerprint = (newFingerprint) => {
+        setShowFingerprintModal(true);
+      };
+      
+      return (
+        <div className="space-y-4">
+          {/* Terminal-Style Header */}
+          <div className="rounded-lg border border-emerald-500/30 bg-black shadow-2xl overflow-hidden">
+            {/* Terminal Top Bar */}
+            <div className="flex items-center justify-between px-4 py-2 bg-slate-950 border-b border-emerald-500/20">
+              <div className="flex items-center gap-3">
+                <div className="flex gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
+                  <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+                  <div className="w-3 h-3 rounded-full bg-emerald-500/80"></div>
+                </div>
+                <span className="text-emerald-400 text-xs font-mono">~/ghost-identity-generator</span>
+              </div>
+              <div className="px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/30">
+                <span className="text-emerald-400 text-[10px] font-mono font-bold">PRIVACY</span>
+              </div>
+            </div>
+            
+            {/* Terminal Content */}
+            <div className="p-6 bg-gradient-to-b from-slate-950 to-black">
+              <div className="space-y-4">
+                {/* Command Line Header */}
+                <div className="font-mono">
+                  <div className="flex items-center gap-2 text-slate-500 text-xs mb-2">
+                    <span className="text-emerald-400">$</span>
+                    <span>./generate_identity.sh --mode=anonymous</span>
+                  </div>
+                  <h1 className="text-2xl font-bold text-emerald-400 mb-1">Ghost Identity Generator</h1>
+                  <p className="text-slate-400 text-sm">Complete anonymous digital persona generation system</p>
+                </div>
+                
+                {/* Stats Table */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="bg-slate-900/50 border border-slate-800 rounded p-3">
+                    <div className="text-[10px] text-slate-500 font-mono mb-1">COMPONENT</div>
+                    <div className="text-sm text-white font-mono">AI_FACE</div>
+                  </div>
+                  <div className="bg-slate-900/50 border border-slate-800 rounded p-3">
+                    <div className="text-[10px] text-slate-500 font-mono mb-1">EMAIL_TYPE</div>
+                    <div className="text-sm text-white font-mono">BURNER</div>
+                  </div>
+                  <div className="bg-slate-900/50 border border-slate-800 rounded p-3">
+                    <div className="text-[10px] text-slate-500 font-mono mb-1">BACKSTORY</div>
+                    <div className="text-sm text-white font-mono">AI_GEN</div>
+                  </div>
+                  <div className="bg-slate-900/50 border border-slate-800 rounded p-3">
+                    <div className="text-[10px] text-slate-500 font-mono mb-1">PASSWORD</div>
+                    <div className="text-sm text-white font-mono">SECURE</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Generate Button - Premium 3D Laser Effect */}
+          {!identity && (
+            <div className="relative group">
+              {/* Animated laser grid background */}
+              <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-cyan-500/20 to-cyan-500/0 animate-pulse"></div>
+                <div className="absolute inset-0" style={{
+                  backgroundImage: 'linear-gradient(rgba(6,182,212,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(6,182,212,0.3) 1px, transparent 1px)',
+                  backgroundSize: '20px 20px',
+                  animation: 'scan 3s linear infinite'
+                }}></div>
+              </div>
+              
+              {/* Glow effects */}
+              <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 via-emerald-500 to-cyan-500 rounded-lg blur-lg opacity-30 group-hover:opacity-60 animate-pulse"></div>
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-400 via-emerald-400 to-cyan-400 rounded-lg blur opacity-0 group-hover:opacity-40 transition-opacity duration-500"></div>
+              
+              {/* Laser scan line */}
+              <div className="absolute inset-0 rounded-lg overflow-hidden pointer-events-none">
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-0 group-hover:opacity-100 group-hover:animate-scan-line"></div>
+              </div>
+              
+              {/* Main button */}
+              <button
+                onClick={generateIdentity}
+                disabled={generating}
+                className="relative w-full py-5 rounded-lg bg-gradient-to-br from-slate-900 via-black to-slate-900 border-2 border-cyan-500/40 hover:border-cyan-400/60 text-cyan-400 font-mono text-sm font-bold disabled:opacity-50 transition-all shadow-2xl shadow-cyan-500/20 hover:shadow-cyan-500/40 overflow-hidden group-hover:scale-[1.02] disabled:hover:scale-100"
+                style={{
+                  textShadow: '0 0 10px rgba(6,182,212,0.5)',
+                  transform: 'translateZ(0)',
+                  backfaceVisibility: 'hidden'
+                }}
+              >
+                {/* Inner glow */}
+                <div className="absolute inset-0 bg-gradient-to-t from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                
+                {/* Corner accents */}
+                <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-cyan-400/60"></div>
+                <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-cyan-400/60"></div>
+                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-cyan-400/60"></div>
+                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-cyan-400/60"></div>
+                
+                {/* Content */}
+                <div className="relative z-10">
+                  {generating ? (
+                    <div className="flex items-center justify-center gap-3">
+                      <div className="relative">
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-cyan-400 border-t-transparent"></div>
+                        <div className="absolute inset-0 animate-ping rounded-full h-5 w-5 border-2 border-cyan-400 opacity-20"></div>
+                      </div>
+                      <span className="tracking-wider">[GENERATING IDENTITY...]</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="text-emerald-400">$</span>
+                        <span className="tracking-wider">GENERATE_IDENTITY</span>
+                      </div>
+                      <div className="text-[10px] text-slate-500">--cost=10000_WHISTLE</div>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Shimmer effect */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+                </div>
+              </button>
+            </div>
+          )}
+          
+          {/* Generated Identity - Terminal Output */}
+          {identity && (
+            <div className="rounded-lg border border-emerald-500/30 bg-black shadow-2xl overflow-hidden">
+              {/* Terminal Header */}
+              <div className="flex items-center justify-between px-4 py-2 bg-slate-950 border-b border-emerald-500/20">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                  <span className="text-emerald-400 text-xs font-mono">output: {identity.name.toLowerCase().replace(' ', '_')}</span>
+                  <span className="text-slate-600 text-xs font-mono">| {new Date(identity.generatedAt).toLocaleTimeString()}</span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={exportIdentity}
+                    className="px-3 py-1 rounded bg-slate-900 border border-slate-700 hover:border-emerald-500/50 text-slate-400 hover:text-emerald-400 text-xs font-mono transition-all"
+                  >
+                    [EXPORT]
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIdentity(null);
+                      setBurnerEmail(null);
+                      setEmailMessages([]);
+                      setSelectedMessage(null);
+                      setMessageBody('');
+                      setCurrentFingerprint(null);
+                      setShowFingerprintModal(false);
+                      setShowEmailModal(false);
+                    }}
+                    className="px-3 py-1 rounded bg-slate-900 border border-slate-700 hover:border-red-500/50 text-slate-400 hover:text-red-400 text-xs font-mono transition-all"
+                  >
+                    [CLEAR]
+                  </button>
+                </div>
+              </div>
+              
+              <div className="p-6 bg-gradient-to-b from-slate-950 to-black space-y-4">
+                {/* Two Column Layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Left Column - Photo + Basic Info */}
+                  <div className="space-y-4">
+                    {/* AI Face */}
+                    <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-4">
+                      <div className="text-[10px] text-emerald-400 font-mono mb-3">$ cat profile_photo.ai</div>
+                      <img 
+                        src={identity.faceImage} 
+                        alt="AI Generated Face" 
+                        className="w-full aspect-square object-cover rounded border border-slate-700 mb-2"
+                        onError={(e) => e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23666" width="200" height="200"/><text x="50%" y="50%" fill="%23fff" text-anchor="middle" dy=".3em">Loading</text></svg>'}
+                      />
+                      <div className="text-[10px] text-slate-600 font-mono">// AI_GENERATED | UNIQUE_HASH</div>
+                    </div>
+                    
+                    {/* Personal Data */}
+                    <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-4">
+                      <div className="text-[10px] text-emerald-400 font-mono mb-3">$ cat personal_info.json</div>
+                      <div className="space-y-2 font-mono text-xs">
+                        <div className="flex">
+                          <span className="text-slate-500 w-20">name:</span>
+                          <span className="text-white">"{identity.name}"</span>
+                        </div>
+                        <div className="flex">
+                          <span className="text-slate-500 w-20">age:</span>
+                          <span className="text-white">{identity.age}</span>
+                        </div>
+                        <div className="flex">
+                          <span className="text-slate-500 w-20">location:</span>
+                          <span className="text-white">"{identity.location}"</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Right Column - Credentials */}
+                  <div className="space-y-4">
+                    {/* Credentials Block */}
+                    <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-4">
+                      <div className="text-[10px] text-emerald-400 font-mono mb-3">$ cat credentials.secure</div>
+                      <div className="space-y-3">
+                        <div>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-[10px] text-slate-500 font-mono">EMAIL_ADDRESS:</span>
+                            <button 
+                              onClick={() => copyToClipboard(identity.email, 'Email')}
+                              className="text-[10px] text-emerald-400 hover:text-emerald-300 font-mono"
+                            >
+                              [COPY]
+                            </button>
+                          </div>
+                          <div className="text-white text-xs font-mono bg-black/60 px-2 py-1.5 rounded border border-slate-700">{identity.email}</div>
+                        </div>
+                        <div>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-[10px] text-slate-500 font-mono">USERNAME:</span>
+                            <button 
+                              onClick={() => copyToClipboard(identity.username, 'Username')}
+                              className="text-[10px] text-emerald-400 hover:text-emerald-300 font-mono"
+                            >
+                              [COPY]
+                            </button>
+                          </div>
+                          <div className="text-white text-xs font-mono bg-black/60 px-2 py-1.5 rounded border border-slate-700">{identity.username}</div>
+                        </div>
+                        <div>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-[10px] text-slate-500 font-mono">PASSWORD:</span>
+                            <button 
+                              onClick={() => copyToClipboard(identity.password, 'Password')}
+                              className="text-[10px] text-emerald-400 hover:text-emerald-300 font-mono"
+                            >
+                              [COPY]
+                            </button>
+                          </div>
+                          <div className="text-white text-xs font-mono bg-black/60 px-2 py-1.5 rounded border border-slate-700">{identity.password}</div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Email Access */}
+                    {burnerEmail && (
+                      <button
+                        onClick={() => {
+                          checkEmailMessages(burnerEmail);
+                          setShowEmailModal(true);
+                        }}
+                        className="w-full py-3 rounded bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 hover:border-emerald-500/50 text-emerald-400 text-xs font-mono font-bold transition-all"
+                      >
+                        $ ACCESS_EMAIL_INBOX
+                      </button>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Backstory */}
+                <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-4">
+                  <div className="text-[10px] text-emerald-400 font-mono mb-3">$ cat backstory.txt</div>
+                  <div className="text-slate-300 leading-relaxed text-xs font-mono">{identity.backstory}</div>
+                </div>
+                
+                {/* Digital Footprint Eraser */}
+                <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <div className="text-[10px] text-cyan-400 font-mono">$ ./erase_fingerprint.sh</div>
+                    <button
+                      onClick={async () => {
+                        await detectFingerprint();
+                        pushToast('Current fingerprint detected', 'ok');
+                      }}
+                      className="px-3 py-1 rounded bg-slate-950 border border-slate-700 hover:border-cyan-500/50 text-cyan-400 text-[10px] font-mono transition-all"
+                    >
+                      [SCAN_CURRENT]
+                    </button>
+                  </div>
+                  
+                  {!currentFingerprint ? (
+                    <div className="text-center py-6">
+                      <div className="text-slate-500 text-xs font-mono mb-2">// No fingerprint scanned</div>
+                      <div className="text-slate-600 text-xs font-mono">Click [SCAN_CURRENT] to analyze browser data</div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {/* Current Fingerprint */}
+                      <div className="bg-black/60 border border-red-900/50 rounded p-3">
+                        <div className="text-[10px] text-red-400 font-mono mb-2">// DETECTED_FINGERPRINT</div>
+                        <div className="space-y-1.5 text-[10px] font-mono">
+                          <div className="flex">
+                            <span className="text-slate-600 w-28">user_agent:</span>
+                            <span className="text-slate-300 truncate">{currentFingerprint.userAgent.slice(0, 40)}...</span>
+                          </div>
+                          <div className="flex">
+                            <span className="text-slate-600 w-28">platform:</span>
+                            <span className="text-slate-300">{currentFingerprint.platform}</span>
+                          </div>
+                          <div className="flex">
+                            <span className="text-slate-600 w-28">screen:</span>
+                            <span className="text-slate-300">{currentFingerprint.screenResolution}</span>
+                          </div>
+                          <div className="flex">
+                            <span className="text-slate-600 w-28">timezone:</span>
+                            <span className="text-slate-300">{currentFingerprint.timezone}</span>
+                          </div>
+                          <div className="flex">
+                            <span className="text-slate-600 w-28">language:</span>
+                            <span className="text-slate-300">{currentFingerprint.language}</span>
+                          </div>
+                          <div className="flex">
+                            <span className="text-slate-600 w-28">canvas_hash:</span>
+                            <span className="text-slate-300">{currentFingerprint.canvasFingerprint}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Generate New Fingerprint Button */}
+                      <button
+                        onClick={() => {
+                          const newFingerprint = generateNewFingerprint();
+                          applyFingerprint(newFingerprint);
+                        }}
+                        className="w-full py-2.5 rounded bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 hover:border-cyan-500/50 text-cyan-400 text-[10px] font-mono font-bold transition-all"
+                      >
+                        $ GENERATE_NEW_FINGERPRINT
+                      </button>
+                      
+                      <div className="text-[10px] text-slate-600 font-mono text-center">
+                        // Guide: Apply randomized fingerprint via browser extensions
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Fingerprint Spoofing Modal */}
+                {showFingerprintModal && (
+                  <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-black border border-cyan-500/30 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+                      {/* Terminal Header */}
+                      <div className="flex items-center justify-between px-4 py-2 bg-slate-950 border-b border-cyan-500/20">
+                        <div className="flex items-center gap-3">
+                          <div className="flex gap-1.5">
+                            <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
+                            <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+                            <div className="w-3 h-3 rounded-full bg-emerald-500/80"></div>
+                          </div>
+                          <span className="text-cyan-400 text-xs font-mono">~/erase_fingerprint_guide.sh</span>
+                        </div>
+                        <button
+                          onClick={() => setShowFingerprintModal(false)}
+                          className="text-slate-400 hover:text-white text-xs font-mono"
+                        >
+                          [X]
+                        </button>
+                      </div>
+                      
+                      {/* Body */}
+                      <div className="p-6 bg-gradient-to-b from-slate-950 to-black overflow-y-auto flex-1 space-y-4 font-mono text-xs">
+                        <div className="text-cyan-400 mb-4">$ cat fingerprint_removal_steps.txt</div>
+                        
+                        {/* Step 1 */}
+                        <div className="bg-slate-900/50 border border-slate-800 rounded p-4">
+                          <div className="text-emerald-400 mb-3">[STEP_1] Install Browser Extensions</div>
+                          <div className="space-y-2 pl-4">
+                            <div className="bg-black/60 border border-slate-700 rounded p-2">
+                              <div className="text-white mb-1">▸ Canvas Fingerprint Defender</div>
+                              <div className="text-slate-400 text-[10px] mb-1">// Randomizes canvas fingerprinting</div>
+                              <a 
+                                href="https://chrome.google.com/webstore/detail/canvas-fingerprint-defend/lanfdkkpgfjfdikkncbnojekcppdebfp" 
+                                target="_blank"
+                                className="text-cyan-400 hover:text-cyan-300 text-[10px]"
+                              >
+                                chrome.google.com/webstore →
+                              </a>
+                            </div>
+                            <div className="bg-black/60 border border-slate-700 rounded p-2">
+                              <div className="text-white mb-1">▸ User-Agent Switcher</div>
+                              <div className="text-slate-400 text-[10px] mb-1">// Change browser identity</div>
+                              <a 
+                                href="https://chrome.google.com/webstore/detail/user-agent-switcher-for-c/djflhoibgkdhkhhcedjiklpkjnoahfmg" 
+                                target="_blank"
+                                className="text-cyan-400 hover:text-cyan-300 text-[10px]"
+                              >
+                                chrome.google.com/webstore →
+                              </a>
+                            </div>
+                            <div className="bg-black/60 border border-slate-700 rounded p-2">
+                              <div className="text-white mb-1">▸ Location Guard</div>
+                              <div className="text-slate-400 text-[10px] mb-1">// Fake geolocation</div>
+                              <a 
+                                href="https://chrome.google.com/webstore/detail/location-guard/cfohepagpmnodfdmjliccbbigdkfcgia" 
+                                target="_blank"
+                                className="text-cyan-400 hover:text-cyan-300 text-[10px]"
+                              >
+                                chrome.google.com/webstore →
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Step 2 */}
+                        <div className="bg-slate-900/50 border border-slate-800 rounded p-4">
+                          <div className="text-emerald-400 mb-3">[STEP_2] Use Brave Browser (Recommended)</div>
+                          <div className="pl-4 space-y-2">
+                            <div className="text-slate-300 text-[10px] mb-2">// Built-in fingerprinting protection</div>
+                            <div className="bg-black/60 border border-slate-700 rounded p-3 space-y-1 text-[10px]">
+                              <div className="text-slate-400">▸ Settings → Shields → Fingerprinting: <span className="text-white">Aggressive</span></div>
+                              <div className="text-slate-400">▸ Enable "Block trackers & ads"</div>
+                              <div className="text-slate-400">▸ Enable "Upgrade connections to HTTPS"</div>
+                              <div className="text-slate-400">▸ Disable WebRTC IP leak</div>
+                            </div>
+                            <a 
+                              href="https://brave.com/download/" 
+                              target="_blank"
+                              className="inline-block mt-2 px-3 py-1.5 rounded bg-slate-900 border border-slate-700 hover:border-cyan-500/50 text-cyan-400 hover:text-cyan-300 text-[10px] transition-all"
+                            >
+                              brave.com/download →
+                            </a>
+                          </div>
+                        </div>
+                        
+                        {/* Step 3 */}
+                        <div className="bg-slate-900/50 border border-slate-800 rounded p-4">
+                          <div className="text-emerald-400 mb-3">[STEP_3] Console Script (Advanced/Temporary)</div>
+                          <div className="pl-4 space-y-2">
+                            <div className="text-slate-400 text-[10px] mb-2">// Paste in browser console (F12) for temporary spoofing</div>
+                            <div className="bg-black rounded border border-slate-700 p-3 relative">
+                              <pre className="text-[10px] text-emerald-400 overflow-x-auto whitespace-pre-wrap">
+{SPOOFING_SCRIPT}
+                              </pre>
+                              <button
+                                onClick={() => copyToClipboard(SPOOFING_SCRIPT, 'Spoofing script')}
+                                className="absolute top-2 right-2 px-2 py-1 rounded bg-slate-900 border border-slate-700 hover:border-cyan-500/50 text-cyan-400 text-[9px] transition-all"
+                              >
+                                [COPY]
+                              </button>
+                            </div>
+                            <div className="text-yellow-600 text-[10px] mt-2">
+                              // WARNING: Temporary only. Resets on page reload. Use extensions for permanent protection.
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Step 4 */}
+                        <div className="bg-slate-900/50 border border-slate-800 rounded p-4">
+                          <div className="text-emerald-400 mb-3">[STEP_4] Verify Your New Fingerprint</div>
+                          <div className="pl-4 space-y-2">
+                            <div className="text-slate-400 text-[10px] mb-2">// Test your fingerprint at these sites:</div>
+                            <div className="space-y-1.5">
+                              <a 
+                                href="https://browserleaks.com/canvas" 
+                                target="_blank"
+                                className="block bg-black/60 border border-slate-700 rounded p-2 hover:border-cyan-500/50 transition-all"
+                              >
+                                <div className="text-cyan-400 text-[10px]">▸ browserleaks.com/canvas</div>
+                                <div className="text-slate-500 text-[9px]">// Test canvas fingerprinting</div>
+                              </a>
+                              <a 
+                                href="https://amiunique.org/" 
+                                target="_blank"
+                                className="block bg-black/60 border border-slate-700 rounded p-2 hover:border-cyan-500/50 transition-all"
+                              >
+                                <div className="text-cyan-400 text-[10px]">▸ amiunique.org</div>
+                                <div className="text-slate-500 text-[9px]">// Full fingerprint analysis</div>
+                              </a>
+                              <a 
+                                href="https://coveryourtracks.eff.org/" 
+                                target="_blank"
+                                className="block bg-black/60 border border-slate-700 rounded p-2 hover:border-cyan-500/50 transition-all"
+                              >
+                                <div className="text-cyan-400 text-[10px]">▸ coveryourtracks.eff.org</div>
+                                <div className="text-slate-500 text-[9px]">// EFF privacy check</div>
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Footer */}
+                      <div className="border-t border-cyan-500/20 p-3 bg-slate-950">
+                        <div className="text-[10px] text-slate-500 font-mono">
+                          // PRO_TIP: Change fingerprint regularly. Use different profiles for different activities.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Email Inbox Modal */}
+                {showEmailModal && burnerEmail && (
+                  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-slate-900 rounded-2xl border border-blue-500/30 max-w-3xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+                      {/* Header */}
+                      <div className="bg-gradient-to-r from-blue-600/20 to-cyan-600/20 border-b border-blue-500/30 p-6">
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <h3 className="text-2xl font-bold text-white mb-2">📧 Burner Email Inbox</h3>
+                            <div className="flex items-center gap-2">
+                              <div className="text-white font-mono text-sm bg-black/50 px-3 py-1 rounded">{burnerEmail}</div>
+                              <button
+                                onClick={() => copyToClipboard(burnerEmail, 'Email address')}
+                                className="text-blue-400 hover:text-blue-300 text-sm"
+                              >
+                                📋
+                              </button>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setShowEmailModal(false);
+                              setSelectedMessage(null);
+                              setMessageBody('');
+                            }}
+                            className="text-slate-400 hover:text-white transition-all"
+                          >
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                        
+                        {/* Refresh Button */}
+                        <button
+                          onClick={() => checkEmailMessages(burnerEmail)}
+                          className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold transition-all"
+                        >
+                          🔄 Refresh Messages
+                        </button>
+                      </div>
+                      
+                      {/* Body - Messages List */}
+                      <div className="p-6 overflow-y-auto flex-1">
+                        <div className="text-xs text-slate-400 mb-4">
+                          💡 This email is temporary and expires in a few hours. Messages will appear here when received.
+                        </div>
+                        
+                        {emailMessages.length === 0 ? (
+                          <div className="text-center py-12">
+                            <div className="text-6xl mb-4">📭</div>
+                            <div className="text-slate-400 text-lg mb-2">No messages yet</div>
+                            <div className="text-slate-500 text-sm">Send a test email to verify it works!</div>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {emailMessages.map((msg, idx) => (
+                              <div 
+                                key={idx} 
+                                onClick={() => readMessage(burnerEmail, msg.id)}
+                                className="bg-black/50 rounded-xl p-5 border border-blue-500/10 hover:border-blue-500/30 cursor-pointer transition-all hover:bg-black/70 hover:scale-[1.02]"
+                              >
+                                <div className="flex justify-between items-start mb-3">
+                                  <div className="text-white font-bold text-base">{msg.subject || '(No Subject)'}</div>
+                                  <div className="text-slate-500 text-xs whitespace-nowrap ml-3">{new Date(msg.date).toLocaleString()}</div>
+                                </div>
+                                <div className="text-slate-400 text-sm mb-2">
+                                  <span className="text-slate-500">From:</span> {msg.from}
+                                </div>
+                                <div className="text-blue-400 text-sm font-bold">
+                                  Click to read full message →
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Footer */}
+                      <div className="border-t border-blue-500/30 p-4 bg-blue-500/5">
+                        <div className="flex items-center gap-3 text-sm">
+                          <span className="text-blue-400">💡</span>
+                          <div className="text-slate-300">
+                            <span className="font-bold">Tip:</span> Send yourself a test email to verify the inbox is working!
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Email Inbox (embedded - hidden now) */}
+                {false && burnerEmail && (
+                  <div className="mt-6 bg-black/40 rounded-2xl p-6 border border-blue-500/20">
+                    <div className="flex justify-between items-center mb-4">
+                      <div>
+                        <div className="text-blue-400 text-sm font-bold mb-1">📧 BURNER EMAIL INBOX</div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-white font-mono text-xs bg-black/50 px-2 py-1 rounded">{burnerEmail}</div>
+                          <button
+                            onClick={() => copyToClipboard(burnerEmail, 'Email address')}
+                            className="text-blue-400 hover:text-blue-300 text-xs"
+                          >
+                            📋
+                          </button>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => checkEmailMessages(burnerEmail)}
+                        className="px-3 py-2 rounded bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all"
+                      >
+                        🔄 Refresh
+                      </button>
+                    </div>
+                    
+                    <div className="text-xs text-slate-400 mb-4">
+                      💡 This email is temporary and expires in a few hours. Send test emails to verify it works!
+                    </div>
+                    
+                    {emailMessages.length === 0 ? (
+                      <div className="text-center py-8">
+                        <div className="text-slate-400 text-sm mb-2">📭 No messages yet</div>
+                        <div className="text-slate-500 text-xs">Messages will appear here when received</div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {emailMessages.map((msg, idx) => (
+                          <div 
+                            key={idx} 
+                            onClick={() => readMessage(burnerEmail, msg.id)}
+                            className="bg-black/50 rounded-lg p-4 border border-blue-500/10 hover:border-blue-500/30 cursor-pointer transition-all hover:bg-black/70"
+                          >
+                            <div className="flex justify-between items-start mb-2">
+                              <div className="text-white font-bold text-sm">{msg.subject || '(No Subject)'}</div>
+                              <div className="text-slate-500 text-xs">{new Date(msg.date).toLocaleString()}</div>
+                            </div>
+                            <div className="text-slate-400 text-xs">📤 From: {msg.from}</div>
+                            <div className="text-blue-400 text-xs mt-2">Click to read →</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Message Viewer Modal */}
+                    {selectedMessage && (
+                      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <div className="bg-slate-900 rounded-2xl border border-blue-500/30 max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+                          {/* Header */}
+                          <div className="bg-gradient-to-r from-blue-600/20 to-cyan-600/20 border-b border-blue-500/30 p-6">
+                            <div className="flex justify-between items-start mb-3">
+                              <div>
+                                <h3 className="text-xl font-bold text-white mb-1">{selectedMessage.subject || '(No Subject)'}</h3>
+                                <div className="text-slate-400 text-sm">From: {selectedMessage.from}</div>
+                                <div className="text-slate-500 text-xs mt-1">{new Date(selectedMessage.date).toLocaleString()}</div>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  setSelectedMessage(null);
+                                  setMessageBody('');
+                                }}
+                                className="text-slate-400 hover:text-white transition-all"
+                              >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                            
+                            {/* Attachments */}
+                            {selectedMessage.attachments && selectedMessage.attachments.length > 0 && (
+                              <div className="mt-3 flex items-center gap-2">
+                                <span className="text-yellow-400 text-xs">📎 Attachments:</span>
+                                {selectedMessage.attachments.map((att, i) => (
+                                  <span key={i} className="text-xs bg-yellow-500/20 text-yellow-300 px-2 py-1 rounded border border-yellow-500/30">
+                                    {att.filename} ({att.size} bytes)
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Body */}
+                          <div className="p-6 overflow-y-auto flex-1">
+                            <div className="text-white whitespace-pre-wrap leading-relaxed">
+                              {messageBody}
+                            </div>
+                          </div>
+                          
+                          {/* Footer */}
+                          <div className="border-t border-blue-500/30 p-4 flex justify-end gap-2">
+                            <button
+                              onClick={() => copyToClipboard(messageBody, 'Message content')}
+                              className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold transition-all"
+                            >
+                              📋 Copy Content
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedMessage(null);
+                                setMessageBody('');
+                              }}
+                              className="px-4 py-2 rounded bg-slate-700 hover:bg-slate-600 text-white text-sm font-bold transition-all"
+                            >
+                              Close
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Generate New */}
+                <div className="mt-6 text-center">
+                  <button
+                    onClick={generateIdentity}
+                    disabled={generating}
+                    className="px-8 py-4 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-bold shadow-xl disabled:opacity-50 transition-all"
+                  >
+                    {generating ? 'Generating...' : '🎭 Generate Another Identity'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Disclaimer */}
+          <div className="bg-black/80 border border-yellow-500/40 rounded-lg p-4">
+            <div className="text-[10px] text-yellow-400 font-mono mb-2">// WARNING</div>
+            <div className="text-white text-xs font-mono leading-relaxed">
+              This tool generates fictional identities for privacy protection, testing, and creative purposes only. 
+              Do not use for fraud, identity theft, or illegal activities. Email expires after a few hours.
+            </div>
+          </div>
     </div>
       );
     }
@@ -3997,6 +5025,7 @@
       const items = [
         { id:'home',    label:'Home', emoji:'🏛️', color:'cyan' },
         { id:'offline-network', label:'Ghost Whistle', emoji:'👻', special: true, color:'emerald' },
+        { id:'ghost-identity', label:'Ghost Identity', icon:'alert-circle', special: true, color:'cyan' },
         { id:'social-hub', label:'Ghost Terminal', emoji:'🖥️', color:'cyan' },
         { id:'services', label:'Ghost Services', emoji:'✨', color:'purple' },
         { id:'how-it-works', label:'How It Works', emoji:'💡', color:'blue' },
@@ -4015,6 +5044,8 @@
             <nav className="space-y-2">
               {items.map((x,i)=> {
                 const isGhostWhistle = x.id === 'offline-network';
+                const isGhostIdentity = x.id === 'ghost-identity';
+                const isSpecial = isGhostWhistle || isGhostIdentity;
                 const isActive = step === x.id;
                 
                 return (
@@ -4031,6 +5062,10 @@
                         ? isActive
                           ? 'relative border-emerald-400/60 bg-gradient-to-r from-emerald-400/20 via-teal-400/20 to-cyan-400/20 text-white shadow-lg shadow-emerald-500/30 animate-pulse'
                           : 'relative border-emerald-500/40 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-cyan-500/10 text-emerald-100 hover:border-emerald-400/60 hover:shadow-lg hover:shadow-emerald-500/20 hover:scale-[1.03] animate-shimmer'
+                        : isGhostIdentity
+                        ? isActive
+                          ? 'relative border-cyan-400/60 bg-gradient-to-r from-cyan-400/20 via-emerald-400/20 to-teal-400/20 text-white shadow-lg shadow-cyan-500/30 animate-pulse'
+                          : 'relative border-cyan-500/40 bg-gradient-to-r from-cyan-500/10 via-emerald-500/10 to-teal-500/10 text-cyan-100 hover:border-cyan-400/60 hover:shadow-lg hover:shadow-cyan-500/20 hover:scale-[1.03] animate-shimmer'
                         : isActive
                     ? 'border-cyan-400/60 bg-cyan-400/15 text-cyan-100 scale-in'
                           : 'border-white/10 bg-white/[0.03] text-white/80 hover:bg-white/[0.07] hover:scale-[1.02]'
@@ -4041,18 +5076,31 @@
                         <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-r from-transparent via-emerald-400/30 to-transparent blur-sm animate-shimmer-slide"></div>
                       </>
                     )}
+                    {isGhostIdentity && !isActive && (
+                      <>
+                        <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-cyan-400/0 via-cyan-400/20 to-cyan-400/0 animate-shimmer-slide"></div>
+                        <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent blur-sm animate-shimmer-slide"></div>
+                      </>
+                    )}
                     <span className="relative z-10 flex items-center gap-3 w-full">
                       <span className={`flex items-center justify-center w-5 h-5 ${isActive ? 'animate-pulse' : ''}`}>
                         {x.image ? (
                           <img src={x.image} alt={x.label} className="w-5 h-5 object-contain rounded" />
+                        ) : x.icon ? (
+                          <i data-lucide={x.icon} className="w-5 h-5"></i>
                         ) : (
                           <span className="text-lg">{x.emoji}</span>
                         )}
                       </span>
-                      <span className={isGhostWhistle ? 'font-bold' : ''}>{x.label}</span>
+                      <span className={isSpecial ? 'font-bold' : ''}>{x.label}</span>
                       {isGhostWhistle && (
                         <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 font-bold uppercase tracking-wider border border-emerald-400/40">
                           Earn
+                        </span>
+                      )}
+                      {isGhostIdentity && (
+                        <span className="ml-auto text-[10px] px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono font-bold uppercase tracking-wider border border-cyan-400/40">
+                          NEW
                         </span>
                       )}
                     </span>
@@ -16660,7 +17708,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'offline-network', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
+      const validSteps = ['home', 'webrtc', 'offline-network', 'ghost-identity', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -16695,6 +17743,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                       case 'home': return <Home setStep={setStepGuarded} />;
                       case 'webrtc': return <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />;
                       case 'offline-network': return <OfflineNetworkHub pushToast={push} setStep={setStepGuarded} />;
+                      case 'ghost-identity': return <GhostIdentityGenerator pushToast={push} />;
                       case 'social-hub': 
                         console.log('🎯 Switching to SocialHub component');
                         return <SocialHub pushToast={push} setStep={setStepGuarded} />;
@@ -17525,7 +18574,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'offline-network', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
+      const validSteps = ['home', 'webrtc', 'offline-network', 'ghost-identity', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -17560,6 +18609,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                       case 'home': return <Home setStep={setStepGuarded} />;
                       case 'webrtc': return <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />;
                       case 'offline-network': return <OfflineNetworkHub pushToast={push} setStep={setStepGuarded} />;
+                      case 'ghost-identity': return <GhostIdentityGenerator pushToast={push} />;
                       case 'social-hub': 
                         console.log('🎯 Switching to SocialHub component');
                         return <SocialHub pushToast={push} setStep={setStepGuarded} />;
