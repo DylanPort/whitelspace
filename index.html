@@ -3076,9 +3076,62 @@
             </div>
           </div>
           
+          {/* Test It Here - Instant Demo */}
+          {spoofing && selectedLocation && !targetUrl && (
+            <div className="bg-gradient-to-br from-cyan-900/30 via-black to-blue-900/30 border-2 border-cyan-500/50 rounded-lg p-6">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="text-3xl">🧪</div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-cyan-400 font-mono mb-2">🎯 TEST IT HERE (INSTANT PROOF)</h3>
+                  <p className="text-white font-mono text-sm mb-4">
+                    See it working on THIS page before trying external sites!
+                  </p>
+                  
+                  <div className="bg-black/80 border border-cyan-500/30 rounded-lg p-4 mb-4">
+                    <div className="text-cyan-400 font-mono text-xs mb-2">📍 YOUR CURRENT LOCATION:</div>
+                    <div id="current-location-test" className="bg-slate-900 rounded p-3 text-emerald-400 font-mono text-sm">
+                      Click "Test Spoof" below to check...
+                    </div>
+                  </div>
+                  
+                  <button
+                    onClick={() => {
+                      if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(
+                          (position) => {
+                            const testDiv = document.getElementById('current-location-test');
+                            if (testDiv) {
+                              testDiv.innerHTML = `
+                                ✅ SPOOFED LOCATION:<br>
+                                📍 ${selectedLocation.name}<br>
+                                🌍 Lat: ${position.coords.latitude.toFixed(4)}<br>
+                                🌍 Lon: ${position.coords.longitude.toFixed(4)}<br>
+                                <span class="text-emerald-400">✅ WORKING PERFECTLY!</span>
+                              `;
+                            }
+                            pushToast(`✅ Spoof confirmed! Showing: ${selectedLocation.name}`, 'ok');
+                          },
+                          (error) => {
+                            pushToast('❌ Location permission denied', 'err');
+                          }
+                        );
+                      }
+                    }}
+                    className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-mono font-bold py-4 rounded-lg transition-all shadow-lg"
+                  >
+                    🧪 TEST SPOOF ON THIS PAGE
+                  </button>
+                  <p className="text-slate-400 text-xs mt-3 font-mono text-center">
+                    ⚡ This works because the spoofer is active on our site! External sites need console method.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* Bookmarklet Display (when active) */}
-          {spoofing && selectedLocation && (
-            <div className="bg-gradient-to-br from-emerald-900/30 via-black to-cyan-900/30 border-2 border-emerald-500/50 rounded-lg p-6 animate-pulse">
+          {spoofing && selectedLocation && !targetUrl && (
+            <div className="bg-gradient-to-br from-emerald-900/30 via-black to-cyan-900/30 border-2 border-emerald-500/50 rounded-lg p-6">
               <div className="flex items-start gap-3 mb-4">
                 <div className="text-3xl">🔗</div>
                 <div className="flex-1">
@@ -3253,9 +3306,20 @@
                   <div className="flex items-center gap-3 mb-4">
                     <div className="text-3xl">🎯</div>
                     <div>
-                      <h4 className="text-purple-400 font-bold font-mono">READY TO SPOOF</h4>
-                      <p className="text-slate-300 text-xs font-mono">Location: {selectedLocation.emoji} {selectedLocation.name}</p>
+                      <h4 className="text-purple-400 font-bold font-mono">STEP-BY-STEP ACTIVATION</h4>
+                      <p className="text-slate-300 text-xs font-mono">Spoofing to: {selectedLocation.emoji} {selectedLocation.name}</p>
                     </div>
+                  </div>
+                  
+                  <div className="bg-black/80 border border-yellow-500/30 rounded-lg p-4 mb-4">
+                    <div className="text-yellow-400 font-mono text-xs font-bold mb-3">📋 FOLLOW THESE STEPS:</div>
+                    <ol className="text-slate-300 text-sm space-y-2 font-mono list-decimal list-inside">
+                      <li className="text-cyan-400">Click the button below → Website opens + code copies</li>
+                      <li className="text-emerald-400">On the new tab, press <span className="bg-slate-900 px-2 py-1 rounded">F12</span> (opens console)</li>
+                      <li className="text-purple-400">In Chrome: Type <span className="bg-slate-900 px-2 py-1 rounded">allow pasting</span> and press Enter</li>
+                      <li className="text-pink-400">Press <span className="bg-slate-900 px-2 py-1 rounded">Ctrl+V</span> (paste code) → Press <span className="bg-slate-900 px-2 py-1 rounded">Enter</span></li>
+                      <li className="text-orange-400">Refresh the page <span className="bg-slate-900 px-2 py-1 rounded">F5</span> → Location is spoofed! ✅</li>
+                    </ol>
                   </div>
                   
                   <button
@@ -3264,17 +3328,17 @@
                       navigator.clipboard.writeText(bookmarklet);
                       const newWindow = window.open(targetUrl, '_blank');
                       if (newWindow) {
-                        pushToast(`📍 Opening ${targetUrl.split('/')[2]}... Bookmarklet copied! Paste in console (F12)`, 'ok');
+                        pushToast(`✅ Website opened! CODE COPIED! Now paste in console (F12 → Ctrl+V → Enter)`, 'ok');
                       } else {
-                        pushToast('Bookmarklet copied! Enable popups and try again.', 'warn');
+                        pushToast('❌ Popup blocked! Enable popups for this site.', 'err');
                       }
                     }}
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-mono font-bold py-4 rounded-lg transition-all shadow-lg"
+                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-mono font-bold py-4 rounded-lg transition-all shadow-lg animate-pulse"
                   >
-                    🚀 OPEN {targetUrl.split('/')[2]?.toUpperCase() || 'WEBSITE'} WITH SPOOFER
+                    🚀 STEP 1: OPEN {targetUrl.split('/')[2]?.toUpperCase() || 'WEBSITE'} + COPY CODE
                   </button>
-                  <p className="text-slate-400 text-xs mt-3 font-mono text-center">
-                    ⚡ Opens website + auto-copies bookmarklet to clipboard
+                  <p className="text-red-400 text-xs mt-3 font-mono text-center font-bold">
+                    ⚠️ IMPORTANT: Just opening the site is NOT enough! You MUST paste the code in console (F12) and refresh!
                   </p>
                 </div>
               )}
