@@ -12243,8 +12243,15 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
     const TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
     const SYSTEM_PROGRAM_ID = solanaWeb3.SystemProgram.programId;
     // x402 helpers
-    async function getX402Token(hops = 3) {
+    async function getX402Token(hops = 3, feature = null) {
       try {
+        // Check if this feature is free (staking/nodes)
+        const freeFeatures = ['stake', 'unstake', 'run-node', 'staking', 'node'];
+        if (feature && freeFeatures.some(f => feature.toLowerCase().includes(f))) {
+          console.log(`🆓 Feature "${feature}" is free - bypassing x402 payment`);
+          return 'FREE_ACCESS';
+        }
+        
         const now = Math.floor(Date.now() / 1000);
         const cached = localStorage.getItem('x402_token');
         const exp = parseInt(localStorage.getItem('x402_exp') || '0', 10);
@@ -12281,9 +12288,28 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
               secretKey = new Uint8Array(mobilePrivateKey.split(',').map(n => parseInt(n)));
             } else {
               // Base58 format (default)
-              const bs58Decoder = window.bs58?.decode || window.bs58?.default?.decode;
-              if (!bs58Decoder) throw new Error('bs58 library not loaded');
-              secretKey = bs58Decoder(mobilePrivateKey);
+              // Try multiple ways to access bs58
+              const bs58Decoder = window.bs58?.decode || window.bs58?.default?.decode || 
+                                  (typeof bs58 !== 'undefined' && bs58.decode);
+              
+              if (!bs58Decoder) {
+                console.error('❌ bs58 library not available. Available:', { 
+                  'window.bs58': typeof window.bs58,
+                  'global bs58': typeof bs58 
+                });
+                // Fallback: try to decode as base64 or array
+                console.warn('⚠️ Attempting fallback decoding...');
+                try {
+                  // Try as base64
+                  const Buf = window.Buffer || Buffer;
+                  secretKey = Buf.from(mobilePrivateKey, 'base64');
+                } catch {
+                  // Try as comma-separated array
+                  secretKey = new Uint8Array(mobilePrivateKey.split(',').map(n => parseInt(n)));
+                }
+              } else {
+                secretKey = bs58Decoder(mobilePrivateKey);
+              }
             }
             
             // Reconstruct keypair
@@ -12329,7 +12355,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         const { accessToken, ttlSeconds } = await window.requestX402AndPay({ 
           wallet, 
           hops,
-          keypair  // null for desktop, keypair object for mobile
+          keypair,  // null for desktop, keypair object for mobile
+          feature   // Pass feature name to check if it's free
         });
         
         localStorage.setItem('x402_token', accessToken);
