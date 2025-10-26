@@ -12530,25 +12530,30 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
     
     // x402-gate ALL privacy features (EXCEPT staking/nodes which are FREE)
     async function requireX402Payment(featureName, hops = 1) {
-      // 🆓 FREE FEATURES: Staking and Node Operations
-      const freeFeatures = ['stake', 'unstake', 'staking', 'node', 'run node', 'run-node', 'privacy node'];
-      const isFreeFeature = freeFeatures.some(f => featureName.toLowerCase().includes(f));
+      // 🆓 FREE FEATURES: ONLY Staking, Unstaking, and Node Operations
+      // Everything else REQUIRES PAYMENT!
+      const featureLower = featureName.toLowerCase().trim();
       
-      if (isFreeFeature) {
+      // Exact matches for free operations
+      const exactFreeMatches = [
+        'stake tokens',
+        'unstake tokens',
+        'run node',
+        'privacy node',
+        'start node'
+      ];
+      
+      // Also check if it contains these keywords for staking/node ops
+      const freeKeywords = ['staking', 'unstaking'];
+      const isExactMatch = exactFreeMatches.includes(featureLower);
+      const hasKeyword = freeKeywords.some(keyword => featureLower.includes(keyword));
+      
+      if (isExactMatch || hasKeyword) {
         console.log(`🆓 "${featureName}" is FREE - no payment required`);
         return 'FREE_ACCESS';
       }
       
-      // 🧪 TESTING BYPASS: Disable x402 if flag is set
-      const bypassMode = localStorage.getItem('x402_bypass') === 'true';
-      if (bypassMode) {
-        console.log(`🧪 x402 BYPASS: "${featureName}" - payment skipped (testing mode)`);
-        if (window.pushToast) {
-          window.pushToast(`🧪 Testing mode: ${featureName} unlocked`, 'info');
-        }
-        return 'bypass_token';
-      }
-      
+      // ⚠️ ALL OTHER FEATURES REQUIRE PAYMENT - NO BYPASS!
       try {
         console.log(`🔐 x402: "${featureName}" requires payment`);
         if (window.pushToast) {
