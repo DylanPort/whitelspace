@@ -1,15 +1,11 @@
 const crypto = require('crypto');
 const { Connection, PublicKey } = require('@solana/web3.js');
-const { getAssociatedTokenAddressSync } = require('@solana/spl-token');
 
 // Configuration
 const PROGRAM_ID = '2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq';
 const WHISTLE_MINT = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';
 const RPC_URL = process.env.SOLANA_RPC_URL || 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
-// v10 client sends 10,000 WHISTLE with 6 decimals → 10,000 * 10^6
-const EXPECTED_AMOUNT = 10_000_000_000; // 10,000 WHISTLE (6 decimals)
-// Support v10 direct-transfer to collector ATA, and newer pool PDA deposits
-const FEE_COLLECTOR_WALLET = 'G1RHSMtZVZLafmZ9man8anb2HXf7JP5Kh5sbrGZKM6Pg';
+const EXPECTED_AMOUNT = 10_000_000_000; // 10,000 WHISTLE (6 decimals = 10,000 * 1e6)
 
 exports.handler = async (event, context) => {
   const headers = {
@@ -48,37 +44,53 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Derive pool PDA and collector ATA to verify destination
+    // Derive pool PDA and pool vault to verify deposit
+    const programIdPubkey = new PublicKey(PROGRAM_ID);
+    const whistleMintPubkey = new PublicKey(WHISTLE_MINT);
+    const TOKEN_PROGRAM = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+    const ASSOCIATED_TOKEN_PROGRAM = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
+    
     const [poolPda] = await PublicKey.findProgramAddress(
       [Buffer.from('pool')],
-      new PublicKey(PROGRAM_ID)
+      programIdPubkey
     );
-    const whistleMintPk = new PublicKey(WHISTLE_MINT);
-    const collectorPk = new PublicKey(FEE_COLLECTOR_WALLET);
-    const collectorAta = getAssociatedTokenAddressSync(whistleMintPk, collectorPk);
-
-    // Verify deposit destination: either Pool PDA vault (new) or Collector ATA (v10)
+    
+    // Derive pool vault (ATA for pool PDA)
+    const [poolVault] = await PublicKey.findProgramAddress(
+      [
+        poolPda.toBuffer(),
+        TOKEN_PROGRAM.toBuffer(),
+        whistleMintPubkey.toBuffer()
+      ],
+      ASSOCIATED_TOKEN_PROGRAM
+    );
+    
+    console.log('🔍 Verifying payment to pool vault:', poolVault.toBase58());
+    
+    // Verify deposit_fees instruction was called to pool
     const postBalances = tx.meta.postTokenBalances || [];
     const preBalances = tx.meta.preTokenBalances || [];
     
+    console.log('📊 Token balances:', {
+      pre: preBalances.map(p => ({ index: p.accountIndex, mint: p.mint, amount: p.uiTokenAmount.amount })),
+      post: postBalances.map(p => ({ index: p.accountIndex, mint: p.mint, amount: p.uiTokenAmount.amount }))
+    });
+    
     let amountReceived = 0;
-    let destination = 'unknown';
     for (const post of postBalances) {
-      if (post.mint !== WHISTLE_MINT) continue;
-      const pre = preBalances.find((p) => p.accountIndex === post.accountIndex);
-      const preAmount = pre ? BigInt(pre.uiTokenAmount.amount) : 0n;
-      const postAmount = BigInt(post.uiTokenAmount.amount);
-      const delta = postAmount - preAmount;
-      if (delta <= 0n) continue;
-      // Match by token account owner (PDA owner or collector wallet owner)
-      if (post.owner === poolPda.toBase58()) {
-        amountReceived = Number(delta);
-        destination = 'poolPda';
-        break;
-      }
-      if (post.owner === collectorPk.toBase58()) {
-        amountReceived = Number(delta);
-        destination = 'collectorAta';
+      // Check if pool vault received tokens by checking the account address
+      const accountKeys = tx.transaction.message.accountKeys || [];
+      const accountPubkey = accountKeys[post.accountIndex];
+      const accountAddress = accountPubkey?.pubkey?.toBase58?.() || accountPubkey?.toBase58?.() || String(accountPubkey);
+      
+      console.log(`  Checking account ${post.accountIndex}: ${accountAddress} (mint: ${post.mint})`);
+      
+      if (accountAddress === poolVault.toBase58() && post.mint === WHISTLE_MINT) {
+        const pre = preBalances.find(p => p.accountIndex === post.accountIndex);
+        const preAmount = pre ? BigInt(pre.uiTokenAmount.amount) : 0n;
+        const postAmount = BigInt(post.uiTokenAmount.amount);
+        amountReceived = Number(postAmount - preAmount);
+        console.log(`✅ Found pool vault! Pre: ${preAmount}, Post: ${postAmount}, Received: ${amountReceived}`);
         break;
       }
     }
@@ -92,9 +104,7 @@ exports.handler = async (event, context) => {
           error: 'insufficient_payment',
           expected: EXPECTED_AMOUNT,
           received: amountReceived,
-          poolPda: poolPda.toBase58(),
-          collectorAta: collectorAta.toBase58(),
-          destination
+          poolPda: poolPda.toBase58()
         })
       };
     }
@@ -108,7 +118,7 @@ exports.handler = async (event, context) => {
     const accessToken = 'atk_' + crypto.randomBytes(16).toString('hex');
     const expiresAt = Math.floor(Date.now() / 1000) + 15 * 60; // 15 min
 
-    console.log(`✅ x402 payment verified: ${amountReceived} WHISTLE to ${destination} from ${payer}, tx: ${txSig}`);
+    console.log(`✅ x402 payment verified: ${amountReceived} WHISTLE deposited to pool from ${payer}, tx: ${txSig}`);
 
     return {
       statusCode: 200,
