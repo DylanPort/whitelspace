@@ -70,9 +70,10 @@
     
     if (!wallet || !wallet.publicKey) throw new Error('Wallet not connected');
 
-    // Detect wallet type: mobile in-app (has keypair) vs desktop extension (needs signTransaction)
-    const isMobileWallet = !!keypair;
-    console.log(`💼 Wallet type: ${isMobileWallet ? 'Mobile In-App' : 'Desktop Extension'}`);
+    // Detect available signing method
+    const canUseKeypair = !!keypair; // mobile in-app wallet path
+    const canUseExtension = wallet && typeof wallet.signTransaction === 'function';
+    console.log(`💼 Sign method: ${canUseKeypair ? 'Keypair' : (canUseExtension ? 'Extension Wallet' : 'Unknown')}`);
 
     // 1) Request quote
     const gateway = (window.X402_GATEWAY || window.location.origin);
@@ -179,19 +180,21 @@
     console.log('📤 Sending payment...');
     let sig;
     
-    // MOBILE IN-APP WALLET: Sign and send with keypair (no user interaction needed)
-    if (isMobileWallet) {
+    if (canUseKeypair) {
+      // MOBILE IN-APP WALLET: Sign and send with keypair (no user interaction needed)
       console.log('📱 Using mobile in-app wallet (auto-signing)...');
-      sig = await connection.sendTransaction(tx, [keypair], { 
+      sig = await connection.sendTransaction(tx, [keypair], {
         skipPreflight: false,
         preflightCommitment: 'confirmed'
       });
-    }
-    // DESKTOP EXTENSION WALLET: Request signature from user via wallet popup
-    else {
+    } else if (canUseExtension) {
+      // DESKTOP EXTENSION WALLET: Request signature from user via wallet popup
       console.log('🖥️ Using desktop extension wallet (requesting signature)...');
       const signed = await wallet.signTransaction(tx);
       sig = await connection.sendRawTransaction(signed.serialize(), { skipPreflight: false });
+    } else {
+      console.error('❌ No available signing method (no keypair and wallet has no signTransaction)');
+      throw new Error('No available signing method on this device. Use mobile in-app wallet or a browser wallet that supports signTransaction.');
     }
     
     console.log('⏳ Confirming payment:', sig);
