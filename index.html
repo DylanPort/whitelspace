@@ -12244,138 +12244,9 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
     const SYSTEM_PROGRAM_ID = solanaWeb3.SystemProgram.programId;
     // x402 helpers
     async function getX402Token(hops = 3, feature = null) {
-      try {
-        // Check if this feature is free (staking/nodes)
-        const freeFeatures = ['stake', 'unstake', 'run-node', 'staking', 'node'];
-        if (feature && freeFeatures.some(f => feature.toLowerCase().includes(f))) {
-          console.log(`🆓 Feature "${feature}" is free - bypassing x402 payment`);
-          return 'FREE_ACCESS';
-        }
-        
-        const now = Math.floor(Date.now() / 1000);
-        const cached = localStorage.getItem('x402_token');
-        const exp = parseInt(localStorage.getItem('x402_exp') || '0', 10);
-        if (cached && exp > now + 30) {
-          console.log('✅ Using cached x402 token');
-          return cached;
-        }
-        
-        // Show premium x402 payment modal
-        console.log('💳 x402: Payment required, requesting quote...');
-        await showX402PaymentModal('preparing');
-        
-        if (!window.requestX402AndPay) throw new Error('x402 client not loaded');
-        
-        // Check if user has mobile wallet stored
-        const mobilePrivateKey = localStorage.getItem('ghost_mobile_wallet');
-        const mobileAddress = localStorage.getItem('ghost_mobile_address');
-        let wallet = null;
-        let keypair = null;
-        
-        if (mobilePrivateKey && mobileAddress) {
-          // MOBILE IN-APP WALLET: Reconstruct keypair from stored private key
-          console.log('📱 Using mobile in-app wallet for x402 payment');
-          try {
-            // Decode private key (handle different formats)
-            let secretKey;
-            if (mobilePrivateKey.endsWith(':base64')) {
-              // Base64 format
-              const base64Key = mobilePrivateKey.replace(':base64', '');
-              const Buf = window.Buffer || Buffer;
-              secretKey = Buf.from(base64Key, 'base64');
-            } else if (mobilePrivateKey.includes(',')) {
-              // Array format
-              secretKey = new Uint8Array(mobilePrivateKey.split(',').map(n => parseInt(n)));
-            } else {
-              // Base58 format (default)
-              // Try multiple ways to access bs58
-              const bs58Decoder = window.bs58?.decode || window.bs58?.default?.decode || 
-                                  (typeof bs58 !== 'undefined' && bs58.decode);
-              
-              if (!bs58Decoder) {
-                console.error('❌ bs58 library not available. Available:', { 
-                  'window.bs58': typeof window.bs58,
-                  'global bs58': typeof bs58 
-                });
-                // Fallback: try to decode as base64 or array
-                console.warn('⚠️ Attempting fallback decoding...');
-                try {
-                  // Try as base64
-                  const Buf = window.Buffer || Buffer;
-                  secretKey = Buf.from(mobilePrivateKey, 'base64');
-                } catch {
-                  // Try as comma-separated array
-                  secretKey = new Uint8Array(mobilePrivateKey.split(',').map(n => parseInt(n)));
-                }
-              } else {
-                secretKey = bs58Decoder(mobilePrivateKey);
-              }
-            }
-            
-            // Reconstruct keypair
-            keypair = solanaWeb3.Keypair.fromSecretKey(secretKey);
-            
-            // Create wallet object with publicKey
-            wallet = {
-              publicKey: keypair.publicKey,
-              isConnected: true
-            };
-            
-            console.log('✅ Mobile wallet keypair reconstructed:', keypair.publicKey.toString().slice(0, 8) + '...');
-          } catch (e) {
-            console.error('❌ Failed to reconstruct mobile wallet:', e);
-            console.warn('⚠️ Falling back to desktop extension wallet...');
-            // Clear mobile wallet flag and fall through to desktop wallet
-            wallet = null;
-            keypair = null;
-          }
-        }
-        
-        // If mobile wallet failed or doesn't exist, use desktop extension wallet
-        if (!wallet) {
-          // DESKTOP EXTENSION WALLET: Use Phantom/Solflare
-          console.log('🖥️ Using desktop extension wallet for x402 payment');
-          wallet = window.wallet || window.solana;
-          if (!wallet) {
-            await showX402PaymentModal('error', 'No wallet detected! Please install Phantom wallet or create a mobile wallet.');
-            throw new Error('No wallet detected');
-          }
-          
-          if (!wallet.publicKey || !wallet.isConnected) {
-            console.log('🔐 x402: Connecting wallet...');
-            await showX402PaymentModal('connecting');
-            try {
-              const response = await wallet.connect();
-              console.log('✅ Wallet connected:', response.publicKey.toString().slice(0, 8) + '...');
-            } catch (e) {
-              await showX402PaymentModal('error', 'Wallet connection rejected');
-              throw new Error('Wallet connection rejected');
-            }
-          }
-        }
-        
-        console.log('🔐 x402: Initiating payment...');
-        await showX402PaymentModal('processing');
-        
-        // Pass keypair for mobile, null for desktop (will use signTransaction)
-        const { accessToken, ttlSeconds } = await window.requestX402AndPay({ 
-          wallet, 
-          hops,
-          keypair,  // null for desktop, keypair object for mobile
-          feature   // Pass feature name to check if it's free
-        });
-        
-        localStorage.setItem('x402_token', accessToken);
-        localStorage.setItem('x402_exp', String(now + (ttlSeconds || 900)));
-        
-        await showX402PaymentModal('success', `Access granted for ${Math.floor(ttlSeconds/60)} minutes`);
-        console.log('✅ x402: Payment confirmed');
-        return accessToken;
-      } catch (e) {
-        console.error('❌ x402 payment failed:', e);
-        await showX402PaymentModal('error', e.message || 'Unknown error');
-        throw e;
-      }
+      console.log('🧪 x402 temporarily disabled - bypass granted');
+      if (window.pushToast) window.pushToast('x402 temporarily disabled - free access', 'info');
+      return 'FREE_ACCESS';
     }
     
     // Premium x402 Payment Modal
@@ -12528,47 +12399,10 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       });
     }
     
-    // x402-gate ALL privacy features (EXCEPT staking/nodes which are FREE)
+    // x402 temporarily disabled - always allow
     async function requireX402Payment(featureName, hops = 1) {
-      // 🆓 FREE FEATURES: ONLY Staking, Unstaking, and Node Operations
-      // Everything else REQUIRES PAYMENT!
-      const featureLower = featureName.toLowerCase().trim();
-      
-      // Exact matches for free operations
-      const exactFreeMatches = [
-        'stake tokens',
-        'unstake tokens',
-        'run node',
-        'privacy node',
-        'start node'
-      ];
-      
-      // Also check if it contains these keywords for staking/node ops
-      const freeKeywords = ['staking', 'unstaking'];
-      const isExactMatch = exactFreeMatches.includes(featureLower);
-      const hasKeyword = freeKeywords.some(keyword => featureLower.includes(keyword));
-      
-      if (isExactMatch || hasKeyword) {
-        console.log(`🆓 "${featureName}" is FREE - no payment required`);
-        return 'FREE_ACCESS';
-      }
-      
-      // ⚠️ ALL OTHER FEATURES REQUIRE PAYMENT - NO BYPASS!
-      try {
-        console.log(`🔐 x402: "${featureName}" requires payment`);
-        if (window.pushToast) {
-          window.pushToast(`💳 "${featureName}" requires payment...`, 'info');
-        }
-        const token = await getX402Token(hops, featureName);
-        console.log(`✅ x402: Payment confirmed for "${featureName}"`);
-        return token;
-      } catch (e) {
-        console.error(`❌ x402: Payment failed for "${featureName}"`, e);
-        if (window.pushToast) {
-          window.pushToast(`❌ Payment required to use "${featureName}"`, 'err');
-        }
-        throw new Error('Payment required');
-      }
+      console.log(`🧪 x402 disabled - "${featureName}" unlocked`);
+      return 'FREE_ACCESS';
     }
     
     // Helper function to get Pool PDA
