@@ -2886,6 +2886,13 @@
         if (walletAddress) {
           fetchNodeData();
           checkFeeRewardsEligibility(); // Check if eligible for fee rewards
+          
+          // Refresh cooldown status every 60 seconds
+          const cooldownInterval = setInterval(() => {
+            checkFeeRewardsEligibility();
+          }, 60000); // 1 minute
+          
+          return () => clearInterval(cooldownInterval);
         }
       }, [walletAddress]);
       
@@ -3481,26 +3488,44 @@
           pushToast(`🎉 Successfully claimed ${feeRewardsClaimable.claimableFormatted} $WHISTLE!`, 'ok');
           console.log('✅ Claim successful! Tx:', `https://solscan.io/tx/${signature}`);
           
-          // Record claim timestamp for 24h cooldown
-          try {
-            await fetch('/.netlify/functions/record-claim', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                walletAddress: walletAddress,
-                signature: signature
-              })
-            });
-            console.log('✅ Claim timestamp recorded');
-          } catch (recordError) {
-            console.warn('⚠️ Failed to record claim timestamp:', recordError);
-            // Don't block the UI if recording fails
+          // Record claim timestamp for 24h cooldown (MUST complete before allowing any refresh)
+          console.log('📝 Recording claim timestamp...');
+          const recordResponse = await fetch('/.netlify/functions/record-claim', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              walletAddress: walletAddress,
+              signature: signature
+            })
+          });
+          
+          if (!recordResponse.ok) {
+            console.error('❌ Failed to record claim timestamp!');
+            throw new Error('Failed to record claim timestamp. Please contact support.');
           }
           
-          // Refresh data
-          setFeeRewardsClaimable({ claimable: 0, onCooldown: true, message: 'Claimed! Next claim available in 24 hours' });
-          await checkFeeRewardsEligibility();
+          const recordData = await recordResponse.json();
+          console.log('✅ Claim timestamp recorded:', recordData);
+          
+          // Calculate next claim time (24 hours from now)
+          const now = Date.now();
+          const nextClaimTime = now + (24 * 60 * 60 * 1000);
+          const nextClaimDate = new Date(nextClaimTime).toISOString();
+          
+          // Set cooldown state (don't refresh from backend to avoid race condition)
+          setFeeRewardsClaimable({
+            claimable: 0,
+            claimableFormatted: '0',
+            onCooldown: true,
+            hoursRemaining: 24,
+            nextClaimAvailable: nextClaimDate,
+            message: 'Claimed! Next claim available in 24 hours'
+          });
+          
+          // Refresh other data
           await fetchNodeData();
+          
+          // Don't call checkFeeRewardsEligibility() immediately to prevent overwriting cooldown state
           
         } catch (error) {
           console.error('❌ Fee rewards claim error:', error);
