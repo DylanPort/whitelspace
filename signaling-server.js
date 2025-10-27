@@ -316,7 +316,18 @@ wss.on('connection', (ws, req) => {
 
   async function validateX402Token(token) {
     try {
-      const resp = await fetch('http://localhost:3001/x402/validate', {
+      // Allow FREE_ACCESS token for node/staking operations (no validation needed)
+      if (token === 'FREE_ACCESS') {
+        console.log('✅ FREE_ACCESS token accepted for node operation');
+        return true;
+      }
+
+      // Determine validation endpoint based on environment
+      const validationUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://whitelspace.netlify.app/.netlify/functions/x402-validate'
+        : 'http://localhost:3001/x402/validate';
+
+      const resp = await fetch(validationUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accessToken: token })
@@ -325,6 +336,11 @@ wss.on('connection', (ws, req) => {
       return json && json.ok === true;
     } catch (e) {
       console.error('❌ x402 validate error:', e);
+      // Fallback: Accept FREE_ACCESS if validation endpoint is unavailable
+      if (token === 'FREE_ACCESS') {
+        console.warn('⚠️ Validation endpoint unavailable, accepting FREE_ACCESS');
+        return true;
+      }
       return false;
     }
   }
@@ -645,13 +661,33 @@ async function requireX402(req, res, next) {
     const auth = req.headers['authorization'] || '';
     const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
     if (!token) return res.status(401).json({ error: 'x402_token_required' });
-    const resp = await fetch('http://localhost:3001/x402/validate', {
+    
+    // Allow FREE_ACCESS token for node/staking operations
+    if (token === 'FREE_ACCESS') {
+      console.log('✅ FREE_ACCESS token accepted for API request');
+      return next();
+    }
+    
+    // Determine validation endpoint based on environment
+    const validationUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://whitelspace.netlify.app/.netlify/functions/x402-validate'
+      : 'http://localhost:3001/x402/validate';
+    
+    const resp = await fetch(validationUrl, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken: token })
     });
     const json = await resp.json();
     if (!json.ok) return res.status(401).json({ error: 'x402_token_invalid' });
     next();
   } catch (e) {
+    console.error('❌ x402 validation error:', e);
+    // Fallback: If validation fails but token is FREE_ACCESS, allow it
+    const auth = req.headers['authorization'] || '';
+    const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+    if (token === 'FREE_ACCESS') {
+      console.warn('⚠️ Validation endpoint unavailable, accepting FREE_ACCESS');
+      return next();
+    }
     return res.status(401).json({ error: 'x402_validate_failed' });
   }
 }

@@ -21,6 +21,19 @@ exports.handler = async (event, context) => {
       };
     }
 
+    // Allow FREE_ACCESS token for node/staking operations (free features)
+    if (accessToken === 'FREE_ACCESS') {
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ 
+          ok: true,
+          expiresAt: 9999999999,
+          note: 'FREE_ACCESS granted for node/staking operations'
+        })
+      };
+    }
+
     // Simple stateless validation - check if token format is valid
     // In production, use JWT tokens with embedded expiry and signature
     if (!accessToken.startsWith('atk_') || accessToken.length < 20) {

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Node Display Test</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+    h1 { color: #3b82f6; }
+    h2 { color: #60a5fa; margin-top: 30px; }
+    .status {
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: 1px solid #334155;
+    }
+    .success { background: #064e3b; border-color: #10b981; }
+    .error { background: #7f1d1d; border-color: #ef4444; }
+    .info { background: #1e3a8a; border-color: #3b82f6; }
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 5px;
+    }
+    button:hover { background: #2563eb; }
+    .log {
+      background: #1e293b;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid #334155;
+    }
+    .log-time { color: #64748b; }
+    .log-success { color: #10b981; }
+    .log-error { color: #ef4444; }
+    .log-info { color: #3b82f6; }
+    .node-card {
+      background: #1e293b;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: 1px solid #334155;
+    }
+    .node-online { border-color: #10b981; }
+  </style>
+</head>
+<body>
+  <h1>🧪 Node Display Test Suite</h1>
+  <p>Test that nodes display correctly on the map and count updates properly.</p>
+
+  <h2>Test 1: API Connectivity</h2>
+  <div class="status info" id="api-status">
+    <strong>Status:</strong> Not tested yet
+  </div>
+  <button onclick="testAPI()">Test API Connection</button>
+
+  <h2>Test 2: Fetch Nodes</h2>
+  <div class="status info" id="nodes-status">
+    <strong>Status:</strong> Not tested yet
+  </div>
+  <button onclick="testFetchNodes()">Fetch Active Nodes</button>
+  
+  <div id="nodes-list"></div>
+
+  <h2>Test 3: Authentication</h2>
+  <div class="status info" id="auth-status">
+    <strong>Status:</strong> Not tested yet
+  </div>
+  <button onclick="testAuthentication()">Test x402 Auth</button>
+
+  <h2>Console Log</h2>
+  <div class="log" id="console-log"></div>
+
+  <script>
+    const API_BASE = 'https://whitelspace.onrender.com';
+    const log = [];
+
+    function addLog(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const entry = { timestamp, message, type };
+      log.push(entry);
+      updateLogDisplay();
+      console.log(`[${type}] ${message}`);
+    }
+
+    function updateLogDisplay() {
+      const logDiv = document.getElementById('console-log');
+      logDiv.innerHTML = log.map(entry => `
+        <div class="log-entry log-${entry.type}">
+          <span class="log-time">${entry.timestamp}</span> ${entry.message}
+        </div>
+      `).reverse().join('');
+    }
+
+    async function testAPI() {
+      const statusDiv = document.getElementById('api-status');
+      statusDiv.className = 'status info';
+      statusDiv.innerHTML = '<strong>Status:</strong> Testing...';
+      addLog('Testing API connectivity...', 'info');
+
+      try {
+        const response = await fetch(`${API_BASE}/health`);
+        const data = await response.json();
+        
+        if (data.status === 'ok') {
+          statusDiv.className = 'status success';
+          statusDiv.innerHTML = `
+            <strong>✅ Status:</strong> Connected<br>
+            <strong>Active Nodes:</strong> ${data.nodes}
+          `;
+          addLog(`✅ API connected! Active nodes: ${data.nodes}`, 'success');
+        } else {
+          throw new Error('Unexpected response');
+        }
+      } catch (error) {
+        statusDiv.className = 'status error';
+        statusDiv.innerHTML = `<strong>❌ Status:</strong> Failed - ${error.message}`;
+        addLog(`❌ API test failed: ${error.message}`, 'error');
+      }
+    }
+
+    async function testFetchNodes() {
+      const statusDiv = document.getElementById('nodes-status');
+      statusDiv.className = 'status info';
+      statusDiv.innerHTML = '<strong>Status:</strong> Fetching nodes...';
+      addLog('Fetching active nodes from API...', 'info');
+
+      try {
+        // Try with FREE_ACCESS token
+        const response = await fetch(`${API_BASE}/api/nodes`, {
+          headers: {
+            'Authorization': 'Bearer FREE_ACCESS',
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        
+        statusDiv.className = 'status success';
+        statusDiv.innerHTML = `
+          <strong>✅ Status:</strong> Success<br>
+          <strong>Total Nodes:</strong> ${data.totalNodes || 0}<br>
+          <strong>Nodes Fetched:</strong> ${data.nodes ? data.nodes.length : 0}
+        `;
+        
+        addLog(`✅ Fetched ${data.nodes ? data.nodes.length : 0} nodes`, 'success');
+
+        // Display nodes
+        if (data.nodes && data.nodes.length > 0) {
+          const nodesList = document.getElementById('nodes-list');
+          nodesList.innerHTML = data.nodes.map(node => `
+            <div class="node-card node-online">
+              <strong>Node ID:</strong> ${node.id}<br>
+              <strong>Wallet:</strong> ${node.walletAddress.slice(0, 8)}...${node.walletAddress.slice(-6)}<br>
+              <strong>Region:</strong> ${node.region}<br>
+              <strong>Relays:</strong> ${node.relayCount}<br>
+              <strong>Uptime:</strong> ${Math.floor(node.uptime / 1000 / 60)} minutes
+            </div>
+          `).join('');
+          
+          data.nodes.forEach(node => {
+            addLog(`📡 Node: ${node.id} @ ${node.region}`, 'info');
+          });
+        } else {
+          addLog('⚠️ No active nodes found', 'info');
+        }
+      } catch (error) {
+        statusDiv.className = 'status error';
+        statusDiv.innerHTML = `<strong>❌ Status:</strong> Failed - ${error.message}`;
+        addLog(`❌ Fetch failed: ${error.message}`, 'error');
+      }
+    }
+
+    async function testAuthentication() {
+      const statusDiv = document.getElementById('auth-status');
+      statusDiv.className = 'status info';
+      statusDiv.innerHTML = '<strong>Status:</strong> Testing authentication...';
+      addLog('Testing x402 authentication...', 'info');
+
+      try {
+        // Test FREE_ACCESS token (should work for node operations)
+        const response = await fetch(`${API_BASE}/api/nodes`, {
+          headers: {
+            'Authorization': 'Bearer FREE_ACCESS',
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          statusDiv.className = 'status success';
+          statusDiv.innerHTML = `
+            <strong>✅ Status:</strong> FREE_ACCESS token works!<br>
+            Node operations should be free
+          `;
+          addLog('✅ FREE_ACCESS token validated successfully', 'success');
+        } else if (response.status === 401) {
+          statusDiv.className = 'status error';
+          statusDiv.innerHTML = `<strong>❌ Status:</strong> Authentication required`;
+          addLog('❌ FREE_ACCESS token rejected - server may need configuration', 'error');
+        } else {
+          throw new Error(`HTTP ${response.status}`);
+        }
+      } catch (error) {
+        statusDiv.className = 'status error';
+        statusDiv.innerHTML = `<strong>❌ Status:</strong> Failed - ${error.message}`;
+        addLog(`❌ Auth test failed: ${error.message}`, 'error');
+      }
+    }
+
+    // Auto-run API test on load
+    window.addEventListener('load', () => {
+      addLog('Test suite loaded', 'success');
+      setTimeout(testAPI, 500);
+    });
+  </script>
+</body>
+</html>
+

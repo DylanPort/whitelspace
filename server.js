@@ -187,6 +187,12 @@ app.get('/x402/protected-test', (req, res) => {
 app.post('/x402/validate', (req, res) => {
   const { accessToken } = req.body || {};
   if (!accessToken) return res.status(400).json({ ok: false, error: 'missing_token' });
+  
+  // Allow FREE_ACCESS token for node/staking operations
+  if (accessToken === 'FREE_ACCESS') {
+    return res.json({ ok: true, expiresAt: 9999999999 }); // Never expires
+  }
+  
   const exp = issuedTokens.get(accessToken);
   if (!exp) return res.status(200).json({ ok: false, error: 'invalid_token' });
   if (exp < Math.floor(Date.now() / 1000)) {
