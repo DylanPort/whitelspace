@@ -3,8 +3,12 @@
 <head>
 <meta charset="utf-8">
   <title>Whistle — P2P encrypted tips + Solana memo</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: http: data: blob:; connect-src 'self' https: wss: ws: http://localhost:* ws://localhost:*; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: http:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https: http:;">
+  <!-- Cache control for mobile browsers -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <link rel="manifest" href="/manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -12814,7 +12818,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
     ];
     const MAINNET_RPC = RPC_ENDPOINTS[0];
     
-    const SIGNALING_SERVER_URL = (window.location.hostname === 'localhost' ? 'ws://localhost:8080' : 'wss://whitelspace.onrender.com'); // Env-aware
+    const SIGNALING_SERVER_URL = 'wss://whitelspace.onrender.com'; // Always use production server
     const TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
     const SYSTEM_PROGRAM_ID = solanaWeb3.SystemProgram.programId;
     // x402 helpers
@@ -13564,6 +13568,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             console.warn('⚠️ Using FREE_ACCESS token:', tokenErr);
           }
           
+          // Always use production API
           const response = await fetch('https://whitelspace.onrender.com/api/nodes', {
             headers: {
               'Authorization': `Bearer ${x402Token}`,
