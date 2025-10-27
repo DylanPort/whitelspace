@@ -279,40 +279,70 @@
 
     async function scanEmail(email) {
       try {
-        // Call our backend API (uses HaveIBeenPwned)
+        // Try backend API first (Netlify function)
         const apiUrl = window.location.hostname === 'localhost' 
           ? 'http://localhost:8888/.netlify/functions/check-breach'
           : '/.netlify/functions/check-breach';
 
-        const response = await fetch(apiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ email })
-        });
+        try {
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email })
+          });
 
-        const data = await response.json();
+          const data = await response.json();
 
-        if (response.status === 429) {
-          alert('⏳ Rate limit reached. Please try again in a few moments.');
+          if (response.status === 429) {
+            alert('⏳ Rate limit reached. Please try again in a few moments.');
+            return;
+          }
+
+          if (!response.ok) {
+            throw new Error(data.error || 'API error');
+          }
+
+          if (data.safe || data.breachCount === 0) {
+            showSafeResult();
+            return;
+          }
+
+          displayBreaches(data.breaches);
           return;
-        }
+        } catch (backendError) {
+          console.log('Backend API failed, trying direct API:', backendError);
+          
+          // Fallback: Try direct API call (may hit CORS issues)
+          const directResponse = await fetch(`https://haveibeenpwned.com/api/v3/breachedaccount/${encodeURIComponent(email)}?truncateResponse=false`, {
+            headers: {
+              'User-Agent': 'GhostWhistle-Scanner'
+            }
+          });
 
-        if (!response.ok) {
-          throw new Error(data.error || 'API error');
-        }
+          if (directResponse.status === 404) {
+            showSafeResult();
+            return;
+          }
 
-        if (data.safe || data.breachCount === 0) {
-          showSafeResult();
-          return;
-        }
+          if (directResponse.status === 200) {
+            const breaches = await directResponse.json();
+            displayBreaches(breaches);
+            return;
+          }
 
-        displayBreaches(data.breaches);
+          throw new Error('Both backend and direct API failed');
+        }
 
       } catch (error) {
         console.error('API Error:', error);
-        alert('⚠️ Error connecting to breach database. Please try again later.\n\nError: ' + error.message);
+        
+        if (window.location.hostname === 'localhost') {
+          alert('⚠️ LOCAL TESTING ERROR\n\nTo test the Dark Web Scanner locally:\n\n1. Install Netlify CLI: npm install -g netlify-cli\n2. Run: netlify dev\n3. Access at: http://localhost:8888\n\nOR deploy to production to use the live scanner.');
+        } else {
+          alert('⚠️ Error connecting to breach database.\n\nThis could be due to:\n• Rate limiting (try again later)\n• Network issues\n• API maintenance\n\nPlease try again in a few moments.');
+        }
       }
     }
 

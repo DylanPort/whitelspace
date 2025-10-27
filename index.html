@@ -2733,6 +2733,7 @@
       const tabs = [
         { id: "home", label: "Home", emoji: "🏛️" },
         { id: "offline-network", label: "Ghost Whistle", emoji: "👻", special: true },
+        { id: "dark-web-scanner", label: "Dark Web Scanner", emoji: "🔍" },
         { id: "claim-rewards", label: "Claim Rewards", emoji: "💰" },
         { id: "ghost-identity", label: "Ghost Identity", emoji: "🆔", special: true },
         { id: "social-hub", label: "Ghost Terminal", emoji: "🖥️" },
@@ -19601,7 +19602,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'offline-network', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
+      const validSteps = ['home', 'webrtc', 'offline-network', 'dark-web-scanner', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -19636,6 +19637,9 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                       case 'home': return <Home setStep={setStepGuarded} />;
                       case 'webrtc': return <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />;
                       case 'offline-network': return <OfflineNetworkHub pushToast={push} setStep={setStepGuarded} />;
+                      case 'dark-web-scanner': 
+                        window.location.href = 'dark-web-scanner.html';
+                        return <div className="text-white p-8 text-center">Redirecting to Dark Web Scanner...</div>;
                       case 'claim-rewards': return <ClaimRewards pushToast={push} />;
                       case 'ghost-identity': return <GhostIdentityGenerator pushToast={push} />;
                       case 'location-spoofer': return <LocationSpoofer pushToast={push} />;
@@ -20470,7 +20474,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'offline-network', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
+      const validSteps = ['home', 'webrtc', 'offline-network', 'dark-web-scanner', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -20505,6 +20509,9 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                       case 'home': return <Home setStep={setStepGuarded} />;
                       case 'webrtc': return <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />;
                       case 'offline-network': return <OfflineNetworkHub pushToast={push} setStep={setStepGuarded} />;
+                      case 'dark-web-scanner': 
+                        window.location.href = 'dark-web-scanner.html';
+                        return <div className="text-white p-8 text-center">Redirecting to Dark Web Scanner...</div>;
                       case 'claim-rewards': return <ClaimRewards pushToast={push} />;
                       case 'ghost-identity': return <GhostIdentityGenerator pushToast={push} />;
                       case 'location-spoofer': return <LocationSpoofer pushToast={push} />;
