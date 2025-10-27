@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const crypto = require('crypto');
+const https = require('https');
 const { Connection, PublicKey } = require('@solana/web3.js');
 const { getAssociatedTokenAddressSync } = require('@solana/spl-token');
 
@@ -200,6 +201,91 @@ app.post('/x402/validate', (req, res) => {
     return res.status(200).json({ ok: false, error: 'expired_token' });
   }
   return res.json({ ok: true, expiresAt: exp });
+});
+
+// ===== HaveIBeenPwned API Proxy (to avoid CORS) =====
+const HIBP_API_KEY = 'ccac04e904014631a35d34e8762954eb';
+
+// Helper function to make HIBP API requests
+function makeHibpRequest(path) {
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: 'haveibeenpwned.com',
+      port: 443,
+      path: path,
+      method: 'GET',
+      headers: {
+        'hibp-api-key': HIBP_API_KEY,
+        'user-agent': 'Ghost-Whistle-Privacy-Monitor'
+      }
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          try {
+            resolve({ success: true, data: JSON.parse(data), statusCode: res.statusCode });
+          } catch (e) {
+            resolve({ success: true, data: data, statusCode: res.statusCode });
+          }
+        } else if (res.statusCode === 404) {
+          resolve({ success: true, data: null, statusCode: res.statusCode });
+        } else {
+          resolve({ success: false, error: `HTTP ${res.statusCode}`, statusCode: res.statusCode });
+        }
+      });
+    });
+
+    req.on('error', (e) => {
+      reject(e);
+    });
+
+    req.end();
+  });
+}
+
+// Get latest breach
+app.get('/api/hibp/latest-breach', async (req, res) => {
+  try {
+    const result = await makeHibpRequest('/api/v3/latestbreach');
+    
+    if (result.success) {
+      return res.json(result.data);
+    } else {
+      return res.status(result.statusCode || 500).json({ error: result.error });
+    }
+  } catch (error) {
+    console.error('HIBP API Error:', error);
+    return res.status(500).json({ error: 'Failed to fetch from HaveIBeenPwned' });
+  }
+});
+
+// Check if email has been breached
+app.get('/api/hibp/breach/:email', async (req, res) => {
+  try {
+    const email = encodeURIComponent(req.params.email);
+    const result = await makeHibpRequest(`/api/v3/breachedaccount/${email}`);
+    
+    if (result.statusCode === 404) {
+      // No breaches found
+      return res.status(404).json({ breaches: [] });
+    }
+    
+    if (result.success) {
+      return res.json(result.data);
+    } else {
+      return res.status(result.statusCode || 500).json({ error: result.error });
+    }
+  } catch (error) {
+    console.error('HIBP API Error:', error);
+    return res.status(500).json({ error: 'Failed to fetch from HaveIBeenPwned' });
+  }
 });
 
 app.listen(PORT, () => {
