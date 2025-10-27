@@ -2733,7 +2733,6 @@
       const tabs = [
         { id: "home", label: "Home", emoji: "🏛️" },
         { id: "offline-network", label: "Ghost Whistle", emoji: "👻", special: true },
-        { id: "dark-web-scanner", label: "Dark Web Scanner", emoji: "🔍" },
         { id: "claim-rewards", label: "Claim Rewards", emoji: "💰" },
         { id: "ghost-identity", label: "Ghost Identity", emoji: "🆔", special: true },
         { id: "social-hub", label: "Ghost Terminal", emoji: "🖥️" },
@@ -2851,6 +2850,363 @@
     </div>
           )}
     </div>
+      );
+    }
+
+    // ============= BREACH MONITOR SECTION =============
+    function BreachMonitor({ pushToast }) {
+      const [latestBreaches, setLatestBreaches] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [checkingEmail, setCheckingEmail] = useState(false);
+      const [emailToCheck, setEmailToCheck] = useState('');
+      const [breachResults, setBreachResults] = useState(null);
+      const [terminalLines, setTerminalLines] = useState([]);
+      
+      const HIBP_API_KEY = 'ccac04e904014631a35d34e8762954eb';
+      
+      // Fetch latest breach on mount
+      useEffect(() => {
+        fetchLatestBreach();
+      }, []);
+      
+      const addTerminalLine = (text, type = 'info') => {
+        const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
+        setTerminalLines(prev => [...prev, { timestamp, text, type }]);
+      };
+      
+      const fetchLatestBreach = async () => {
+        try {
+          setLoading(true);
+          addTerminalLine('[SYSTEM] Initializing breach database connection...', 'system');
+          
+          const response = await fetch('https://haveibeenpwned.com/api/v3/latestbreach', {
+            headers: {
+              'hibp-api-key': HIBP_API_KEY,
+              'user-agent': 'Ghost-Whistle-Privacy-Monitor'
+            }
+          });
+          
+          if (response.ok) {
+            const breach = await response.json();
+            setLatestBreaches([breach]);
+            addTerminalLine(`[SUCCESS] Latest breach data retrieved: ${breach.Name}`, 'success');
+            addTerminalLine(`[INFO] ${breach.PwnCount.toLocaleString()} accounts compromised`, 'info');
+          } else {
+            addTerminalLine('[ERROR] Failed to fetch breach data', 'error');
+          }
+        } catch (error) {
+          console.error('Error fetching latest breach:', error);
+          addTerminalLine(`[ERROR] ${error.message}`, 'error');
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      const checkEmail = async () => {
+        if (!emailToCheck || !emailToCheck.includes('@')) {
+          pushToast('❌ Please enter a valid email address', 'error');
+          return;
+        }
+        
+        try {
+          setCheckingEmail(true);
+          setBreachResults(null);
+          addTerminalLine(`[SCAN] Initiating breach scan for: ${emailToCheck}`, 'warning');
+          addTerminalLine('[SCAN] Searching across 600+ breach databases...', 'system');
+          
+          const response = await fetch(
+            `https://haveibeenpwned.com/api/v3/breachedaccount/${encodeURIComponent(emailToCheck)}`,
+            {
+              headers: {
+                'hibp-api-key': HIBP_API_KEY,
+                'user-agent': 'Ghost-Whistle-Privacy-Monitor'
+              }
+            }
+          );
+          
+          if (response.status === 404) {
+            setBreachResults([]);
+            addTerminalLine('[RESULT] ✅ No breaches found - Account is clean', 'success');
+            pushToast('✅ Good news! This email hasn\'t been found in any breaches', 'ok');
+          } else if (response.ok) {
+            const breaches = await response.json();
+            setBreachResults(breaches);
+            addTerminalLine(`[RESULT] ⚠️ Found in ${breaches.length} breach(es)`, 'error');
+            addTerminalLine(`[ALERT] Immediate action required`, 'error');
+            pushToast(`⚠️ Found in ${breaches.length} data breaches!`, 'error');
+          } else {
+            addTerminalLine('[ERROR] Scan failed - Rate limit or API error', 'error');
+            pushToast('❌ Scan failed. Please try again later', 'error');
+          }
+        } catch (error) {
+          console.error('Error checking email:', error);
+          addTerminalLine(`[ERROR] ${error.message}`, 'error');
+          pushToast('❌ Error checking email', 'error');
+        } finally {
+          setCheckingEmail(false);
+        }
+      };
+      
+      const formatDate = (dateString) => {
+        return new Date(dateString).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      };
+      
+      return (
+        <div className="max-w-7xl mx-auto space-y-6 fade-in">
+          {/* Header */}
+          <div className="panel-strong border border-red-500/30 rounded-2xl p-8 bg-gradient-to-br from-red-500/5 via-transparent to-purple-500/5">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-purple-600 flex items-center justify-center">
+                    <span className="text-2xl">🚨</span>
+                  </div>
+                  <div>
+                    <h1 className="text-3xl font-black text-white uppercase tracking-tight">
+                      [BREACH_MONITOR]
+                    </h1>
+                    <p className="text-red-400 text-sm font-mono">Real-time data breach surveillance system</p>
+                  </div>
+                </div>
+                <p className="text-white/60 mt-4 font-mono text-sm">
+                  Monitoring 600+ breach databases • 12 billion+ compromised accounts • Live threat intelligence
+                </p>
+              </div>
+              <button
+                onClick={fetchLatestBreach}
+                disabled={loading}
+                className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 rounded-lg text-red-400 font-mono text-sm transition-all hover:scale-105"
+              >
+                {loading ? '[LOADING...]' : '[REFRESH]'}
+              </button>
+            </div>
+          </div>
+          
+          {/* Email Scanner */}
+          <div className="panel-strong border border-purple-500/30 rounded-2xl p-6 bg-black/40">
+            <div className="mb-4">
+              <h2 className="text-xl font-black text-white uppercase tracking-tight font-mono mb-2">
+                [SCAN_YOUR_ACCOUNT]
+              </h2>
+              <p className="text-white/60 text-sm font-mono">
+                Check if your email has been compromised in data breaches
+              </p>
+            </div>
+            
+            <div className="flex gap-3">
+              <input
+                type="email"
+                value={emailToCheck}
+                onChange={(e) => setEmailToCheck(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && checkEmail()}
+                placeholder="user@example.com"
+                className="flex-1 px-4 py-3 bg-black/60 border border-purple-500/30 rounded-lg text-white placeholder-white/40 font-mono text-sm focus:outline-none focus:border-purple-500 transition-all"
+              />
+              <button
+                onClick={checkEmail}
+                disabled={checkingEmail}
+                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-lg text-white font-mono font-bold text-sm transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {checkingEmail ? '[SCANNING...]' : '[SCAN_NOW]'}
+              </button>
+            </div>
+            
+            {/* Breach Results */}
+            {breachResults !== null && (
+              <div className="mt-6 space-y-3">
+                {breachResults.length === 0 ? (
+                  <div className="p-6 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <span className="text-3xl">✅</span>
+                      <div>
+                        <p className="text-emerald-400 font-mono font-bold">[STATUS: CLEAN]</p>
+                        <p className="text-white/60 text-sm mt-1">No breaches found for this email address</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+                      <p className="text-red-400 font-mono font-bold">
+                        ⚠️ [CRITICAL] Found in {breachResults.length} breach{breachResults.length > 1 ? 'es' : ''}
+                      </p>
+                      <p className="text-white/60 text-sm mt-1">
+                        Your information has been exposed. Take immediate action.
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {breachResults.map((breach, idx) => (
+                        <div
+                          key={idx}
+                          className="p-5 bg-gradient-to-r from-red-500/5 to-purple-500/5 border border-red-500/20 rounded-xl hover:border-red-500/40 transition-all"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                {breach.LogoPath && (
+                                  <img 
+                                    src={`https://haveibeenpwned.com${breach.LogoPath}`} 
+                                    alt={breach.Name}
+                                    className="w-10 h-10 rounded object-contain bg-white/5 p-1"
+                                  />
+                                )}
+                                <div>
+                                  <h3 className="text-white font-bold text-lg">{breach.Name}</h3>
+                                  <p className="text-red-400 font-mono text-xs">
+                                    {formatDate(breach.BreachDate)} • {breach.PwnCount.toLocaleString()} accounts
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              <p className="text-white/70 text-sm mb-3">{breach.Description}</p>
+                              
+                              <div className="flex flex-wrap gap-2">
+                                {breach.DataClasses.map((dataClass, i) => (
+                                  <span
+                                    key={i}
+                                    className="px-2 py-1 bg-red-500/20 border border-red-500/30 rounded text-red-400 text-xs font-mono"
+                                  >
+                                    {dataClass}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+          
+          {/* Latest Breach Alert */}
+          {latestBreaches.length > 0 && (
+            <div className="panel-strong border border-orange-500/30 rounded-2xl p-6 bg-gradient-to-br from-orange-500/5 to-red-500/5">
+              <div className="mb-4">
+                <h2 className="text-xl font-black text-white uppercase tracking-tight font-mono mb-2 flex items-center gap-2">
+                  <span className="animate-pulse">🔴</span>
+                  [LATEST_BREACH_DETECTED]
+                </h2>
+                <p className="text-orange-400 text-sm font-mono">
+                  Most recent data breach reported to HaveIBeenPwned
+                </p>
+              </div>
+              
+              {latestBreaches.map((breach, idx) => (
+                <div key={idx} className="p-6 bg-black/40 border border-orange-500/20 rounded-xl">
+                  <div className="flex items-start gap-4">
+                    {breach.LogoPath && (
+                      <img 
+                        src={`https://haveibeenpwned.com${breach.LogoPath}`} 
+                        alt={breach.Name}
+                        className="w-16 h-16 rounded-lg object-contain bg-white/5 p-2"
+                      />
+                    )}
+                    <div className="flex-1">
+                      <h3 className="text-2xl font-bold text-white mb-2">{breach.Name}</h3>
+                      <div className="flex flex-wrap gap-4 mb-3 text-sm">
+                        <span className="text-orange-400 font-mono">
+                          📅 {formatDate(breach.BreachDate)}
+                        </span>
+                        <span className="text-red-400 font-mono">
+                          👥 {breach.PwnCount.toLocaleString()} accounts
+                        </span>
+                        {breach.IsVerified && (
+                          <span className="text-emerald-400 font-mono">✓ Verified</span>
+                        )}
+                      </div>
+                      
+                      <p className="text-white/70 mb-4">{breach.Description}</p>
+                      
+                      <div>
+                        <p className="text-white/60 text-sm font-mono mb-2">Compromised Data:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {breach.DataClasses.map((dataClass, i) => (
+                            <span
+                              key={i}
+                              className="px-3 py-1 bg-orange-500/20 border border-orange-500/30 rounded-lg text-orange-400 text-sm font-mono"
+                            >
+                              {dataClass}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Terminal Output */}
+          <div className="panel-strong border border-cyan-500/30 rounded-2xl p-6 bg-black/60">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-black text-cyan-400 uppercase tracking-tight font-mono">
+                [SYSTEM_LOG]
+              </h2>
+              <button
+                onClick={() => setTerminalLines([])}
+                className="px-3 py-1 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/50 rounded text-cyan-400 text-xs font-mono transition-all"
+              >
+                [CLEAR]
+              </button>
+            </div>
+            
+            <div className="bg-black border border-cyan-500/20 rounded-lg p-4 h-64 overflow-y-auto font-mono text-xs space-y-1">
+              {terminalLines.length === 0 ? (
+                <div className="text-white/40">
+                  <p>[SYSTEM] Terminal ready...</p>
+                  <p>[SYSTEM] Awaiting commands...</p>
+                  <p className="mt-2 animate-pulse">▊</p>
+                </div>
+              ) : (
+                terminalLines.map((line, idx) => (
+                  <div
+                    key={idx}
+                    className={`${
+                      line.type === 'error' ? 'text-red-400' :
+                      line.type === 'success' ? 'text-emerald-400' :
+                      line.type === 'warning' ? 'text-orange-400' :
+                      line.type === 'system' ? 'text-cyan-400' :
+                      'text-white/70'
+                    }`}
+                  >
+                    <span className="text-white/40">[{line.timestamp}]</span> {line.text}
+                  </div>
+                ))
+              )}
+              {terminalLines.length > 0 && (
+                <div className="text-cyan-400 animate-pulse">▊</div>
+              )}
+            </div>
+          </div>
+          
+          {/* Stats Footer */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl">
+              <div className="text-purple-400 text-sm font-mono mb-1">Total Breaches</div>
+              <div className="text-white text-2xl font-bold font-mono">600+</div>
+            </div>
+            <div className="p-4 bg-gradient-to-br from-red-500/10 to-orange-500/10 border border-red-500/20 rounded-xl">
+              <div className="text-red-400 text-sm font-mono mb-1">Compromised Accounts</div>
+              <div className="text-white text-2xl font-bold font-mono">12B+</div>
+            </div>
+            <div className="p-4 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 rounded-xl">
+              <div className="text-cyan-400 text-sm font-mono mb-1">Database Status</div>
+              <div className="text-emerald-400 text-xl font-bold font-mono flex items-center gap-2">
+                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
+                LIVE
+              </div>
+            </div>
+          </div>
+        </div>
       );
     }
 
@@ -6691,6 +7047,7 @@ console.log('✅ Fingerprint spoofing active!');`;
       const items = [
         { id:'home',    label:'Home', emoji:'🏛️', color:'cyan' },
         { id:'offline-network', label:'Ghost Whistle', emoji:'👻', special: true, color:'emerald' },
+        { id:'breach-monitor', label:'Breach Monitor', emoji:'🚨', special: true, color:'red', isNew: true },
         { id:'claim-rewards', label:'Claim Rewards', emoji:'💰', color:'yellow' },
         { id:'ghost-identity', label:'Ghost Identity', emoji:'🆔', special: true, color:'cyan' },
         { id:'location-spoofer', label:'Location Spoofer', emoji:'🌍', special: true, color:'purple', isNew: true },
@@ -6714,7 +7071,8 @@ console.log('✅ Fingerprint spoofing active!');`;
                 const isGhostWhistle = x.id === 'offline-network';
                 const isGhostIdentity = x.id === 'ghost-identity';
                 const isLocationSpoofer = x.id === 'location-spoofer';
-                const isSpecial = isGhostWhistle || isGhostIdentity || isLocationSpoofer;
+                const isBreachMonitor = x.id === 'breach-monitor';
+                const isSpecial = isGhostWhistle || isGhostIdentity || isLocationSpoofer || isBreachMonitor;
                 const isActive = step === x.id;
                 
                 return (
@@ -6731,6 +7089,10 @@ console.log('✅ Fingerprint spoofing active!');`;
                         ? isActive
                           ? 'relative border-emerald-400/60 bg-gradient-to-r from-emerald-400/20 via-teal-400/20 to-cyan-400/20 text-white shadow-lg shadow-emerald-500/30 animate-pulse'
                           : 'relative border-emerald-500/40 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-cyan-500/10 text-emerald-100 hover:border-emerald-400/60 hover:shadow-lg hover:shadow-emerald-500/20 hover:scale-[1.03] animate-shimmer'
+                        : isBreachMonitor
+                        ? isActive
+                          ? 'relative border-red-400/60 bg-gradient-to-r from-red-400/20 via-orange-400/20 to-pink-400/20 text-white shadow-lg shadow-red-500/30 animate-pulse'
+                          : 'relative border-red-500/40 bg-gradient-to-r from-red-500/10 via-orange-500/10 to-pink-500/10 text-red-100 hover:border-red-400/60 hover:shadow-lg hover:shadow-red-500/20 hover:scale-[1.03] animate-shimmer'
                         : isGhostIdentity
                         ? isActive
                           ? 'relative border-cyan-400/60 bg-gradient-to-r from-cyan-400/20 via-emerald-400/20 to-teal-400/20 text-white shadow-lg shadow-cyan-500/30 animate-pulse'
@@ -6747,6 +7109,12 @@ console.log('✅ Fingerprint spoofing active!');`;
                       <>
                         <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-emerald-400/0 via-emerald-400/20 to-emerald-400/0 animate-shimmer-slide"></div>
                         <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-r from-transparent via-emerald-400/30 to-transparent blur-sm animate-shimmer-slide"></div>
+                      </>
+                    )}
+                    {isBreachMonitor && !isActive && (
+                      <>
+                        <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-red-400/0 via-red-400/20 to-red-400/0 animate-shimmer-slide"></div>
+                        <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-r from-transparent via-red-400/30 to-transparent blur-sm animate-shimmer-slide"></div>
                       </>
                     )}
                     {isGhostIdentity && !isActive && (
@@ -16120,7 +16488,6 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                           <div className="text-xs text-white/80 font-normal">Windows • macOS • Linux</div>
                         </div>
                       </a>
-                      
                       <div className="text-center">
                         <span className="text-xs text-white/60">From <span className="line-through text-white/40">$29.99/mo</span></span>
                         <span className="ml-2 text-sm font-bold text-emerald-300">Free Beta Access</span>
@@ -19588,7 +19955,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'offline-network', 'dark-web-scanner', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
+      const validSteps = ['home', 'webrtc', 'offline-network', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -19623,9 +19990,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                       case 'home': return <Home setStep={setStepGuarded} />;
                       case 'webrtc': return <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />;
                       case 'offline-network': return <OfflineNetworkHub pushToast={push} setStep={setStepGuarded} />;
-                      case 'dark-web-scanner': 
-                        window.location.href = 'dark-web-scanner.html';
-                        return <div className="text-white p-8 text-center">Redirecting to Dark Web Scanner...</div>;
+                      case 'breach-monitor': return <BreachMonitor pushToast={push} />;
                       case 'claim-rewards': return <ClaimRewards pushToast={push} />;
                       case 'ghost-identity': return <GhostIdentityGenerator pushToast={push} />;
                       case 'location-spoofer': return <LocationSpoofer pushToast={push} />;
@@ -20460,7 +20825,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'offline-network', 'dark-web-scanner', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
+      const validSteps = ['home', 'webrtc', 'offline-network', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -20495,9 +20860,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                       case 'home': return <Home setStep={setStepGuarded} />;
                       case 'webrtc': return <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />;
                       case 'offline-network': return <OfflineNetworkHub pushToast={push} setStep={setStepGuarded} />;
-                      case 'dark-web-scanner': 
-                        window.location.href = 'dark-web-scanner.html';
-                        return <div className="text-white p-8 text-center">Redirecting to Dark Web Scanner...</div>;
+                      case 'breach-monitor': return <BreachMonitor pushToast={push} />;
                       case 'claim-rewards': return <ClaimRewards pushToast={push} />;
                       case 'ghost-identity': return <GhostIdentityGenerator pushToast={push} />;
                       case 'location-spoofer': return <LocationSpoofer pushToast={push} />;
