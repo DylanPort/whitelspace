@@ -7035,28 +7035,6 @@ console.log('✅ Fingerprint spoofing active!');`;
       
       const tools = [
         {
-          id: 'ghost-identity',
-          title: 'Ghost Identity',
-          subtitle: 'Anonymous Identities',
-          description: 'Generate complete anonymous identities with realistic details. Perfect for privacy protection and testing. All generated locally, nothing is saved.',
-          icon: 'user-x',
-          color: 'cyan',
-          gradient: 'from-cyan-600 to-teal-600',
-          features: ['Random identities', 'Realistic data', 'Multiple formats', 'Export options'],
-          isNew: true
-        },
-        {
-          id: 'location-spoofer',
-          title: 'Location Spoofer',
-          subtitle: 'GPS Override',
-          description: 'Spoof your GPS location to any place in the world. Override geolocation API for privacy. Works with preset locations or custom coordinates.',
-          icon: 'map-pin',
-          color: 'purple',
-          gradient: 'from-purple-600 to-fuchsia-600',
-          features: ['Preset locations', 'Custom coordinates', 'Real-time override', 'Privacy protection'],
-          isNew: true
-        },
-        {
           id: 'webrtc',
           title: 'WebRTC Transfer',
           subtitle: 'P2P File Sharing',
@@ -7135,7 +7113,7 @@ console.log('✅ Fingerprint spoofing active!');`;
               <div className="grid grid-cols-3 gap-2 md:gap-3">
                 <div className="px-2 md:px-3 py-2 rounded bg-slate-900/50 border border-slate-700/50">
                   <div className="text-[9px] md:text-xs text-slate-500 font-mono mb-1">TOOLS</div>
-                  <div className="text-xs md:text-sm font-mono font-bold text-cyan-400">6 ACTIVE</div>
+                  <div className="text-xs md:text-sm font-mono font-bold text-cyan-400">4 ACTIVE</div>
                 </div>
                 <div className="px-2 md:px-3 py-2 rounded bg-slate-900/50 border border-slate-700/50">
                   <div className="text-[9px] md:text-xs text-slate-500 font-mono mb-1">PRIVACY</div>
@@ -7164,11 +7142,6 @@ console.log('✅ Fingerprint spoofing active!');`;
                     <div className="flex items-center gap-2">
                       <i data-lucide={tool.icon} className="w-5 h-5 md:w-6 md:h-6"></i>
                       <span className="text-[10px] md:text-xs font-mono text-slate-500">{tool.id}.tool</span>
-                      {tool.isNew && (
-                        <span className="px-1.5 py-0.5 bg-gradient-to-r from-orange-500 to-pink-500 rounded text-white text-[8px] md:text-[9px] font-bold animate-pulse">
-                          NEW
-                        </span>
-                      )}
                     </div>
                     <div className={`px-2 py-0.5 rounded bg-${tool.color}-500/10 border border-${tool.color}-500/30`}>
                       <span className={`text-${tool.color}-400 text-[10px] md:text-xs font-mono`}>READY</span>
@@ -7221,12 +7194,14 @@ console.log('✅ Fingerprint spoofing active!');`;
         { id:'offline-network', label:'Ghost Whistle', emoji:'👻', special: true, color:'emerald' },
         { id:'breach-monitor', label:'Breach Monitor', emoji:'🚨', special: true, color:'red', isNew: true },
         { id:'claim-rewards', label:'Claim Rewards', emoji:'💰', color:'yellow' },
+        { id:'ghost-identity', label:'Ghost Identity', emoji:'🆔', special: true, color:'cyan' },
+        { id:'location-spoofer', label:'Location Spoofer', emoji:'🌍', special: true, color:'purple', isNew: true },
         { id:'social-hub', label:'Ghost Terminal', emoji:'🖥️', color:'cyan' },
         { id:'services', label:'Ghost Services', emoji:'✨', color:'purple' },
-        { id:'privacy-tools', label:'Privacy Tools', emoji:'🗝️', color:'slate' },
         { id:'how-it-works', label:'How It Works', emoji:'💡', color:'blue' },
         { id:'swap', label:'Privacy Swap', image:'public/4DqRlDPT_400x400.png.png', color:'orange' },
         { id:'solana-privacy', label:'Solana Privacy', image:'public/solana.png', color:'indigo' },
+        { id:'privacy-tools', label:'Privacy Tools', emoji:'🗝️', color:'slate' },
       ];
       
       useEffect(()=>{
@@ -7239,8 +7214,10 @@ console.log('✅ Fingerprint spoofing active!');`;
             <nav className="space-y-2">
               {items.map((x,i)=> {
                 const isGhostWhistle = x.id === 'offline-network';
+                const isGhostIdentity = x.id === 'ghost-identity';
+                const isLocationSpoofer = x.id === 'location-spoofer';
                 const isBreachMonitor = x.id === 'breach-monitor';
-                const isSpecial = isGhostWhistle || isBreachMonitor;
+                const isSpecial = isGhostWhistle || isGhostIdentity || isLocationSpoofer || isBreachMonitor;
                 const isActive = step === x.id;
                 
                 return (
@@ -7261,6 +7238,14 @@ console.log('✅ Fingerprint spoofing active!');`;
                         ? isActive
                           ? 'relative border-red-400/60 bg-gradient-to-r from-red-400/20 via-orange-400/20 to-pink-400/20 text-white shadow-lg shadow-red-500/30 animate-pulse'
                           : 'relative border-red-500/40 bg-gradient-to-r from-red-500/10 via-orange-500/10 to-pink-500/10 text-red-100 hover:border-red-400/60 hover:shadow-lg hover:shadow-red-500/20 hover:scale-[1.03] animate-shimmer'
+                        : isGhostIdentity
+                        ? isActive
+                          ? 'relative border-cyan-400/60 bg-gradient-to-r from-cyan-400/20 via-emerald-400/20 to-teal-400/20 text-white shadow-lg shadow-cyan-500/30 animate-pulse'
+                          : 'relative border-cyan-500/40 bg-gradient-to-r from-cyan-500/10 via-emerald-500/10 to-teal-500/10 text-cyan-100 hover:border-cyan-400/60 hover:shadow-lg hover:shadow-cyan-500/20 hover:scale-[1.03] animate-shimmer'
+                        : isLocationSpoofer
+                        ? isActive
+                          ? 'relative border-purple-400/60 bg-gradient-to-r from-purple-400/20 via-pink-400/20 to-fuchsia-400/20 text-white shadow-lg shadow-purple-500/30 animate-pulse'
+                          : 'relative border-purple-500/40 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-fuchsia-500/10 text-purple-100 hover:border-purple-400/60 hover:shadow-lg hover:shadow-purple-500/20 hover:scale-[1.03] animate-shimmer'
                         : isActive
                     ? 'border-cyan-400/60 bg-cyan-400/15 text-cyan-100 scale-in'
                           : 'border-white/10 bg-white/[0.03] text-white/80 hover:bg-white/[0.07] hover:scale-[1.02]'
@@ -7275,6 +7260,18 @@ console.log('✅ Fingerprint spoofing active!');`;
                       <>
                         <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-red-400/0 via-red-400/20 to-red-400/0 animate-shimmer-slide"></div>
                         <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-r from-transparent via-red-400/30 to-transparent blur-sm animate-shimmer-slide"></div>
+                      </>
+                    )}
+                    {isGhostIdentity && !isActive && (
+                      <>
+                        <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-cyan-400/0 via-cyan-400/20 to-cyan-400/0 animate-shimmer-slide"></div>
+                        <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent blur-sm animate-shimmer-slide"></div>
+                      </>
+                    )}
+                    {isLocationSpoofer && !isActive && (
+                      <>
+                        <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-purple-400/0 via-purple-400/20 to-purple-400/0 animate-shimmer-slide"></div>
+                        <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-r from-transparent via-purple-400/30 to-transparent blur-sm animate-shimmer-slide"></div>
                       </>
                     )}
                     <span className="relative z-10 flex items-center gap-3 w-full">

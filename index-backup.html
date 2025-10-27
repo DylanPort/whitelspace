@@ -2091,7 +2091,6 @@
         { id: "home", label: "Home", icon: "home" },
         { id: "webrtc", label: "WebRTC Transfer", icon: "radio" },
         { id: "offline-network", label: "👻 Ghost Whistle", icon: "network" },
-        { id: "dark-web-scanner", label: "🔍 Dark Web Scanner", icon: "search" },
         { id: "services", label: "🌐 Services", icon: "box" },
         { id: "swap", label: "Privacy Swap", iconImg: "4DqRlDPT_400x400.png.png" },
         { id: "solana-privacy", label: "Solana Privacy Tools", iconImg: "solana.png" },
@@ -11897,7 +11896,6 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                           <div className="text-xs text-white/80 font-normal">Windows • macOS • Linux</div>
                         </div>
                       </a>
-                      
                       <div className="text-center">
                         <span className="text-xs text-white/60">From <span className="line-through text-white/40">$29.99/mo</span></span>
                         <span className="ml-2 text-sm font-bold text-emerald-300">Free Beta Access</span>
@@ -15362,9 +15360,6 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                       case 'home': return <Home setStep={setStepGuarded} />;
                       case 'webrtc': return <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />;
                       case 'offline-network': return <OfflineNetworkHub pushToast={push} setStep={setStepGuarded} />;
-                      case 'dark-web-scanner': 
-                        window.location.href = 'dark-web-scanner.html';
-                        return <div className="text-white p-8 text-center">Redirecting to Dark Web Scanner...</div>;
                       case 'social-hub': 
                         console.log('🎯 Switching to SocialHub component');
                         return <SocialHub pushToast={push} setStep={setStepGuarded} />;
@@ -16081,9 +16076,6 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                       case 'home': return <Home setStep={setStepGuarded} />;
                       case 'webrtc': return <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />;
                       case 'offline-network': return <OfflineNetworkHub pushToast={push} setStep={setStepGuarded} />;
-                      case 'dark-web-scanner': 
-                        window.location.href = 'dark-web-scanner.html';
-                        return <div className="text-white p-8 text-center">Redirecting to Dark Web Scanner...</div>;
                       case 'social-hub': 
                         console.log('🎯 Switching to SocialHub component');
                         return <SocialHub pushToast={push} setStep={setStepGuarded} />;
