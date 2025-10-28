@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solana Wallet Recovery Tool</title>
+    <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            color: #856404;
+        }
+        .warning strong {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        label {
+            display: block;
+            margin: 20px 0 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        textarea, input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 20px;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: scale(1.02);
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 2px solid #28a745;
+            display: none;
+        }
+        .result.show {
+            display: block;
+        }
+        .result h3 {
+            color: #28a745;
+            margin-top: 0;
+        }
+        .output-box {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border: 1px solid #ddd;
+            word-break: break-all;
+        }
+        .output-box label {
+            margin: 0 0 8px 0;
+            color: #667eea;
+            font-size: 0.9em;
+        }
+        .copy-btn {
+            background: #28a745;
+            padding: 8px 15px;
+            font-size: 14px;
+            width: auto;
+            margin: 10px 0 0 0;
+        }
+        .instructions {
+            background: #e7f3ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 4px solid #2196F3;
+        }
+        .instructions h4 {
+            margin-top: 0;
+            color: #1976D2;
+        }
+        .instructions ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .instructions li {
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+        .error {
+            background: #f8d7da;
+            border: 2px solid #dc3545;
+            padding: 15px;
+            border-radius: 8px;
+            color: #721c24;
+            margin-top: 20px;
+            display: none;
+        }
+        .error.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔑 Solana Wallet Recovery Tool</h1>
+        <p style="text-align: center; color: #666;">Convert your private key to import into Phantom</p>
+        
+        <div class="warning">
+            <strong>⚠️ SECURITY WARNING</strong>
+            This tool runs 100% locally in your browser. Your private key never leaves your computer.
+            However, NEVER share your private key with anyone or enter it on untrusted websites.
+        </div>
+
+        <label for="privateKey">Enter your Base64 Private Key:</label>
+        <textarea id="privateKey" placeholder="Paste your base64 private key here...
+Example: kVKDUBpbsovKs1uivb70j3js8JCoN1aTEVQ=="></textarea>
+
+        <button onclick="convertKey()">🔓 Convert & Recover Wallet</button>
+
+        <div id="error" class="error"></div>
+
+        <div id="result" class="result">
+            <h3>✅ Wallet Recovered Successfully!</h3>
+            
+            <div class="output-box">
+                <label>Your Wallet Address (Public Key):</label>
+                <div id="publicKey" style="font-weight: bold; color: #28a745;"></div>
+                <button class="copy-btn" onclick="copyToClipboard('publicKey')">📋 Copy Address</button>
+            </div>
+
+            <div class="output-box">
+                <label>Private Key (JSON Array) - For Phantom Import:</label>
+                <div id="privateKeyArray" style="font-size: 12px;"></div>
+                <button class="copy-btn" onclick="copyToClipboard('privateKeyArray')">📋 Copy Private Key</button>
+            </div>
+
+            <div class="output-box">
+                <label>Private Key (Base58) - Alternative Format:</label>
+                <div id="privateKeyBase58" style="font-size: 12px;"></div>
+                <button class="copy-btn" onclick="copyToClipboard('privateKeyBase58')">📋 Copy Base58</button>
+            </div>
+
+            <div class="instructions">
+                <h4>📱 How to Import into Phantom Wallet:</h4>
+                <ol>
+                    <li><strong>Copy the JSON Array</strong> shown above (click the "Copy Private Key" button)</li>
+                    <li>Open <strong>Phantom Wallet</strong></li>
+                    <li>Click the hamburger menu (☰) → <strong>Add / Connect Wallet</strong></li>
+                    <li>Select <strong>Import Private Key</strong></li>
+                    <li><strong>Paste the JSON array</strong> you copied</li>
+                    <li>Give your wallet a name and click <strong>Import</strong></li>
+                    <li>✅ Your funds should now be accessible!</li>
+                </ol>
+                
+                <h4>💡 Alternative Method (if above doesn't work):</h4>
+                <ol>
+                    <li>Use <strong>Solflare Wallet</strong> instead (supports more import formats)</li>
+                    <li>Go to Solflare.com → Import Wallet</li>
+                    <li>Paste the Base58 private key or JSON array</li>
+                    <li>Once imported, you can send funds to a new Phantom wallet if needed</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function convertKey() {
+            const input = document.getElementById('privateKey').value.trim();
+            const resultDiv = document.getElementById('result');
+            const errorDiv = document.getElementById('error');
+            
+            // Hide previous results
+            resultDiv.classList.remove('show');
+            errorDiv.classList.remove('show');
+
+            if (!input) {
+                showError('Please enter your private key');
+                return;
+            }
+
+            try {
+                let privateKeyBytes;
+
+                // Try to decode as base64
+                try {
+                    // Remove any base64 suffix if present
+                    const cleanInput = input.replace(':base64', '').trim();
+                    const decoded = atob(cleanInput);
+                    privateKeyBytes = new Uint8Array(decoded.length);
+                    for (let i = 0; i < decoded.length; i++) {
+                        privateKeyBytes[i] = decoded.charCodeAt(i);
+                    }
+                } catch (e) {
+                    // Try as base58
+                    try {
+                        privateKeyBytes = solanaWeb3.decode(input);
+                    } catch (e2) {
+                        throw new Error('Invalid private key format. Please ensure it\'s in base64 or base58 format.');
+                    }
+                }
+
+                // Solana private keys should be 64 bytes (32 byte secret + 32 byte public)
+                // or 32 bytes (just the secret)
+                if (privateKeyBytes.length !== 32 && privateKeyBytes.length !== 64) {
+                    throw new Error(`Invalid key length: ${privateKeyBytes.length} bytes. Expected 32 or 64 bytes.`);
+                }
+
+                // If it's just 32 bytes, we need to derive the full keypair
+                let keypair;
+                if (privateKeyBytes.length === 32) {
+                    keypair = solanaWeb3.Keypair.fromSeed(privateKeyBytes);
+                } else {
+                    keypair = solanaWeb3.Keypair.fromSecretKey(privateKeyBytes);
+                }
+
+                // Get public key
+                const publicKey = keypair.publicKey.toBase58();
+                
+                // Get secret key as array
+                const secretKeyArray = Array.from(keypair.secretKey);
+                
+                // Get secret key as base58 (first 32 bytes only for compatibility)
+                const bs58 = solanaWeb3.bs58 || window.bs58;
+                let base58Key;
+                try {
+                    // Some wallets expect the full 64 bytes, others just 32
+                    base58Key = bs58.encode(keypair.secretKey);
+                } catch (e) {
+                    // Fallback
+                    base58Key = bs58.encode(privateKeyBytes);
+                }
+
+                // Display results
+                document.getElementById('publicKey').textContent = publicKey;
+                document.getElementById('privateKeyArray').textContent = JSON.stringify(secretKeyArray);
+                document.getElementById('privateKeyBase58').textContent = base58Key;
+                
+                resultDiv.classList.add('show');
+
+            } catch (error) {
+                showError('Error: ' + error.message);
+                console.error(error);
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+        }
+
+        function copyToClipboard(elementId) {
+            const text = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Copied!';
+                btn.style.background = '#28a745';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '';
+                }, 2000);
+            }).catch(err => {
+                alert('Failed to copy. Please select and copy manually.');
+            });
+        }
+
+        // Allow Enter key to submit
+        document.getElementById('privateKey').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                convertKey();
+            }
+        });
+    </script>
+</body>
+</html>
+
