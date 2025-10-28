@@ -4615,7 +4615,12 @@
       
       // Delete file
       const deleteFile = (fileId) => {
-        setFiles(prev => prev.filter(f => f.id !== fileId));
+        setFiles(prev => {
+          const updated = prev.filter(f => f.id !== fileId);
+          console.log('🗑️ Deleting file, saving updated list to localStorage');
+          localStorage.setItem('ghostStorage_files', JSON.stringify(updated));
+          return updated;
+        });
         setFileHealth(prev => {
           const updated = { ...prev };
           delete updated[fileId];
@@ -4697,13 +4702,12 @@
       
       // Persist files to localStorage whenever they change
       useEffect(() => {
-        if (files.length > 0) {
-          try {
-            localStorage.setItem('ghostStorage_files', JSON.stringify(files));
-            console.log('💾 Files saved to localStorage');
-          } catch (error) {
-            console.error('Failed to save files:', error);
-          }
+        try {
+          console.log('💾 Saving files to localStorage:', files.length, 'files');
+          localStorage.setItem('ghostStorage_files', JSON.stringify(files));
+          console.log('✅ Files saved successfully');
+        } catch (error) {
+          console.error('❌ Failed to save files:', error);
         }
       }, [files]);
       
