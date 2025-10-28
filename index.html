@@ -5007,7 +5007,10 @@
                               View chunk distribution ({file.chunks.length} nodes)
                             </summary>
                             <div className="mt-3 grid grid-cols-5 gap-2">
-                              {file.chunks.slice(0, 15).map((chunk, idx) => (
+                              {file.chunks.slice(0, 15).map((chunk, idx) => {
+                                // Determine chunk type based on index (first 10 are data, last 5 are parity)
+                                const chunkType = idx < 10 ? 'data' : 'parity';
+                                return (
                                 <div
                                   key={idx}
                                   className={`p-2 rounded-lg text-center text-xs ${
@@ -5017,9 +5020,10 @@
                                   }`}
                                 >
                                   <div className="font-mono font-bold">#{idx + 1}</div>
-                                  <div className="text-[10px] opacity-70">{chunk.chunk.type}</div>
+                                  <div className="text-[10px] opacity-70">{chunkType}</div>
                                 </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </details>
                         </div>
