@@ -4049,6 +4049,8 @@
 
     // ============= DECENTRALIZED STORAGE SECTION =============
     function DecentralizedStorage({ pushToast }) {
+      console.log('✅ DecentralizedStorage component loaded');
+      
       // State management
       const [files, setFiles] = useState([]);
       const [uploading, setUploading] = useState(false);
@@ -4521,6 +4523,7 @@
       
       // Initialize
       useEffect(() => {
+        console.log('🔵 DecentralizedStorage: Loading nodes on mount...');
         loadAvailableNodes();
       }, []);
       
