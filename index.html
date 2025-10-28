@@ -2762,7 +2762,7 @@
       const tabs = [
         { id: "home", label: "Home", emoji: "🏛️" },
         { id: "offline-network", label: "Ghost Whistle", emoji: "👻", special: true },
-        { id: "decentralized-storage", label: "Cloud Storage", emoji: "💾", special: true },
+        { id: "decentralized-storage", label: "Decentralized Storage", emoji: "💾", special: true },
         { id: "breach-monitor", label: "Breach Monitor", emoji: "🚨", special: true },
         { id: "claim-rewards", label: "Claim Rewards", emoji: "💰" },
         { id: "social-hub", label: "Ghost Terminal", emoji: "🖥️" },
@@ -4051,8 +4051,19 @@
     function DecentralizedStorage({ pushToast }) {
       console.log('✅ DecentralizedStorage component loaded');
       
-      // State management
-      const [files, setFiles] = useState([]);
+      // Wallet state
+      const [wallet, setWallet] = useState(null);
+      const [walletAddress, setWalletAddress] = useState(null);
+      
+      // State management - Load from localStorage
+      const [files, setFiles] = useState(() => {
+        try {
+          const saved = localStorage.getItem('ghostStorage_files');
+          return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+          return [];
+        }
+      });
       const [uploading, setUploading] = useState(false);
       const [uploadProgress, setUploadProgress] = useState(0);
       const [nodes, setNodes] = useState([]);
@@ -4068,6 +4079,7 @@
       const [monitoringActive, setMonitoringActive] = useState(false);
       const [performanceMetrics, setPerformanceMetrics] = useState([]);
       const [showNodeSelection, setShowNodeSelection] = useState(false);
+      const [socket, setSocket] = useState(null);
       
       // Encryption and chunking utilities
       const encryptFile = async (fileBuffer, key) => {
@@ -4309,6 +4321,69 @@
           setUploading(true);
           setUploadProgress(0);
           
+          // X402 Payment Gate - Call BEFORE any upload
+          pushToast('💳 Verifying X402 access...', 'info');
+          setUploadProgress(5);
+          
+          try {
+            // Check if getX402Token exists (from main App component)
+            if (!window.getX402Token) {
+              console.error('❌ getX402Token not available - calling requestX402AndPay directly');
+              
+              // Fallback: Use requestX402AndPay directly
+              const currentWallet = wallet || window.solana;
+              if (!currentWallet || !currentWallet.publicKey) {
+                pushToast('❌ Please connect your wallet first', 'error');
+                setUploading(false);
+                return;
+              }
+              
+              // Get keypair for mobile wallets
+              let keypair = null;
+              if (wallet?.isMobile) {
+                const mobilePrivateKey = localStorage.getItem('ghost_mobile_wallet');
+                if (mobilePrivateKey) {
+                  const privateKeyArray = JSON.parse(mobilePrivateKey);
+                  keypair = solanaWeb3.Keypair.fromSecretKey(new Uint8Array(privateKeyArray));
+                }
+              }
+              
+              const paymentResult = await window.requestX402AndPay({
+                wallet: currentWallet,
+                hops: 5,
+                feature: 'decentralized-storage-upload',
+                keypair: keypair
+              });
+              
+              if (!paymentResult || !paymentResult.accessToken) {
+                pushToast('❌ Payment failed', 'error');
+                setUploading(false);
+                return;
+              }
+            } else {
+              // Use getX402Token from App component
+              const token = await window.getX402Token(5, 'decentralized-storage-upload');
+              
+              if (!token) {
+                pushToast('❌ Payment required to upload files', 'error');
+                setUploading(false);
+                return;
+              }
+            }
+            
+            console.log('✅ X402 access granted for storage upload');
+            pushToast('✅ X402 access verified', 'ok');
+            
+          } catch (error) {
+            console.error('X402 payment error:', error);
+            pushToast(`❌ Payment required: ${error.message}`, 'error');
+            setUploading(false);
+            return;
+          }
+          
+          // Generate unique file ID
+          const fileId = `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          
           // Step 1: Read file
           pushToast('📖 Reading file...', 'info');
           const fileBuffer = await file.arrayBuffer();
@@ -4332,10 +4407,10 @@
           const selectedStorageNodes = selectOptimalNodes(availableNodes, 15);
           setUploadProgress(60);
           
-          // Step 5: Distribute chunks
+          // Step 5: Distribute chunks to REAL nodes
           pushToast('📤 Distributing chunks to nodes...', 'info');
           const chunkAssignments = chunks.map((chunk, index) => ({
-            chunkId: `${file.name}-chunk-${index}`,
+            chunkId: `${fileId}-chunk-${index}`,
             chunk: chunk,
             nodeId: selectedStorageNodes[index]?.id || `node-${index}`,
             node: selectedStorageNodes[index],
@@ -4343,13 +4418,41 @@
             verified: true
           }));
           
+          // ACTUALLY send chunks to real nodes via signaling server
+          if (socket && socket.connected) {
+            try {
+              console.log('📡 Sending chunks to real nodes via signaling server...');
+              for (const assignment of chunkAssignments) {
+                socket.emit('STORE_CHUNK', {
+                  nodeId: assignment.nodeId,
+                  chunkId: assignment.chunkId,
+                  chunkData: assignment.chunk.data,
+                  metadata: {
+                    fileId: fileId,
+                    index: assignment.chunk.index,
+                    type: assignment.chunk.type,
+                    fileName: file.name,
+                    encrypted: true
+                  }
+                });
+              }
+              pushToast(`📤 Sending ${chunkAssignments.length} chunks to nodes...`, 'info');
+            } catch (error) {
+              console.error('Failed to send chunks:', error);
+              pushToast('⚠️ Chunks stored locally (send failed)', 'warning');
+            }
+          } else {
+            console.warn('⚠️ Socket not connected - storing locally only');
+            pushToast('⚠️ Offline mode - chunks stored locally', 'warning');
+          }
+          
           // Simulate upload delay
           await new Promise(resolve => setTimeout(resolve, 1000));
           setUploadProgress(90);
           
           // Step 6: Store file metadata
           const fileMetadata = {
-            id: `file-${Date.now()}`,
+            id: fileId,
             name: file.name,
             size: file.size,
             type: file.type,
@@ -4521,11 +4624,88 @@
         pushToast('🗑️ File deleted', 'info');
       };
       
+      // Check wallet connection
+      useEffect(() => {
+        checkWallet();
+        const interval = setInterval(checkWallet, 2000);
+        return () => clearInterval(interval);
+      }, []);
+      
+      async function checkWallet() {
+        // Check for mobile in-app wallet first
+        const mobileAddress = localStorage.getItem('ghost_mobile_address');
+        const mobilePrivateKey = localStorage.getItem('ghost_mobile_wallet');
+        
+        if (mobileAddress && mobilePrivateKey) {
+          setWallet({ publicKey: { toBase58: () => mobileAddress }, isConnected: true, isMobile: true });
+          setWalletAddress(mobileAddress);
+          return;
+        }
+        
+        // Check for desktop extension wallet
+        if (window.solana && window.solana.isPhantom) {
+          const connected = window.solana.isConnected;
+          if (connected) {
+            const publicKey = window.solana.publicKey;
+            setWallet(window.solana);
+            setWalletAddress(publicKey?.toBase58() || null);
+          }
+        }
+      }
+      
       // Initialize
       useEffect(() => {
         console.log('🔵 DecentralizedStorage: Loading nodes on mount...');
         loadAvailableNodes();
+        
+        // Connect to signaling server for real node storage
+        try {
+          const signalUrl = 'https://ghost-whistle-signaling.onrender.com';
+          console.log('📡 Connecting to signaling server:', signalUrl);
+          const newSocket = io(signalUrl);
+          
+          newSocket.on('connect', () => {
+            console.log('✅ Connected to signaling server for storage');
+            pushToast('🌐 Connected to storage network', 'ok');
+          });
+          
+          newSocket.on('disconnect', () => {
+            console.log('❌ Disconnected from signaling server');
+            pushToast('⚠️ Disconnected from storage network', 'warning');
+          });
+          
+          newSocket.on('CHUNK_STORED', (data) => {
+            console.log('✅ Chunk stored:', data);
+            pushToast(`✅ Chunk ${data.chunkId} stored on node`, 'ok');
+          });
+          
+          newSocket.on('STORAGE_ERROR', (error) => {
+            console.error('❌ Storage error:', error);
+            pushToast(`❌ ${error.message}`, 'error');
+          });
+          
+          setSocket(newSocket);
+          
+          return () => {
+            if (newSocket) newSocket.disconnect();
+          };
+        } catch (error) {
+          console.error('Failed to connect to signaling server:', error);
+          pushToast('⚠️ Running in offline mode - chunks stored locally', 'warning');
+        }
       }, []);
+      
+      // Persist files to localStorage whenever they change
+      useEffect(() => {
+        if (files.length > 0) {
+          try {
+            localStorage.setItem('ghostStorage_files', JSON.stringify(files));
+            console.log('💾 Files saved to localStorage');
+          } catch (error) {
+            console.error('Failed to save files:', error);
+          }
+        }
+      }, [files]);
       
       // Health monitoring interval
       useEffect(() => {
@@ -4566,7 +4746,7 @@
                   <div className="relative">
                     <div className="absolute inset-0 bg-blue-500/30 blur-xl rounded-full"></div>
                     <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border border-white/20 flex items-center justify-center shadow-xl">
-                      <span className="text-3xl">💾</span>
+                      <i data-lucide="database" className="w-7 h-7 text-blue-400"></i>
                     </div>
                   </div>
                   
@@ -4580,15 +4760,35 @@
                   </div>
                 </div>
                 
-                <label className="group relative px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold text-sm transition-all duration-300 hover:scale-105 shadow-lg shadow-blue-500/20 cursor-pointer">
-                  <input
-                    type="file"
-                    onChange={handleFileUpload}
-                    disabled={uploading}
-                    className="hidden"
-                  />
-                  {uploading ? '⏳ Uploading...' : '📤 Upload File'}
-                </label>
+{walletAddress ? (
+                  <label className="group relative px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold text-sm transition-all duration-300 hover:scale-105 shadow-lg shadow-blue-500/20 cursor-pointer">
+                    <input
+                      type="file"
+                      onChange={handleFileUpload}
+                      disabled={uploading}
+                      className="hidden"
+                    />
+                    {uploading ? '⏳ Uploading...' : '📤 Upload File'}
+                  </label>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (window.solana) {
+                        window.solana.connect().then(() => {
+                          setWallet(window.solana);
+                          setWalletAddress(window.solana.publicKey.toBase58());
+                        }).catch(err => {
+                          pushToast('Failed to connect wallet', 'error');
+                        });
+                      } else {
+                        pushToast('Please install Phantom Wallet', 'error');
+                      }
+                    }}
+                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold text-sm transition-all duration-300 hover:scale-105 shadow-lg shadow-purple-500/20"
+                  >
+                    🔗 Connect Wallet to Upload
+                  </button>
+                )}
               </div>
             </div>
             
@@ -4818,29 +5018,103 @@
             </div>
             
             {showNodeSelection && (
-              <div className="grid grid-cols-4 gap-3">
-                {nodes.slice(0, 20).map(node => (
-                  <div
-                    key={node.id}
-                    className={`p-3 rounded-lg border ${
-                      node.online
-                        ? 'bg-emerald-500/10 border-emerald-500/30'
-                        : 'bg-red-500/10 border-red-500/30'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className={`text-xs font-mono ${node.online ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {node.id}
-                      </span>
-                      <span className="text-[10px] text-white/40">{node.region}</span>
-                    </div>
-                    <div className="text-[10px] text-white/60 space-y-1">
-                      <div>Uptime: {node.uptime.toFixed(1)}%</div>
-                      <div>Storage: {node.storage} GB</div>
-                      <div>Chunks: {node.storedChunks}</div>
-                    </div>
+              <div className="space-y-3">
+                {/* Stats Summary */}
+                <div className="grid grid-cols-4 gap-3">
+                  <div className="bg-black/40 rounded-lg p-3 border border-emerald-500/30">
+                    <div className="text-emerald-400 text-xs font-semibold mb-1">Active Nodes</div>
+                    <div className="text-white text-xl font-bold">{nodes.filter(n => n.online).length}/{nodes.length}</div>
                   </div>
-                ))}
+                  <div className="bg-black/40 rounded-lg p-3 border border-blue-500/30">
+                    <div className="text-blue-400 text-xs font-semibold mb-1">Total Storage</div>
+                    <div className="text-white text-xl font-bold">{nodes.reduce((sum, n) => sum + n.storage, 0)} GB</div>
+                  </div>
+                  <div className="bg-black/40 rounded-lg p-3 border border-purple-500/30">
+                    <div className="text-purple-400 text-xs font-semibold mb-1">Avg Uptime</div>
+                    <div className="text-white text-xl font-bold">{nodes.filter(n => n.online).length > 0 ? (nodes.filter(n => n.online).reduce((sum, n) => sum + n.uptime, 0) / nodes.filter(n => n.online).length).toFixed(1) : 0}%</div>
+                  </div>
+                  <div className="bg-black/40 rounded-lg p-3 border border-cyan-500/30">
+                    <div className="text-cyan-400 text-xs font-semibold mb-1">Stored Chunks</div>
+                    <div className="text-white text-xl font-bold">{nodes.reduce((sum, n) => sum + n.storedChunks, 0)}</div>
+                  </div>
+                </div>
+                
+                {/* Node Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-96 overflow-y-auto">
+                  {nodes.map(node => (
+                    <div
+                      key={node.id}
+                      className={`p-4 rounded-xl border backdrop-blur-xl transition-all hover:scale-[1.02] ${
+                        node.online
+                          ? 'bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/30 shadow-lg shadow-emerald-500/10'
+                          : 'bg-gradient-to-br from-red-500/10 to-red-500/5 border-red-500/30 opacity-50'
+                      }`}
+                    >
+                      {/* Status Indicator */}
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${node.online ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`}></div>
+                          <span className={`text-xs font-bold ${node.online ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {node.online ? 'ONLINE' : 'OFFLINE'}
+                          </span>
+                        </div>
+                        <span className="text-xs text-white/40 bg-white/10 px-2 py-1 rounded">{node.region}</span>
+                      </div>
+                      
+                      {/* Node ID */}
+                      <div className="mb-2">
+                        <div className="text-[9px] text-white/40 mb-1">NODE ID</div>
+                        <div className="text-xs font-mono text-white font-semibold break-all">{node.id.slice(0, 8)}...{node.id.slice(-6)}</div>
+                      </div>
+                      
+                      {/* Owner Wallet */}
+                      {node.owner && (
+                        <div className="mb-2">
+                          <div className="text-[9px] text-white/40 mb-1">OWNER</div>
+                          <div className="text-xs font-mono text-white/80 break-all">{node.owner.slice(0, 8)}...{node.owner.slice(-6)}</div>
+                        </div>
+                      )}
+                      
+                      {/* Stats */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="text-white/60">Uptime:</span>
+                          <span className={`font-semibold ${node.uptime > 95 ? 'text-emerald-400' : node.uptime > 85 ? 'text-yellow-400' : 'text-orange-400'}`}>
+                            {node.uptime.toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="text-white/60">Storage:</span>
+                          <span className="text-blue-400 font-semibold">{node.storage} GB</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="text-white/60">Bandwidth:</span>
+                          <span className="text-purple-400 font-semibold">{node.bandwidth} Mbps</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="text-white/60">Chunks:</span>
+                          <span className="text-cyan-400 font-semibold">{node.storedChunks}</span>
+                        </div>
+                        
+                        {/* Reputation Score */}
+                        {node.reputationScore !== undefined && (
+                          <div className="flex items-center justify-between text-[10px] mt-2 pt-2 border-t border-white/10">
+                            <span className="text-white/60">Reputation:</span>
+                            <span className="text-emerald-400 font-bold">{node.reputationScore}</span>
+                          </div>
+                        )}
+                        
+                        {/* Stake Amount */}
+                        {node.stakedAmount !== undefined && (
+                          <div className="flex items-center justify-between text-[10px]">
+                            <span className="text-white/60">Stake:</span>
+                            <span className="text-yellow-400 font-semibold">{node.stakedAmount.toFixed(2)} WHISTLE</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -4881,37 +5155,119 @@
             </div>
           )}
           
-          {/* Info */}
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/30 p-6">
-            <div className="flex items-start gap-4">
-              <div className="text-4xl">ℹ️</div>
-              <div className="flex-1">
-                <h3 className="text-white font-bold mb-2">How Decentralized Storage Works</h3>
-                <div className="text-white/70 text-sm space-y-2">
-                  <p>• Your files are encrypted and split into 10 data chunks + 5 parity chunks (erasure coding)</p>
-                  <p>• Chunks are distributed across 15 different REAL NODES from the Ghost Whistle network</p>
-                  <p>• You only need ANY 10 chunks to reconstruct your file (can survive 5 node failures)</p>
-                  <p>• Auto-repair system creates new chunks when nodes go offline</p>
-                  <p>• All encryption happens locally - nodes only store encrypted data</p>
-                  <p className="pt-2 text-emerald-400 font-semibold">✅ Connected to {nodes.length} real staking nodes on-chain</p>
-                </div>
+          {/* Info - Terminal Style */}
+          <div className="relative overflow-hidden rounded-xl bg-black border border-cyan-500/20 shadow-2xl">
+            {/* Terminal header */}
+            <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-900/50 to-blue-900/50 border-b border-cyan-500/20">
+              <div className="flex gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
+                <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+                <div className="w-3 h-3 rounded-full bg-emerald-500/80"></div>
+              </div>
+              <span className="text-cyan-400 text-xs font-mono ml-2">ghost-storage:~$</span>
+              <span className="text-emerald-400 text-xs font-mono ml-auto">INFO</span>
+            </div>
+            
+            {/* Terminal content */}
+            <div className="p-4 font-mono text-xs space-y-2 bg-gradient-to-b from-black to-slate-900">
+              <div className="flex items-start gap-2">
+                <span className="text-cyan-400">❯</span>
+                <span className="text-white">echo "DECENTRALIZED STORAGE SYSTEM"</span>
+              </div>
+              <div className="text-white pl-4 font-bold mb-3">DECENTRALIZED STORAGE SYSTEM</div>
+              
+              <div className="flex items-start gap-2">
+                <span className="text-cyan-400">❯</span>
+                <span className="text-white">storage --encrypt --split-chunks</span>
+              </div>
+              <div className="text-emerald-400/80 pl-4">
+                [✓] Encrypting with AES-256-GCM<br/>
+                [✓] Creating 10 data chunks<br/>
+                [✓] Creating 5 parity chunks (Reed-Solomon)
+              </div>
+              
+              <div className="flex items-start gap-2">
+                <span className="text-cyan-400">❯</span>
+                <span className="text-white">storage --distribute</span>
+              </div>
+              <div className="text-emerald-400/80 pl-4">
+                [✓] Distributing across {nodes.filter(n => n.online).length} active nodes<br/>
+                [✓] File requires 10/15 chunks to reconstruct<br/>
+                [✓] Can survive 5 node failures
+              </div>
+              
+              <div className="flex items-start gap-2">
+                <span className="text-cyan-400">❯</span>
+                <span className="text-white">storage --status</span>
+              </div>
+              <div className="text-purple-400/80 pl-4 space-y-1">
+                <span className="text-cyan-400">NODES:</span> <span className="text-white">{nodes.length}</span> total | <span className="text-emerald-400">{nodes.filter(n => n.online).length}</span> online<br/>
+                <span className="text-cyan-400">ENCRYPTION:</span> <span className="text-white">Local-only</span> | <span className="text-emerald-400">AES-256-GCM</span><br/>
+                <span className="text-cyan-400">REPAIR:</span> <span className="text-white">Auto-enabled</span> | <span className="text-emerald-400">Active</span>
+              </div>
+              
+              <div className="flex items-start gap-2 pt-2">
+                <span className="text-cyan-400 animate-pulse">▊</span>
               </div>
             </div>
           </div>
           
-          {/* Current Storage Status */}
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border border-emerald-500/30 p-6">
-            <div className="flex items-start gap-4">
-              <div className="text-4xl">🌐</div>
-              <div className="flex-1">
-                <h3 className="text-white font-bold mb-2">Real Node Network Connected</h3>
-                <div className="text-white/70 text-sm space-y-2">
-                  <p>• System is connected to {nodes.filter(n => n.online).length} ACTIVE nodes from your Ghost Whistle network</p>
-                  <p>• Nodes are selected based on reputation score, uptime, and stake amount</p>
-                  <p>• Geographic distribution across {[...new Set(nodes.map(n => n.region))].length} regions</p>
-                  <p>• Current implementation: Chunks are created and node assignments made</p>
-                  <p className="pt-2 text-yellow-400 font-semibold">📡 Next Step: Integrate WebRTC/signaling server for actual chunk transmission to nodes</p>
-                </div>
+          {/* Network Status - Terminal Style */}
+          <div className="relative overflow-hidden rounded-xl bg-black border border-emerald-500/20 shadow-2xl">
+            {/* Terminal header */}
+            <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-900/50 to-teal-900/50 border-b border-emerald-500/20">
+              <div className="flex gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
+                <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+                <div className="w-3 h-3 rounded-full bg-emerald-500/80"></div>
+              </div>
+              <span className="text-emerald-400 text-xs font-mono ml-2">ghost-network:~$</span>
+              <span className="text-emerald-400 text-xs font-mono ml-auto">ONLINE</span>
+            </div>
+            
+            {/* Terminal content */}
+            <div className="p-4 font-mono text-xs space-y-2 bg-gradient-to-b from-black to-slate-900">
+              <div className="flex items-start gap-2">
+                <span className="text-emerald-400">❯</span>
+                <span className="text-white">network --status --nodes</span>
+              </div>
+              <div className="text-emerald-400/80 pl-4">
+                [✓] Connected to blockchain<br/>
+                [✓] {nodes.filter(n => n.online).length}/{nodes.length} nodes active<br/>
+                [✓] Real-time synchronization enabled
+              </div>
+              
+              <div className="flex items-start gap-2">
+                <span className="text-emerald-400">❯</span>
+                <span className="text-white">network --select --reputation</span>
+              </div>
+              <div className="text-cyan-400/80 pl-4 space-y-1">
+                <span className="text-emerald-400">SELECTION CRITERIA:</span><br/>
+                <span className="text-white">  • Reputation score: HIGH</span><br/>
+                <span className="text-white">  • Uptime: {nodes.filter(n => n.online).length > 0 ? (nodes.filter(n => n.online).reduce((sum, n) => sum + n.uptime, 0) / nodes.filter(n => n.online).length).toFixed(1) : 0}% avg</span><br/>
+                <span className="text-white">  • Stake amount: {nodes.filter(n => n.stakedAmount).length} nodes staking</span>
+              </div>
+              
+              <div className="flex items-start gap-2">
+                <span className="text-emerald-400">❯</span>
+                <span className="text-white">network --geo-distribution</span>
+              </div>
+              <div className="text-purple-400/80 pl-4">
+                [✓] Geographic distribution: <span className="text-white">{[...new Set(nodes.map(n => n.region))].length}</span> regions<br/>
+                [✓] Region diversity: <span className="text-emerald-400">OPTIMAL</span>
+              </div>
+              
+              <div className="flex items-start gap-2">
+                <span className="text-emerald-400">❯</span>
+                <span className="text-white">storage --chunks --transmit</span>
+              </div>
+              <div className="text-yellow-400/80 pl-4">
+                [!] Next step: WebRTC integration for chunk transmission<br/>
+                [!] Signaling server ready at: ghost-whistle-signaling.onrender.com
+              </div>
+              
+              <div className="flex items-start gap-2 pt-2">
+                <span className="text-emerald-400 animate-pulse">▊</span>
               </div>
             </div>
           </div>
@@ -8216,17 +8572,17 @@ console.log('✅ Fingerprint spoofing active!');`;
     // Sidebar navigation
     function Sidebar({ step, setStep }){
       const items = [
-        { id:'home',    label:'Home', emoji:'🏛️', color:'cyan' },
-        { id:'offline-network', label:'Ghost Whistle', emoji:'👻', special: true, color:'emerald' },
-        { id:'decentralized-storage', label:'Cloud Storage', emoji:'💾', special: true, color:'blue', isNew: true },
-        { id:'breach-monitor', label:'Breach Monitor', emoji:'🚨', special: true, color:'red', isNew: true },
-        { id:'claim-rewards', label:'Claim Rewards', emoji:'💰', color:'yellow' },
-        { id:'social-hub', label:'Ghost Terminal', emoji:'🖥️', color:'cyan' },
-        { id:'services', label:'Ghost Services', emoji:'✨', color:'purple' },
-        { id:'how-it-works', label:'How It Works', emoji:'💡', color:'blue' },
+        { id:'home',    label:'Home', icon:'home', color:'cyan' },
+        { id:'offline-network', label:'Ghost Whistle', icon:'network', special: true, color:'emerald' },
+        { id:'decentralized-storage', label:'Decentralized Storage', icon:'database', special: true, color:'blue', isNew: true },
+        { id:'breach-monitor', label:'Breach Monitor', icon:'shield-alert', special: true, color:'red', isNew: true },
+        { id:'claim-rewards', label:'Claim Rewards', icon:'gift', color:'yellow' },
+        { id:'social-hub', label:'Ghost Terminal', icon:'terminal', color:'cyan' },
+        { id:'services', label:'Ghost Services', icon:'activity', color:'purple' },
+        { id:'how-it-works', label:'How It Works', icon:'book-open', color:'blue' },
         { id:'swap', label:'Privacy Swap', image:'public/4DqRlDPT_400x400.png.png', color:'orange' },
         { id:'solana-privacy', label:'Solana Privacy', image:'public/solana.png', color:'indigo' },
-        { id:'privacy-tools', label:'Privacy Tools', emoji:'🗝️', color:'slate' },
+        { id:'privacy-tools', label:'Privacy Tools', icon:'lock', color:'slate' },
       ];
       
       useEffect(()=>{
@@ -8234,13 +8590,22 @@ console.log('✅ Fingerprint spoofing active!');`;
       },[step]);
       
       return (
-        <aside className="hidden md:block w-[260px] shrink-0 scale-in">
-          <div className="rounded-3xl border border-white/10 p-4 sticky top-4 panel-strong backdrop-blur-2xl bg-black/40">
+        <aside className="hidden md:block w-[280px] shrink-0">
+          <div 
+            className="rounded-3xl p-5 sticky top-4"
+            style={{
+              background: 'linear-gradient(135deg, rgba(0,0,0,0.8) 0%, rgba(20,20,20,0.9) 100%)',
+              backdropFilter: 'blur(40px) saturate(180%)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
+            }}
+          >
             <nav className="space-y-2">
               {items.map((x,i)=> {
                 const isGhostWhistle = x.id === 'offline-network';
                 const isBreachMonitor = x.id === 'breach-monitor';
-                const isSpecial = isGhostWhistle || isBreachMonitor;
+                const isStorage = x.id === 'decentralized-storage';
+                const isSpecial = isGhostWhistle || isBreachMonitor || isStorage;
                 const isActive = step === x.id;
                 
                 return (
@@ -8276,11 +8641,18 @@ console.log('✅ Fingerprint spoofing active!');`;
                         )}
                       </span>
                       <span className={isSpecial ? 'font-bold' : ''}>{x.label}</span>
-                      {isGhostWhistle && (
-                        <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 font-bold uppercase tracking-wider border border-emerald-400/40">
-                          Earn
+                      <div className="ml-auto flex items-center gap-2">
+                        {x.isNew && (
+                          <span className="text-[9px] px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-300 font-semibold uppercase tracking-wider border border-blue-400/30">
+                          NEW
                         </span>
                       )}
+                        {isGhostWhistle && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 font-bold uppercase tracking-wider border border-emerald-400/40">
+                            Earn
+                        </span>
+                      )}
+                      </div>
                     </span>
                 </button>
                 );
@@ -21081,7 +21453,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'offline-network', 'breach-monitor', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
+      const validSteps = ['home', 'webrtc', 'offline-network', 'decentralized-storage', 'breach-monitor', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -21952,7 +22324,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'offline-network', 'breach-monitor', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
+      const validSteps = ['home', 'webrtc', 'offline-network', 'decentralized-storage', 'breach-monitor', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (

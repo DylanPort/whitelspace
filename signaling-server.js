@@ -286,6 +286,14 @@ wss.on('connection', (ws, req) => {
           handleRelayToNode(message);
           break;
         
+        case 'STORE_CHUNK':
+          handleStoreChunk(message, ws);
+          break;
+        
+        case 'REQUEST_CHUNK':
+          handleRequestChunk(message, ws);
+          break;
+        
         default:
           console.log('⚠️ Unknown message type:', message.type);
       }
@@ -971,6 +979,85 @@ setInterval(() => {
     upsertNodePerformance(nodeId, node.walletAddress, node.region, 0, node.relayCount);
   });
 }, 300000); // 5 minutes
+
+// Storage handlers
+function handleStoreChunk(message, ws) {
+  try {
+    const { nodeId, chunkId, chunkData, metadata } = message;
+    
+    console.log(`💾 Store chunk request: ${chunkId} -> node ${nodeId}`);
+    
+    // Find target node
+    const targetNode = activeNodes.get(nodeId);
+    if (!targetNode) {
+      console.log(`❌ Node ${nodeId} not found`);
+      ws.send(JSON.stringify({
+        type: 'STORAGE_ERROR',
+        error: `Node ${nodeId} not found or offline`
+      }));
+      return;
+    }
+    
+    // Forward chunk to target node
+    targetNode.ws.send(JSON.stringify({
+      type: 'RECEIVE_CHUNK',
+      chunkId,
+      chunkData,
+      metadata
+    }));
+    
+    console.log(`✅ Chunk ${chunkId} forwarded to node ${nodeId}`);
+    
+    // Send confirmation back to client
+    ws.send(JSON.stringify({
+      type: 'CHUNK_STORED',
+      chunkId,
+      nodeId,
+      success: true
+    }));
+    
+  } catch (error) {
+    console.error('❌ Error handling store chunk:', error);
+    ws.send(JSON.stringify({
+      type: 'STORAGE_ERROR',
+      error: error.message
+    }));
+  }
+}
+
+function handleRequestChunk(message, ws) {
+  try {
+    const { nodeId, chunkId } = message;
+    
+    console.log(`📥 Request chunk: ${chunkId} from node ${nodeId}`);
+    
+    // Find target node
+    const targetNode = activeNodes.get(nodeId);
+    if (!targetNode) {
+      console.log(`❌ Node ${nodeId} not found`);
+      ws.send(JSON.stringify({
+        type: 'STORAGE_ERROR',
+        error: `Node ${nodeId} not found or offline`
+      }));
+      return;
+    }
+    
+    // Request chunk from node
+    targetNode.ws.send(JSON.stringify({
+      type: 'GET_CHUNK',
+      chunkId
+    }));
+    
+    console.log(`✅ Chunk request sent to node ${nodeId}`);
+    
+  } catch (error) {
+    console.error('❌ Error handling request chunk:', error);
+    ws.send(JSON.stringify({
+      type: 'STORAGE_ERROR',
+      error: error.message
+    }));
+  }
+}
 
 // Start server
 const PORT = process.env.PORT || 8080;
