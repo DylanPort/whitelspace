@@ -4450,7 +4450,7 @@
           await new Promise(resolve => setTimeout(resolve, 1000));
           setUploadProgress(90);
           
-          // Step 6: Store file metadata
+          // Step 6: Store file metadata (without chunk data to avoid localStorage size limits)
           const fileMetadata = {
             id: fileId,
             name: file.name,
@@ -4459,14 +4459,30 @@
             uploadedAt: Date.now(),
             encryptionKey: keyHex,
             iv: iv,
-            chunks: chunkAssignments,
+            // Store only references, not actual chunk data
+            chunks: chunkAssignments.map(a => ({
+              chunkId: a.chunkId,
+              nodeId: a.nodeId,
+              uploadedAt: a.uploadedAt,
+              verified: a.verified,
+              node: a.node ? {
+                id: a.node.id,
+                address: a.node.address,
+                region: a.node.region
+              } : null
+            })),
             requiredChunks: 10,
             totalChunks: 15,
             health: 100,
             lastHealthCheck: Date.now()
           };
           
-          setFiles(prev => [...prev, fileMetadata]);
+          console.log('💾 Storing file metadata (no chunk data to save space):', fileMetadata);
+          setFiles(prev => {
+            const updated = [...prev, fileMetadata];
+            console.log('📊 Total files:', updated.length);
+            return updated;
+          });
           setUploadProgress(100);
           
           pushToast(`✅ ${file.name} uploaded successfully!`, 'ok');
@@ -4704,10 +4720,16 @@
       useEffect(() => {
         try {
           console.log('💾 Saving files to localStorage:', files.length, 'files');
-          localStorage.setItem('ghostStorage_files', JSON.stringify(files));
+          const serialized = JSON.stringify(files);
+          console.log('📦 Serialized size:', (serialized.length / 1024).toFixed(2), 'KB');
+          
+          localStorage.setItem('ghostStorage_files', serialized);
           console.log('✅ Files saved successfully');
         } catch (error) {
           console.error('❌ Failed to save files:', error);
+          if (error.name === 'QuotaExceededError') {
+            pushToast('❌ Storage limit exceeded. Please delete old files.', 'error');
+          }
         }
       }, [files]);
       
