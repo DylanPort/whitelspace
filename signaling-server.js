@@ -243,11 +243,25 @@ wss.on('connection', (ws, req) => {
 
   ws.on('message', (data) => {
     try {
+      console.log(`📨 Received RAW message (${data.length} bytes):`, data.toString().substring(0, 200));
       const message = JSON.parse(data);
+      console.log(`📨 Parsed message type: ${message.type}`);
       
       switch (message.type) {
         case 'register':
           handleRegister(ws, message);
+          break;
+        
+        case 'REGISTER_NODE':
+          handleBootstrapNodeRegister(ws, message);
+          break;
+        
+        case 'HEARTBEAT':
+          handleBootstrapHeartbeat(message);
+          break;
+        
+        case 'NODE_OFFLINE':
+          handleNodeOffline(message);
           break;
         
         case 'offer':
@@ -294,6 +308,27 @@ wss.on('connection', (ws, req) => {
           handleRequestChunk(message, ws);
           break;
         
+        case 'RELAY_COMPLETED':
+          // Forward completion notification to all connected clients
+          console.log(`✅ Relay ${message.requestId} completed by ${message.nodeId}`);
+          wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(JSON.stringify({
+                type: 'RELAY_COMPLETED',
+                requestId: message.requestId,
+                signature: message.signature,
+                completedBy: message.nodeId,
+                timestamp: Date.now()
+              }));
+            }
+          });
+          break;
+        
+        case 'NODE_JOINED_RELAY':
+          // Track relay participation (for future analytics)
+          console.log(`📍 Node joined relay ${message.requestId}`);
+          break;
+        
         default:
           console.log('⚠️ Unknown message type:', message.type);
       }
@@ -321,6 +356,70 @@ wss.on('connection', (ws, req) => {
   ws.on('error', (err) => {
     console.error('❌ WebSocket error:', err);
   });
+
+  // Bootstrap node handlers (no X402 required for internal nodes)
+  function handleBootstrapNodeRegister(ws, message) {
+    const { nodeId, walletAddress, region, capabilities, staked } = message;
+    
+    console.log(`🟢 Bootstrap node registering: ${nodeId}`);
+    
+    currentNode = new Node(ws, nodeId, walletAddress);
+    currentNode.region = region || 'unknown';
+    currentNode.reputation = 100; // Bootstrap nodes get max reputation
+    
+    // Create session in database
+    createNodeSession(nodeId, region).then(sessionId => {
+      currentNode.sessionId = sessionId;
+    });
+    
+    activeNodes.set(nodeId, currentNode);
+    
+    // Add to region map
+    if (!nodesByRegion.has(region)) {
+      nodesByRegion.set(region, new Set());
+    }
+    nodesByRegion.get(region).add(nodeId);
+    
+    console.log(`✅ Bootstrap node registered: ${nodeId} (${walletAddress.slice(0,8)}...) in ${region}`);
+    
+    // Send confirmation
+    ws.send(JSON.stringify({
+      type: 'NODE_REGISTERED',
+      nodeId: nodeId,
+      message: 'Bootstrap node registered successfully'
+    }));
+    
+    // Broadcast updated node list to all
+    broadcastNodeList();
+  }
+  
+  function handleBootstrapHeartbeat(message) {
+    const { nodeId } = message;
+    const node = activeNodes.get(nodeId);
+    
+    if (node) {
+      node.updateLastSeen();
+    }
+  }
+  
+  function handleNodeOffline(message) {
+    const { nodeId } = message;
+    const node = activeNodes.get(nodeId);
+    
+    if (node) {
+      console.log(`🛑 Bootstrap node going offline: ${nodeId}`);
+      
+      // Persist session data before removing
+      const sessionUptime = Date.now() - node.connectedAt;
+      if (node.sessionId) {
+        endNodeSession(node.sessionId, node.id, sessionUptime, node.relayCount);
+        upsertNodePerformance(node.id, node.walletAddress, node.region, sessionUptime, node.relayCount);
+      }
+      
+      activeNodes.delete(nodeId);
+      broadcastNodeList();
+    }
+  }
 
   async function validateX402Token(token) {
     try {

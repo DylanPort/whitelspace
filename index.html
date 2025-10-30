@@ -2,19 +2,46 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-  <title>Whistle — P2P encrypted tips + Solana memo</title>
+  <title>Whistle v1.5 — P2P encrypted tips + Solana memo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: http: data: blob:; connect-src 'self' https: wss: ws: http://localhost:* ws://localhost:*; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: http:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https: http:;">
   <!-- Cache control for mobile browsers -->
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="manifest" href="/manifest.webmanifest?v=1.5">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#0b0f14">
+  <meta name="theme-color" content="#020408">
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- v1.5 Cache Buster & Service Worker Update -->
+  <script>
+    // Clear old service worker cache and force reload
+    (async function() {
+      const version = 'v1.5-premium';
+      const lastVersion = localStorage.getItem('app-version');
+      
+      if (lastVersion !== version) {
+        console.log('🔄 Upgrading to', version);
+        
+        // Clear service worker caches
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(key => caches.delete(key)));
+        }
+        
+        // Unregister old service worker
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map(r => r.unregister()));
+        }
+        
+        localStorage.setItem('app-version', version);
+        window.location.reload(true);
+      }
+    })();
+  </script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -108,12 +135,19 @@
     window.isSolanaMobile = /SolanaMobile/i.test(navigator.userAgent);
   </script>
 <style>
+    /* ========================================
+       Ghost Whistle v1.5 - Premium Dark Theme
+       Darker backgrounds, diverse animations
+       Professional glass morphism effects
+       ======================================== */
     html,body{height:100%}
     body{
-      background: linear-gradient(135deg, #0a0e1a 0%, #0d1117 20%, #0e1520 40%, #0a0d18 60%, #090c14 80%, #06070d 100%);
+      background: linear-gradient(135deg, #020408 0%, #050810 20%, #070b15 40%, #040609 60%, #030508 80%, #010204 100%);
       background-attachment: fixed;
       position: relative;
+      overflow-x: hidden;
     }
+    /* Premium layered background effects v1.5 */
     body::before {
       content: '';
       position: fixed;
@@ -121,27 +155,132 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: radial-gradient(ellipse at top, rgba(13, 27, 62, 0.3) 0%, transparent 50%),
-                  radial-gradient(ellipse at bottom left, rgba(20, 15, 35, 0.2) 0%, transparent 50%),
-                  radial-gradient(ellipse at bottom right, rgba(15, 20, 40, 0.2) 0%, transparent 50%);
+      background: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 80% at 0% 50%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 80% at 100% 50%, rgba(6, 182, 212, 0.1) 0%, transparent 50%),
+        radial-gradient(ellipse 100% 100% at 50% 100%, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
       pointer-events: none;
       z-index: 0;
+      animation: ambientShift 20s ease-in-out infinite alternate;
+    }
+    /* Animated particles overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        radial-gradient(2px 2px at 20% 30%, rgba(255,255,255,0.15) 0%, transparent 50%),
+        radial-gradient(2px 2px at 60% 70%, rgba(99, 102, 241, 0.2) 0%, transparent 50%),
+        radial-gradient(3px 3px at 50% 50%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+        radial-gradient(2px 2px at 80% 10%, rgba(6, 182, 212, 0.2) 0%, transparent 50%),
+        radial-gradient(2px 2px at 40% 80%, rgba(16, 185, 129, 0.15) 0%, transparent 50%);
+      background-size: 200% 200%;
+      background-position: 0% 0%;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.6;
+      animation: particleFloat 40s ease-in-out infinite;
+    }
+    @keyframes ambientShift {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.1); }
+    }
+    @keyframes particleFloat {
+      0%, 100% { background-position: 0% 0%; }
+      25% { background-position: 100% 0%; }
+      50% { background-position: 100% 100%; }
+      75% { background-position: 0% 100%; }
+    }
+    /* v1.5 Animated Mesh Gradient Overlay */
+    @keyframes meshRotate {
+      0% { transform: rotate(0deg) scale(1); opacity: 0.03; }
+      50% { transform: rotate(180deg) scale(1.1); opacity: 0.05; }
+      100% { transform: rotate(360deg) scale(1); opacity: 0.03; }
+    }
+    @keyframes techGridMove {
+      0% { transform: translateY(0) translateX(0); }
+      100% { transform: translateY(40px) translateX(40px); }
+    }
+    body > .mesh-overlay {
+      position: fixed;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: 
+        radial-gradient(circle at 20% 50%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 40% 20%, rgba(6, 182, 212, 0.12) 0%, transparent 50%),
+        radial-gradient(circle at 90% 10%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+      animation: meshRotate 60s ease-in-out infinite;
+      mix-blend-mode: screen;
+    }
+    body > .tech-grid {
+      position: fixed;
+      inset: 0;
+      background-image: 
+        linear-gradient(rgba(99, 102, 241, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99, 102, 241, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+      animation: techGridMove 20s linear infinite;
+      opacity: 0.5;
     }
     #root {
       position: relative;
       z-index: 1;
     }
-    /* Premium dynamic visuals */
+    /* Premium dynamic visuals v1.5 */
     @keyframes gradientMove{0%{transform:translate3d(-6%, -4%, 0) scale(1)}100%{transform:translate3d(6%, 4%, 0) scale(1.08)}}
     @keyframes floatSlow{0%{transform:translateY(0)}50%{transform:translateY(-4px)}100%{transform:translateY(0)}}
+    @keyframes floatMedium{0%{transform:translateY(0) translateX(0)}33%{transform:translateY(-8px) translateX(4px)}66%{transform:translateY(-4px) translateX(-4px)}100%{transform:translateY(0) translateX(0)}}
+    @keyframes floatElegant{0%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-10px) rotate(2deg)}100%{transform:translateY(0) rotate(0deg)}}
     @keyframes ripple{0%{transform:scale(0);opacity:.5}100%{transform:scale(4);opacity:0}}
     @keyframes toastIn{0%{transform:translateY(8px);opacity:0}100%{transform:translateY(0);opacity:1}}
     @keyframes fadeIn{0%{opacity:0}100%{opacity:1}}
     @keyframes fadeOut{0%{opacity:1}100%{opacity:0}}
     @keyframes slideUp{0%{transform:translateY(20px) scale(0.95);opacity:0}100%{transform:translateY(0) scale(1);opacity:1}}
+    @keyframes slideDown{0%{transform:translateY(-20px);opacity:0}100%{transform:translateY(0);opacity:1}}
+    @keyframes slideInFromLeft{0%{transform:translateX(-100%) rotate(-5deg);opacity:0}100%{transform:translateX(0) rotate(0deg);opacity:1}}
+    @keyframes slideInFromRight{0%{transform:translateX(100%) rotate(5deg);opacity:0}100%{transform:translateX(0) rotate(0deg);opacity:1}}
+    @keyframes zoomInRotate{0%{transform:scale(0.5) rotate(-180deg);opacity:0}100%{transform:scale(1) rotate(0deg);opacity:1}}
+    @keyframes breathe{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.03);opacity:0.9}}
+    @keyframes gentlePulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.05);opacity:0.85}}
+    @keyframes smoothBounce{0%,100%{transform:translateY(0)}25%{transform:translateY(-10px)}50%{transform:translateY(-5px)}75%{transform:translateY(-7px)}}
+    @keyframes wave{0%{transform:rotate(0deg)}10%{transform:rotate(14deg)}20%{transform:rotate(-8deg)}30%{transform:rotate(14deg)}40%{transform:rotate(-4deg)}50%{transform:rotate(10deg)}60%{transform:rotate(0deg)}100%{transform:rotate(0deg)}}
+    @keyframes subtleGlow{0%,100%{filter:brightness(1) drop-shadow(0 0 2px currentColor)}50%{filter:brightness(1.2) drop-shadow(0 0 8px currentColor)}}
+    @keyframes borderGlow{0%,100%{box-shadow:0 0 5px rgba(99,102,241,0.3),0 0 10px rgba(139,92,246,0.2),inset 0 0 5px rgba(99,102,241,0.1)}50%{box-shadow:0 0 20px rgba(99,102,241,0.6),0 0 30px rgba(139,92,246,0.4),inset 0 0 10px rgba(99,102,241,0.2)}}
+    @keyframes shimmerWave{0%{background-position:-200% center}100%{background-position:200% center}}
+    @keyframes rotateY{0%{transform:rotateY(0deg)}100%{transform:rotateY(360deg)}}
+    @keyframes flipIn{0%{transform:perspective(400px) rotateX(90deg);opacity:0}100%{transform:perspective(400px) rotateX(0deg);opacity:1}}
+    @keyframes skewIn{0%{transform:skewX(-20deg) translateX(-50px);opacity:0}100%{transform:skewX(0deg) translateX(0);opacity:1}}
+    @keyframes matrixFall{0%{transform:translateY(-100%);opacity:0}50%{opacity:1}100%{transform:translateY(100vh);opacity:0}}
+    /* v1.5 Premium Animation Classes */
     .animate-fadeIn{animation:fadeIn 0.3s ease-out}
     .animate-fadeOut{animation:fadeOut 0.3s ease-out}
     .animate-slideUp{animation:slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)}
+    .animate-slideDown{animation:slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1)}
+    .animate-floatMedium{animation:floatMedium 8s ease-in-out infinite}
+    .animate-floatElegant{animation:floatElegant 6s ease-in-out infinite}
+    .animate-breathe{animation:breathe 4s ease-in-out infinite}
+    .animate-gentlePulse{animation:gentlePulse 3s ease-in-out infinite}
+    .animate-smoothBounce{animation:smoothBounce 2s ease-in-out infinite}
+    .animate-wave{animation:wave 2s ease-in-out}
+    .animate-subtleGlow{animation:subtleGlow 2s ease-in-out infinite}
+    .animate-borderGlow{animation:borderGlow 3s ease-in-out infinite}
+    .animate-shimmerWave{animation:shimmerWave 3s linear infinite}
+    .animate-flipIn{animation:flipIn 0.6s cubic-bezier(0.16, 1, 0.3, 1)}
+    .animate-skewIn{animation:skewIn 0.5s cubic-bezier(0.16, 1, 0.3, 1)}
+    .animate-zoomInRotate{animation:zoomInRotate 0.6s cubic-bezier(0.16, 1, 0.3, 1)}
+    .animate-slideInLeft{animation:slideInFromLeft 0.5s cubic-bezier(0.16, 1, 0.3, 1)}
+    .animate-slideInRight{animation:slideInFromRight 0.5s cubic-bezier(0.16, 1, 0.3, 1)}
     @keyframes scanline{0%{transform:translateY(-100%)}100%{transform:translateY(100%)}}
     @keyframes neonPulse{0%,100%{box-shadow:0 0 5px rgba(6,182,212,0.4),0 0 10px rgba(6,182,212,0.3),0 0 15px rgba(6,182,212,0.2),0 0 20px rgba(6,182,212,0.1)}50%{box-shadow:0 0 10px rgba(6,182,212,0.6),0 0 20px rgba(6,182,212,0.5),0 0 30px rgba(6,182,212,0.4),0 0 40px rgba(6,182,212,0.3)}}
     @keyframes glitchMove{0%{transform:translate(0)}20%{transform:translate(-2px,2px)}40%{transform:translate(-2px,-2px)}60%{transform:translate(2px,2px)}80%{transform:translate(2px,-2px)}100%{transform:translate(0)}}
@@ -151,15 +290,22 @@
     @keyframes menuItemFade{0%{opacity:0;transform:translateX(-10px)}100%{opacity:1;transform:translateX(0)}}
     @keyframes scan{0%{background-position:0 0}100%{background-position:0 100%}}
     @keyframes scan-line{0%{transform:translateY(-100%)}100%{transform:translateY(4000%)}}
-    .cyberpunk-card{position:relative}
-    .cyberpunk-card::before,.cyberpunk-card::after{content:'';position:absolute;width:20px;height:20px;opacity:0.6;transition:all 0.3s}
+    /* v1.5 Premium Card Effects */
+    .cyberpunk-card{position:relative;transition:all 0.4s cubic-bezier(0.16, 1, 0.3, 1)}
+    .cyberpunk-card::before,.cyberpunk-card::after{content:'';position:absolute;width:20px;height:20px;opacity:0.6;transition:all 0.4s cubic-bezier(0.16, 1, 0.3, 1)}
     .cyberpunk-card::before{top:0;left:0;border-top:2px solid currentColor;border-left:2px solid currentColor}
     .cyberpunk-card::after{bottom:0;right:0;border-bottom:2px solid currentColor;border-right:2px solid currentColor}
-    .cyberpunk-card:hover::before,.cyberpunk-card:hover::after{width:30px;height:30px;opacity:1}
+    .cyberpunk-card:hover{transform:translateY(-4px) scale(1.02)}
+    .cyberpunk-card:hover::before,.cyberpunk-card:hover::after{width:35px;height:35px;opacity:1}
+    .premium-glass{background:rgba(10,14,26,0.4);backdrop-filter:blur(20px) saturate(180%);border:1px solid rgba(255,255,255,0.1);box-shadow:0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.05)}
+    .premium-glass-dark{background:rgba(2,4,10,0.6);backdrop-filter:blur(24px) saturate(200%);border:1px solid rgba(99,102,241,0.2);box-shadow:0 12px 40px rgba(0,0,0,0.5),inset 0 1px 0 rgba(99,102,241,0.1),0 0 80px rgba(99,102,241,0.03)}
+    .premium-glow-border{position:relative;border:1px solid transparent;background:linear-gradient(135deg,rgba(2,4,10,0.95),rgba(5,8,16,0.98)) padding-box,linear-gradient(135deg,rgba(99,102,241,0.5),rgba(139,92,246,0.5),rgba(6,182,212,0.5)) border-box}
+    .premium-hover-lift{transition:all 0.4s cubic-bezier(0.16, 1, 0.3, 1)}
+    .premium-hover-lift:hover{transform:translateY(-6px) scale(1.02);box-shadow:0 20px 60px rgba(99,102,241,0.3),0 0 80px rgba(139,92,246,0.2)}
     .bg-anim{animation:gradientMove 14s ease-in-out infinite alternate}
     .float-slow{animation:floatSlow 6s ease-in-out infinite}
-    .glass-hover{transition:transform .3s ease, box-shadow .3s ease}
-    .glass-hover:hover{transform:translateY(-2px);box-shadow:0 20px 40px rgba(0,0,0,.35)}
+    .glass-hover{transition:transform .4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow .4s ease, border-color .4s ease}
+    .glass-hover:hover{transform:translateY(-4px) scale(1.01);box-shadow:0 24px 48px rgba(0,0,0,.5),0 0 60px rgba(99,102,241,0.15);border-color:rgba(99,102,241,0.4)}
     .btn-ripple{position:relative;overflow:hidden}
     .btn-ripple span.ripple{position:absolute;border-radius:9999px;background:rgba(255,255,255,.35);transform:scale(0);animation:ripple .6s linear;pointer-events:none}
     .toast-enter{animation:toastIn .4s cubic-bezier(0.68, -0.55, 0.265, 1.55)}
@@ -197,24 +343,27 @@
       background: rgba(239, 68, 68, 0.1);
     }
     
-    /* Custom Leaflet Map Styles */
+    /* v1.5 Custom Leaflet Map Styles - Visible Map with Dark Theme */
     .leaflet-container {
-      background: #0f1419 !important;
-      border-radius: 12px;
+      background: #0a1628 !important;
+      border-radius: 16px;
       z-index: 1;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3), inset 0 0 30px rgba(99,102,241,0.05);
     }
     .leaflet-tile-pane {
-      opacity: 0.6 !important;
+      opacity: 0.85 !important;
+      filter: brightness(0.9) contrast(1.1) saturate(0.8);
     }
     .leaflet-popup-content-wrapper {
-      background: rgba(15, 23, 42, 0.95) !important;
-      backdrop-filter: blur(12px);
-      border-radius: 12px !important;
+      background: rgba(2, 4, 10, 0.98) !important;
+      backdrop-filter: blur(20px) saturate(180%);
+      border-radius: 16px !important;
       color: white !important;
-      border: 1px solid rgba(59, 130, 246, 0.3) !important;
+      border: 1px solid rgba(99, 102, 241, 0.4) !important;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.6), 0 0 60px rgba(99,102,241,0.2) !important;
     }
     .leaflet-popup-tip {
-      background: rgba(15, 23, 42, 0.95) !important;
+      background: rgba(2, 4, 10, 0.98) !important;
     }
     
     /* Make markers HIGHLY visible */
@@ -322,9 +471,9 @@
       background: rgba(16, 185, 129, 0.7);
     }
 
-    /* Animated sky with clouds */
-     .sky{position:fixed;inset:0;pointer-events:none;z-index:-9;background:linear-gradient(180deg,#7ec8ff 0%, #bfe4ff 45%, #e8f4ff 100%)}
-     .cloud{position:absolute;filter:blur(0px);opacity:.95}
+    /* v1.5 Dark Premium Background - NO BLUE! */
+     .sky{position:fixed;inset:0;pointer-events:none;z-index:-9;background:linear-gradient(135deg, #020408 0%, #050810 20%, #070b15 40%, #040609 60%, #030508 80%, #010204 100%);display:none!important}
+     .cloud{position:absolute;filter:blur(0px);opacity:0;display:none!important}
     .cloud::before{content:"";position:absolute;inset:0; background:
       radial-gradient(120px 70px at 60px 60px, rgba(255,255,255,.95) 40%, rgba(255,255,255,0) 60%),
       radial-gradient(100px 60px at 120px 60px, rgba(255,255,255,.95) 40%, rgba(255,255,255,0) 60%),
@@ -342,12 +491,17 @@
     .c8{top:64%;left:-50%;width:440px;height:170px;animation:cloudDrift 88s linear infinite}
     .c9{top:78%;left:-46%;width:300px;height:120px;animation:cloudDrift 76s linear infinite}
 
-    /* Dim overlay to ensure text contrast */
-    .sky-dim{position:fixed;inset:0;pointer-events:none;z-index:-8;background:linear-gradient(180deg,rgba(0,0,0,.38) 0%, rgba(0,0,0,.32) 35%, rgba(0,0,0,.28) 65%, rgba(0,0,0,.36) 100%)}
+    /* v1.5 Dark overlay - DISABLED (using body background instead) */
+    .sky-dim{position:fixed;inset:0;pointer-events:none;z-index:-8;background:transparent;display:none!important}
+    
+    /* v1.5 Ensure App wrapper is transparent */
+    #root > div, .relative.min-h-screen {
+      background: transparent !important;
+    }
 
-    /* Stronger glass panels for readability */
-    .glass-strong{background:rgba(10,14,20,.58)!important;border-color:rgba(255,255,255,.12)!important;box-shadow:0 24px 60px rgba(0,0,0,.45)!important}
-    .panel-strong{background:rgba(10,14,20,.58)!important;border-color:rgba(255,255,255,.12)!important}
+    /* v1.5 Stronger glass panels for readability - Darker Premium */
+    .glass-strong{background:rgba(2,4,10,.75)!important;backdrop-filter:blur(24px) saturate(200%)!important;border:1px solid rgba(99,102,241,.15)!important;box-shadow:0 24px 60px rgba(0,0,0,.6),inset 0 1px 0 rgba(99,102,241,.08)!important}
+    .panel-strong{background:rgba(2,4,10,.7)!important;backdrop-filter:blur(20px) saturate(180%)!important;border:1px solid rgba(255,255,255,.08)!important;box-shadow:0 12px 40px rgba(0,0,0,.5)!important}
 
     /* Home: premium animations */
     @keyframes fadeUp{0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:translateY(0)}}
@@ -372,13 +526,13 @@
     .hover-lift{transition:transform .25s ease, box-shadow .25s ease}
     .hover-lift:hover{transform:translateY(-3px) scale(1.01);box-shadow:0 18px 40px rgba(0,0,0,.45)}
     
-    .badge-step{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:9999px;background:linear-gradient(135deg,#67e8f9,#a78bfa);color:#0b0f14;font-weight:700;font-size:12px;margin-right:8px;animation:glow 3s ease-in-out infinite}
+    .badge-step{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:9999px;background:linear-gradient(135deg,#6366f1,#8b5cf6,#06b6d4);color:#fff;font-weight:700;font-size:12px;margin-right:8px;box-shadow:0 4px 12px rgba(99,102,241,0.4);animation:glow 3s ease-in-out infinite}
     
-    .step-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:10px;transition:all .3s ease}
-    .step-card:hover{background:rgba(255,255,255,.06);border-color:rgba(103,232,249,.2)}
+    .step-card{background:rgba(2,4,10,.6);backdrop-filter:blur(12px);border:1px solid rgba(99,102,241,.2);border-radius:16px;padding:10px;transition:all .4s cubic-bezier(0.16, 1, 0.3, 1)}
+    .step-card:hover{background:rgba(2,4,10,.8);border-color:rgba(99,102,241,.4);transform:translateY(-2px);box-shadow:0 12px 32px rgba(99,102,241,.25)}
     
-    .mini-code{background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px;transition:all .3s ease}
-    .mini-code:hover{border-color:rgba(103,232,249,.3);box-shadow:0 0 20px rgba(103,232,249,.15)}
+    .mini-code{background:rgba(0,0,0,.65);backdrop-filter:blur(8px);border:1px solid rgba(99,102,241,.2);border-radius:8px;padding:8px;transition:all .4s cubic-bezier(0.16, 1, 0.3, 1)}
+    .mini-code:hover{border-color:rgba(99,102,241,.5);background:rgba(0,0,0,.75);box-shadow:0 0 24px rgba(99,102,241,.25),inset 0 0 12px rgba(99,102,241,.1)}
     
     .shimmer-bg{background:linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.08) 50%,rgba(255,255,255,0) 100%);background-size:200% 100%;animation:shimmer 3s linear infinite}
     .animate-shimmer{animation:shimmer 3s infinite}
@@ -468,9 +622,90 @@
       animation: coinBounce 1s ease-in-out 3;
     }
     
-    /* Button press effect */
-    .btn-press{transition:all .15s ease}
+    /* v1.5 Premium Logo 3D Animations */
+    @keyframes logo3DFloat {
+      0%, 100% {
+        transform: translateY(0px) rotateY(0deg) rotateX(0deg) scale(1);
+      }
+      25% {
+        transform: translateY(-8px) rotateY(15deg) rotateX(5deg) scale(1.05);
+      }
+      50% {
+        transform: translateY(-4px) rotateY(-15deg) rotateX(-5deg) scale(1.08);
+      }
+      75% {
+        transform: translateY(-10px) rotateY(10deg) rotateX(3deg) scale(1.05);
+      }
+    }
+    
+    @keyframes logoSpin {
+      0% { transform: rotateY(0deg); }
+      100% { transform: rotateY(360deg); }
+    }
+    
+    @keyframes logoBump {
+      0%, 100% { transform: scale(1) rotate(0deg); }
+      25% { transform: scale(1.15) rotate(5deg); }
+      50% { transform: scale(1.1) rotate(-5deg); }
+      75% { transform: scale(1.15) rotate(3deg); }
+    }
+    
+    @keyframes logoFlip {
+      0% { transform: perspective(400px) rotateX(0deg); }
+      100% { transform: perspective(400px) rotateX(360deg); }
+    }
+    
+    .logo-3d-float {
+      perspective: 1000px;
+      transform-style: preserve-3d;
+      animation: logo3DFloat 6s ease-in-out infinite;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    .logo-3d-float:hover {
+      animation: logoSpin 2s ease-in-out, logoBump 0.6s ease-in-out;
+      filter: drop-shadow(0 0 20px rgba(99, 102, 241, 0.8)) drop-shadow(0 0 40px rgba(139, 92, 246, 0.6));
+    }
+    
+    .logo-dynamic {
+      transform-style: preserve-3d;
+      transition: all 0.3s ease;
+      animation: logoBump 4s ease-in-out infinite;
+    }
+    
+    .logo-3d-float:active .logo-dynamic {
+      animation: logoFlip 0.8s ease-in-out;
+    }
+    
+    /* v1.5 Premium Button Effects */
+    .btn-press{transition:all .15s cubic-bezier(0.4, 0, 0.2, 1)}
     .btn-press:active{transform:scale(.96)}
+    .btn-premium{
+      position:relative;
+      overflow:hidden;
+      transition:all .4s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow:0 4px 16px rgba(99,102,241,0.3),inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+    .btn-premium::before{
+      content:'';
+      position:absolute;
+      top:0;
+      left:-100%;
+      width:100%;
+      height:100%;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent);
+      transition:left 0.5s ease;
+    }
+    .btn-premium:hover{
+      transform:translateY(-2px);
+      box-shadow:0 8px 24px rgba(99,102,241,0.5),0 0 40px rgba(139,92,246,0.3),inset 0 1px 0 rgba(255,255,255,0.2);
+    }
+    .btn-premium:hover::before{
+      left:100%;
+    }
+    .btn-premium:active{
+      transform:translateY(0) scale(0.98);
+    }
     
     /* Card entrance stagger */
     .stagger-1{animation-delay:.05s}
@@ -557,8 +792,10 @@
         display:none; /* Hide animations in landscape for better performance */
       }
       body{
-        background:#0b0f14;
+        background:#020408;
       }
+      /* Reduce animation intensity on mobile for better performance */
+      .animate-floatMedium,.animate-floatElegant,.animate-breathe{animation-duration:10s!important}
     }
     
     /* Touch-friendly improvements */
@@ -995,8 +1232,35 @@
   <!-- EXIF Reader for metadata scrubbing -->
   <script src="https://cdn.jsdelivr.net/npm/exifreader@4.14.1/dist/exif-reader.js"></script>
 </head>
-<body>
+<body style="background: linear-gradient(135deg, #020408 0%, #050810 20%, #070b15 40%, #040609 60%, #030508 80%, #010204 100%) !important; background-attachment: fixed !important;">
+  <!-- v1.5 Premium Animated Background Effects -->
+  <div class="mesh-overlay"></div>
+  <div class="tech-grid"></div>
+  <!-- Force v1.5 Dark Theme Override -->
+  <style>
+    body {
+      background: linear-gradient(135deg, #020408 0%, #050810 20%, #070b15 40%, #040609 60%, #030508 80%, #010204 100%) !important;
+      background-attachment: fixed !important;
+    }
+  </style>
   <div id="root"></div>
+
+  <!-- Force v1.5 Theme Application -->
+  <script>
+    // Immediately apply v1.5 dark theme (cache override)
+    (function() {
+      const darkBg = 'linear-gradient(135deg, #020408 0%, #050810 20%, #070b15 40%, #040609 60%, #030508 80%, #010204 100%)';
+      document.body.style.background = darkBg;
+      document.body.style.backgroundAttachment = 'fixed';
+      
+      // Double-check after DOM loads
+      document.addEventListener('DOMContentLoaded', function() {
+        document.body.style.background = darkBg;
+        document.body.style.backgroundAttachment = 'fixed';
+        console.log('✅ Ghost Whistle v1.5 - Premium Dark Theme Applied');
+      });
+    })();
+  </script>
 
   <script type="text/babel">
     const { useEffect, useMemo, useRef, useState } = React;
@@ -2003,8 +2267,8 @@
       return (
         <header className="flex items-center justify-between border-b border-white/10 pb-3 fade-up gap-2 relative z-[10000]">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <div className="relative h-9 w-9 shrink-0 rounded-xl overflow-hidden border border-white/20 float-slow bg-white/5 hover:scale-110 transition-transform">
-              <img src="whistel_logo_top_right_2048.png" alt="Whistle" className="absolute inset-0 h-full w-full object-contain"/>
+            <div className="relative shrink-0 rounded-xl overflow-visible border border-white/20 bg-white/5 logo-3d-float group cursor-pointer" style={{width: '72px', height: '72px'}}>
+              <img src="whistel_logo_top_right_2048.png" alt="Whistle" className="absolute inset-0 h-full w-full object-contain logo-dynamic"/>
                {!walletStore.pubkey && <span className="absolute inset-0 rounded-xl bg-cyan-400/20 animate-ping pulse-glow" />}
     </div>
       <div className="min-w-0 flex-1">
@@ -2762,15 +3026,16 @@
       const tabs = [
         { id: "home", label: "Home", emoji: "🏛️" },
         { id: "offline-network", label: "Ghost Whistle", emoji: "👻", special: true },
-        { id: "decentralized-storage", label: "Decentralized Storage", emoji: "💾", special: true },
-        { id: "breach-monitor", label: "Breach Monitor", emoji: "🚨", special: true },
+        { id: "anonymous-relay", label: "Anonymous Relay", emoji: "🔀", special: true },
+        { id: "privacy-tools", label: "Privacy Tools Hub", emoji: "🔒" },
+        { id: "decentralized-storage", label: "Decentralized Storage", emoji: "💾", indent: true },
+        { id: "breach-monitor", label: "Breach Monitor", emoji: "🚨", indent: true },
         { id: "claim-rewards", label: "Claim Rewards", emoji: "💰" },
         { id: "social-hub", label: "Ghost Terminal", emoji: "🖥️" },
         { id: "services", label: "Ghost Services", emoji: "✨" },
         { id: "how-it-works", label: "How It Works", emoji: "💡" },
         { id: "swap", label: "Privacy Swap", image: "public/4DqRlDPT_400x400.png.png" },
         { id: "solana-privacy", label: "Solana Privacy", image: "public/solana.png" },
-        { id: "privacy-tools", label: "Privacy Tools", emoji: "🗝️" },
       ];
       
       const currentTab = tabs.find(t => t.id === step) || tabs[0];
@@ -2853,7 +3118,7 @@
                       setIsOpen(false);
                     }
                   }}
-                  className={`relative w-full flex items-center gap-3 px-4 py-3 text-left transition-all ${
+                  className={`relative w-full flex items-center gap-3 ${t.indent ? 'pl-8' : 'px-4'} py-3 text-left transition-all ${
                     step === t.id
                       ? "bg-cyan-400/20 text-cyan-200 border-l-4 border-cyan-400 shadow-lg"
                       : "text-white/80 hover:bg-cyan-400/10 border-l-4 border-transparent hover:border-cyan-400/30"
@@ -2867,9 +3132,9 @@
                   {t.image ? (
                     <img src={t.image} alt={t.label} className="w-5 h-5 object-contain rounded" />
                   ) : (
-                    <span className="text-lg">{t.emoji}</span>
+                    <span className={`${t.indent ? 'text-base' : 'text-lg'}`}>{t.emoji}</span>
                   )}
-                  <span className="font-medium text-sm">{t.label}</span>
+                  <span className={`font-medium ${t.indent ? 'text-xs' : 'text-sm'}`}>{t.label}</span>
                   {step === t.id && (
                     <svg className="w-4 h-4 ml-auto text-cyan-400" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -3382,7 +3647,7 @@
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-emerald-400 text-xs">●</span>
-                      <p className="text-white/60">Ghost Whistle Breach Monitor v1.0</p>
+                      <p className="text-white/60">Ghost Whistle Breach Monitor v1.5</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-emerald-400 text-xs">●</span>
@@ -4681,7 +4946,7 @@
         
         // Connect to signaling server for real node storage
         try {
-          const signalUrl = 'https://ghost-whistle-signaling.onrender.com';
+          const signalUrl = 'http://localhost:8080';
           console.log('📡 Connecting to signaling server:', signalUrl);
           const newSocket = io(signalUrl);
           
@@ -5293,7 +5558,7 @@
               </div>
               <div className="text-yellow-400/80 pl-4">
                 [!] Next step: WebRTC integration for chunk transmission<br/>
-                [!] Signaling server ready at: ghost-whistle-signaling.onrender.com
+                [!] Signaling server ready at: localhost:8080
               </div>
               
               <div className="flex items-start gap-2 pt-2">
@@ -8601,23 +8866,29 @@ console.log('✅ Fingerprint spoofing active!');`;
 
     // Sidebar navigation
     function Sidebar({ step, setStep }){
+      const [privacyToolsExpanded, setPrivacyToolsExpanded] = useState(true);
+      
       const items = [
         { id:'home',    label:'Home', icon:'home', color:'cyan' },
         { id:'offline-network', label:'Ghost Whistle', icon:'network', special: true, color:'emerald' },
-        { id:'decentralized-storage', label:'Decentralized Storage', icon:'database', special: true, color:'blue', isNew: true },
-        { id:'breach-monitor', label:'Breach Monitor', icon:'shield-alert', special: true, color:'red', isNew: true },
+        { id:'anonymous-relay', label:'Anonymous Relay', icon:'shuffle', special: true, color:'purple' },
         { id:'claim-rewards', label:'Claim Rewards', icon:'gift', color:'yellow' },
         { id:'social-hub', label:'Ghost Terminal', icon:'terminal', color:'cyan' },
         { id:'services', label:'Ghost Services', icon:'activity', color:'purple' },
         { id:'how-it-works', label:'How It Works', icon:'book-open', color:'blue' },
         { id:'swap', label:'Privacy Swap', image:'public/4DqRlDPT_400x400.png.png', color:'orange' },
         { id:'solana-privacy', label:'Solana Privacy', image:'public/solana.png', color:'indigo' },
-        { id:'privacy-tools', label:'Privacy Tools', icon:'lock', color:'slate' },
+        { id:'privacy-tools', label:'Privacy Tools Hub', icon:'lock', color:'slate' },
+      ];
+      
+      const privacyToolsItems = [
+        { id:'decentralized-storage', label:'Decentralized Storage', icon:'database', color:'blue', isNew: true },
+        { id:'breach-monitor', label:'Breach Monitor', icon:'shield-alert', color:'red' },
       ];
       
       useEffect(()=>{
         if(window.lucide) window.lucide.createIcons();
-      },[step]);
+      },[step, privacyToolsExpanded]);
       
       return (
         <aside className="hidden md:block w-[280px] shrink-0">
@@ -8633,16 +8904,23 @@ console.log('✅ Fingerprint spoofing active!');`;
             <nav className="space-y-2">
               {items.map((x,i)=> {
                 const isGhostWhistle = x.id === 'offline-network';
-                const isBreachMonitor = x.id === 'breach-monitor';
-                const isStorage = x.id === 'decentralized-storage';
-                const isSpecial = isGhostWhistle || isBreachMonitor || isStorage;
+                const isAnonymousRelay = x.id === 'anonymous-relay';
+                const isPrivacyTools = x.id === 'privacy-tools';
+                const isSpecial = isGhostWhistle || isAnonymousRelay;
                 const isActive = step === x.id;
                 
+                // Check if any privacy tool is active
+                const isPrivacyToolActive = privacyToolsItems.some(tool => tool.id === step);
+                
                 return (
-                <button key={x.id} onClick={()=>{
+                <div key={x.id} className="space-y-1">
+                  <button onClick={()=>{
                   console.log('🎯 Sidebar clicked:', x.id);
                   if (x.id === 'how-it-works') {
                     window.open('/howto', '_blank');
+                    } else if (x.id === 'privacy-tools') {
+                      setPrivacyToolsExpanded(!privacyToolsExpanded);
+                      setStep(x.id); // Also navigate to privacy-tools page
                   } else {
                     setStep(x.id);
                   }
@@ -8652,10 +8930,12 @@ console.log('✅ Fingerprint spoofing active!');`;
                         ? isActive
                           ? 'relative border-emerald-400/60 bg-gradient-to-r from-emerald-400/20 via-teal-400/20 to-cyan-400/20 text-white shadow-lg shadow-emerald-500/30 animate-pulse'
                           : 'relative border-emerald-500/40 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-cyan-500/10 text-emerald-100 hover:border-emerald-400/60 hover:shadow-lg hover:shadow-emerald-500/20 hover:scale-[1.03] animate-shimmer'
-                        : isBreachMonitor
-                        ? isActive
-                          ? 'relative border-red-400/60 bg-gradient-to-r from-red-400/20 via-orange-400/20 to-orange-400/10 text-white shadow-lg shadow-red-500/30 animate-pulse'
-                          : 'relative border-red-500/40 bg-gradient-to-r from-red-500/10 via-orange-500/10 to-orange-500/5 text-red-100 hover:border-red-400/60 hover:shadow-lg hover:shadow-red-500/20 hover:scale-[1.03]'
+                          : isAnonymousRelay
+                          ? isActive
+                            ? 'relative border-amber-400/60 bg-gradient-to-r from-amber-400/20 via-orange-400/20 to-yellow-400/20 text-white shadow-lg shadow-amber-500/40 animate-pulse'
+                            : 'relative border-amber-500/40 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-yellow-500/10 text-amber-100 hover:border-amber-400/60 hover:shadow-lg hover:shadow-amber-500/30 hover:scale-[1.03]'
+                          : isPrivacyTools && (isActive || isPrivacyToolActive)
+                          ? 'border-slate-400/60 bg-slate-400/15 text-slate-100'
                         : isActive
                     ? 'border-cyan-400/60 bg-cyan-400/15 text-cyan-100 scale-in'
                           : 'border-white/10 bg-white/[0.03] text-white/80 hover:bg-white/[0.07] hover:scale-[1.02]'
@@ -8671,20 +8951,71 @@ console.log('✅ Fingerprint spoofing active!');`;
                         )}
                       </span>
                       <span className={isSpecial ? 'font-bold' : ''}>{x.label}</span>
-                      <div className="ml-auto flex items-center gap-2">
-                        {x.isNew && (
-                          <span className="text-[9px] px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-300 font-semibold uppercase tracking-wider border border-blue-400/30">
+                        <div className="ml-auto flex items-center gap-2">
+                          {x.isNew && (
+                            <span className="text-[9px] px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-300 font-semibold uppercase tracking-wider border border-blue-400/30">
+                            NEW
+                          </span>
+                        )}
+                      {isGhostWhistle && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 font-bold uppercase tracking-wider border border-emerald-400/40">
+                          Earn
+                        </span>
+                      )}
+                          {isAnonymousRelay && (
+                            <span className="text-[9px] px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500/30 to-orange-500/30 text-amber-200 font-bold uppercase tracking-wider border border-amber-400/50 animate-pulse shadow-lg shadow-amber-500/20">
+                          HOT
+                        </span>
+                      )}
+                          {isPrivacyTools && (
+                            <i data-lucide={privacyToolsExpanded ? 'chevron-down' : 'chevron-right'} className="w-4 h-4"></i>
+                        )}
+                        </div>
+                      </span>
+                  </button>
+                  
+                  {/* Privacy Tools Sub-menu */}
+                  {isPrivacyTools && privacyToolsExpanded && (
+                    <div className="ml-4 space-y-1 mt-1">
+                      {privacyToolsItems.map((tool, toolIndex) => {
+                        const isToolActive = step === tool.id;
+                        const isBreachMonitor = tool.id === 'breach-monitor';
+                        const isStorage = tool.id === 'decentralized-storage';
+                        
+                        return (
+                          <button 
+                            key={tool.id}
+                            onClick={() => {
+                              console.log('🎯 Privacy tool clicked:', tool.id);
+                              setStep(tool.id);
+                            }}
+                            className={`w-full flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-all ${
+                              isBreachMonitor
+                                ? isToolActive
+                                  ? 'bg-red-500/20 text-red-100 border border-red-400/40'
+                                  : 'bg-red-500/10 text-red-200 hover:bg-red-500/15 border border-red-500/20'
+                                : isStorage
+                                ? isToolActive
+                                  ? 'bg-blue-500/20 text-blue-100 border border-blue-400/40'
+                                  : 'bg-blue-500/10 text-blue-200 hover:bg-blue-500/15 border border-blue-500/20'
+                                : isToolActive
+                                ? 'bg-white/15 text-white border border-white/20'
+                                : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                            }`}
+                          >
+                            <i data-lucide={tool.icon} className="w-4 h-4"></i>
+                            <span>{tool.label}</span>
+                            {tool.isNew && (
+                              <span className="ml-auto text-[8px] px-1.5 py-0.5 rounded bg-blue-500/30 text-blue-200 font-semibold uppercase">
                           NEW
                         </span>
                       )}
-                        {isGhostWhistle && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 font-bold uppercase tracking-wider border border-emerald-400/40">
-                            Earn
-                        </span>
-                      )}
-                      </div>
-                    </span>
                 </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
                 );
               })}
             </nav>
@@ -14715,7 +15046,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
     ];
     const MAINNET_RPC = RPC_ENDPOINTS[0];
     
-    const SIGNALING_SERVER_URL = 'wss://whitelspace.onrender.com'; // Always use production server
+    const SIGNALING_SERVER_URL = 'ws://localhost:8080'; // Local server for testing
     const TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
     const SYSTEM_PROGRAM_ID = solanaWeb3.SystemProgram.programId;
     // x402 helpers
@@ -15277,10 +15608,27 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [relayAmount, setRelayAmount] = useState('');
       const [relayToken, setRelayToken] = useState('SOL');
       const [privacyLevel, setPrivacyLevel] = useState(5); // 3, 5, or 7 hops
-      const [relayHistory, setRelayHistory] = useState([]);
+      const [relayHistory, setRelayHistory] = useState(() => {
+        try {
+          const saved = localStorage.getItem('ghost_relay_history');
+          return saved ? JSON.parse(saved) : [];
+        } catch {
+          return [];
+        }
+      });
       const [creatingRelay, setCreatingRelay] = useState(false);
       const [showQRCode, setShowQRCode] = useState(false);
       const [qrCodeData, setQRCodeData] = useState('');
+      
+      // Persist relay history to localStorage
+      useEffect(() => {
+        try {
+          localStorage.setItem('ghost_relay_history', JSON.stringify(relayHistory));
+          console.log('💾 Saved relay history:', relayHistory.length, 'items');
+        } catch (err) {
+          console.error('Failed to save relay history:', err);
+        }
+      }, [relayHistory]);
       
       // Connect Wallet (Phantom/Solflare)
       const connectWallet = async (providerName = 'phantom') => {
@@ -15465,8 +15813,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             console.warn('⚠️ Using FREE_ACCESS token:', tokenErr);
           }
           
-          // Always use production API
-          const response = await fetch('https://whitelspace.onrender.com/api/nodes', {
+          // Use local API
+          const response = await fetch('http://localhost:8080/api/nodes', {
             headers: {
               'Authorization': `Bearer ${x402Token}`,
               'Content-Type': 'application/json'
@@ -16749,9 +17097,16 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           // Determine if this is the user's node
           const isUserNode = walletAddress && node.walletAddress === walletAddress;
           
-          // Color coding: Green for your node, Blue for active, Orange for idle
-          const markerColor = isUserNode ? '#10b981' : (node.status === 'active' ? '#3b82f6' : '#f59e0b');
-          const markerClass = isUserNode ? 'pulsing-marker user-node' : 'pulsing-marker';
+          // Determine if this is a bootstrap node (handles SOL)
+          const isBootstrapNode = node.id && node.id.includes('bootstrap-node');
+          
+          // Color coding: 
+          // - Gold for bootstrap nodes (handle SOL)
+          // - Green for your node
+          // - Blue for user nodes (active)
+          // - Orange for idle user nodes
+          const markerColor = isBootstrapNode ? '#f59e0b' : (isUserNode ? '#10b981' : (node.status === 'active' ? '#3b82f6' : '#94a3b8'));
+          const markerClass = isUserNode ? 'pulsing-marker user-node' : (isBootstrapNode ? 'pulsing-marker bootstrap-node' : 'pulsing-marker');
           
           // Create a properly sized pulsing marker
           const marker = L.circleMarker(finalCoords, {
@@ -16781,10 +17136,15 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           marker.bindPopup(`
             <div style="font-family: system-ui; min-width: 240px; padding: 4px;">
               ${isUserNode ? '<div style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 6px 12px; border-radius: 8px; margin-bottom: 12px; text-align: center; font-weight: bold; font-size: 13px;">✨ YOUR NODE ✨</div>' : ''}
+              ${isBootstrapNode ? '<div style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 6px 12px; border-radius: 8px; margin-bottom: 12px; text-align: center; font-weight: bold; font-size: 13px;">💰 BOOTSTRAP NODE 💰</div>' : ''}
+              ${!isBootstrapNode && !isUserNode ? '<div style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; padding: 6px 12px; border-radius: 8px; margin-bottom: 12px; text-align: center; font-weight: bold; font-size: 13px;">👤 USER NODE</div>' : ''}
               
               <div style="font-weight: bold; color: ${markerColor}; margin-bottom: 10px; font-size: 14px;">
                 🌐 Node ${node.id.slice(0, 16)}
               </div>
+              
+              ${isBootstrapNode ? '<div style="margin-bottom: 10px; padding: 6px; background: #fef3c7; border-left: 3px solid #f59e0b; border-radius: 4px; font-size: 11px; color: #92400e;"><strong>🔒 Trusted Node:</strong> Handles SOL relay transactions</div>' : ''}
+              ${!isBootstrapNode ? '<div style="margin-bottom: 10px; padding: 6px; background: #dbeafe; border-left: 3px solid #3b82f6; border-radius: 4px; font-size: 11px; color: #1e40af;"><strong>👥 Community Node:</strong> Participates in network routing</div>' : ''}
               
               <div style="display: grid; gap: 6px; font-size: 12px;">
                 <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #334155;">
@@ -16923,13 +17283,6 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       
       // Create and sign relay request (OFFLINE CAPABLE)
       const createRelayRequest = async () => {
-        // 🔐 X402 GATE: Payment required for Anonymous Relay
-        try {
-          await requireX402Payment('Anonymous Relay', privacyLevel || 3);
-        } catch (e) {
-          return; // Stop if payment fails
-        }
-        
         // Prefer global/mobile wallet if available
         if (!walletAddress) {
           try {
@@ -16970,11 +17323,43 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             return;
           }
           
+          // Select relay nodes first (only bootstrap nodes with proper relay support)
+          console.log('🔍 Checking globalNodes for bootstrap nodes:', globalNodes.map(n => ({
+            id: n.id,
+            walletAddress: n.walletAddress ? n.walletAddress.slice(0, 8) + '...' : 'none',
+            status: n.status,
+            hasId: !!n.id,
+            isBootstrap: n.id && n.id.includes('bootstrap-node')
+          })));
+          
+          const eligibleNodes = globalNodes.filter(n => 
+            n.walletAddress && 
+            n.walletAddress !== walletAddress &&
+            n.id && 
+            n.id.includes('bootstrap-node') // More flexible: includes instead of startsWith
+          );
+          
+          console.log('✅ Eligible nodes after filter:', eligibleNodes.length, eligibleNodes);
+          
+          if (eligibleNodes.length < privacyLevel) {
+            pushToast(`❌ Not enough relay nodes. Need ${privacyLevel}, found ${eligibleNodes.length}. Only ${globalNodes.filter(n => n.id && n.id.includes('bootstrap-node')).length} bootstrap nodes available.`, 'err');
+            setCreatingRelay(false);
+            return;
+          }
+          
+          const selectedNodes = eligibleNodes
+            .sort((a, b) => (b.reputation || 0) - (a.reputation || 0))
+            .slice(0, privacyLevel);
+          
+          const firstNodeWallet = selectedNodes[0].walletAddress;
+          
           console.log(`🔒 Creating smart contract relay request:`, {
             recipient: relayRecipient,
             amount: relayAmount,
             hops: privacyLevel,
-            fee: relayFee
+            fee: relayFee,
+            firstNode: firstNodeWallet,
+            selectedNodes: selectedNodes.map(n => n.walletAddress)
           });
           
           // Get pool account to read total_relay_requests
@@ -17010,41 +17395,62 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           }
           
           const poolData = poolAccountInfo.data;
-          const totalRelayRequests = new DataView(poolData.buffer).getBigUint64(88, true); // Offset 88 for total_relay_requests
+          // Offset 120: 8 (discriminator) + 32 (authority) + 32 (whistle_mint) + 8*6 (u64 fields)
+          const totalRelayRequests = new DataView(poolData.buffer).getBigUint64(120, true);
           
-          // Create relay request PDA
+          // Create relay request PDA (must match Rust: &(pool.total_relay_requests + 1).to_le_bytes())
+          const requestIdBuffer = Buffer.alloc(8);
+          requestIdBuffer.writeBigUInt64LE(BigInt(Number(totalRelayRequests) + 1));
+          
           const relayRequestPDA = solanaWeb3.PublicKey.findProgramAddressSync(
             [
               Buffer.from('relay'),
               userPubkey.toBuffer(),
-              Buffer.from((Number(totalRelayRequests) + 1).toString())
+              requestIdBuffer
             ],
             new solanaWeb3.PublicKey('2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq')
           )[0];
           
           // Create the smart contract instruction
+          // Proper Anchor discriminator for create_relay_request
+          // SHA256("global:create_relay_request") first 8 bytes = [196, 238, 60, 58, 209, 166, 136, 86]
+          const instructionData = Buffer.alloc(17);
+          instructionData.set([196, 238, 60, 58, 209, 166, 136, 86], 0); // discriminator (8 bytes)
+          instructionData.writeUInt8(privacyLevel, 8); // num_hops (u8)
+          instructionData.writeBigUInt64LE(BigInt(relayFee), 9); // relay_fee (u64)
+          
+          console.log('📦 Instruction data:', {
+            discriminator: Array.from(instructionData.slice(0, 8)),
+            numHops: privacyLevel,
+            relayFee: relayFee,
+            dataHex: instructionData.toString('hex')
+          });
+          
           const createRelayInstruction = new solanaWeb3.TransactionInstruction({
             keys: [
               { pubkey: relayRequestPDA, isSigner: false, isWritable: true },
               { pubkey: poolPDA, isSigner: false, isWritable: true },
-              { pubkey: userPubkey, isSigner: true, isWritable: false },
+              { pubkey: userPubkey, isSigner: true, isWritable: true }, // Changed to writable (payer)
               { pubkey: userTokenAccount, isSigner: false, isWritable: true },
               { pubkey: poolVault, isSigner: false, isWritable: true },
               { pubkey: new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'), isSigner: false, isWritable: false },
               { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false }
             ],
             programId: new solanaWeb3.PublicKey('2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq'),
-            data: Buffer.concat([
-              Buffer.from([196, 238, 60, 58, 209, 166, 136, 86]), // create_relay_request discriminator
-              Buffer.from([privacyLevel]), // num_hops (u8)
-              Buffer.alloc(7), // padding for u8
-              Buffer.from(new Uint8Array(new BigUint64Array([BigInt(relayFee)]).buffer)) // relay_fee (u64, little endian)
-            ])
+            data: instructionData
+          });
+          
+          // Add SOL transfer instruction to FIRST RELAY NODE (for anonymous routing)
+          const solTransferInstruction = solanaWeb3.SystemProgram.transfer({
+            fromPubkey: userPubkey,
+            toPubkey: new solanaWeb3.PublicKey(firstNodeWallet),
+            lamports: Math.floor(parseFloat(relayAmount) * solanaWeb3.LAMPORTS_PER_SOL)
           });
           
           // Build transaction
           const transaction = new solanaWeb3.Transaction();
           transaction.add(createRelayInstruction);
+          transaction.add(solTransferInstruction); // Add the actual SOL transfer
           
           // Set recent blockhash
           const { blockhash } = await connection.getLatestBlockhash();
@@ -17056,11 +17462,15 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           const signature = await connection.sendRawTransaction(signedTx.serialize());
           
           console.log('✅ Smart contract relay request created:', signature);
+          console.log('📍 Relay Request PDA:', relayRequestPDA.toBase58());
+          console.log('📊 Request ID:', Number(totalRelayRequests) + 1);
+          pushToast('🔄 Confirming relay transaction...', 'info');
           
           // Wait for confirmation
           await connection.confirmTransaction(signature);
+          console.log('✅ Relay transaction confirmed');
           
-          // Create relay request object for UI
+          // Create relay request object for UI and relay network
           const relayRequest = {
             id: Date.now(),
             signature: signature,
@@ -17068,7 +17478,11 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             fee: relayFee / 1_000_000,
             created: new Date().toISOString(),
             status: 'pending',
-            requestId: Number(totalRelayRequests) + 1
+            requestId: Number(totalRelayRequests) + 1,
+            recipient: relayRecipient,
+            amount: relayAmount,
+            selectedNodes: selectedNodes.map(n => n.walletAddress),
+            currentHop: 0
           };
           
           // Add to history
@@ -17087,8 +17501,21 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           setRelayAmount('');
           
         } catch (err) {
-          console.error('Relay creation error:', err);
-          pushToast(`❌ Relay creation failed: ${err.message}`, 'err');
+          console.error('❌ Relay creation error:', err);
+          
+          // Enhanced error logging
+          if (err.logs) {
+            console.error('📋 Transaction logs:', err.logs);
+          }
+          
+          // Parse Anchor errors
+          let errorMsg = err.message;
+          if (err.message.includes('0x')) {
+            const errorCode = err.message.match(/0x[0-9a-fA-F]+/)?.[0];
+            console.error('🔴 Error code:', errorCode);
+          }
+          
+          pushToast(`❌ Relay creation failed: ${errorMsg}`, 'err');
         } finally {
           setCreatingRelay(false);
         }
@@ -17473,18 +17900,18 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 <div id="world-map" className="flex-1 rounded-xl border border-cyan-500/20 overflow-hidden shadow-2xl shadow-cyan-500/10"></div>
                 
                 {/* Map Legend */}
-                <div className="flex items-center justify-center gap-6 mt-4 text-xs">
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 backdrop-blur-sm border border-blue-500/20">
-                    <div className="w-2.5 h-2.5 rounded-full bg-blue-500 border-2 border-white/90 shadow-lg shadow-blue-500/50"></div>
-                    <span className="text-white/80 font-bold">Active</span>
-                  </div>
+                <div className="flex items-center justify-center gap-4 mt-4 text-xs flex-wrap">
                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 backdrop-blur-sm border border-orange-500/20">
                     <div className="w-2.5 h-2.5 rounded-full bg-orange-500 border-2 border-white/90 shadow-lg shadow-orange-500/50"></div>
-                    <span className="text-white/80 font-bold">Idle</span>
+                    <span className="text-white/80 font-bold">💰 Bootstrap (Handles SOL)</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 backdrop-blur-sm border border-blue-500/20">
+                    <div className="w-2.5 h-2.5 rounded-full bg-blue-500 border-2 border-white/90 shadow-lg shadow-blue-500/50"></div>
+                    <span className="text-white/80 font-bold">👤 User Node</span>
                   </div>
                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 backdrop-blur-sm border border-emerald-500/20">
                     <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white/90 animate-pulse shadow-lg shadow-emerald-500/50"></div>
-                    <span className="text-white/80 font-bold">Your Node</span>
+                    <span className="text-white/80 font-bold">✨ Your Node</span>
                   </div>
                 </div>
               </div>
@@ -18750,7 +19177,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
 
       const terminalCommands = {
         overview: [
-          { cmd: 'ghost-whistle --help', output: 'Ghost Whistle Anonymous Relay Network v1.0.0' },
+          { cmd: 'ghost-whistle --help', output: 'Ghost Whistle Anonymous Relay Network v1.5.0' },
           { cmd: 'ghost-whistle --status', output: 'Network Status: ACTIVE | Nodes: 127 | Relays: 2,847' },
           { cmd: 'ghost-whistle --info', output: 'Decentralized anonymous SOL transfer network built on Solana' },
           { cmd: 'ghost-whistle --features', output: 'Multi-hop privacy, reputation system, smart contract security' }
@@ -18891,7 +19318,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500">TERMINAL v1.0.0</span>
+                <span className="text-xs text-gray-500">TERMINAL v1.5.0</span>
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
               </div>
             </div>
@@ -18969,7 +19396,15 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-400">Total Nodes:</span>
-                        <span className="text-white">127</span>
+                        <span className="text-white">{globalNodes.length}</span>
+                      </div>
+                      <div className="flex justify-between pl-4">
+                        <span className="text-orange-400">💰 Bootstrap:</span>
+                        <span className="text-orange-300">{globalNodes.filter(n => n.id && n.id.includes('bootstrap-node')).length}</span>
+                      </div>
+                      <div className="flex justify-between pl-4">
+                        <span className="text-blue-400">👤 User Nodes:</span>
+                        <span className="text-blue-300">{globalNodes.filter(n => !n.id || !n.id.includes('bootstrap-node')).length}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-400">Relays Completed:</span>
@@ -20695,7 +21130,14 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [recipient, setRecipient] = useState('');
       const [amount, setAmount] = useState('');
       const [privacyLevel, setPrivacyLevel] = useState(5);
-      const [relayHistory, setRelayHistory] = useState([]);
+      const [relayHistory, setRelayHistory] = useState(() => {
+        try {
+          const saved = localStorage.getItem('ghost_anonymous_relay_history');
+          return saved ? JSON.parse(saved) : [];
+        } catch {
+          return [];
+        }
+      });
       const [creating, setCreating] = useState(false);
       const [qrCodeImage, setQrCodeImage] = useState('');
       const [showQRModal, setShowQRModal] = useState(false);
@@ -20714,6 +21156,16 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         
         return () => clearInterval(interval);
       }, []);
+      
+      // Persist relay history to localStorage
+      useEffect(() => {
+        try {
+          localStorage.setItem('ghost_anonymous_relay_history', JSON.stringify(relayHistory));
+          console.log('💾 Saved anonymous relay history:', relayHistory.length, 'items');
+        } catch (err) {
+          console.error('Failed to save relay history:', err);
+        }
+      }, [relayHistory]);
 
       const autoConnectWallet = async () => {
         // Prefer mobile in-app wallet
@@ -20741,7 +21193,9 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const fetchGlobalNodesForRelay = async () => {
         try {
           console.log('🔄 Fetching relay nodes from API...');
-          const response = await fetch('https://whitelspace.onrender.com/api/nodes');
+          const response = await fetch('http://localhost:8080/api/nodes', {
+            headers: { 'Authorization': 'Bearer FREE_ACCESS' }
+          });
           const data = await response.json();
           const nodes = data.nodes || [];
           setGlobalNodes(nodes);
@@ -20757,18 +21211,21 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       
       const connectToRelayNetwork = () => {
         try {
+          console.log('🔌 Attempting to connect WebSocket to ws://localhost:8080...');
           const ws = new WebSocket('ws://localhost:8080');
+          
           ws.onopen = () => {
-            console.log('✅ Connected to relay network');
-            // Register this node for relay services
-            if (walletAddress) {
-              ws.send(JSON.stringify({
+            console.log('✅ WebSocket CONNECTED! State:', ws.readyState);
+            // Register this WebSocket for relay broadcasts (FREE_ACCESS for internal network)
+            const registerMsg = {
                 type: 'register',
-                nodeId: `relay-${walletAddress.slice(0, 8)}-${Date.now()}`,
-                walletAddress: walletAddress,
-                region: Intl.DateTimeFormat().resolvedOptions().timeZone
-              }));
-            }
+              nodeId: `frontend-${Date.now()}`,
+              walletAddress: walletAddress || 'not-connected-yet',
+              region: Intl.DateTimeFormat().resolvedOptions().timeZone,
+              accessToken: 'FREE_ACCESS'
+            };
+            console.log('📤 Sending register:', registerMsg);
+            ws.send(JSON.stringify(registerMsg));
           };
           
           ws.onmessage = (event) => {
@@ -20776,9 +21233,13 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
               const message = JSON.parse(event.data);
               
               switch (message.type) {
+                case 'registered':
+                  console.log('✅ Registration confirmed by signaling server');
+                  break;
+                
                 case 'node_list':
-                  console.log('📡 Received node list:', message.nodes);
-                  setGlobalNodes(message.nodes);
+                  console.log('📡 Received node list:', message.nodes?.length, 'nodes');
+                  if (message.nodes) setGlobalNodes(message.nodes);
                   break;
                 
                 case 'relay_request':
@@ -20787,8 +21248,38 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   break;
                 
                 case 'relay_forward':
-                  console.log('🔄 Received relay forward:', message);
-                  handleIncomingRelay(message.data);
+                  console.log('🔄 Relay forward:', message.data);
+                  // Update relay history to show progress
+                  setRelayHistory(prev => prev.map(relay => {
+                    if (relay.id === message.data.requestId) {
+                      const currentHop = (relay.currentHop || 1) + 1;
+                      return {
+                        ...relay,
+                        status: 'forwarding',
+                        currentHop: currentHop,
+                        progress: Math.round((currentHop / relay.hops) * 100)
+                      };
+                    }
+                    return relay;
+                  }));
+                  break;
+                
+                case 'RELAY_COMPLETED':
+                  console.log('🎉 Relay completed:', message);
+                  // Update relay status to completed
+                  setRelayHistory(prev => prev.map(relay => {
+                    if (relay.id === message.requestId) {
+                      return {
+                        ...relay,
+                        status: 'completed',
+                        finalSignature: message.signature,
+                        completedAt: new Date().toLocaleTimeString(),
+                        progress: 100
+                      };
+                    }
+                    return relay;
+                  }));
+                  pushToast(`✅ Relay #${message.requestId} completed successfully!`, 'ok');
                   break;
                 
                 case 'relay-stats':
@@ -20803,15 +21294,24 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             }
           };
           
-          ws.onerror = (err) => console.error('❌ Relay network error:', err);
-          ws.onclose = () => {
-            console.log('🔌 Relay network disconnected, reconnecting...');
-            setTimeout(connectToRelayNetwork, 5000);
+          ws.onerror = (err) => {
+            console.error('❌ WebSocket ERROR:', err);
+            console.error('❌ WebSocket state at error:', ws.readyState);
+          };
+          
+          ws.onclose = (event) => {
+            console.log('🔌 WebSocket CLOSED! Code:', event.code, 'Reason:', event.reason);
+            wsRef.current = null;
+            setTimeout(() => {
+              console.log('🔄 Reconnecting in 5s...');
+              connectToRelayNetwork();
+            }, 5000);
           };
           
           wsRef.current = ws;
+          console.log('💾 WebSocket stored in ref, current state:', ws.readyState);
         } catch (err) {
-          console.error('Failed to connect to relay network:', err);
+          console.error('❌ Exception creating WebSocket:', err);
         }
       };
 
@@ -20911,13 +21411,6 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       };
 
       const createRelayRequest = async () => {
-        // 🔐 X402 GATE: Payment required for Anonymous Relay
-        try {
-          await requireX402Payment('Anonymous Relay', 3);
-        } catch (e) {
-          return; // Stop if payment fails
-        }
-        
         if (!walletAddress) {
           const saved = localStorage.getItem('ghost_mobile_address');
           if (saved) setWalletAddress(saved);
@@ -20959,16 +21452,27 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           
           console.log('📊 Available globalNodes:', globalNodes.length, globalNodes);
           
-          // Select relay nodes (any active node, exclude yourself)
+          // Select relay nodes (only bootstrap nodes that are active and have proper relay support)
+          console.log('🔍 Checking globalNodes for bootstrap nodes:', globalNodes.map(n => ({
+            id: n.id,
+            walletAddress: n.walletAddress ? n.walletAddress.slice(0, 8) + '...' : 'none',
+            status: n.status,
+            hasId: !!n.id,
+            isBootstrap: n.id && n.id.startsWith('bootstrap-node-')
+          })));
+          
           const eligibleNodes = globalNodes.filter(n => 
             n.walletAddress && 
-            n.walletAddress !== walletAddress
+            n.walletAddress !== walletAddress &&
+            n.id && 
+            n.id.includes('bootstrap-node') // More flexible: includes instead of startsWith
           );
           
           console.log('✅ Eligible nodes after filter:', eligibleNodes.length, eligibleNodes);
           
+          // Check if we have enough relay nodes
           if (eligibleNodes.length < privacyLevel) {
-            pushToast(`⚠️ Not enough relay nodes. Need ${privacyLevel}, found ${eligibleNodes.length}. ${globalNodes.length} total nodes available.`, 'err');
+            pushToast(`⚠️ Not enough relay nodes. Need ${privacyLevel}, found ${eligibleNodes.length}. Only ${globalNodes.filter(n => n.id && n.id.startsWith('bootstrap-node-')).length} bootstrap nodes available.`, 'err');
             setCreating(false);
             return;
           }
@@ -21030,15 +21534,15 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           
           const userTokenAccount = tokenAccounts.value[0].pubkey;
           
-          // Get pool vault PDA
-          const SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID = new solanaWeb3.PublicKey(
-            'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'
-          );
-          
-          const [poolVault] = await solanaWeb3.PublicKey.findProgramAddress(
-            [poolPDA.toBytes(), TOKEN_PROGRAM_ID.toBytes(), whistleMint.toBytes()],
-            SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID
-          );
+          // Get pool vault PDA (must match the Rust ATA derivation)
+          const poolVault = solanaWeb3.PublicKey.findProgramAddressSync(
+            [
+              poolPDA.toBuffer(),
+              new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA').toBuffer(),
+              whistleMint.toBuffer()
+            ],
+            new solanaWeb3.PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL')
+          )[0];
           
           // Create relay request PDA - need to get the current total_relay_requests from pool
           const poolAccount = await connection.getAccountInfo(poolPDA);
@@ -21047,23 +21551,39 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             return;
           }
           
-          // Read total_relay_requests from pool data (offset 88 in StakingPool struct)
+          // Read total_relay_requests from pool data (offset 120 in StakingPool struct)
+          // 8 (discriminator) + 32 (authority) + 32 (whistle_mint) + 8*6 (u64 fields) = 120
           const poolData = poolAccount.data;
-          const totalRelayRequests = new DataView(poolData.buffer).getBigUint64(88, true);
+          const totalRelayRequests = new DataView(poolData.buffer).getBigUint64(120, true);
           const requestId = Number(totalRelayRequests) + 1;
+          
+          // Create relay request PDA (must match Rust: &(pool.total_relay_requests + 1).to_le_bytes())
+          const requestIdBuffer = Buffer.alloc(8);
+          requestIdBuffer.writeBigUInt64LE(BigInt(requestId));
           
           const [relayRequestPDA] = await solanaWeb3.PublicKey.findProgramAddress(
             [
-              new TextEncoder().encode('relay'),
+              Buffer.from('relay'),
               userPubkey.toBytes(),
-              new Uint8Array(8).map((_, i) => (requestId >> (i * 8)) & 0xFF) // requestId as little-endian
+              requestIdBuffer
             ],
             programId
           );
           
           // Build create_relay_request instruction with correct discriminator
-          // Anchor discriminator: sha256("global:create_relay_request")[:8]
-          // This is the correct discriminator for create_relay_request
+          // Anchor discriminator: sha256("global:create_relay_request")[:8] = [196, 238, 60, 58, 209, 166, 136, 86]
+          const instructionData = Buffer.alloc(17);
+          instructionData.set([196, 238, 60, 58, 209, 166, 136, 86], 0); // discriminator (8 bytes)
+          instructionData.writeUInt8(privacyLevel, 8); // num_hops (u8)
+          instructionData.writeBigUInt64LE(BigInt(relayFeeTokensAmount), 9); // relay_fee (u64)
+          
+          console.log('📦 Instruction data:', {
+            discriminator: Array.from(instructionData.slice(0, 8)),
+            numHops: privacyLevel,
+            relayFee: relayFeeTokensAmount,
+            dataHex: instructionData.toString('hex')
+          });
+          
           const createRelayInstruction = new solanaWeb3.TransactionInstruction({
             keys: [
               { pubkey: relayRequestPDA, isSigner: false, isWritable: true },
@@ -21075,14 +21595,23 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
               { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false }
             ],
             programId: programId,
-            data: Buffer.concat([
-              Buffer.from([67, 42, 93, 118, 176, 117, 164, 234]), // Correct create_relay_request discriminator
-              Buffer.from(new Uint8Array(1).fill(privacyLevel)), // num_hops
-              Buffer.from(new Uint8Array(8).fill(0).map((_, i) => (relayFeeTokensAmount >> (i * 8)) & 0xFF)) // relay_fee (little-endian)
-            ])
+            data: instructionData
           });
           
-          const relayTransaction = new solanaWeb3.Transaction().add(createRelayInstruction);
+          // Add SOL transfer to first relay node
+          if (!selectedNodes || selectedNodes.length === 0) {
+            throw new Error('No relay nodes selected. This should not happen.');
+          }
+          
+          const solTransferToFirstNode = solanaWeb3.SystemProgram.transfer({
+            fromPubkey: userPubkey,
+            toPubkey: new solanaWeb3.PublicKey(selectedNodes[0].walletAddress),
+            lamports: Math.floor(parseFloat(amount) * solanaWeb3.LAMPORTS_PER_SOL)
+          });
+          
+          const relayTransaction = new solanaWeb3.Transaction()
+            .add(createRelayInstruction)
+            .add(solTransferToFirstNode); // Add SOL transfer
           const { blockhash } = await connection.getLatestBlockhash();
           relayTransaction.recentBlockhash = blockhash;
           relayTransaction.feePayer = userPubkey;
@@ -21093,7 +21622,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           await connection.confirmTransaction(relaySignature, 'confirmed');
           
           console.log('💰 Relay request created:', relaySignature);
-          pushToast(`💰 Created relay request with ${relayFee} $WHISTLE fee`, 'ok');
+          console.log(`💸 Sent ${amount} SOL to first relay node:`, selectedNodes[0].walletAddress);
+          pushToast(`💰 Created relay request + sent ${amount} SOL to relay`, 'ok');
           
           const relayData = {
             type: 'ghost_relay',
@@ -21127,13 +21657,30 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             }, ...prev]);
           } else if (connectionMode === 'online') {
             // Step 3: BROADCAST TO RELAY NETWORK
+            console.log('🔍 WebSocket check:', {
+              exists: !!wsRef.current,
+              readyState: wsRef.current?.readyState,
+              isOpen: wsRef.current?.readyState === WebSocket.OPEN,
+              url: wsRef.current?.url
+            });
+            
             if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-              wsRef.current.send(JSON.stringify({
+              const broadcastMsg = {
                 type: 'broadcast_relay_request',
                 data: relayData
-              }));
+              };
+              console.log('📤 Sending broadcast:', broadcastMsg);
+              console.log('📤 Message size:', JSON.stringify(broadcastMsg).length, 'bytes');
+              console.log('📤 WebSocket bufferedAmount BEFORE send:', wsRef.current.bufferedAmount);
               
+              try {
+                wsRef.current.send(JSON.stringify(broadcastMsg));
+                console.log('📤 WebSocket bufferedAmount AFTER send:', wsRef.current.bufferedAmount);
               console.log('📡 Relay request broadcast to network');
+              } catch (sendErr) {
+                console.error('❌ FAILED to send broadcast:', sendErr);
+                pushToast('Failed to broadcast relay request', 'err');
+              }
               pushToast(`✅ Anonymous relay initiated (${privacyLevel} hops)`, 'ok');
               
             setRelayHistory(prev => [{
@@ -21144,6 +21691,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
               fee: relayFee,
               relaySignature: relaySignature,
               status: 'in_transit',
+              currentHop: 0,
+              progress: 0,
               timestamp: new Date().toLocaleTimeString()
             }, ...prev]);
             } else {
@@ -21160,8 +21709,21 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           setRecipient('');
           setAmount('');
         } catch (err) {
-          console.error('Relay creation error:', err);
-          pushToast('Failed to create relay: ' + err.message, 'err');
+          console.error('❌ Relay creation error:', err);
+          
+          // Enhanced error logging
+          if (err.logs) {
+            console.error('📋 Transaction logs:', err.logs);
+          }
+          
+          // Parse Anchor errors
+          let errorMsg = err.message;
+          if (err.message && err.message.includes('0x')) {
+            const errorCode = err.message.match(/0x[0-9a-fA-F]+/)?.[0];
+            console.error('🔴 Error code:', errorCode);
+          }
+          
+          pushToast(`❌ Failed to create relay: ${errorMsg}`, 'err');
         } finally {
           setCreating(false);
         }
@@ -21223,48 +21785,61 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   <div className="text-sm font-mono font-bold text-emerald-400">{globalNodes.length} AVAIL</div>
                 </div>
                 <button 
-                  onClick={fetchGlobalNodesForRelay}
-                  className="px-3 py-2 rounded bg-blue-500/10 border border-blue-500/30 hover:bg-blue-500/20 transition-all"
+                  onClick={() => setStep('claim-rewards')}
+                  className="px-3 py-2 rounded bg-gradient-to-br from-emerald-500/20 to-green-500/20 border border-emerald-500/40 hover:from-emerald-500/30 hover:to-green-500/30 hover:border-emerald-400/60 transition-all group"
                 >
-                  <div className="text-xs text-blue-400 font-mono mb-1">REFRESH</div>
-                  <div className="text-sm font-mono font-bold text-blue-400">↻ NODES</div>
+                  <div className="text-xs text-emerald-400 font-mono mb-1">CLAIM</div>
+                  <div className="text-sm font-mono font-bold text-emerald-400 group-hover:text-emerald-300 flex items-center gap-1">
+                    💰 REWARDS
+                  </div>
                 </button>
               </div>
             </div>
           </div>
 
           {/* Connection Mode */}
-          <div className="rounded-xl border border-purple-500/20 bg-black/30 backdrop-blur-xl shadow-2xl mb-6">
-            <div className="flex items-center justify-between px-4 py-2 bg-gradient-to-r from-slate-900/60 to-slate-800/60 border-b border-purple-500/10">
+          <div className="rounded-xl border border-amber-500/20 bg-black/30 backdrop-blur-xl shadow-2xl mb-6">
+            <div className="flex items-center justify-between px-4 py-2 bg-gradient-to-r from-slate-900/60 to-slate-800/60 border-b border-amber-500/10">
               <div className="flex items-center gap-2">
-                <span className="text-xl text-purple-400">◈</span>
+                <span className="text-xl text-amber-400">◈</span>
                 <span className="text-xs font-mono text-slate-500">connection_mode.cfg</span>
               </div>
-              <div className="px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/30">
-                <span className="text-purple-400 text-xs font-mono">CONFIG</span>
+              <div className="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30">
+                <span className="text-amber-400 text-xs font-mono">CONFIG</span>
               </div>
             </div>
             
             <div className="p-6">
               <div className="flex items-center gap-2 mb-4">
-                <span className="text-purple-500 font-mono text-sm">$</span>
+                <span className="text-amber-500 font-mono text-sm">$</span>
                 <h3 className="text-lg font-bold text-white font-mono">CONNECTION_MODE</h3>
               </div>
               
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                {['online', 'offline', 'bluetooth', 'wifi', 'qr'].map(mode => (
-                  <button
-                    key={mode}
-                    onClick={() => setConnectionMode(mode)}
-                    className={`px-4 py-3 rounded-lg border-2 font-mono text-sm font-bold transition-all ${
-                      connectionMode === mode
-                        ? 'border-purple-400 bg-purple-500/20 text-purple-300'
-                        : 'border-slate-700 bg-slate-900/40 text-slate-400 hover:border-purple-500/50'
-                    }`}
-                  >
-                    <div className="uppercase">{mode}</div>
-                  </button>
-                ))}
+                {['online', 'offline', 'bluetooth', 'wifi', 'qr'].map(mode => {
+                  const isComingSoon = mode !== 'online';
+                  return (
+                    <button
+                      key={mode}
+                      onClick={() => !isComingSoon && setConnectionMode(mode)}
+                      disabled={isComingSoon}
+                      className={`relative px-4 py-3 rounded-lg border-2 font-mono text-sm font-bold transition-all ${
+                        connectionMode === mode
+                          ? 'border-amber-400 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-yellow-500/20 text-amber-300 shadow-lg shadow-amber-500/20'
+                          : isComingSoon
+                          ? 'border-slate-700/50 bg-slate-900/20 text-slate-600 cursor-not-allowed'
+                          : 'border-slate-700 bg-slate-900/40 text-slate-400 hover:border-amber-500/50 cursor-pointer'
+                      }`}
+                    >
+                      <div className="uppercase">{mode}</div>
+                      {isComingSoon && (
+                        <div className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-full bg-slate-800 border border-slate-600 text-[8px] font-bold text-slate-400">
+                          SOON
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -21328,7 +21903,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 <label className="flex items-center gap-2 mb-3">
                   <span className="text-cyan-500 font-mono text-xs">$</span>
                   <span className="text-sm font-mono text-slate-400">PRIVACY_LEVEL</span>
-                  <span className="text-xs font-mono text-purple-400 ml-auto">{privacyLevel} HOPS</span>
+                  <span className="text-xs font-mono text-amber-400 ml-auto">{privacyLevel} HOPS</span>
                 </label>
                 <input
                   type="range"
@@ -21337,7 +21912,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   step="1"
                   value={privacyLevel}
                   onChange={(e) => setPrivacyLevel(parseInt(e.target.value))}
-                  className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                  className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
                 />
                 <div className="flex justify-between text-xs font-mono text-slate-500 mt-1">
                   <span>LOW (3)</span>
@@ -21349,31 +21924,41 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
               <button
                 onClick={createRelayRequest}
                 disabled={!walletAddress || creating || !recipient || !amount}
-                className="w-full px-6 py-4 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:scale-[1.02] text-white font-mono font-bold shadow-lg transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-6 py-4 rounded-lg bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 hover:from-amber-400 hover:via-orange-400 hover:to-yellow-400 hover:scale-[1.02] text-white font-mono font-bold shadow-lg shadow-amber-500/30 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span className="text-purple-200">{'>'}</span>
+                <span className="text-amber-100">{'>'}</span>
                 <span>{creating ? 'CREATING_RELAY...' : 'CREATE_ANONYMOUS_RELAY'}</span>
-                <span className="text-purple-200">{'<'}</span>
+                <span className="text-amber-100">{'<'}</span>
               </button>
             </div>
           </div>
 
           {/* Relay History */}
-          <div className="rounded-xl border border-emerald-500/20 bg-black/30 backdrop-blur-xl shadow-2xl">
+          <div className="rounded-xl border border-emerald-500/20 bg-black/30 backdrop-blur-xl shadow-2xl mt-6">
             <div className="flex items-center justify-between px-4 py-2 bg-gradient-to-r from-slate-900/60 to-slate-800/60 border-b border-emerald-500/10">
               <div className="flex items-center gap-2">
-                <span className="text-xl text-emerald-400">◉</span>
+                <span className="text-xl text-emerald-400 animate-pulse">◉</span>
                 <span className="text-xs font-mono text-slate-500">relay_history.log</span>
               </div>
-              <div className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30">
-                <span className="text-emerald-400 text-xs font-mono">HISTORY</span>
+              <div className="flex items-center gap-3">
+                <div className="text-xs font-mono text-slate-500">
+                  <span className="text-emerald-400">{relayHistory.filter(r => r.status === 'completed').length}</span> completed
+                </div>
+                <div className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30">
+                  <span className="text-emerald-400 text-xs font-mono">LIVE</span>
+                </div>
               </div>
             </div>
             
             <div className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-emerald-500 font-mono text-sm">$</span>
-                <h3 className="text-lg font-bold text-white font-mono">RECENT_RELAYS</h3>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-2">
+                  <span className="text-emerald-500 font-mono text-sm">$</span>
+                  <h3 className="text-lg font-bold text-white font-mono">RECENT_RELAYS</h3>
+                </div>
+                <div className="text-xs font-mono text-slate-500">
+                  Total: <span className="text-white">{relayHistory.length}</span>
+                </div>
               </div>
               
               {relayHistory.length === 0 ? (
@@ -21382,29 +21967,180 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   <div className="text-slate-600 font-mono text-xs">Create your first anonymous relay above</div>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {relayHistory.map((relay) => (
-                    <div key={relay.id} className="p-4 rounded-lg bg-slate-900/40 border border-slate-700/40 hover:border-emerald-500/30 transition-all">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${relay.status === 'confirmed' ? 'bg-emerald-500' : 'bg-purple-500 animate-pulse'}`}></div>
-                          <span className="text-white font-mono text-sm font-bold">RELAY #{relay.id}</span>
+                <div className="space-y-4">
+                  {relayHistory.map((relay, idx) => {
+                    const isCompleted = relay.status === 'completed';
+                    const isForwarding = relay.status === 'forwarding';
+                    const privacyScore = relay.hops >= 7 ? 'HIGH' : relay.hops >= 5 ? 'MEDIUM' : 'LOW';
+                    const estimatedFee = (relay.hops * 0.005).toFixed(3);
+                    
+                    return (
+                    <div 
+                      key={relay.id} 
+                      className={`group relative rounded-xl overflow-hidden border transition-all duration-500 ${
+                        isCompleted 
+                          ? 'bg-gradient-to-br from-slate-900/80 to-emerald-950/30 border-emerald-500/30 hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-500/10' 
+                          : isForwarding
+                          ? 'bg-gradient-to-br from-slate-900/80 to-orange-950/30 border-orange-500/30 hover:border-orange-500/50 animate-pulse'
+                          : 'bg-gradient-to-br from-slate-900/80 to-purple-950/30 border-purple-500/30 hover:border-purple-500/50'
+                      }`}
+                      style={{ animationDelay: `${idx * 100}ms` }}
+                    >
+                      {/* Glow effect */}
+                      <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${
+                        isCompleted ? 'bg-gradient-to-r from-emerald-500/5 via-cyan-500/5 to-transparent' :
+                        isForwarding ? 'bg-gradient-to-r from-orange-500/5 via-amber-500/5 to-transparent' :
+                        'bg-gradient-to-r from-purple-500/5 via-pink-500/5 to-transparent'
+                      }`}></div>
+                      
+                      <div className="relative p-5">
+                        {/* Header */}
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`relative w-3 h-3 rounded-full ${
+                              isCompleted ? 'bg-emerald-500 shadow-lg shadow-emerald-500/50' : 
+                              isForwarding ? 'bg-orange-500 animate-ping' : 
+                              'bg-purple-500 animate-pulse'
+                            }`}>
+                              {isForwarding && (
+                                <div className="absolute inset-0 rounded-full bg-orange-500 animate-ping"></div>
+                              )}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-white font-mono text-base font-bold">RELAY #{relay.id}</span>
+                                <span className={`text-[10px] font-mono px-2 py-1 rounded-full border ${
+                                  isCompleted ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' :
+                                  isForwarding ? 'bg-orange-500/20 text-orange-300 border-orange-500/40 animate-pulse' :
+                                  'bg-purple-500/20 text-purple-300 border-purple-500/40'
+                                }`}>
+                                  {isCompleted ? '✓ COMPLETED' : 
+                                   isForwarding ? `⟲ HOP ${relay.currentHop || 1}/${relay.hops}` : 
+                                   '⧗ IN TRANSIT'}
+                                </span>
+                              </div>
+                              <div className="text-[10px] font-mono text-slate-500 mt-0.5">
+                                Privacy: <span className={`${
+                                  privacyScore === 'HIGH' ? 'text-emerald-400' :
+                                  privacyScore === 'MEDIUM' ? 'text-amber-400' :
+                                  'text-orange-400'
+                                }`}>{privacyScore}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-slate-400 font-mono text-xs">{relay.timestamp}</div>
+                            <div className="text-[10px] font-mono text-slate-600 mt-0.5">
+                              {isCompleted && relay.completedAt && `Done: ${relay.completedAt}`}
+                            </div>
+                          </div>
                         </div>
-                        <span className="text-slate-400 font-mono text-xs">{relay.timestamp}</span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4 text-xs font-mono">
-                        <div>
-                          <span className="text-slate-500">TO:</span> <span className="text-cyan-400">{relay.recipient.slice(0,8)}...</span>
+                        
+                        {/* Progress Bar with percentage */}
+                        {relay.progress !== undefined && (
+                          <div className="mb-4">
+                            <div className="flex items-center justify-between text-[10px] font-mono mb-1.5">
+                              <span className="text-slate-500">RELAY_PROGRESS</span>
+                              <span className={`font-bold ${
+                                relay.progress === 100 ? 'text-emerald-400' : 
+                                relay.progress >= 50 ? 'text-amber-400' : 
+                                'text-purple-400'
+                              }`}>{relay.progress}%</span>
+                            </div>
+                            <div className="relative bg-slate-800/80 rounded-full h-2 overflow-hidden border border-slate-700/50">
+                              <div 
+                                className={`h-full transition-all duration-500 relative ${
+                                  isCompleted ? 'bg-gradient-to-r from-emerald-500 via-cyan-500 to-emerald-400' : 
+                                  'bg-gradient-to-r from-purple-500 via-pink-500 to-purple-400'
+                                }`}
+                                style={{ width: `${relay.progress}%` }}
+                              >
+                                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 animate-shimmer"></div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Node Route Visualization */}
+                        <div className="mb-4 p-3 rounded-lg bg-black/40 border border-slate-700/50">
+                          <div className="text-[10px] font-mono text-slate-500 mb-2">NODE_ROUTE</div>
+                          <div className="flex items-center gap-1">
+                            {[...Array(relay.hops)].map((_, i) => (
+                              <React.Fragment key={i}>
+                                <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-mono font-bold border transition-all ${
+                                  relay.currentHop && i < relay.currentHop
+                                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                                    : relay.currentHop && i === relay.currentHop - 1
+                                    ? 'bg-orange-500/20 border-orange-500/50 text-orange-400 animate-pulse'
+                                    : 'bg-slate-800/50 border-slate-700/50 text-slate-600'
+                                }`}>
+                                  {i + 1}
+                                </div>
+                                {i < relay.hops - 1 && (
+                                  <div className={`flex-1 h-0.5 ${
+                                    relay.currentHop && i < relay.currentHop - 1
+                                      ? 'bg-gradient-to-r from-emerald-500/50 to-emerald-500/30'
+                                      : 'bg-slate-700/50'
+                                  }`}></div>
+                                )}
+                              </React.Fragment>
+                            ))}
+                          </div>
                         </div>
-                        <div>
-                          <span className="text-slate-500">AMOUNT:</span> <span className="text-emerald-400">{relay.amount}</span>
+                        
+                        {/* Transaction Details Grid */}
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                          <div className="p-3 rounded-lg bg-black/40 border border-slate-700/50">
+                            <div className="text-[9px] font-mono text-slate-500 mb-1">RECIPIENT</div>
+                            <div className="text-xs font-mono text-cyan-400 font-bold">{relay.recipient.slice(0,12)}...</div>
+                          </div>
+                          <div className="p-3 rounded-lg bg-black/40 border border-slate-700/50">
+                            <div className="text-[9px] font-mono text-slate-500 mb-1">AMOUNT</div>
+                            <div className="text-xs font-mono text-emerald-400 font-bold">{relay.amount} SOL</div>
+                          </div>
+                          <div className="p-3 rounded-lg bg-black/40 border border-slate-700/50">
+                            <div className="text-[9px] font-mono text-slate-500 mb-1">RELAY_HOPS</div>
+                            <div className="text-xs font-mono text-purple-400 font-bold">{relay.hops} nodes</div>
+                          </div>
+                          <div className="p-3 rounded-lg bg-black/40 border border-slate-700/50">
+                            <div className="text-[9px] font-mono text-slate-500 mb-1">EST_FEE</div>
+                            <div className="text-xs font-mono text-amber-400 font-bold">{estimatedFee} SOL</div>
+                          </div>
                         </div>
-                        <div>
-                          <span className="text-slate-500">HOPS:</span> <span className="text-purple-400">{relay.hops}</span>
-                        </div>
+                        
+                        {/* Solscan Link for completed */}
+                        {isCompleted && relay.finalSignature && (
+                          <div className="pt-3 border-t border-slate-700/50">
+                            <a 
+                              href={`https://solscan.io/tx/${relay.finalSignature}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="group/link flex items-center justify-between p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 hover:border-emerald-500/50 transition-all"
+                            >
+                              <div className="flex items-center gap-2">
+                                <svg className="w-4 h-4 text-emerald-400 group-hover/link:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                                <span className="text-xs font-mono text-emerald-400 font-bold">VIEW ON SOLSCAN</span>
+                              </div>
+                              <span className="text-[10px] font-mono text-emerald-500/70">{relay.finalSignature.slice(0, 6)}...{relay.finalSignature.slice(-6)}</span>
+                            </a>
+                          </div>
+                        )}
+                        
+                        {/* Relay TX for tracking */}
+                        {relay.relaySignature && !isCompleted && (
+                          <div className="pt-3 border-t border-slate-700/50">
+                            <div className="flex items-center justify-between text-[10px] font-mono">
+                              <span className="text-slate-500">RELAY_TX:</span>
+                              <span className="text-slate-400">{relay.relaySignature.slice(0, 16)}...</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

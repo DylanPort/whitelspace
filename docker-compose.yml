@@ -1,0 +1,249 @@
+version: '3.8'
+
+services:
+  # Signaling Server
+  signaling-server:
+    build: .
+    container_name: ghost-signaling
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+    command: pm2-runtime start signaling-server.js
+    restart: unless-stopped
+    networks:
+      - ghost-network
+
+  # Backend API Server
+  backend-api:
+    build: .
+    container_name: ghost-backend
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    command: pm2-runtime start server.js
+    restart: unless-stopped
+    networks:
+      - ghost-network
+
+  # Bootstrap Node 1
+  node-1:
+    build: .
+    container_name: ghost-node-1
+    environment:
+      - NODE_ID=bootstrap-node-1
+      - NODE_REGION=US-East
+      - SIGNALING_SERVER=ws://signaling-server:8080
+      - RPC_URL=${RPC_URL}
+      - STORAGE_DIR=/app/node-storage/node-1
+    volumes:
+      - ./node-keys:/app/node-keys:ro
+      - node-1-storage:/app/node-storage/node-1
+    command: pm2-runtime start node-client.js
+    restart: unless-stopped
+    depends_on:
+      - signaling-server
+    networks:
+      - ghost-network
+
+  # Bootstrap Node 2
+  node-2:
+    build: .
+    container_name: ghost-node-2
+    environment:
+      - NODE_ID=bootstrap-node-2
+      - NODE_REGION=US-West
+      - SIGNALING_SERVER=ws://signaling-server:8080
+      - RPC_URL=${RPC_URL}
+      - STORAGE_DIR=/app/node-storage/node-2
+    volumes:
+      - ./node-keys:/app/node-keys:ro
+      - node-2-storage:/app/node-storage/node-2
+    command: pm2-runtime start node-client.js
+    restart: unless-stopped
+    depends_on:
+      - signaling-server
+    networks:
+      - ghost-network
+
+  # Bootstrap Node 3
+  node-3:
+    build: .
+    container_name: ghost-node-3
+    environment:
+      - NODE_ID=bootstrap-node-3
+      - NODE_REGION=US-Central
+      - SIGNALING_SERVER=ws://signaling-server:8080
+      - RPC_URL=${RPC_URL}
+      - STORAGE_DIR=/app/node-storage/node-3
+    volumes:
+      - ./node-keys:/app/node-keys:ro
+      - node-3-storage:/app/node-storage/node-3
+    command: pm2-runtime start node-client.js
+    restart: unless-stopped
+    depends_on:
+      - signaling-server
+    networks:
+      - ghost-network
+
+  # Bootstrap Node 4
+  node-4:
+    build: .
+    container_name: ghost-node-4
+    environment:
+      - NODE_ID=bootstrap-node-4
+      - NODE_REGION=EU-West
+      - SIGNALING_SERVER=ws://signaling-server:8080
+      - RPC_URL=${RPC_URL}
+      - STORAGE_DIR=/app/node-storage/node-4
+    volumes:
+      - ./node-keys:/app/node-keys:ro
+      - node-4-storage:/app/node-storage/node-4
+    command: pm2-runtime start node-client.js
+    restart: unless-stopped
+    depends_on:
+      - signaling-server
+    networks:
+      - ghost-network
+
+  # Bootstrap Node 5
+  node-5:
+    build: .
+    container_name: ghost-node-5
+    environment:
+      - NODE_ID=bootstrap-node-5
+      - NODE_REGION=EU-East
+      - SIGNALING_SERVER=ws://signaling-server:8080
+      - RPC_URL=${RPC_URL}
+      - STORAGE_DIR=/app/node-storage/node-5
+    volumes:
+      - ./node-keys:/app/node-keys:ro
+      - node-5-storage:/app/node-storage/node-5
+    command: pm2-runtime start node-client.js
+    restart: unless-stopped
+    depends_on:
+      - signaling-server
+    networks:
+      - ghost-network
+
+  # Bootstrap Node 6
+  node-6:
+    build: .
+    container_name: ghost-node-6
+    environment:
+      - NODE_ID=bootstrap-node-6
+      - NODE_REGION=Asia-Pacific
+      - SIGNALING_SERVER=ws://signaling-server:8080
+      - RPC_URL=${RPC_URL}
+      - STORAGE_DIR=/app/node-storage/node-6
+    volumes:
+      - ./node-keys:/app/node-keys:ro
+      - node-6-storage:/app/node-storage/node-6
+    command: pm2-runtime start node-client.js
+    restart: unless-stopped
+    depends_on:
+      - signaling-server
+    networks:
+      - ghost-network
+
+  # Bootstrap Node 7
+  node-7:
+    build: .
+    container_name: ghost-node-7
+    environment:
+      - NODE_ID=bootstrap-node-7
+      - NODE_REGION=South-America
+      - SIGNALING_SERVER=ws://signaling-server:8080
+      - RPC_URL=${RPC_URL}
+      - STORAGE_DIR=/app/node-storage/node-7
+    volumes:
+      - ./node-keys:/app/node-keys:ro
+      - node-7-storage:/app/node-storage/node-7
+    command: pm2-runtime start node-client.js
+    restart: unless-stopped
+    depends_on:
+      - signaling-server
+    networks:
+      - ghost-network
+
+  # Bootstrap Node 8
+  node-8:
+    build: .
+    container_name: ghost-node-8
+    environment:
+      - NODE_ID=bootstrap-node-8
+      - NODE_REGION=Australia
+      - SIGNALING_SERVER=ws://signaling-server:8080
+      - RPC_URL=${RPC_URL}
+      - STORAGE_DIR=/app/node-storage/node-8
+    volumes:
+      - ./node-keys:/app/node-keys:ro
+      - node-8-storage:/app/node-storage/node-8
+    command: pm2-runtime start node-client.js
+    restart: unless-stopped
+    depends_on:
+      - signaling-server
+    networks:
+      - ghost-network
+
+  # Bootstrap Node 9
+  node-9:
+    build: .
+    container_name: ghost-node-9
+    environment:
+      - NODE_ID=bootstrap-node-9
+      - NODE_REGION=Canada
+      - SIGNALING_SERVER=ws://signaling-server:8080
+      - RPC_URL=${RPC_URL}
+      - STORAGE_DIR=/app/node-storage/node-9
+    volumes:
+      - ./node-keys:/app/node-keys:ro
+      - node-9-storage:/app/node-storage/node-9
+    command: pm2-runtime start node-client.js
+    restart: unless-stopped
+    depends_on:
+      - signaling-server
+    networks:
+      - ghost-network
+
+  # Bootstrap Node 10
+  node-10:
+    build: .
+    container_name: ghost-node-10
+    environment:
+      - NODE_ID=bootstrap-node-10
+      - NODE_REGION=Middle-East
+      - SIGNALING_SERVER=ws://signaling-server:8080
+      - RPC_URL=${RPC_URL}
+      - STORAGE_DIR=/app/node-storage/node-10
+    volumes:
+      - ./node-keys:/app/node-keys:ro
+      - node-10-storage:/app/node-storage/node-10
+    command: pm2-runtime start node-client.js
+    restart: unless-stopped
+    depends_on:
+      - signaling-server
+    networks:
+      - ghost-network
+
+networks:
+  ghost-network:
+    driver: bridge
+
+volumes:
+  node-1-storage:
+  node-2-storage:
+  node-3-storage:
+  node-4-storage:
+  node-5-storage:
+  node-6-storage:
+  node-7-storage:
+  node-8-storage:
+  node-9-storage:
+  node-10-storage:
+

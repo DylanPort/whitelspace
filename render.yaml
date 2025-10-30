@@ -1,16 +1,42 @@
+# Render.com Configuration for Ghost Whistle
+# Deploy signaling server and backend API to Render
+# Bootstrap nodes run locally on your computer
+
 services:
+  # Signaling Server - Connects all nodes
   - type: web
-    name: ghost-whistle-signaling-server
-    runtime: node
+    name: ghost-whistle-signaling
     env: node
-    region: oregon
-    plan: free
+    region: oregon  # Choose: oregon, frankfurt, singapore
+    plan: starter   # $7/month - or "free" for free tier
     buildCommand: npm install
     startCommand: node signaling-server.js
     envVars:
+      - key: PORT
+        value: 8080
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 10000
+      - key: ALLOWED_ORIGINS
+        value: "*"  # Or set to your frontend domain
     healthCheckPath: /health
-
+    
+  # Backend API - Public API
+  - type: web
+    name: ghost-whistle-backend
+    env: node
+    region: oregon
+    plan: starter  # $7/month - or "free" for free tier
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: 3001
+      - key: NODE_ENV
+        value: production
+      - key: RPC_URL
+        value: https://api.mainnet-beta.solana.com
+      - key: SUPABASE_URL
+        sync: false  # Add manually in Render dashboard
+      - key: SUPABASE_KEY
+        sync: false  # Add manually in Render dashboard
+    healthCheckPath: /health

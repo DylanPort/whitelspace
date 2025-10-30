@@ -1,38 +1,64 @@
-# Wallet files - NEVER commit these!
-playground-wallet.json
-wallet.json
-keypair.json
-id.json
-*-keypair.json
-
-# But allow these JSON files
-!package.json
-!package-lock.json
-!tsconfig.json
-!manifest.webmanifest
-
-# Node modules
+# Dependencies
 node_modules/
+package-lock.json
 
 # Environment variables
 .env
 .env.local
+.env.production
+*.env
+
+# Node keys and wallets - NEVER COMMIT THESE!
+node-keys/
+*.json
+!package.json
+!ghost-whistle-idl.json
+!capacitor.config.json
+!tsconfig.json
+
+# PM2
+.pm2/
+logs/
+*.log
+
+# Storage
+node-storage/
+*.db
+*.sqlite
 
 # Build outputs
 dist/
 build/
-
-# Logs
-*.log
-npm-debug.log*
-
-# OS files
-.DS_Store
-Thumbs.db
+.cache/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+.temp/
+temp/
+
+# Backups
+*.backup
+*.bak
+*.old
+
+# Docker
+.dockerignore
+
+# Local development
+.local/
+local/
+test-*.html
+*-test.html
