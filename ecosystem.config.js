@@ -1,6 +1,6 @@
 // PM2 Ecosystem Configuration for 10 Bootstrap Nodes
 
-const SIGNALING_SERVER = process.env.SIGNALING_SERVER || 'ws://localhost:8080';
+const SIGNALING_SERVER = process.env.SIGNALING_SERVER || 'wss://ghost-whistle-signaling.onrender.com';
 const RPC_URL = process.env.RPC_URL || 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
 
 // Geographic distribution for better privacy
