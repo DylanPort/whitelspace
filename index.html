@@ -3223,21 +3223,13 @@
                             <textarea 
                               value={privateKeyInput}
                               onChange={(e) => setPrivateKeyInput(e.target.value)}
-                              placeholder="Enter your private key (base58)"
+                              placeholder="Enter your private key (base58, base64, or array format)"
                               rows={4}
                               className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:border-cyan-400/50 focus:outline-none font-mono text-xs"
                             />
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <label className="text-sm text-white/80 font-semibold">Set Password</label>
-                            <input 
-                              type="password" 
-                              value={walletPassword}
-                              onChange={(e) => setWalletPassword(e.target.value)}
-                              placeholder="Enter password (min 6 characters)"
-                              className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:border-cyan-400/50 focus:outline-none"
-                            />
+                            <div className="text-xs text-white/50">
+                              Supports: Base58 (Phantom), Base64, JSON array [1,2,3...], or comma-separated numbers
+                            </div>
                           </div>
                           
                           <button onClick={handleImportMobileWallet} className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold">
