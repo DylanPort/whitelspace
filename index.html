@@ -15816,8 +15816,12 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             console.warn('⚠️ Using FREE_ACCESS token:', tokenErr);
           }
           
-          // Use local API
-          const response = await fetch('http://localhost:8080/api/nodes', {
+          // Use dynamic API endpoint based on environment
+          const API_BASE_URL = window.location.hostname === 'localhost'
+            ? 'http://localhost:8080'
+            : 'https://ghost-whistle-signaling.onrender.com';
+          
+          const response = await fetch(`${API_BASE_URL}/api/nodes`, {
             headers: {
               'Authorization': `Bearer ${x402Token}`,
               'Content-Type': 'application/json'
