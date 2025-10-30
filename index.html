@@ -50,43 +50,104 @@
   <script>window.global = window.global || window;</script>
   <script type="module">import { Buffer } from 'https://esm.sh/buffer@6.0.3'; window.Buffer = Buffer;</script>
   <script crossorigin src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.3/lib/index.iife.js"></script>
-  <script src="https://unpkg.com/bs58@5.0.0/index.js"></script>
+  <!-- Try multiple CDNs for bs58 -->
+  <script src="https://cdn.jsdelivr.net/npm/bs58@5.0.0/index.min.js" onerror="this.onerror=null; var s=document.createElement('script'); s.src='https://unpkg.com/bs58@5.0.0/index.js'; document.head.appendChild(s);"></script>
   <!-- Solana Wallet Adapter & SPL Token -->
   <script src="https://unpkg.com/@solana/spl-token@0.3.8/lib/index.iife.js"></script>
   <script src="https://unpkg.com/@coral-xyz/anchor@0.29.0/dist/browser/index.js"></script>
   <script src="https://unpkg.com/bn.js@5.2.1/lib/bn.js"></script>
   <script src="/x402-client.js?v=15"></script>
   <script>
-    // BS58 Helper - Wait for library and provide consistent interface
-    window.ensureBs58 = async () => {
-      // Wait for bs58 to be available (max 5 seconds)
-      for (let i = 0; i < 50; i++) {
-        if (window.bs58 || (typeof bs58 !== 'undefined')) {
-          const lib = window.bs58 || bs58;
-          return {
-            encode: (data) => {
-              try {
-                return lib.encode ? lib.encode(data) : (lib.default?.encode ? lib.default.encode(data) : null);
-              } catch (e) {
-                console.error('bs58 encode error:', e);
-                return null;
-              }
-            },
-            decode: (str) => {
-              try {
-                return lib.decode ? lib.decode(str) : (lib.default?.decode ? lib.default.decode(str) : null);
-              } catch (e) {
-                console.error('bs58 decode error:', e);
-                return null;
-              }
-            }
-          };
+    // BS58 Helper - Inline fallback implementation + CDN detection
+    (function() {
+      // Simple inline bs58 encode/decode as fallback
+      const BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+      
+      function inlineEncode(source) {
+        if (!source || source.length === 0) return '';
+        const digits = [0];
+        for (let i = 0; i < source.length; ++i) {
+          let carry = source[i];
+          for (let j = 0; j < digits.length; ++j) {
+            carry += digits[j] << 8;
+            digits[j] = carry % 58;
+            carry = (carry / 58) | 0;
+          }
+          while (carry > 0) {
+            digits.push(carry % 58);
+            carry = (carry / 58) | 0;
+          }
         }
-        await new Promise(resolve => setTimeout(resolve, 100));
+        let string = '';
+        for (let k = 0; source[k] === 0 && k < source.length - 1; ++k) string += BASE58_ALPHABET[0];
+        for (let q = digits.length - 1; q >= 0; --q) string += BASE58_ALPHABET[digits[q]];
+        return string;
       }
-      console.warn('⚠️ bs58 library not available after 5 seconds');
-      return null;
-    };
+      
+      function inlineDecode(string) {
+        if (!string || string.length === 0) return new Uint8Array(0);
+        const bytes = [0];
+        for (let i = 0; i < string.length; i++) {
+          const c = string[i];
+          const value = BASE58_ALPHABET.indexOf(c);
+          if (value < 0) throw new Error('Invalid base58 character');
+          let carry = value;
+          for (let j = 0; j < bytes.length; ++j) {
+            carry += bytes[j] * 58;
+            bytes[j] = carry & 0xff;
+            carry >>= 8;
+          }
+          while (carry > 0) {
+            bytes.push(carry & 0xff);
+            carry >>= 8;
+          }
+        }
+        for (let k = 0; string[k] === BASE58_ALPHABET[0] && k < string.length - 1; ++k) {
+          bytes.push(0);
+        }
+        return new Uint8Array(bytes.reverse());
+      }
+      
+      // Store inline implementation
+      window.__inlineBs58 = { encode: inlineEncode, decode: inlineDecode };
+      
+      // Enhanced helper that tries CDN first, falls back to inline
+      window.ensureBs58 = async () => {
+        // Try CDN version first (wait up to 2 seconds)
+        for (let i = 0; i < 20; i++) {
+          if (window.bs58 || (typeof bs58 !== 'undefined')) {
+            console.log('✅ Using CDN bs58 library');
+            const lib = window.bs58 || bs58;
+            return {
+              encode: (data) => {
+                try {
+                  return lib.encode ? lib.encode(data) : (lib.default?.encode ? lib.default.encode(data) : null);
+                } catch (e) {
+                  console.error('CDN bs58 encode error, falling back:', e);
+                  return window.__inlineBs58.encode(data);
+                }
+              },
+              decode: (str) => {
+                try {
+                  return lib.decode ? lib.decode(str) : (lib.default?.decode ? lib.default.decode(str) : null);
+                } catch (e) {
+                  console.error('CDN bs58 decode error, falling back:', e);
+                  return window.__inlineBs58.decode(str);
+                }
+              }
+            };
+          }
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        // Use inline fallback
+        console.warn('⚠️ CDN bs58 not available, using inline fallback');
+        return {
+          encode: window.__inlineBs58.encode,
+          decode: window.__inlineBs58.decode
+        };
+      };
+    })();
   </script>
   <script>
     // Configure x402 gateway - auto-detect environment
