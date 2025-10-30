@@ -62,7 +62,7 @@ exports.handler = async (event, context) => {
     
     // 1.5. Fetch ACTUAL fee balance from fee collector wallet
     const feeCollectorWallet = new PublicKey(FEE_COLLECTOR);
-    const whistleMint = new PublicKey(WHISTLE_MINT);
+    // whistleMint already declared at line 27
     const TOKEN_PROGRAM = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
     const ASSOCIATED_TOKEN_PROGRAM = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
     
