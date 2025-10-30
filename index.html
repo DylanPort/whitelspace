@@ -57,6 +57,38 @@
   <script src="https://unpkg.com/bn.js@5.2.1/lib/bn.js"></script>
   <script src="/x402-client.js?v=15"></script>
   <script>
+    // BS58 Helper - Wait for library and provide consistent interface
+    window.ensureBs58 = async () => {
+      // Wait for bs58 to be available (max 5 seconds)
+      for (let i = 0; i < 50; i++) {
+        if (window.bs58 || (typeof bs58 !== 'undefined')) {
+          const lib = window.bs58 || bs58;
+          return {
+            encode: (data) => {
+              try {
+                return lib.encode ? lib.encode(data) : (lib.default?.encode ? lib.default.encode(data) : null);
+              } catch (e) {
+                console.error('bs58 encode error:', e);
+                return null;
+              }
+            },
+            decode: (str) => {
+              try {
+                return lib.decode ? lib.decode(str) : (lib.default?.decode ? lib.default.decode(str) : null);
+              } catch (e) {
+                console.error('bs58 decode error:', e);
+                return null;
+              }
+            }
+          };
+        }
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      console.warn('⚠️ bs58 library not available after 5 seconds');
+      return null;
+    };
+  </script>
+  <script>
     // Configure x402 gateway - auto-detect environment
     if (window.location.hostname === 'localhost') {
       window.X402_GATEWAY = 'http://localhost:3001'; // Local development
@@ -2477,13 +2509,17 @@
           // Generate new keypair
           const keypair = solanaWeb3.Keypair.generate();
           const publicKey = keypair.publicKey.toString();
+          
+          // Wait for and use bs58 properly
           let privateKey;
-          try {
-            const b = (window && (window.bs58?.encode || window.bs58?.default?.encode)) || null;
-            privateKey = b ? (window.bs58.encode ? window.bs58.encode(keypair.secretKey) : window.bs58.default.encode(keypair.secretKey)) : null;
-          } catch {}
+          const bs58Helper = await window.ensureBs58();
+          if (bs58Helper) {
+            privateKey = bs58Helper.encode(keypair.secretKey);
+          }
+          
           if (!privateKey) {
-            // Fallback to base64 if bs58 isn't available yet; still allows backup
+            // Fallback to base64 only if bs58 completely fails
+            console.warn('⚠️ Using base64 fallback for private key');
             const Buf = (window && window.Buffer) ? window.Buffer : undefined;
             privateKey = Buf ? Buf.from(keypair.secretKey).toString('base64') + ':base64' : Array.from(keypair.secretKey).join(',');
           }
@@ -2545,18 +2581,21 @@
         let method = '';
         
         // Method 1: Base58 (Phantom/Solflare export format)
-        if (!keypair && typeof bs58 !== 'undefined') {
+        if (!keypair) {
           try {
-            const decoded = bs58.decode(input);
-            console.log('✅ Base58 decoded, length:', decoded.length);
-            if (decoded.length === 64) {
-              keypair = solanaWeb3.Keypair.fromSecretKey(decoded);
-              method = 'Base58-64byte';
-            } else if (decoded.length === 32) {
-              keypair = solanaWeb3.Keypair.fromSeed(decoded);
-              method = 'Base58-32byte';
+            const bs58Helper = await window.ensureBs58();
+            if (bs58Helper) {
+              const decoded = bs58Helper.decode(input);
+              console.log('✅ Base58 decoded, length:', decoded.length);
+              if (decoded.length === 64) {
+                keypair = solanaWeb3.Keypair.fromSecretKey(decoded);
+                method = 'Base58-64byte';
+              } else if (decoded.length === 32) {
+                keypair = solanaWeb3.Keypair.fromSeed(decoded);
+                method = 'Base58-32byte';
+              }
+              if (keypair) console.log('✅', method, 'success!');
             }
-            if (keypair) console.log('✅', method, 'success!');
           } catch (e) {
             console.log('⏭️ Base58 skip:', e.message);
           }
