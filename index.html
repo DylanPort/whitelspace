@@ -749,6 +749,35 @@
       .text-base{font-size:15px!important}
       .text-sm{font-size:13px!important}
       .text-xs{font-size:11px!important}
+      
+      /* MOBILE MAP FIX: Ensure markers are visible on mobile */
+      .leaflet-marker-pane,
+      .leaflet-overlay-pane {
+        z-index: 1000 !important;
+        pointer-events: auto !important;
+      }
+      
+      .leaflet-marker-pane svg,
+      .leaflet-overlay-pane svg {
+        pointer-events: auto !important;
+        touch-action: auto !important;
+      }
+      
+      /* Make markers bigger and more visible on mobile */
+      .leaflet-marker-pane svg circle,
+      .leaflet-overlay-pane svg circle {
+        r: 12 !important; /* Larger radius on mobile */
+        stroke-width: 4px !important;
+        stroke: #ffffff !important;
+        fill-opacity: 1 !important;
+        stroke-opacity: 1 !important;
+      }
+      
+      /* Ensure pulsing animations work on mobile */
+      .pulsing-marker path,
+      .pulsing-marker circle {
+        animation: markerPulse 2s ease-in-out infinite, markerGlow 2s ease-in-out infinite !important;
+      }
     }
     
     @media (max-width: 640px) {
