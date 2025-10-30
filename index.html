@@ -15046,7 +15046,10 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
     ];
     const MAINNET_RPC = RPC_ENDPOINTS[0];
     
-    const SIGNALING_SERVER_URL = 'ws://localhost:8080'; // Local server for testing
+    // Production signaling server - update this with your Render URL or public server
+    const SIGNALING_SERVER_URL = window.location.hostname === 'localhost' 
+      ? 'ws://localhost:8080' 
+      : 'wss://ghost-whistle-signaling.onrender.com'; // Update with your actual Render URL
     const TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
     const SYSTEM_PROGRAM_ID = solanaWeb3.SystemProgram.programId;
     // x402 helpers
