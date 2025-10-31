@@ -22905,26 +22905,24 @@ When ready, suggest: "Ready to build? Click 🚀 Generate to create your privacy
 
 If a user requests non-privacy tools, politely redirect: "I specialize in privacy tools for Ghost Whistle. How about making that idea privacy-focused instead?"`;
           
-          // Call OpenRouter for conversational response
-          const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          // Call backend Netlify Function (no API key exposure)
+          const res = await fetch(`${API_BASE}/chat-with-ai`, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer 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`,
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              model: 'openai/gpt-4o-mini',
-              messages: [
-                { role: 'system', content: systemPrompt },
-                ...conversationContext
-              ],
-              temperature: 0.8,
-              max_tokens: 150
+              messages: conversationContext,
+              hasPreview: !!preview
             })
           });
           
+          if (!res.ok) {
+            throw new Error('Chat service unavailable');
+          }
+          
           const data = await res.json();
-          const aiResponse = data?.choices?.[0]?.message?.content || 'Could you tell me more about your vision?';
+          const aiResponse = data?.message || 'Could you tell me more about your vision?';
           
           setChatMessages([...newMessages, { role: 'assistant', content: aiResponse }]);
           
