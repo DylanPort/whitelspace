@@ -22932,7 +22932,8 @@ If a user requests non-privacy tools, politely redirect: "I specialize in privac
           setConversationHistory(newMessages);
           
         } catch (e) {
-          setChatMessages([...newMessages, { role: 'assistant', content: '❌ Sorry, I had trouble connecting. Could you try again?' }]);
+          console.error('Chat error:', e);
+          setChatMessages([...newMessages, { role: 'assistant', content: `❌ Connection error: ${e.message || 'Could not reach AI service'}. Please check console for details.` }]);
         }
       };
       

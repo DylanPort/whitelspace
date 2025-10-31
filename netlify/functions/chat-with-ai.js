@@ -1,6 +1,8 @@
 // Netlify Function: Chat with Whistle AI
 // Handles conversational AI without exposing API keys
 
+const fetch = require('node-fetch');
+
 exports.handler = async (event, context) => {
   // CORS headers
   const headers = {
