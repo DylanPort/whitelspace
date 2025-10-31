@@ -1,0 +1,588 @@
+<!-- 🛠️ PRIVACY TOOLS BUILDER & GALLERY SECTION -->
+<!-- This section can be integrated into index.html -->
+
+<script type="text/babel">
+  // Privacy Tools State Management
+  const PrivacyToolsSection = () => {
+    const [activeTab, setActiveTab] = React.useState('gallery'); // gallery, create, leaderboard
+    const [tools, setTools] = React.useState([]);
+    const [loading, setLoading] = React.useState(false);
+    const [creating, setCreating] = React.useState(false);
+    const [selectedCategory, setSelectedCategory] = React.useState('all');
+    const [sortBy, setSortBy] = React.useState('created_at');
+    const [selectedTool, setSelectedTool] = React.useState(null);
+    const [userVotes, setUserVotes] = React.useState({});
+
+    // Create Tool Form State
+    const [toolDescription, setToolDescription] = React.useState('');
+    const [toolCategory, setToolCategory] = React.useState('General');
+    const [creatorWallet, setCreatorWallet] = React.useState('');
+
+    const categories = [
+      { name: 'all', icon: '🎯', label: 'All Tools' },
+      { name: 'Encryption', icon: '🔐', label: 'Encryption' },
+      { name: 'Password', icon: '🔑', label: 'Passwords' },
+      { name: 'Anonymous', icon: '👤', label: 'Anonymity' },
+      { name: 'File Privacy', icon: '📁', label: 'File Privacy' },
+      { name: 'Network', icon: '🌐', label: 'Network' },
+      { name: 'Metadata', icon: '🏷️', label: 'Metadata' },
+      { name: 'Messaging', icon: '💬', label: 'Messaging' },
+      { name: 'General', icon: '🛠️', label: 'General' }
+    ];
+
+    const API_BASE = window.location.hostname === 'localhost'
+      ? 'http://localhost:8888/.netlify/functions'
+      : '/.netlify/functions';
+
+    // Fetch tools
+    const fetchTools = async () => {
+      setLoading(true);
+      try {
+        const category = selectedCategory === 'all' ? '' : selectedCategory;
+        const response = await fetch(
+          `${API_BASE}/get-privacy-tools?status=approved&category=${category}&sortBy=${sortBy}&limit=50`
+        );
+        const data = await response.json();
+        
+        if (data.success) {
+          setTools(data.tools);
+        }
+      } catch (error) {
+        console.error('Error fetching tools:', error);
+      }
+      setLoading(false);
+    };
+
+    React.useEffect(() => {
+      fetchTools();
+    }, [selectedCategory, sortBy]);
+
+    // Create tool
+    const handleCreateTool = async () => {
+      if (toolDescription.length < 20) {
+        alert('Description must be at least 20 characters');
+        return;
+      }
+
+      setCreating(true);
+      try {
+        const response = await fetch(`${API_BASE}/create-privacy-tool`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            description: toolDescription,
+            category: toolCategory,
+            creatorWallet: creatorWallet || window.solana?.publicKey?.toString()
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Auto-open preview modal if URL returned
+          if (data.tool && data.tool.url) {
+            setSelectedTool({
+              id: data.tool.id || 'preview',
+              url: data.tool.url,
+              category: toolCategory,
+              description: toolDescription,
+              upvotes: 0,
+              downvotes: 0,
+              views: 0,
+              featured: false
+            });
+          }
+          setToolDescription('');
+          setActiveTab('gallery');
+          fetchTools();
+        } else {
+          alert('❌ Error: ' + (data.error || 'Failed to create tool'));
+        }
+      } catch (error) {
+        console.error('Error creating tool:', error);
+        alert('❌ Failed to create tool. Please try again.');
+      }
+      setCreating(false);
+    };
+
+    // Vote on tool
+    const handleVote = async (toolId, voteType) => {
+      try {
+        const response = await fetch(`${API_BASE}/vote-privacy-tool`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            toolId,
+            voteType,
+            voterWallet: window.solana?.publicKey?.toString()
+          })
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+          // Update local state
+          setUserVotes(prev => ({ ...prev, [toolId]: voteType }));
+          fetchTools(); // Refresh to get updated counts
+        }
+      } catch (error) {
+        console.error('Error voting:', error);
+      }
+    };
+
+    // Track view
+    const handleViewTool = async (tool) => {
+      setSelectedTool(tool);
+      
+      try {
+        await fetch(`${API_BASE}/view-privacy-tool`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ toolId: tool.id })
+        });
+      } catch (error) {
+        console.error('Error tracking view:', error);
+      }
+    };
+
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 py-20">
+        <div className="max-w-7xl mx-auto px-4">
+          
+          {/* Header */}
+          <div className="text-center mb-12">
+            <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400 mb-4">
+              🛠️ Privacy Tools Lab
+            </h1>
+            <p className="text-xl text-gray-300 max-w-2xl mx-auto mb-6">
+              Create privacy tools with AI, share with the community, and earn up to <span className="text-green-400 font-bold">$500</span> for the best tool each month!
+            </p>
+            
+            {/* Stats */}
+            <div className="flex justify-center gap-8 mb-8">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-cyan-400">{tools.length}</div>
+                <div className="text-sm text-gray-400">Community Tools</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-purple-400">$500</div>
+                <div className="text-sm text-gray-400">Monthly Prize</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-green-400">Free</div>
+                <div className="text-sm text-gray-400">No Code Needed</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex justify-center gap-4 mb-8">
+            <button
+              onClick={() => setActiveTab('gallery')}
+              className={`px-6 py-3 rounded-xl font-semibold transition-all ${
+                activeTab === 'gallery'
+                  ? 'bg-gradient-to-r from-cyan-500 to-purple-500 text-white'
+                  : 'bg-slate-800 text-gray-400 hover:bg-slate-700'
+              }`}
+            >
+              📚 Tool Gallery
+            </button>
+            <button
+              onClick={() => setActiveTab('create')}
+              className={`px-6 py-3 rounded-xl font-semibold transition-all ${
+                activeTab === 'create'
+                  ? 'bg-gradient-to-r from-green-500 to-cyan-500 text-white'
+                  : 'bg-slate-800 text-gray-400 hover:bg-slate-700'
+              }`}
+            >
+              ✨ Create Tool
+            </button>
+            <button
+              onClick={() => setActiveTab('leaderboard')}
+              className={`px-6 py-3 rounded-xl font-semibold transition-all ${
+                activeTab === 'leaderboard'
+                  ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white'
+                  : 'bg-slate-800 text-gray-400 hover:bg-slate-700'
+              }`}
+            >
+              🏆 Leaderboard
+            </button>
+          </div>
+
+          {/* Gallery Tab */}
+          {activeTab === 'gallery' && (
+            <div>
+              {/* Filters */}
+              <div className="flex flex-wrap justify-center gap-4 mb-8">
+                {/* Category Filter */}
+                <div className="flex gap-2">
+                  {categories.map(cat => (
+                    <button
+                      key={cat.name}
+                      onClick={() => setSelectedCategory(cat.name)}
+                      className={`px-4 py-2 rounded-lg transition-all ${
+                        selectedCategory === cat.name
+                          ? 'bg-cyan-500 text-white'
+                          : 'bg-slate-800 text-gray-400 hover:bg-slate-700'
+                      }`}
+                      title={cat.label}
+                    >
+                      {cat.icon}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Sort Filter */}
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="px-4 py-2 bg-slate-800 text-white rounded-lg border border-slate-700"
+                >
+                  <option value="created_at">🆕 Newest</option>
+                  <option value="upvotes">⬆️ Most Upvoted</option>
+                  <option value="views">👁️ Most Viewed</option>
+                  <option value="trending">🔥 Trending</option>
+                </select>
+              </div>
+
+              {/* Tools Grid */}
+              {loading ? (
+                <div className="text-center py-20">
+                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-cyan-500 border-t-transparent"></div>
+                  <p className="mt-4 text-gray-400">Loading tools...</p>
+                </div>
+              ) : tools.length === 0 ? (
+                <div className="text-center py-20">
+                  <div className="text-6xl mb-4">🛠️</div>
+                  <p className="text-xl text-gray-400 mb-4">No tools found</p>
+                  <button
+                    onClick={() => setActiveTab('create')}
+                    className="px-6 py-3 bg-gradient-to-r from-green-500 to-cyan-500 text-white rounded-xl font-semibold"
+                  >
+                    Be the first to create one!
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {tools.map(tool => (
+                    <div
+                      key={tool.id}
+                      className="bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-700 p-6 hover:border-cyan-400 transition-all cursor-pointer"
+                      onClick={() => handleViewTool(tool)}
+                    >
+                      {/* Category Badge */}
+                      <div className="flex justify-between items-start mb-3">
+                        <span className="px-3 py-1 bg-slate-700 text-cyan-400 rounded-full text-sm">
+                          {categories.find(c => c.name === tool.category)?.icon} {tool.category}
+                        </span>
+                        {tool.featured && (
+                          <span className="px-3 py-1 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-full text-sm">
+                            ⭐ Featured
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Description */}
+                      <p className="text-gray-300 mb-4 line-clamp-3">
+                        {tool.description}
+                      </p>
+
+                      {/* Stats */}
+                      <div className="flex items-center justify-between text-sm text-gray-400 mb-4">
+                        <div className="flex gap-4">
+                          <span>⬆️ {tool.upvotes}</span>
+                          <span>⬇️ {tool.downvotes}</span>
+                          <span>👁️ {tool.views}</span>
+                        </div>
+                      </div>
+
+                      {/* Vote Buttons */}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleVote(tool.id, 'upvote');
+                          }}
+                          className={`flex-1 py-2 rounded-lg transition-all ${
+                            userVotes[tool.id] === 'upvote'
+                              ? 'bg-green-500 text-white'
+                              : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
+                          }`}
+                        >
+                          ⬆️ Upvote
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleVote(tool.id, 'downvote');
+                          }}
+                          className={`flex-1 py-2 rounded-lg transition-all ${
+                            userVotes[tool.id] === 'downvote'
+                              ? 'bg-red-500 text-white'
+                              : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
+                          }`}
+                        >
+                          ⬇️
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Create Tool Tab */}
+          {activeTab === 'create' && (
+            <div className="max-w-3xl mx-auto">
+              <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-700 p-8">
+                <h2 className="text-3xl font-bold text-white mb-6">
+                  ✨ Create Your Privacy Tool with AI
+                </h2>
+
+                {/* How it works */}
+                <div className="bg-slate-900/50 rounded-lg p-6 mb-6">
+                  <h3 className="text-lg font-semibold text-cyan-400 mb-3">How it works:</h3>
+                  <ol className="space-y-2 text-gray-300">
+                    <li>1. 📝 Describe your privacy tool idea in plain English</li>
+                    <li>2. 🤖 Our AI generates the complete working tool</li>
+                    <li>3. 🔍 Tool goes through community review</li>
+                    <li>4. ✅ Once approved, it goes live for everyone!</li>
+                    <li>5. 💰 Top tool each month wins $500!</li>
+                  </ol>
+                </div>
+
+                {/* Form */}
+                <div className="space-y-6">
+                  {/* Description */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Tool Description <span className="text-red-400">*</span>
+                    </label>
+                    <textarea
+                      value={toolDescription}
+                      onChange={(e) => setToolDescription(e.target.value)}
+                      placeholder="Example: A password strength checker that shows entropy, suggests improvements, and displays visual feedback with color-coded bars..."
+                      className="w-full px-4 py-3 bg-slate-900 text-white rounded-lg border border-slate-700 focus:border-cyan-400 focus:outline-none min-h-[150px]"
+                      maxLength={500}
+                    />
+                    <div className="text-right text-sm text-gray-400 mt-1">
+                      {toolDescription.length}/500 characters (min 20)
+                    </div>
+                  </div>
+
+                  {/* Category */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Category
+                    </label>
+                    <select
+                      value={toolCategory}
+                      onChange={(e) => setToolCategory(e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-900 text-white rounded-lg border border-slate-700 focus:border-cyan-400 focus:outline-none"
+                    >
+                      {categories.filter(c => c.name !== 'all').map(cat => (
+                        <option key={cat.name} value={cat.name}>
+                          {cat.icon} {cat.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Wallet (optional) */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Your Wallet Address (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={creatorWallet}
+                      onChange={(e) => setCreatorWallet(e.target.value)}
+                      placeholder={window.solana?.publicKey?.toString() || "Connect wallet or enter manually"}
+                      className="w-full px-4 py-3 bg-slate-900 text-white rounded-lg border border-slate-700 focus:border-cyan-400 focus:outline-none"
+                    />
+                    <p className="text-sm text-gray-400 mt-1">
+                      Required to receive $500 if your tool wins!
+                    </p>
+                  </div>
+
+                  {/* Submit Button */}
+                  <button
+                    onClick={handleCreateTool}
+                    disabled={creating || toolDescription.length < 20}
+                    className="w-full py-4 bg-gradient-to-r from-green-500 to-cyan-500 text-white rounded-xl font-bold text-lg hover:shadow-lg hover:shadow-cyan-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {creating ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="animate-spin">🤖</span> AI is building your tool...
+                      </span>
+                    ) : (
+                      '🚀 Create Tool with AI'
+                    )}
+                  </button>
+
+                  {/* Note */}
+                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                    <p className="text-yellow-200 text-sm">
+                      ⚠️ <strong>Note:</strong> Your tool will be reviewed before going live. 
+                      This ensures quality and security for all users. You'll be notified once approved!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Leaderboard Tab */}
+          {activeTab === 'leaderboard' && (
+            <div className="max-w-4xl mx-auto">
+              <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-700 p-8">
+                <h2 className="text-3xl font-bold text-white mb-6 text-center">
+                  🏆 Top Privacy Tools This Month
+                </h2>
+
+                <div className="space-y-4">
+                  {tools
+                    .sort((a, b) => (b.upvotes * 10 + b.views) - (a.upvotes * 10 + a.views))
+                    .slice(0, 10)
+                    .map((tool, index) => (
+                      <div
+                        key={tool.id}
+                        className={`flex items-center gap-4 p-6 rounded-xl border transition-all cursor-pointer ${
+                          index === 0
+                            ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-500'
+                            : index === 1
+                            ? 'bg-slate-700/50 border-gray-400'
+                            : index === 2
+                            ? 'bg-slate-700/50 border-orange-700'
+                            : 'bg-slate-800/50 border-slate-700'
+                        }`}
+                        onClick={() => handleViewTool(tool)}
+                      >
+                        {/* Rank */}
+                        <div className={`text-4xl font-bold ${
+                          index === 0 ? 'text-yellow-400' :
+                          index === 1 ? 'text-gray-400' :
+                          index === 2 ? 'text-orange-700' :
+                          'text-gray-500'
+                        }`}>
+                          {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                        </div>
+
+                        {/* Tool Info */}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="px-3 py-1 bg-slate-700 text-cyan-400 rounded-full text-sm">
+                              {categories.find(c => c.name === tool.category)?.icon} {tool.category}
+                            </span>
+                          </div>
+                          <p className="text-gray-300 line-clamp-2">{tool.description}</p>
+                        </div>
+
+                        {/* Stats */}
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-cyan-400 mb-1">
+                            {tool.upvotes * 10 + tool.views}
+                          </div>
+                          <div className="text-sm text-gray-400">
+                            ⬆️ {tool.upvotes} · 👁️ {tool.views}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+
+                {/* Prize Info */}
+                <div className="mt-8 bg-gradient-to-r from-green-500/20 to-cyan-500/20 border border-green-500/50 rounded-xl p-6 text-center">
+                  <div className="text-4xl mb-2">💰</div>
+                  <div className="text-2xl font-bold text-green-400 mb-2">$500 Prize</div>
+                  <p className="text-gray-300">
+                    Top tool at the end of the month wins! Winner selected by community votes + views.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+
+        {/* Tool Preview Modal */}
+        {selectedTool && (
+          <div 
+            className="fixed inset-0 z-[99999] flex items-center justify-center p-4"
+            style={{background: 'rgba(0, 0, 0, 0.9)', backdropFilter: 'blur(8px)'}}
+            onClick={() => setSelectedTool(null)}
+          >
+            <div 
+              className="bg-slate-900 rounded-2xl border border-cyan-400/30 shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-slate-700">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="px-3 py-1 bg-slate-700 text-cyan-400 rounded-full text-sm">
+                      {categories.find(c => c.name === selectedTool.category)?.icon} {selectedTool.category}
+                    </span>
+                  </div>
+                  <p className="text-gray-300">{selectedTool.description}</p>
+                </div>
+                <button
+                  onClick={() => setSelectedTool(null)}
+                  className="ml-4 p-2 hover:bg-slate-800 rounded-lg transition-all"
+                >
+                  <span className="text-2xl">×</span>
+                </button>
+              </div>
+
+              {/* Tool iframe */}
+              <div className="flex-1 overflow-hidden">
+                <iframe
+                  src={selectedTool.url}
+                  className="w-full h-full"
+                  title={selectedTool.description}
+                  sandbox="allow-scripts allow-same-origin"
+                />
+              </div>
+
+              {/* Footer Actions */}
+              <div className="flex items-center justify-between p-6 border-t border-slate-700">
+                <div className="flex gap-4 text-gray-400">
+                  <span>⬆️ {selectedTool.upvotes}</span>
+                  <span>⬇️ {selectedTool.downvotes}</span>
+                  <span>👁️ {selectedTool.views}</span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleVote(selectedTool.id, 'upvote')}
+                    className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-all"
+                  >
+                    ⬆️ Upvote
+                  </button>
+                  <a
+                    href={selectedTool.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-6 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg transition-all"
+                  >
+                    🚀 Open in New Tab
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+</script>
+
+<!-- Add this div where you want the Privacy Tools section to appear -->
+<div id="privacy-tools-section"></div>
+
+<!-- Render the section -->
+<script type="text/babel">
+  const privacyToolsRoot = ReactDOM.createRoot(document.getElementById('privacy-tools-section'));
+  privacyToolsRoot.render(<PrivacyToolsSection />);
+</script>
+

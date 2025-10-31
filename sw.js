@@ -1,5 +1,5 @@
 // Ghost Whistle Service Worker v1.5
-const CACHE_NAME = 'ghost-whistle-v1.5-premium';
+const CACHE_NAME = 'ghost-whistle-v1.5.1-premium';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -16,9 +16,8 @@ const ASSETS_TO_CACHE = [
   'https://unpkg.com/@babel/standalone/babel.min.js',
   'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.3/lib/index.iife.js',
   'https://unpkg.com/bs58@5.0.0/index.js',
-  'https://unpkg.com/@coral-xyz/anchor@0.29.0/dist/browser/index.js',
-  'https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js',
-  'https://unpkg.com/lucide@latest/dist/umd/lucide.min.js'
+  'https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js',
+  'https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js'
 ];
 
 // Install event - cache assets
@@ -57,6 +56,10 @@ self.addEventListener('fetch', (event) => {
   const method = event.request.method;
   if (method && method !== 'GET') {
     return; // Let network handle non-GET requests
+  }
+  // Bypass SW for Netlify Functions
+  if (event.request.url.includes('/.netlify/functions/')) {
+    return; // let the network handle it; avoid SW interference
   }
   // Network-first strategy for index.html to always get latest
   if (event.request.url.includes('index.html') || event.request.url.endsWith('/')) {
