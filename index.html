@@ -603,6 +603,7 @@
     @keyframes scaleIn{0%{opacity:0;transform:scale(.94)}100%{opacity:1;transform:scale(1)}}
     @keyframes shimmer{0%{background-position:200% center}100%{background-position:-200% center}}
     @keyframes shimmer-slide{0%{transform:translateX(-100%)}100%{transform:translateX(200%)}}
+    @keyframes laser-border{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
     @keyframes pulseSlow{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.85;transform:scale(1.05)}}
     @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
@@ -630,6 +631,10 @@
     .shimmer-bg{background:linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.08) 50%,rgba(255,255,255,0) 100%);background-size:200% 100%;animation:shimmer 3s linear infinite}
     .animate-shimmer{animation:shimmer 3s infinite}
     .animate-shimmer-slide{animation:shimmer-slide 3s linear infinite}
+    
+    /* Premium Lab Laser Border */
+    .premium-lab::before{content:'';position:absolute;inset:-1px;border-radius:12px;padding:1px;background:linear-gradient(90deg,rgba(6,182,212,0.4),rgba(251,191,36,0.6),rgba(6,182,212,0.4));background-size:200% 100%;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:laser-border 2s linear infinite;pointer-events:none}
+    .premium-lab-active::before{content:'';position:absolute;inset:-1px;border-radius:12px;padding:2px;background:linear-gradient(90deg,rgba(6,182,212,0.8),rgba(251,191,36,1),rgba(6,182,212,0.8));background-size:200% 100%;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:laser-border 1.5s linear infinite;pointer-events:none}
     
     .pulse-glow{animation:pulse 2s ease-in-out infinite}
     
@@ -9457,6 +9462,7 @@ console.log('✅ Fingerprint spoofing active!');`;
       
       const items = [
         { id:'home',    label:'Home', icon:'home', color:'cyan' },
+        { id:'privacy-tools-lab', label:'🛠️ Privacy Tools Lab', icon:'wrench', color:'gold', isNew: true, badge: '$500', isPremium: true },
         { id:'offline-network', label:'Ghost Whistle', icon:'network', special: true, color:'emerald' },
         { id:'anonymous-relay', label:'Anonymous Relay', icon:'shuffle', special: true, color:'purple' },
         { id:'claim-rewards', label:'Claim Rewards', icon:'gift', color:'yellow' },
@@ -9466,7 +9472,6 @@ console.log('✅ Fingerprint spoofing active!');`;
         { id:'swap', label:'Privacy Swap', image:'public/4DqRlDPT_400x400.png.png', color:'orange' },
         { id:'solana-privacy', label:'Solana Privacy', image:'public/solana.png', color:'indigo' },
         { id:'privacy-tools', label:'Privacy Tools Hub', icon:'lock', color:'slate' },
-        { id:'privacy-tools-lab', label:'🛠️ Privacy Tools Lab', icon:'wrench', color:'green', isNew: true, badge: '$500' },
       ];
       
       const privacyToolsItems = [
@@ -9494,6 +9499,7 @@ console.log('✅ Fingerprint spoofing active!');`;
                 const isGhostWhistle = x.id === 'offline-network';
                 const isAnonymousRelay = x.id === 'anonymous-relay';
                 const isPrivacyTools = x.id === 'privacy-tools';
+                const isPremiumLab = x.isPremium;
                 const isSpecial = isGhostWhistle || isAnonymousRelay;
                 const isActive = step === x.id;
                 
@@ -9514,7 +9520,11 @@ console.log('✅ Fingerprint spoofing active!');`;
                   }
                 }}
                     className={`w-full flex items-center gap-3 rounded-xl px-3 py-3 border text-sm transition-all btn-press ${
-                      isGhostWhistle 
+                      isPremiumLab
+                        ? isActive
+                          ? 'premium-lab-active relative border-transparent bg-gradient-to-r from-cyan-600/30 via-amber-600/30 to-cyan-600/30 text-white shadow-lg shadow-cyan-500/40 animate-pulse'
+                          : 'premium-lab relative border-transparent bg-gradient-to-r from-cyan-500/20 via-amber-500/20 to-cyan-500/20 text-amber-100 hover:shadow-2xl hover:shadow-amber-500/40 hover:scale-[1.05]'
+                      : isGhostWhistle 
                         ? isActive
                           ? 'relative border-emerald-400/60 bg-gradient-to-r from-emerald-400/20 via-teal-400/20 to-cyan-400/20 text-white shadow-lg shadow-emerald-500/30 animate-pulse'
                           : 'relative border-emerald-500/40 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-cyan-500/10 text-emerald-100 hover:border-emerald-400/60 hover:shadow-lg hover:shadow-emerald-500/20 hover:scale-[1.03] animate-shimmer'
@@ -9540,7 +9550,12 @@ console.log('✅ Fingerprint spoofing active!');`;
                       </span>
                       <span className={isSpecial ? 'font-bold' : ''}>{x.label}</span>
                         <div className="ml-auto flex items-center gap-2">
-                          {x.isNew && (
+                          {isPremiumLab && (
+                            <span className="text-[11px] px-2.5 py-1 rounded-md bg-gradient-to-r from-amber-500/40 to-yellow-500/40 text-amber-100 font-black tracking-tight border border-amber-400/60 shadow-lg shadow-amber-500/30 animate-pulse">
+                              $500
+                            </span>
+                          )}
+                          {x.isNew && !isPremiumLab && (
                             <span className="text-[9px] px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-300 font-semibold uppercase tracking-wider border border-blue-400/30">
                             NEW
                           </span>
@@ -9557,8 +9572,8 @@ console.log('✅ Fingerprint spoofing active!');`;
                       )}
                           {isPrivacyTools && (
                             <i data-lucide={privacyToolsExpanded ? 'chevron-down' : 'chevron-right'} className="w-4 h-4"></i>
-                        )}
-                        </div>
+                      )}
+                      </div>
                       </span>
                   </button>
                   
