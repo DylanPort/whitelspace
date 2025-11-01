@@ -240,7 +240,7 @@
 
       // Chat state
       const [chatMessages, setChatMessages] = useState([
-        { role: 'assistant', content: '👋 Hi! I\'m **Whistle AI**, your privacy tool architect.\n\n🎯 I build **working privacy tools**, not websites:\n✅ Encryption modules (AES, RSA, PBKDF2)\n✅ Backend APIs (Express, authentication)\n✅ Crypto utilities (key derivation, signing)\n✅ Privacy algorithms (zero-knowledge, steganography)\n✅ Integration-ready for Ghost Whistle\n\n💡 **Examples:**\n• "Build a file encryptor with chunked AES-256"\n• "Create a zero-knowledge proof generator"\n• "Build a metadata stripper for images"\n• "Make an anonymous credential system"\n\nWhat privacy tool should I build?' }
+        { role: 'assistant', content: '👋 Hi! I\'m **Whistle AI**, your privacy tool architect.\n\n🎯 I build **REAL working privacy tools** with actual code:\n✅ Encryption tools (AES-256, RSA, PBKDF2)\n✅ Backend APIs (Express routes, authentication)\n✅ Crypto modules (key derivation, signing, hashing)\n✅ Privacy utilities (metadata stripping, steganography)\n✅ Full projects ready to integrate into Ghost Whistle\n\n💡 **Try these:**\n• "Build a file encryptor with chunked AES-256 encryption"\n• "Create a password manager with PBKDF2 key derivation"\n• "Build an image metadata stripper with EXIF removal"\n• "Make a steganography tool to hide messages in images"\n\nDescribe the privacy tool you want to build!' }
       ]);
       const [userInput, setUserInput] = useState('');
 
@@ -257,13 +257,37 @@
         setUserInput('');
         setDescription(newMessages.filter(m => m.role === 'user').map(m => m.content).join('\n'));
 
-        // Simple echo for now (you can connect to chat-with-ai function)
-        setTimeout(() => {
+        // Call real AI chat
+        try {
+          const res = await fetch(`${API_BASE}/chat-with-ai`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              messages: newMessages.map(m => ({ role: m.role, content: m.content })),
+              hasPreview: files.length > 0
+            })
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            setChatMessages([...newMessages, {
+              role: 'assistant',
+              content: data.message || 'Great idea! Ready to build? Click ⚙️ Generate.'
+            }]);
+          } else {
+            // Fallback on error
+            setChatMessages([...newMessages, {
+              role: 'assistant',
+              content: 'I understand. Ready to build? Click ⚙️ Generate to create your full-stack privacy tool.'
+            }]);
+          }
+        } catch (err) {
+          console.error('Chat error:', err);
           setChatMessages([...newMessages, {
             role: 'assistant',
             content: 'Great idea! Ready to build? Click ⚙️ Generate to create your full-stack privacy tool.'
           }]);
-        }, 500);
+        }
       };
 
       // Generate project
