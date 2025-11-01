@@ -164,17 +164,6 @@
             <span className="text-[10px] text-gray-600">{files.length} files</span>
           </div>
 
-          {/* Bottom console */}
-          <div className={`${consoleOpen ? 'h-36' : 'h-0'} transition-all duration-300 overflow-hidden border-t border-slate-800 bg-slate-950/70`}> 
-            <div className="px-4 py-2 text-[11px] text-gray-400 flex items-center justify-between">
-              <span>Console</span>
-              <button onClick={()=>setConsoleOpen(false)} className="text-gray-500 hover:text-gray-300">Close</button>
-            </div>
-            <div className="px-4 pb-3 text-[11px] text-gray-500 space-y-1 max-h-28 overflow-auto">
-              <div>Tip: Approve each file to stream it into your workspace.</div>
-              <div>{progress}</div>
-            </div>
-          </div>
           <div className="p-2">
             {renderTree(tree)}
           </div>
