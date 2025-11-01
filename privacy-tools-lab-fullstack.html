@@ -449,6 +449,16 @@
       const [showConfirmModal, setShowConfirmModal] = useState(false);
       const [showPlan, setShowPlan] = useState(false);
       const [resourceTab, setResourceTab] = useState('files'); // 'files' | 'plan'
+      const [showGitHubModal, setShowGitHubModal] = useState(false);
+      const [githubConfig, setGithubConfig] = useState({
+        token: localStorage.getItem('github_token') || '',
+        repoName: '',
+        description: '',
+        isPrivate: false,
+        uploading: false,
+        error: null,
+        success: null
+      });
       const [layoutMode, setLayoutMode] = useState('tabbed'); // 'tabbed' | 'split'
       const [centerTab, setCenterTab] = useState('editor'); // editor | preview
       const [consoleOpen, setConsoleOpen] = useState(false);
@@ -747,6 +757,173 @@
       };
 
       // Download project as ZIP
+      // Push to GitHub
+      const handlePushToGitHub = async () => {
+        const { token, repoName, description, isPrivate } = githubConfig;
+        
+        if (!token) {
+          setGithubConfig(prev => ({ ...prev, error: 'GitHub token required' }));
+          return;
+        }
+        
+        if (!repoName) {
+          setGithubConfig(prev => ({ ...prev, error: 'Repository name required' }));
+          return;
+        }
+        
+        if (files.length === 0) {
+          setGithubConfig(prev => ({ ...prev, error: 'No files to upload' }));
+          return;
+        }
+
+        setGithubConfig(prev => ({ ...prev, uploading: true, error: null, success: null }));
+
+        try {
+          // 1. Create repository
+          const createRepoRes = await fetch('https://api.github.com/user/repos', {
+            method: 'POST',
+            headers: {
+              'Authorization': `token ${token}`,
+              'Content-Type': 'application/json',
+              'Accept': 'application/vnd.github.v3+json'
+            },
+            body: JSON.stringify({
+              name: repoName,
+              description: description || `Privacy tool created with Ghost Whistle`,
+              private: isPrivate,
+              auto_init: true
+            })
+          });
+
+          if (!createRepoRes.ok) {
+            const error = await createRepoRes.json();
+            throw new Error(error.message || 'Failed to create repository');
+          }
+
+          const repo = await createRepoRes.json();
+          const repoFullName = repo.full_name;
+          const defaultBranch = repo.default_branch || 'main';
+
+          // 2. Get the latest commit SHA
+          const refRes = await fetch(`https://api.github.com/repos/${repoFullName}/git/ref/heads/${defaultBranch}`, {
+            headers: {
+              'Authorization': `token ${token}`,
+              'Accept': 'application/vnd.github.v3+json'
+            }
+          });
+
+          if (!refRes.ok) throw new Error('Failed to get ref');
+          const refData = await refRes.json();
+          const latestCommitSha = refData.object.sha;
+
+          // 3. Get the base tree
+          const commitRes = await fetch(`https://api.github.com/repos/${repoFullName}/git/commits/${latestCommitSha}`, {
+            headers: {
+              'Authorization': `token ${token}`,
+              'Accept': 'application/vnd.github.v3+json'
+            }
+          });
+
+          if (!commitRes.ok) throw new Error('Failed to get commit');
+          const commitData = await commitRes.json();
+          const baseTreeSha = commitData.tree.sha;
+
+          // 4. Create blobs for all files
+          const tree = [];
+          for (const file of files) {
+            const blobRes = await fetch(`https://api.github.com/repos/${repoFullName}/git/blobs`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `token ${token}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/vnd.github.v3+json'
+              },
+              body: JSON.stringify({
+                content: file.content,
+                encoding: 'utf-8'
+              })
+            });
+
+            if (!blobRes.ok) throw new Error(`Failed to create blob for ${file.path}`);
+            const blob = await blobRes.json();
+
+            tree.push({
+              path: file.path,
+              mode: '100644',
+              type: 'blob',
+              sha: blob.sha
+            });
+          }
+
+          // 5. Create new tree
+          const treeRes = await fetch(`https://api.github.com/repos/${repoFullName}/git/trees`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `token ${token}`,
+              'Content-Type': 'application/json',
+              'Accept': 'application/vnd.github.v3+json'
+            },
+            body: JSON.stringify({
+              base_tree: baseTreeSha,
+              tree: tree
+            })
+          });
+
+          if (!treeRes.ok) throw new Error('Failed to create tree');
+          const treeData = await treeRes.json();
+
+          // 6. Create new commit
+          const newCommitRes = await fetch(`https://api.github.com/repos/${repoFullName}/git/commits`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `token ${token}`,
+              'Content-Type': 'application/json',
+              'Accept': 'application/vnd.github.v3+json'
+            },
+            body: JSON.stringify({
+              message: `Add privacy tool files\n\nGenerated with Ghost Whistle Privacy Tools Lab Pro`,
+              tree: treeData.sha,
+              parents: [latestCommitSha]
+            })
+          });
+
+          if (!newCommitRes.ok) throw new Error('Failed to create commit');
+          const newCommit = await newCommitRes.json();
+
+          // 7. Update reference
+          const updateRefRes = await fetch(`https://api.github.com/repos/${repoFullName}/git/refs/heads/${defaultBranch}`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `token ${token}`,
+              'Content-Type': 'application/json',
+              'Accept': 'application/vnd.github.v3+json'
+            },
+            body: JSON.stringify({
+              sha: newCommit.sha
+            })
+          });
+
+          if (!updateRefRes.ok) throw new Error('Failed to update ref');
+
+          // Success!
+          localStorage.setItem('github_token', token);
+          setGithubConfig(prev => ({ 
+            ...prev, 
+            uploading: false, 
+            success: `Successfully uploaded to ${repo.html_url}`,
+            repoUrl: repo.html_url
+          }));
+
+        } catch (error) {
+          console.error('GitHub upload error:', error);
+          setGithubConfig(prev => ({ 
+            ...prev, 
+            uploading: false, 
+            error: error.message || 'Failed to upload to GitHub' 
+          }));
+        }
+      };
+
       const handleDownloadZip = async () => {
         if (files.length === 0) return;
 
@@ -903,7 +1080,16 @@
 
                 {/* Actions */}
                 <div className="flex items-center gap-2">
-                  <button onClick={handleDownloadZip} className="px-4 py-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-medium transition-all shadow-lg shadow-cyan-500/30 flex items-center gap-2">
+                  <button 
+                    onClick={() => setShowGitHubModal(true)} 
+                    disabled={files.length === 0}
+                    className="px-4 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-medium transition-all shadow-lg shadow-purple-500/30 flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <span className="hacker-icon">GH</span>
+                    <span>Push to GitHub</span>
+                  </button>
+                  
+                  <button onClick={handleDownloadZip} disabled={files.length === 0} className="px-4 py-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-medium transition-all shadow-lg shadow-cyan-500/30 flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
                     <span>⬇</span>
                     <span>Download ZIP</span>
                   </button>
@@ -1283,6 +1469,118 @@
                         <button onClick={regenerateCurrentFile} className="px-3 py-1.5 text-xs rounded btn-hacker">Regenerate</button>
                         <button onClick={()=>{ setShowConfirmModal(false); proceedCurrentFile(); }} className="px-4 py-1.5 text-xs rounded btn-primary-hacker">Approve & Generate</button>
                       </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* GitHub Upload Modal */}
+            {showGitHubModal && (
+              <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                <div className="relative w-full max-w-lg mx-4 rounded-2xl border border-purple-900/50 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 shadow-2xl shadow-purple-500/20">
+                  <div className="px-6 py-4 border-b border-purple-900/50 flex items-center justify-between bg-gradient-to-r from-purple-900/20 to-pink-900/20">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg hacker-icon">GH</span>
+                      <div className="text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">PUSH TO GITHUB</div>
+                    </div>
+                    <button onClick={()=>{setShowGitHubModal(false); setGithubConfig(prev => ({...prev, error: null, success: null}));}} className="text-gray-400 hover:text-gray-200">✕</button>
+                  </div>
+                  
+                  <div className="px-6 py-5 space-y-4">
+                    {/* GitHub Token */}
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">GitHub Personal Access Token <span className="text-red-400">*</span></label>
+                      <input 
+                        type="password"
+                        value={githubConfig.token}
+                        onChange={(e) => setGithubConfig(prev => ({...prev, token: e.target.value}))}
+                        placeholder="ghp_xxxxxxxxxxxx"
+                        className="w-full px-3 py-2 rounded-lg bg-black border border-slate-700 text-gray-200 text-xs font-mono focus:border-purple-500 focus:outline-none"
+                      />
+                      <p className="text-[10px] text-gray-500 mt-1">
+                        Create token at <a href="https://github.com/settings/tokens" target="_blank" className="text-purple-400 hover:underline">github.com/settings/tokens</a> with <code className="text-cyan-400">repo</code> scope
+                      </p>
+                    </div>
+
+                    {/* Repository Name */}
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">Repository Name <span className="text-red-400">*</span></label>
+                      <input 
+                        type="text"
+                        value={githubConfig.repoName}
+                        onChange={(e) => setGithubConfig(prev => ({...prev, repoName: e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, '-')}))}
+                        placeholder="my-privacy-tool"
+                        className="w-full px-3 py-2 rounded-lg bg-black border border-slate-700 text-gray-200 text-xs font-mono focus:border-purple-500 focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">Description (optional)</label>
+                      <input 
+                        type="text"
+                        value={githubConfig.description}
+                        onChange={(e) => setGithubConfig(prev => ({...prev, description: e.target.value}))}
+                        placeholder="My privacy tool built with Ghost Whistle"
+                        className="w-full px-3 py-2 rounded-lg bg-black border border-slate-700 text-gray-200 text-xs focus:border-purple-500 focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Private Repository */}
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="checkbox"
+                        id="isPrivate"
+                        checked={githubConfig.isPrivate}
+                        onChange={(e) => setGithubConfig(prev => ({...prev, isPrivate: e.target.checked}))}
+                        className="accent-purple-500"
+                      />
+                      <label htmlFor="isPrivate" className="text-xs text-gray-300 cursor-pointer">Make repository private</label>
+                    </div>
+
+                    {/* Error Message */}
+                    {githubConfig.error && (
+                      <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-xs">
+                        ❌ {githubConfig.error}
+                      </div>
+                    )}
+
+                    {/* Success Message */}
+                    {githubConfig.success && (
+                      <div className="px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/30 text-green-300 text-xs space-y-2">
+                        <div>✅ {githubConfig.success}</div>
+                        <a href={githubConfig.repoUrl} target="_blank" className="block text-cyan-400 hover:underline font-mono break-all">
+                          View Repository →
+                        </a>
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 pt-2">
+                      <button 
+                        onClick={()=>{setShowGitHubModal(false); setGithubConfig(prev => ({...prev, error: null, success: null}));}} 
+                        className="flex-1 px-4 py-2.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-gray-300 transition-all"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={handlePushToGitHub}
+                        disabled={githubConfig.uploading || !githubConfig.token || !githubConfig.repoName}
+                        className="flex-1 px-4 py-2.5 text-xs rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-medium transition-all shadow-lg shadow-purple-500/30 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {githubConfig.uploading ? (
+                          <>
+                            <span className="hacker-icon animate-spin">⟳</span>
+                            <span>Uploading...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="hacker-icon">↑</span>
+                            <span>Push to GitHub</span>
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
                 </div>
