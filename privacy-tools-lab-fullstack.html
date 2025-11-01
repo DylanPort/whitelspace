@@ -319,7 +319,7 @@
         }
       };
 
-      // Generate project with LIVE STREAMING
+      // Generate project CURSOR-STYLE: Plan structure, then build file-by-file
       const handleGenerate = async () => {
         if (!description || description.length < 20) {
           setError('Description must be at least 20 characters');
@@ -328,80 +328,98 @@
 
         setCreating(true);
         setError(null);
-        setProgress('🎨 Initializing AI...');
+        setProgress('🧠 Planning project structure...');
         
-        // Clear placeholder and show generating message
-        setFiles([{ path: '⏳ Generating...', content: '# AI is creating your privacy tool...\n\nFiles will appear here in real-time', type: 'temp', size: 0 }]);
+        // Clear placeholder
+        setFiles([]);
         setActiveFile(null);
         setOpenTabs([]);
         setProjectStructure(null);
 
         try {
-          // Start generation in background
-          const startTime = Date.now();
-          const res = await fetch(`${API_BASE}/create-fullstack-tool`, {
+          // STEP 1: Generate project structure (quick, <5 seconds)
+          setProgress('📋 AI is planning your project...');
+          const structureRes = await fetch(`${API_BASE}/create-fullstack-tool`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               description,
               category,
-              includeBackend
+              includeBackend,
+              structureOnly: true // Just get the plan, don't generate files
             })
           });
 
-          if (!res.ok) {
-            throw new Error(`Generation failed: ${res.status}`);
+          if (!structureRes.ok) {
+            throw new Error(`Planning failed: ${structureRes.status}`);
           }
 
-          const data = await res.json();
+          const structureData = await structureRes.json();
+          const projectPlan = structureData.tool || structureData;
 
-          if (data.success && data.tool) {
-            // LIVE STREAM: Show files appearing one by one
-            setProgress('📦 Building workspace...');
-            const allFiles = data.tool.files || [];
+          setProjectStructure(projectPlan);
+          const filesToGenerate = projectPlan.files || [];
+
+          console.log(`📋 Project plan: ${filesToGenerate.length} files to build`);
+
+          // STEP 2: Generate files ONE AT A TIME (Cursor-style)
+          const generatedFiles = [];
+
+          for (let i = 0; i < filesToGenerate.length; i++) {
+            const fileSpec = filesToGenerate[i];
             
-            // Clear temp files first
-            setFiles([]);
-            
-            // Animate files appearing
-            for (let i = 0; i < allFiles.length; i++) {
-              const file = allFiles[i];
-              setProgress(`✍️ Writing ${file.path}...`);
+            setProgress(`✍️ Building ${fileSpec.path}... (${i + 1}/${filesToGenerate.length})`);
+
+            // Generate single file
+            const fileRes = await fetch(`${API_BASE}/generate-single-file`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                fileSpec,
+                projectContext: {
+                  projectName: projectPlan.projectName || 'privacy-tool',
+                  description: projectPlan.description || description,
+                  techStack: projectPlan.techStack || ['JavaScript', 'Node.js']
+                }
+              })
+            });
+
+            if (fileRes.ok) {
+              const fileData = await fileRes.json();
               
-              // Add file to workspace
-              setFiles(prev => [...prev, file]);
-              
-              // Auto-select first file
-              if (i === 0) {
-                setActiveFile(file);
-                setOpenTabs([file]);
+              if (fileData.success && fileData.file) {
+                generatedFiles.push(fileData.file);
+                
+                // LIVE UPDATE: Add file to workspace immediately
+                setFiles([...generatedFiles]);
+                
+                // Auto-select first file
+                if (i === 0) {
+                  setActiveFile(fileData.file);
+                  setOpenTabs([fileData.file]);
+                }
+                
+                console.log(`✅ ${fileSpec.path} (${fileData.file.size} chars)`);
               }
-              
-              // Small delay for visual effect (50ms per file)
-              await new Promise(resolve => setTimeout(resolve, 50));
+            } else {
+              console.error(`Failed to generate ${fileSpec.path}`);
+              // Continue with next file even if one fails
             }
-
-            setProjectStructure(data.tool);
-            setProgress('✅ Project generated successfully!');
             
-            setTimeout(() => {
-              setCreating(false);
-              setProgress('');
-            }, 1500);
-          } else {
-            throw new Error(data.error || 'Generation failed');
+            // Small delay between files for visual feedback
+            await new Promise(resolve => setTimeout(resolve, 100));
           }
+
+          setProgress('✅ Project complete!');
+          
+          setTimeout(() => {
+            setCreating(false);
+            setProgress('');
+          }, 2000);
 
         } catch (err) {
           console.error('Generation error:', err);
-          
-          // Check if it's a timeout (generation might still have succeeded on server)
-          if (err.message.includes('504') || err.message.includes('timeout')) {
-            setError('⏱️ Generation took longer than expected. The tool may have been created - check back in a moment or try with a simpler description.');
-          } else {
-            setError(`❌ ${err.message}`);
-          }
-          
+          setError(`❌ ${err.message}`);
           setProgress('');
           setCreating(false);
         }

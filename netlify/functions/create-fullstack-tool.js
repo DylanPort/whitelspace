@@ -53,7 +53,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { description, category, includeBackend = true } = JSON.parse(event.body);
+    const { description, category, includeBackend = true, structureOnly = false } = JSON.parse(event.body);
 
     if (!description || description.length < 20) {
       return {
@@ -63,7 +63,8 @@ exports.handler = async (event) => {
       };
     }
 
-    console.log('🚀 Generating full-stack tool:', description);
+    console.log('🚀 Generating project:', description);
+    console.log('   Mode:', structureOnly ? 'Structure Only (Cursor-style)' : 'Full Generation');
     console.log('   Backend:', includeBackend ? 'Yes' : 'Frontend only');
     console.log('   🔄 Auto-retry enabled: Up to 3 attempts per operation\n');
 
@@ -182,6 +183,19 @@ OUTPUT ONLY THE JSON, NO MARKDOWN FENCES.`;
 
     console.log('✅ Project structure:', projectStructure.projectName);
     console.log('   Files to generate:', projectStructure.files.length);
+
+    // If structureOnly mode, return just the plan
+    if (structureOnly) {
+      console.log('📋 Structure-only mode: Returning project plan');
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          success: true,
+          tool: projectStructure
+        })
+      };
+    }
 
     // ========================================
     // STEP 2: Generate Code for Each File
