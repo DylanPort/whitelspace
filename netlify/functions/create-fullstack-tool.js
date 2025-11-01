@@ -146,9 +146,6 @@ STRUCTURE REQUIREMENTS:
 ⚠️ KEEP IT LEAN: Generate 3-5 essential files max. Quality over quantity.
 Focus on the CORE functionality. Skip extras like separate test files or long docs.
 
-🚨 CRITICAL: ALWAYS include at least ONE HTML file (interface/index.html or index.html) for preview.
-This is MANDATORY. The user needs a working visual interface to test the tool in the browser.
-
 OUTPUT ONLY THE JSON, NO MARKDOWN FENCES.`;
 
     console.log('📋 Step 1: Generating project structure...');

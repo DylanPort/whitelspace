@@ -132,8 +132,8 @@ OUTPUT ONLY THE CODE, NO MARKDOWN FENCES OR EXPLANATIONS.`;
       body: JSON.stringify({
         model: 'openai/gpt-4o-mini',
         messages: [{ role: 'user', content: filePrompt }],
-        temperature: 0.7, // Lower for faster generation
-        max_tokens: 1800  // Reduced to ensure generation completes within 20-25 seconds
+        temperature: 0.8,
+        max_tokens: 2500
       })
     });
 
