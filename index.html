@@ -9460,11 +9460,11 @@ console.log('✅ Fingerprint spoofing active!');`;
     // Sidebar navigation
     function Sidebar({ step, setStep }){
       const [privacyToolsExpanded, setPrivacyToolsExpanded] = useState(true);
+      const [privacyLabExpanded, setPrivacyLabExpanded] = useState(true);
       
       const items = [
         { id:'home',    label:'Home', icon:'home', color:'cyan' },
         { id:'privacy-tools-lab', label:'🛠️ Privacy Tools Lab', icon:'wrench', color:'gold', isNew: true, badge: '$500', isPremium: true },
-        { id:'community-tools', label:'🏆 Community Tools', icon:'users', color:'amber', isNew: true },
         { id:'offline-network', label:'Ghost Whistle', icon:'network', special: true, color:'emerald' },
         { id:'anonymous-relay', label:'Anonymous Relay', icon:'shuffle', special: true, color:'purple' },
         { id:'claim-rewards', label:'Claim Rewards', icon:'gift', color:'yellow' },
@@ -9480,10 +9480,16 @@ console.log('✅ Fingerprint spoofing active!');`;
         { id:'decentralized-storage', label:'Decentralized Storage', icon:'database', color:'blue', isNew: true },
         { id:'breach-monitor', label:'Breach Monitor', icon:'shield-alert', color:'red' },
       ];
+
+      // Submenu for Privacy Tools Lab
+      const privacyLabItems = [
+        { id:'community-tools', label:'Community Tools', icon:'users' },
+        { id:'pro-creators', label:'Pro Creators', icon:'shield' }
+      ];
       
       useEffect(()=>{
         if(window.lucide) window.lucide.createIcons();
-      },[step, privacyToolsExpanded]);
+      },[step, privacyToolsExpanded, privacyLabExpanded]);
       
       return (
         <aside className="hidden md:block w-[280px] shrink-0">
@@ -9502,6 +9508,7 @@ console.log('✅ Fingerprint spoofing active!');`;
                 const isAnonymousRelay = x.id === 'anonymous-relay';
                 const isPrivacyTools = x.id === 'privacy-tools';
                 const isPremiumLab = x.isPremium;
+                const isPrivacyLab = x.id === 'privacy-tools-lab';
                 const isSpecial = isGhostWhistle || isAnonymousRelay;
                 const isActive = step === x.id;
                 
@@ -9517,6 +9524,9 @@ console.log('✅ Fingerprint spoofing active!');`;
                     } else if (x.id === 'privacy-tools') {
                       setPrivacyToolsExpanded(!privacyToolsExpanded);
                       setStep(x.id); // Also navigate to privacy-tools page
+                  } else if (x.id === 'privacy-tools-lab') {
+                      setPrivacyLabExpanded(!privacyLabExpanded);
+                      setStep(x.id);
                   } else {
                     setStep(x.id);
                   }
@@ -9575,6 +9585,9 @@ console.log('✅ Fingerprint spoofing active!');`;
                           {isPrivacyTools && (
                             <i data-lucide={privacyToolsExpanded ? 'chevron-down' : 'chevron-right'} className="w-4 h-4"></i>
                         )}
+                          {isPrivacyLab && (
+                            <i data-lucide={privacyLabExpanded ? 'chevron-down' : 'chevron-right'} className="w-4 h-4"></i>
+                          )}
                         </div>
                       </span>
                   </button>
@@ -9616,6 +9629,35 @@ console.log('✅ Fingerprint spoofing active!');`;
                         </span>
                       )}
                 </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Privacy Tools Lab Sub-menu */}
+                  {isPrivacyLab && privacyLabExpanded && (
+                    <div className="ml-4 space-y-1 mt-1">
+                      {privacyLabItems.map((item, subIndex) => {
+                        const isSubActive = step === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => {
+                              if (item.id === 'pro-creators') {
+                                window.open('privacy-tools-lab-fullstack.html', '_blank');
+                              } else {
+                                setStep(item.id);
+                              }
+                            }}
+                            className={`w-full flex items-center gap-3 rounded-lg px-3 py-2 border text-xs transition-all ${
+                              isSubActive
+                                ? 'border-amber-400/60 bg-amber-400/10 text-amber-100'
+                                : 'border-white/10 bg-white/[0.03] text-white/70 hover:bg-white/[0.07]'
+                            }`}
+                          >
+                            <i data-lucide={item.icon} className="w-4 h-4"></i>
+                            <span>{item.label}</span>
+                          </button>
                         );
                       })}
                     </div>
