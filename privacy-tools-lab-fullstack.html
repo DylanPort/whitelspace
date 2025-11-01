@@ -163,6 +163,18 @@
             <span className="text-xs text-gray-500 font-bold tracking-wider">FILES</span>
             <span className="text-[10px] text-gray-600">{files.length} files</span>
           </div>
+
+          {/* Bottom console */}
+          <div className={`${consoleOpen ? 'h-36' : 'h-0'} transition-all duration-300 overflow-hidden border-t border-slate-800 bg-slate-950/70`}> 
+            <div className="px-4 py-2 text-[11px] text-gray-400 flex items-center justify-between">
+              <span>Console</span>
+              <button onClick={()=>setConsoleOpen(false)} className="text-gray-500 hover:text-gray-300">Close</button>
+            </div>
+            <div className="px-4 pb-3 text-[11px] text-gray-500 space-y-1 max-h-28 overflow-auto">
+              <div>Tip: Approve each file to stream it into your workspace.</div>
+              <div>{progress}</div>
+            </div>
+          </div>
           <div className="p-2">
             {renderTree(tree)}
           </div>
@@ -302,6 +314,9 @@
       const [showConfirmModal, setShowConfirmModal] = useState(false);
       const [showPlan, setShowPlan] = useState(false);
       const [resourceTab, setResourceTab] = useState('files'); // 'files' | 'plan'
+      const [layoutMode, setLayoutMode] = useState('tabbed'); // 'tabbed' | 'split'
+      const [centerTab, setCenterTab] = useState('editor'); // editor | preview
+      const [consoleOpen, setConsoleOpen] = useState(false);
 
       // Chat state
       const [chatMessages, setChatMessages] = useState([
@@ -630,6 +645,12 @@
                     <input type="checkbox" checked={autoContinue} onChange={(e)=>setAutoContinue(e.target.checked)} />
                     Auto-continue
                   </label>
+                  {/* Layout Switch */}
+                  <div className="hidden md:flex items-center gap-1 px-1 py-1 rounded-lg bg-slate-800/60 border border-slate-700">
+                    <button onClick={()=>setLayoutMode('tabbed')} className={`px-3 py-1.5 text-xs rounded ${layoutMode==='tabbed'?'bg-slate-900 text-cyan-300 border border-slate-700':'text-gray-300 hover:text-gray-100'}`}>Tabbed</button>
+                    <button onClick={()=>setLayoutMode('split')} className={`px-3 py-1.5 text-xs rounded ${layoutMode==='split'?'bg-slate-900 text-cyan-300 border border-slate-700':'text-gray-300 hover:text-gray-100'}`}>Split</button>
+                  </div>
+                  <button onClick={()=>setConsoleOpen(v=>!v)} className="px-3 py-2 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-gray-300 text-sm border border-slate-700">{consoleOpen?'Hide Console':'Show Console'}</button>
                   <button onClick={handleDownloadZip} className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm transition-all flex items-center gap-2">
                     <span>⇩</span>
                     <span>Download ZIP</span>
@@ -764,7 +785,76 @@
             <div className="flex-1" ref={workspaceRef}>
               {files.length > 0 ? (
                 <>
-                  <div className="grid h-full" style={{ gridTemplateColumns: `${leftWidth}% ${centerWidth}% ${100 - leftWidth - centerWidth}%` }}>
+                  {/* TABBED layout */}
+                  {layoutMode==='tabbed' ? (
+                    <div className="grid h-full" style={{ gridTemplateColumns: `${leftWidth}% ${100 - leftWidth}%` }}>
+                      {/* Resources Panel (Files | Plan) */}
+                      <div className="min-w-[220px] overflow-hidden border-r border-slate-800 bg-slate-950/40">
+                        <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-800 bg-slate-900/60">
+                          <button onClick={()=>setResourceTab('files')} className={`px-3 py-1.5 rounded text-xs ${resourceTab==='files'?'bg-slate-800 text-cyan-300 border border-slate-700':'text-gray-400 hover:text-gray-200'}`}>Files</button>
+                          <button onClick={()=>setResourceTab('plan')} className={`px-3 py-1.5 rounded text-xs ${resourceTab==='plan'?'bg-slate-800 text-amber-300 border border-slate-700':'text-gray-400 hover:text-gray-200'}`}>Plan</button>
+                        </div>
+                        <div className="h-full overflow-auto">
+                          {resourceTab==='files' ? (
+                            <FileTree
+                              files={files}
+                              activeFile={activeFile}
+                              onFileSelect={handleFileSelect}
+                            />
+                          ) : (
+                            <div className="p-2">
+                              {plannedFiles.length===0 && (
+                                <div className="text-[11px] text-gray-500 px-2 py-3">Plan will appear here after Generate → Planning</div>
+                              )}
+                              {plannedFiles.map((f, idx)=>{
+                                const done = !!files.find(x=>x.path===f.path);
+                                const isCurrent = idx===currentIndex && awaitingApproval;
+                                return (
+                                  <div key={f.path} className={`px-2 py-1.5 rounded text-xs cursor-default flex items-center gap-2 ${isCurrent?'bg-amber-500/10 border border-amber-500/30': done?'bg-emerald-500/10 border border-emerald-500/20':'hover:bg-slate-800'}`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full ${done?'bg-emerald-400':isCurrent?'bg-amber-400':'bg-slate-600'}`} />
+                                    <span className="font-mono text-gray-300 truncate">{f.path}</span>
+                                    <span className="ml-auto text-gray-500">{f.type||'file'}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Canvas (Tabbed) */}
+                      <div className="flex flex-col overflow-hidden relative">
+                        {/* Aurora ribbon */}
+                        <div className="pointer-events-none absolute inset-0 opacity-[.06] bg-gradient-to-br from-cyan-400 via-fuchsia-400 to-amber-400 blur-3xl" />
+
+                        {/* Approval bar */}
+                        {plannedFiles.length > 0 && currentIndex >= 0 && currentIndex < plannedFiles.length && (
+                          <div className="flex items-center justify-between px-3 py-2 bg-slate-900/70 border-b border-slate-800 relative z-10">
+                            <div className="text-xs text-gray-400 truncate">
+                              <span className="text-cyan-300 font-mono">{plannedFiles[currentIndex]?.path}</span>
+                              <span className="ml-2 text-gray-500">({currentIndex + 1}/{plannedFiles.length})</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button onClick={()=>setCenterTab('editor')} className={`px-3 py-1.5 text-xs rounded ${centerTab==='editor'?'bg-slate-800 text-cyan-300 border border-slate-700':'text-gray-400 hover:text-gray-200'}`}>Editor</button>
+                              <button onClick={()=>setCenterTab('preview')} className={`px-3 py-1.5 text-xs rounded ${centerTab==='preview'?'bg-slate-800 text-amber-300 border border-slate-700':'text-gray-400 hover:text-gray-200'}`}>Preview</button>
+                              <button disabled={!awaitingApproval} onClick={proceedCurrentFile} className="px-3 py-1.5 text-xs rounded bg-green-600 hover:bg-green-700 text-white disabled:opacity-40">Approve & Generate</button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Tab content */}
+                        <div className="flex-1 overflow-hidden bg-slate-950/30">
+                          {centerTab==='editor' ? (
+                            <CodeEditor file={activeFile} onEdit={handleFileEdit} />
+                          ) : (
+                            <LivePreview file={activeFile} />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                  /* SPLIT layout (original, but skinned) */
+                    <div className="grid h-full" style={{ gridTemplateColumns: `${leftWidth}% ${centerWidth}% ${100 - leftWidth - centerWidth}%` }}>
                     {/* Resources Panel (Files | Plan) */}
                     <div className="min-w-[220px] overflow-hidden border-r border-slate-800 bg-slate-950/40">
                       <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-800 bg-slate-900/60">
@@ -840,15 +930,20 @@
                       <div className="panel-title px-3 py-2 border-b border-slate-800 bg-slate-900/60 flex items-center gap-2"><span>👁️</span><span>Preview</span></div>
                       <LivePreview file={activeFile} />
                     </div>
-                  </div>
+                    </div>
+                  )}
 
-                  {/* Resizers */}
-                  <div onMouseDown={()=>setResizing('left')} className="absolute top-0 bottom-0 flex items-center justify-center" style={{ left: `calc(${leftWidth}% - 6px)`, width: '12px', cursor: 'col-resize' }}>
-                    <div className="splitter-dot" />
-                  </div>
-                  <div onMouseDown={()=>setResizing('right')} className="absolute top-0 bottom-0 flex items-center justify-center" style={{ left: `calc(${leftWidth + centerWidth}% - 6px)`, width: '12px', cursor: 'col-resize' }}>
-                    <div className="splitter-dot" />
-                  </div>
+                  {/* Resizers (only for split layout) */}
+                  {layoutMode==='split' && (
+                    <>
+                      <div onMouseDown={()=>setResizing('left')} className="absolute top-0 bottom-0 flex items-center justify-center" style={{ left: `calc(${leftWidth}% - 6px)`, width: '12px', cursor: 'col-resize' }}>
+                        <div className="splitter-dot" />
+                      </div>
+                      <div onMouseDown={()=>setResizing('right')} className="absolute top-0 bottom-0 flex items-center justify-center" style={{ left: `calc(${leftWidth + centerWidth}% - 6px)`, width: '12px', cursor: 'col-resize' }}>
+                        <div className="splitter-dot" />
+                      </div>
+                    </>
+                  )}
                 </>
               ) : (
                 <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-slate-950 to-slate-900">
