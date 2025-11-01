@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Privacy Tools Lab - Full Stack</title>
+  <title>Whistle Builder - Hacker Edition</title>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -21,41 +21,87 @@
       0% { transform: translateX(-100%); }
       100% { transform: translateX(100%); }
     }
+    @keyframes neon-pulse {
+      0%, 100% { text-shadow: 0 0 10px rgba(6, 182, 212, 0.8), 0 0 20px rgba(6, 182, 212, 0.5); }
+      50% { text-shadow: 0 0 20px rgba(6, 182, 212, 1), 0 0 30px rgba(6, 182, 212, 0.8), 0 0 40px rgba(251, 191, 36, 0.3); }
+    }
+    body, html {
+      background: #000;
+      color: #0f0;
+      overflow: hidden;
+    }
     .scrollbar-thin::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
+      width: 8px;
+      height: 8px;
     }
     .scrollbar-thin::-webkit-scrollbar-track {
-      background: rgba(15, 23, 42, 0.5);
+      background: #0a0a0a;
+      border-left: 1px solid #1a1a1a;
     }
     .scrollbar-thin::-webkit-scrollbar-thumb {
-      background: linear-gradient(180deg, rgba(6, 182, 212, 0.5), rgba(251, 191, 36, 0.5));
-      border-radius: 3px;
+      background: linear-gradient(180deg, rgba(6, 182, 212, 0.7), rgba(0, 255, 0, 0.5));
+      border-radius: 4px;
+      border: 1px solid rgba(0, 255, 0, 0.3);
     }
     .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-      background: linear-gradient(180deg, rgba(6, 182, 212, 0.8), rgba(251, 191, 36, 0.8));
+      background: linear-gradient(180deg, rgba(6, 182, 212, 1), rgba(0, 255, 0, 0.8));
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
     }
-    /* Premium dark builder theme extras */
+    /* Hacker dark theme */
     .glass {
-      background: rgba(2,6,23,0.65);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 1px solid rgba(100,116,139,0.35);
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(0, 255, 0, 0.2);
     }
     .panel-title {
       font-size: 10px;
-      letter-spacing: .12em;
-      color: #94a3b8;
+      letter-spacing: .15em;
+      color: #0f0;
       text-transform: uppercase;
+      font-family: 'Courier New', monospace;
     }
     .splitter-dot {
-      width:6px;height:6px;border-radius:50%;
-      background: radial-gradient(circle at 30% 30%, rgba(34,211,238,.9), rgba(251,191,36,.6));
-      box-shadow:0 0 10px rgba(34,211,238,.4), 0 0 14px rgba(251,191,36,.25);
+      width:8px;height:8px;border-radius:50%;
+      background: radial-gradient(circle at 30% 30%, rgba(0,255,0,.9), rgba(6,182,212,.6));
+      box-shadow:0 0 12px rgba(0,255,0,.6), 0 0 18px rgba(6,182,212,.4);
     }
     .noise::before{
-      content:"";position:fixed;inset:0;pointer-events:none;opacity:.04;
+      content:"";position:fixed;inset:0;pointer-events:none;opacity:.08;
       background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23n)"/></svg>');
+    }
+    .hacker-icon {
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      color: #0f0;
+      text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+    }
+    .btn-hacker {
+      background: rgba(0, 0, 0, 0.7);
+      border: 1px solid rgba(0, 255, 0, 0.3);
+      color: #0f0;
+      transition: all 0.2s;
+    }
+    .btn-hacker:hover:not(:disabled) {
+      background: rgba(0, 255, 0, 0.1);
+      border-color: #0f0;
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+      transform: translateY(-1px);
+    }
+    .btn-hacker:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    .btn-primary-hacker {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(0, 255, 0, 0.2));
+      border: 1px solid #0f0;
+      color: #0f0;
+      font-weight: bold;
+      box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
+    }
+    .btn-primary-hacker:hover:not(:disabled) {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(0, 255, 0, 0.3));
+      box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
     }
   </style>
 </head>
@@ -99,13 +145,13 @@
       };
 
       const getFileIcon = (filename) => {
-        if (filename.endsWith('.html')) return '📄';
-        if (filename.endsWith('.js')) return '📜';
-        if (filename.endsWith('.json')) return '⚙️';
-        if (filename.endsWith('.md')) return '📖';
-        if (filename.endsWith('.css')) return '🎨';
-        if (filename.endsWith('.env')) return '🔐';
-        return '📃';
+        if (filename.endsWith('.html')) return <span className="hacker-icon">&lt;/&gt;</span>;
+        if (filename.endsWith('.js')) return <span className="hacker-icon">JS</span>;
+        if (filename.endsWith('.json')) return <span className="hacker-icon">{'{}'}</span>;
+        if (filename.endsWith('.md')) return <span className="hacker-icon">MD</span>;
+        if (filename.endsWith('.css')) return <span className="hacker-icon">CSS</span>;
+        if (filename.endsWith('.env')) return <span className="hacker-icon">ENV</span>;
+        return <span className="hacker-icon">*</span>;
       };
 
       const renderTree = (node, path = '', level = 0) => {
@@ -140,8 +186,8 @@
                   className="py-1.5 px-2 text-xs cursor-pointer text-gray-500 hover:text-gray-300 hover:bg-slate-800/50 flex items-center gap-2 rounded-md transition-all"
                   style={{ paddingLeft: `${level * 12 + 8}px` }}
                 >
-                  <span className="transition-transform" style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
-                  <span>📁</span>
+                  <span className="transition-transform hacker-icon" style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>►</span>
+                  <span className="hacker-icon">DIR</span>
                   <span className="font-mono font-semibold">{key}/</span>
                 </div>
                 {isExpanded && (
@@ -214,8 +260,8 @@
         return (
           <div className="flex-1 flex items-center justify-center text-gray-600">
             <div className="text-center">
-              <div className="text-4xl mb-4">📂</div>
-              <div>Select a file to view</div>
+              <div className="text-4xl mb-4 hacker-icon" style={{fontSize: '3rem'}}>[...]</div>
+              <div className="text-sm">Select a file to view</div>
             </div>
           </div>
         );
@@ -243,27 +289,40 @@
     // LIVE PREVIEW COMPONENT
     // =====================================================
     function LivePreview({ file }) {
+      const handleOpenPreview = () => {
+        if (!file || !file.path.endsWith('.html')) return;
+        const blob = new Blob([file.content], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      };
+
       if (!file || !file.path.endsWith('.html')) {
         return (
-          <div className="flex items-center justify-center text-gray-600 bg-slate-900">
+          <div className="flex items-center justify-center text-gray-600 bg-black">
             <div className="text-center">
-              <div className="text-4xl mb-4">👁️</div>
-              <div className="text-sm">Preview available for HTML files only</div>
+              <div className="text-4xl mb-4 hacker-icon" style={{fontSize: '3rem'}}>{'<>'}</div>
+              <div className="text-sm text-gray-500">Preview available for HTML files only</div>
             </div>
           </div>
         );
       }
 
       return (
-        <div className="bg-white h-full">
-          <div className="bg-slate-900 px-4 py-2 border-b border-slate-700">
-            <span className="text-xs text-gray-400 font-mono">👁️ Live Preview</span>
+        <div className="bg-black h-full flex flex-col">
+          <div className="bg-black px-4 py-2 border-b border-green-900 flex items-center justify-between">
+            <span className="text-xs text-green-500 font-mono hacker-icon">[PREVIEW]</span>
+            <button 
+              onClick={handleOpenPreview}
+              className="px-3 py-1 text-xs btn-hacker rounded flex items-center gap-1"
+            >
+              <span className="hacker-icon">⧉</span>
+              <span>Open in New Tab</span>
+            </button>
           </div>
           <iframe
             srcDoc={file.content}
             title="Preview"
-            className="w-full h-full"
-            style={{ height: 'calc(100% - 37px)' }}
+            className="w-full flex-1"
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals"
           />
         </div>
@@ -284,7 +343,7 @@
 
       // Project state - Initialize with placeholder to show workspace structure from start
       const [files, setFiles] = useState([
-        { path: 'README.md', content: '# Your Privacy Tool Workspace\n\n👈 Chat with Whistle AI to describe your tool\n\n⚙️ Click Generate to build it\n\n📁 Files will appear here as they\'re created', type: 'markdown', size: 150 }
+        { path: 'README.md', content: '# WHISTLE PRIVACY TOOL WORKSPACE\n\n>> CHAT WITH AI TO DESCRIBE YOUR TOOL\n\n>> CLICK GENERATE TO BUILD\n\n>> FILES WILL APPEAR AS CREATED', type: 'markdown', size: 150 }
       ]);
       const [activeFile, setActiveFile] = useState(null);
       const [projectStructure, setProjectStructure] = useState(null);
@@ -363,7 +422,7 @@
       const generateFileAtIndex = async (index, projectPlan) => {
         const fileSpec = plannedFiles[index];
         if (!fileSpec) return false;
-        setProgress(`✍️ Building ${fileSpec.path}... (${index + 1}/${plannedFiles.length})`);
+        setProgress(`[BUILD] ${fileSpec.path}... (${index + 1}/${plannedFiles.length})`);
         try {
           const fileRes = await fetch(`${API_BASE}/generate-single-file`, {
             method: 'POST',
@@ -623,10 +682,10 @@
             <div className="max-w-[1920px] mx-auto px-8 py-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-amber-400 to-yellow-600 mb-1">
-                    🛠️ Whistle Builder
+                  <h1 className="text-2xl font-bold mb-1" style={{color: '#0f0', animation: 'neon-pulse 2s infinite'}}>
+                    <span className="hacker-icon mr-2">{'[X]'}</span>WHISTLE BUILDER
                   </h1>
-                  <p className="text-gray-500 text-xs">Premium dark, professional website & tool builder</p>
+                  <p className="text-gray-600 text-xs font-mono">HACKER EDITION v2.0</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <button onClick={()=>setShowPlan(v=>!v)} className="px-3 py-2 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-gray-300 text-sm border border-slate-700">{showPlan ? 'Hide Plan' : 'Show Plan'}</button>
@@ -640,8 +699,8 @@
                     <button onClick={()=>setLayoutMode('split')} className={`px-3 py-1.5 text-xs rounded ${layoutMode==='split'?'bg-slate-900 text-cyan-300 border border-slate-700':'text-gray-300 hover:text-gray-100'}`}>Split</button>
                   </div>
                   <button onClick={()=>setConsoleOpen(v=>!v)} className="px-3 py-2 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-gray-300 text-sm border border-slate-700">{consoleOpen?'Hide Console':'Show Console'}</button>
-                  <button onClick={handleDownloadZip} className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm transition-all flex items-center gap-2">
-                    <span>⇩</span>
+                  <button onClick={handleDownloadZip} className="px-4 py-2 rounded-lg btn-hacker text-sm transition-all flex items-center gap-2">
+                    <span className="hacker-icon">DL</span>
                     <span>Download ZIP</span>
                   </button>
                   <div className="px-3 py-2 rounded-lg bg-slate-800/50 border border-slate-700 text-gray-300 text-xs">
@@ -681,14 +740,14 @@
             
             {/* Left: Chat Panel */}
             <div className="w-96 bg-slate-900/30 backdrop-blur-md border-r border-slate-800 flex flex-col">
-              <div className="flex-shrink-0 px-6 py-4 border-b border-slate-800/50 bg-slate-950/50">
+              <div className="flex-shrink-0 px-6 py-4 border-b border-green-900/50 bg-black">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-amber-500/20 border border-cyan-500/30 flex items-center justify-center">
-                    <span className="text-xl">🤖</span>
+                  <div className="w-10 h-10 rounded-xl bg-black border-2 border-green-500/50 flex items-center justify-center">
+                    <span className="text-xl hacker-icon" style={{color: '#0f0'}}>AI</span>
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-cyan-400">Whistle AI</h3>
-                    <p className="text-[10px] text-gray-600">Full-Stack Developer</p>
+                    <h3 className="text-sm font-bold text-green-500 hacker-icon">WHISTLE_AI</h3>
+                    <p className="text-[10px] text-gray-600 font-mono">FULLSTACK_DEV</p>
                   </div>
                 </div>
               </div>
@@ -755,16 +814,16 @@
                   <button
                     onClick={handleChat}
                     disabled={!userInput.trim()}
-                    className="flex-1 py-2.5 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/50 text-cyan-400 disabled:opacity-30 text-sm"
+                    className="flex-1 py-2.5 rounded-lg btn-hacker disabled:opacity-30 text-sm font-mono"
                   >
-                    <span className="mr-1">⚡</span> Send
+                    <span className="mr-1 hacker-icon">{'>'}</span> SEND
                   </button>
                   <button
                     onClick={handleGenerate}
                     disabled={creating || !description || description.length < 20}
-                    className="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-cyan-600 to-amber-600 hover:from-cyan-500 hover:to-amber-500 text-white disabled:opacity-30 text-sm"
+                    className="flex-1 py-2.5 rounded-lg btn-primary-hacker disabled:opacity-30 text-sm font-mono"
                   >
-                    {creating ? '⏳ Building...' : <><span className="mr-1">⚙️</span> Generate</>}
+                    {creating ? <><span className="mr-1 hacker-icon">...</span> BUILDING</> : <><span className="mr-1 hacker-icon">{'[>]'}</span> GENERATE</>}
                   </button>
                 </div>
               </div>
@@ -916,7 +975,7 @@
 
                     {/* Preview Column */}
                     <div className="border-l border-slate-800 overflow-hidden">
-                      <div className="panel-title px-3 py-2 border-b border-slate-800 bg-slate-900/60 flex items-center gap-2"><span>👁️</span><span>Preview</span></div>
+                      <div className="panel-title px-3 py-2 border-b border-slate-800 bg-slate-900/60 flex items-center gap-2"><span className="hacker-icon">[VIEW]</span></div>
                       <LivePreview file={activeFile} />
                     </div>
                     </div>
@@ -950,16 +1009,16 @@
                             }}
                           />
                         </div>
-                        <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-amber-400 mb-4">
-                          {progress || 'Whistle AI is building...'}
+                        <div className="text-2xl font-bold text-green-500 mb-4 font-mono">
+                          <span className="hacker-icon">{progress || '[BUILDING...]'}</span>
                         </div>
-                        <div className="text-sm text-gray-500 mb-8">
-                          Files will appear here as they're created
+                        <div className="text-sm text-gray-500 mb-8 font-mono">
+                          {'>> FILES GENERATING IN WORKSPACE...'}
                         </div>
                         {/* Progress bar */}
-                        <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                        <div className="w-full h-2 bg-black rounded-full overflow-hidden border border-green-900">
                           <div 
-                            className="h-full bg-gradient-to-r from-cyan-500 to-amber-500 animate-pulse"
+                            className="h-full bg-gradient-to-r from-green-500 to-cyan-500 animate-pulse"
                             style={{
                               width: '100%',
                               animation: 'progress-slide 2s ease-in-out infinite'
@@ -969,13 +1028,15 @@
                       </>
                     ) : (
                       <>
-                        <div className="text-6xl mb-4">🧪</div>
-                        <div className="text-lg mb-2 text-gray-300">Your Full-Stack Workspace</div>
-                        <div className="text-sm text-gray-500 mb-6">
-                          Chat with Whistle AI to design your privacy tool, then click Generate to create a complete project with frontend and backend
+                        <div className="text-6xl mb-4 hacker-icon" style={{fontSize: '4rem', color: '#0f0'}}>{'[...]'}</div>
+                        <div className="text-lg mb-2 text-green-500 font-mono hacker-icon">FULLSTACK WORKSPACE</div>
+                        <div className="text-sm text-gray-500 mb-6 font-mono">
+                          {'>> CHAT WITH AI TO DESIGN TOOL'}
+                          <br />
+                          {'>> CLICK GENERATE TO BUILD PROJECT'}
                         </div>
-                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800/50 rounded-lg border border-slate-700">
-                          <span className="text-xs text-gray-400">✨ Full-stack generation enabled</span>
+                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-black rounded-lg border border-green-900">
+                          <span className="text-xs text-green-500 hacker-icon">{'[READY]'}</span>
                         </div>
                       </>
                     )}
