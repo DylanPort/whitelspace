@@ -1,4 +1,6 @@
 // Submit Competition Entry
+const fetch = require('node-fetch');
+
 exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
