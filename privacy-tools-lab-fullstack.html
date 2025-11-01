@@ -9,6 +9,8 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
   <style>
     @keyframes spin-flip-zoom {
       0% { transform: rotate(0deg) rotateY(0deg) scale(1); }
@@ -102,6 +104,58 @@
     .btn-primary-hacker:hover:not(:disabled) {
       background: linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(0, 255, 0, 0.3));
       box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+    }
+    /* Custom syntax highlighting for hacker theme */
+    .hljs {
+      background: #000 !important;
+      color: #0f0 !important;
+      padding: 0 !important;
+    }
+    .hljs-keyword, .hljs-selector-tag, .hljs-built_in { color: #00ff00 !important; font-weight: bold; }
+    .hljs-string, .hljs-title, .hljs-section { color: #00ffff !important; }
+    .hljs-variable, .hljs-template-variable { color: #00ff88 !important; }
+    .hljs-comment, .hljs-quote { color: #006600 !important; font-style: italic; }
+    .hljs-number, .hljs-literal { color: #00ff00 !important; }
+    .hljs-function, .hljs-class { color: #00ffaa !important; font-weight: bold; }
+    .hljs-attr, .hljs-attribute { color: #00ddff !important; }
+    .hljs-tag { color: #00ff00 !important; }
+    .hljs-name { color: #00ffff !important; }
+    .hljs-operator { color: #0f0 !important; }
+    /* Code editor line numbers */
+    .code-editor-container {
+      position: relative;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .line-numbers {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 50px;
+      padding: 16px 8px;
+      text-align: right;
+      color: #006600;
+      user-select: none;
+      pointer-events: none;
+      border-right: 1px solid #003300;
+    }
+    .code-content {
+      padding-left: 60px;
+      white-space: pre;
+      overflow-x: auto;
+    }
+    @keyframes typing-cursor {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+    .typing-cursor {
+      display: inline-block;
+      width: 2px;
+      height: 1em;
+      background: #0f0;
+      animation: typing-cursor 1s infinite;
+      margin-left: 2px;
     }
   </style>
 </head>
@@ -256,6 +310,23 @@
     // CODE EDITOR COMPONENT
     // =====================================================
     function CodeEditor({ file, onEdit }) {
+      const editorRef = React.useRef(null);
+      const [displayContent, setDisplayContent] = React.useState('');
+
+      React.useEffect(() => {
+        if (file) {
+          setDisplayContent(file.content);
+          // Trigger syntax highlighting
+          setTimeout(() => {
+            if (editorRef.current && window.hljs) {
+              editorRef.current.querySelectorAll('pre code').forEach((block) => {
+                window.hljs.highlightElement(block);
+              });
+            }
+          }, 0);
+        }
+      }, [file?.path, file?.content]);
+
       if (!file) {
         return (
           <div className="flex-1 flex items-center justify-center text-gray-600 bg-black">
@@ -267,20 +338,33 @@
         );
       }
 
+      const getLanguage = (filename) => {
+        if (filename.endsWith('.js')) return 'javascript';
+        if (filename.endsWith('.html')) return 'html';
+        if (filename.endsWith('.css')) return 'css';
+        if (filename.endsWith('.json')) return 'json';
+        if (filename.endsWith('.md')) return 'markdown';
+        if (filename.endsWith('.py')) return 'python';
+        return 'plaintext';
+      };
+
+      const lineCount = displayContent.split('\n').length;
+
       return (
-        <div className="flex-1 flex flex-col bg-black h-full">
+        <div className="flex-1 flex flex-col bg-black h-full" ref={editorRef}>
           <div className="sticky top-0 bg-black px-4 py-2 border-b border-green-900 flex items-center justify-between z-10">
             <span className="text-xs text-green-500 font-mono hacker-icon">{file.path}</span>
-            <span className="text-[10px] text-gray-600">{file.type || 'file'}</span>
+            <span className="text-[10px] text-gray-600">{file.type || 'file'} • {lineCount} lines</span>
           </div>
-          <div className="flex-1 overflow-auto bg-black">
-            <textarea
-              value={file.content}
-              onChange={(e) => onEdit(file.path, e.target.value)}
-              className="w-full h-full p-4 bg-black text-xs text-green-400 font-mono leading-relaxed resize-none focus:outline-none border-0"
-              style={{minHeight: '100%'}}
-              spellCheck="false"
-            />
+          <div className="flex-1 overflow-auto bg-black code-editor-container">
+            {/* Line numbers */}
+            <div className="line-numbers">
+              {Array.from({ length: lineCount }, (_, i) => (
+                <div key={i}>{i + 1}</div>
+              ))}
+            </div>
+            {/* Syntax highlighted code */}
+            <pre className="code-content m-0 p-4"><code className={`language-${getLanguage(file.path)}`}>{displayContent}</code></pre>
           </div>
         </div>
       );
@@ -419,11 +503,56 @@
         }
       };
 
+      // Stream text character-by-character
+      const streamText = (fullText, updateCallback, speed = 15) => {
+        return new Promise((resolve) => {
+          let index = 0;
+          const interval = setInterval(() => {
+            if (index < fullText.length) {
+              updateCallback(fullText.substring(0, index + 1));
+              index++;
+            } else {
+              clearInterval(interval);
+              resolve();
+            }
+          }, speed);
+        });
+      };
+
       // Generate one file (by index) and append/replace in workspace
       const generateFileAtIndex = async (index, projectPlan) => {
         const fileSpec = plannedFiles[index];
         if (!fileSpec) return false;
         setProgress(`[BUILD] ${fileSpec.path}... (${index + 1}/${plannedFiles.length})`);
+        
+        // Create placeholder file immediately
+        const placeholderFile = {
+          path: fileSpec.path,
+          content: `// [GENERATING CODE...]\n// AI is writing ${fileSpec.path}\n// Please wait...\n`,
+          type: fileSpec.type,
+          size: 0
+        };
+        
+        // Add placeholder to workspace
+        setFiles(prev => {
+          const exists = prev.findIndex(f => f.path === fileSpec.path);
+          if (exists >= 0) {
+            const copy = [...prev];
+            copy[exists] = placeholderFile;
+            return copy;
+          }
+          return [...prev, placeholderFile];
+        });
+
+        // Focus the file being generated
+        setActiveFile(placeholderFile);
+        setOpenTabs(prev => {
+          if (!prev.find(f => f.path === fileSpec.path)) {
+            return [...prev, placeholderFile];
+          }
+          return prev;
+        });
+
         try {
           const fileRes = await fetch(`${API_BASE}/generate-single-file`, {
             method: 'POST',
@@ -441,22 +570,26 @@
           const fileData = await fileRes.json();
           if (!(fileData?.success && fileData?.file)) throw new Error(`Invalid response for ${fileSpec.path}`);
 
-          // If file already exists (regenerate), replace; else append
-          setFiles(prev => {
-            const exists = prev.findIndex(f => f.path === fileData.file.path);
-            if (exists >= 0) {
-              const copy = [...prev];
-              copy[exists] = fileData.file;
-              return copy;
-            }
-            return [...prev, fileData.file];
+          // Stream the content character-by-character
+          await streamText(fileData.file.content, (streamedContent) => {
+            const streamedFile = {
+              ...fileData.file,
+              content: streamedContent
+            };
+            
+            setFiles(prev => {
+              const exists = prev.findIndex(f => f.path === fileData.file.path);
+              if (exists >= 0) {
+                const copy = [...prev];
+                copy[exists] = streamedFile;
+                return copy;
+              }
+              return [...prev, streamedFile];
+            });
+
+            setActiveFile(streamedFile);
           });
 
-          // Focus first file
-          if (index === 0) {
-            setActiveFile(fileData.file);
-            setOpenTabs([fileData.file]);
-          }
           return true;
         } catch (e) {
           console.error(e);
