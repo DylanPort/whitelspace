@@ -351,6 +351,7 @@
     @keyframes subtleGlow{0%,100%{filter:brightness(1) drop-shadow(0 0 2px currentColor)}50%{filter:brightness(1.2) drop-shadow(0 0 8px currentColor)}}
     @keyframes borderGlow{0%,100%{box-shadow:0 0 5px rgba(99,102,241,0.3),0 0 10px rgba(139,92,246,0.2),inset 0 0 5px rgba(99,102,241,0.1)}50%{box-shadow:0 0 20px rgba(99,102,241,0.6),0 0 30px rgba(139,92,246,0.4),inset 0 0 10px rgba(99,102,241,0.2)}}
     @keyframes shimmerWave{0%{background-position:-200% center}100%{background-position:200% center}}
+    @keyframes golden-laser{0%,100%{box-shadow:0 0 5px rgba(251,191,36,0.5),0 0 10px rgba(251,191,36,0.3),inset 0 0 5px rgba(251,191,36,0.2)}50%{box-shadow:0 0 20px rgba(251,191,36,0.8),0 0 30px rgba(251,191,36,0.6),inset 0 0 10px rgba(251,191,36,0.4)}}
     @keyframes rotateY{0%{transform:rotateY(0deg)}100%{transform:rotateY(360deg)}}
     @keyframes flipIn{0%{transform:perspective(400px) rotateX(90deg);opacity:0}100%{transform:perspective(400px) rotateX(0deg);opacity:1}}
     @keyframes skewIn{0%{transform:skewX(-20deg) translateX(-50px);opacity:0}100%{transform:skewX(0deg) translateX(0);opacity:1}}
@@ -9463,6 +9464,7 @@ console.log('✅ Fingerprint spoofing active!');`;
       const items = [
         { id:'home',    label:'Home', icon:'home', color:'cyan' },
         { id:'privacy-tools-lab', label:'🛠️ Privacy Tools Lab', icon:'wrench', color:'gold', isNew: true, badge: '$500', isPremium: true },
+        { id:'community-tools', label:'🏆 Community Tools', icon:'users', color:'amber', isNew: true },
         { id:'offline-network', label:'Ghost Whistle', icon:'network', special: true, color:'emerald' },
         { id:'anonymous-relay', label:'Anonymous Relay', icon:'shuffle', special: true, color:'purple' },
         { id:'claim-rewards', label:'Claim Rewards', icon:'gift', color:'yellow' },
@@ -23137,6 +23139,18 @@ If a user requests non-privacy tools, politely redirect: "I specialize in privac
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
+                  <a 
+                    href="privacy-tools-lab-fullstack.html"
+                    target="_blank"
+                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 hover:from-amber-500 hover:via-yellow-400 hover:to-amber-500 text-black text-sm font-bold tracking-wide transition-all duration-200 border border-amber-400 flex items-center gap-2"
+                    style={{
+                      boxShadow: '0 0 15px rgba(251, 191, 36, 0.6), 0 0 25px rgba(251, 191, 36, 0.4)',
+                      animation: 'golden-laser 2s ease-in-out infinite'
+                    }}
+                  >
+                    <span>⚡</span>
+                    <span>PRO</span>
+                  </a>
                   <div className="px-4 py-2 rounded-lg bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30">
                     <div className="text-green-400 font-bold text-lg">$500</div>
                     <div className="text-green-300/60 text-[10px]">per approved tool</div>
@@ -23462,6 +23476,244 @@ If a user requests non-privacy tools, politely redirect: "I specialize in privac
       document.head.appendChild(style);
     }
 
+    // ===== COMMUNITY TOOLS - Competition Submissions Display =====
+    
+    function CommunityTools({ pushToast }) {
+      const [loading, setLoading] = useState(true);
+      const [submissions, setSubmissions] = useState([]);
+      const [sortBy, setSortBy] = useState('recent'); // recent, top, featured
+      
+      const SUPABASE_URL = 'https://lqaxmnzxkfwndjhzhhpx.supabase.co';
+      const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxxYXhtbnp4a2Z3bmRqaHpoaHB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjk3NzE0OTksImV4cCI6MjA0NTM0NzQ5OX0.qGXJPzKy9VYdXp7o3WKCa2Wb4DDqrMFPPO9KNEgVIEY';
+      
+      // Fetch submissions on mount
+      React.useEffect(() => {
+        loadSubmissions();
+      }, [sortBy]);
+      
+      const loadSubmissions = async () => {
+        setLoading(true);
+        try {
+          let orderColumn = 'created_at';
+          let ascending = false;
+          
+          if (sortBy === 'top') {
+            orderColumn = 'upvotes';
+          } else if (sortBy === 'featured') {
+            orderColumn = 'featured';
+          }
+          
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/competition_submissions?order=${orderColumn}.desc${sortBy === 'featured' ? '&featured=eq.true' : ''}`, {
+            headers: {
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${SUPABASE_KEY}`
+            }
+          });
+          
+          if (!res.ok) throw new Error('Failed to load submissions');
+          
+          const data = await res.json();
+          setSubmissions(data);
+          setLoading(false);
+        } catch (error) {
+          console.error('Error loading submissions:', error);
+          pushToast('Failed to load community tools', 'error');
+          setLoading(false);
+        }
+      };
+      
+      const handleUpvote = async (id) => {
+        try {
+          // Get current submission
+          const submission = submissions.find(s => s.id === id);
+          if (!submission) return;
+          
+          // Update upvotes
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/competition_submissions?id=eq.${id}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${SUPABASE_KEY}`,
+              'Prefer': 'return=representation'
+            },
+            body: JSON.stringify({ upvotes: submission.upvotes + 1 })
+          });
+          
+          if (!res.ok) throw new Error('Failed to upvote');
+          
+          // Reload submissions
+          loadSubmissions();
+          pushToast('Upvoted! 🎉', 'success');
+        } catch (error) {
+          console.error('Error upvoting:', error);
+          pushToast('Failed to upvote', 'error');
+        }
+      };
+      
+      return (
+        <div className="w-full min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-8">
+          {/* Header */}
+          <div className="max-w-7xl mx-auto mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-600 mb-2">
+                  🏆 Community Privacy Tools
+                </h1>
+                <p className="text-gray-400 text-sm">
+                  Explore amazing privacy tools created by our community
+                </p>
+              </div>
+              
+              {/* Sort Filter */}
+              <div className="flex items-center gap-2 bg-slate-800/50 rounded-xl p-1 border border-slate-700/50">
+                <button
+                  onClick={() => setSortBy('recent')}
+                  className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+                    sortBy === 'recent'
+                      ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg'
+                      : 'text-gray-400 hover:text-gray-200'
+                  }`}
+                >
+                  🕒 Recent
+                </button>
+                <button
+                  onClick={() => setSortBy('top')}
+                  className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+                    sortBy === 'top'
+                      ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg'
+                      : 'text-gray-400 hover:text-gray-200'
+                  }`}
+                >
+                  ⬆️ Top Voted
+                </button>
+                <button
+                  onClick={() => setSortBy('featured')}
+                  className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+                    sortBy === 'featured'
+                      ? 'bg-gradient-to-r from-amber-600 to-yellow-600 text-black shadow-lg'
+                      : 'text-gray-400 hover:text-gray-200'
+                  }`}
+                >
+                  ⭐ Featured
+                </button>
+              </div>
+            </div>
+            
+            {/* Stats Bar */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              <div className="px-6 py-4 rounded-xl bg-gradient-to-br from-cyan-900/20 to-blue-900/20 border border-cyan-500/30">
+                <div className="text-cyan-400 text-2xl font-bold">{submissions.length}</div>
+                <div className="text-gray-400 text-xs">Total Submissions</div>
+              </div>
+              <div className="px-6 py-4 rounded-xl bg-gradient-to-br from-amber-900/20 to-yellow-900/20 border border-amber-500/30">
+                <div className="text-amber-400 text-2xl font-bold">
+                  {submissions.filter(s => s.featured).length}
+                </div>
+                <div className="text-gray-400 text-xs">Featured Tools</div>
+              </div>
+              <div className="px-6 py-4 rounded-xl bg-gradient-to-br from-purple-900/20 to-pink-900/20 border border-purple-500/30">
+                <div className="text-purple-400 text-2xl font-bold">
+                  {submissions.reduce((sum, s) => sum + s.upvotes, 0)}
+                </div>
+                <div className="text-gray-400 text-xs">Total Upvotes</div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Submissions Grid */}
+          <div className="max-w-7xl mx-auto">
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="text-cyan-400 text-lg">Loading community tools...</div>
+              </div>
+            ) : submissions.length === 0 ? (
+              <div className="text-center py-20">
+                <div className="text-gray-400 text-lg mb-4">No submissions yet</div>
+                <div className="text-gray-500 text-sm">Be the first to submit a privacy tool!</div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {submissions.map((submission) => (
+                  <div
+                    key={submission.id}
+                    className={`relative rounded-xl bg-slate-800/50 border ${
+                      submission.featured
+                        ? 'border-amber-500/50 shadow-xl shadow-amber-500/20'
+                        : 'border-slate-700/50'
+                    } p-6 transition-all hover:scale-105 hover:shadow-2xl`}
+                  >
+                    {/* Featured Badge */}
+                    {submission.featured && (
+                      <div className="absolute -top-3 -right-3 px-3 py-1 rounded-full bg-gradient-to-r from-amber-600 to-yellow-600 text-black text-xs font-bold shadow-lg">
+                        ⭐ FEATURED
+                      </div>
+                    )}
+                    
+                    {/* Creator */}
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center text-white text-sm font-bold">
+                        {submission.creator.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="text-white text-sm font-medium">
+                          {submission.creator === 'Anonymous' ? '🕵️ Anonymous' : `@${submission.creator}`}
+                        </div>
+                        <div className="text-gray-500 text-xs">
+                          {new Date(submission.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Description */}
+                    <div className="mb-4">
+                      <p className="text-gray-300 text-sm line-clamp-3">
+                        {submission.description}
+                      </p>
+                    </div>
+                    
+                    {/* Tech Stack */}
+                    <div className="mb-4">
+                      <div className="text-gray-500 text-xs mb-1">Tech Stack:</div>
+                      <div className="text-cyan-400 text-xs font-mono">
+                        {submission.tech_stack}
+                      </div>
+                    </div>
+                    
+                    {/* Stats */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3 text-xs text-gray-400">
+                        <span>📁 {submission.file_count} files</span>
+                        <span>👁️ {submission.views} views</span>
+                      </div>
+                    </div>
+                    
+                    {/* Actions */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleUpvote(submission.id)}
+                        className="flex-1 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-medium transition-all shadow-lg"
+                      >
+                        ⬆️ Upvote ({submission.upvotes})
+                      </button>
+                      <a
+                        href={submission.project_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 px-4 py-2 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 text-cyan-400 text-xs font-medium transition-all text-center border border-slate-600"
+                      >
+                        🔗 View Project
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
     function App() {
       const { toasts, push } = useToasts();
       const [step, setStep] = usePersistentState('uiStep', "home");
@@ -23490,7 +23742,7 @@ If a user requests non-privacy tools, politely redirect: "I specialize in privac
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'offline-network', 'decentralized-storage', 'breach-monitor', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'privacy-tools-lab', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
+      const validSteps = ['home', 'webrtc', 'offline-network', 'decentralized-storage', 'breach-monitor', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'privacy-tools-lab', 'community-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -23538,6 +23790,7 @@ If a user requests non-privacy tools, politely redirect: "I specialize in privac
                       case 'anonymous-relay': return <AnonymousRelayService setStep={setStepGuarded} pushToast={push} />;
                       case 'privacy-tools': return <PrivacyToolsHub setStep={setStepGuarded} />;
                       case 'privacy-tools-lab': return <PrivacyToolsLab pushToast={push} setStep={setStepGuarded} />;
+                      case 'community-tools': return <CommunityTools pushToast={push} />;
                       case 'steganography': return <UnifiedSteganography pushToast={push} />;
                       case 'privacy-checkup': return <PrivacyCheckup pushToast={push} />;
                       case 'censorship-map': return <CensorshipMap pushToast={push} />;
@@ -24362,7 +24615,7 @@ If a user requests non-privacy tools, politely redirect: "I specialize in privac
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'offline-network', 'decentralized-storage', 'breach-monitor', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'privacy-tools-lab', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
+      const validSteps = ['home', 'webrtc', 'offline-network', 'decentralized-storage', 'breach-monitor', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'privacy-tools-lab', 'community-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -24410,6 +24663,7 @@ If a user requests non-privacy tools, politely redirect: "I specialize in privac
                       case 'anonymous-relay': return <AnonymousRelayService setStep={setStepGuarded} pushToast={push} />;
                       case 'privacy-tools': return <PrivacyToolsHub setStep={setStepGuarded} />;
                       case 'privacy-tools-lab': return <PrivacyToolsLab pushToast={push} setStep={setStepGuarded} />;
+                      case 'community-tools': return <CommunityTools pushToast={push} />;
                       case 'steganography': return <UnifiedSteganography pushToast={push} />;
                       case 'privacy-checkup': return <PrivacyCheckup pushToast={push} />;
                       case 'censorship-map': return <CensorshipMap pushToast={push} />;
