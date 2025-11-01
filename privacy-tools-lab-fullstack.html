@@ -337,7 +337,7 @@
     // =====================================================
     // CODE EDITOR COMPONENT
     // =====================================================
-    function CodeEditor({ file, onEdit }) {
+    function CodeEditor({ file, onEdit, scrollRef }) {
       const editorRef = React.useRef(null);
       const [displayContent, setDisplayContent] = React.useState('');
 
@@ -384,7 +384,11 @@
             <span className="text-xs text-green-500 font-mono hacker-icon">{file.path}</span>
             <span className="text-[10px] text-gray-600">{file.type || 'file'} • {lineCount} lines</span>
           </div>
-          <div className="flex-1 overflow-auto bg-black code-editor-container">
+          <div 
+            ref={scrollRef}
+            className="flex-1 overflow-auto bg-black code-editor-container"
+            style={{ scrollBehavior: 'smooth' }}
+          >
             {/* Line numbers */}
             <div className="line-numbers">
               {Array.from({ length: lineCount }, (_, i) => (
@@ -535,6 +539,10 @@
         return `${h}:${m}:${sec}`;
       };
 
+      // Auto-scroll refs
+      const chatScrollRef = React.useRef(null);
+      const codeScrollRef = React.useRef(null);
+
       // Chat state
       const [chatMessages, setChatMessages] = useState(() => loadFromStorage('chatMessages', [
         { role: 'assistant', content: '>> WHISTLE_AI INITIALIZED\n>> PRIVACY TOOL ARCHITECT ONLINE\n\n[CAPABILITIES]\n[+] ENCRYPTION TOOLS (AES-256, RSA, PBKDF2)\n[+] BACKEND APIS (EXPRESS, AUTH)\n[+] CRYPTO MODULES (KEY DERIVATION, SIGNING)\n[+] PRIVACY UTILS (METADATA STRIP, STEGO)\n[+] FULLSTACK INTEGRATION READY\n\n[EXAMPLES]\n> "Build file encryptor with AES-256"\n> "Create password manager with PBKDF2"\n> "Build metadata stripper with EXIF removal"\n> "Make steganography tool for images"\n\n>> AWAITING YOUR COMMAND...' }
@@ -589,6 +597,32 @@
       useEffect(() => {
         localStorage.setItem('lab_chatMessages', JSON.stringify(chatMessages));
       }, [chatMessages]);
+
+      // Smooth scroll helper
+      const scrollToBottom = (ref) => {
+        if (!ref?.current) return;
+        // Defer to next frame so DOM updates are measurable
+        requestAnimationFrame(() => {
+          ref.current.scrollTop = ref.current.scrollHeight;
+        });
+      };
+
+      // Auto-scroll on data changes
+      useEffect(() => { 
+        scrollToBottom(chatScrollRef); 
+      }, [chatMessages, creating, error]);
+
+      useEffect(() => { 
+        scrollToBottom(codeScrollRef); 
+      }, [files, activeFile]);
+
+      // Catch character-by-character streaming updates
+      useEffect(() => {
+        if (!codeScrollRef.current) return;
+        const mo = new MutationObserver(() => scrollToBottom(codeScrollRef));
+        mo.observe(codeScrollRef.current, { childList: true, subtree: true, characterData: true });
+        return () => mo.disconnect();
+      }, []);
 
       // Handle chat
       const handleChat = async () => {
@@ -703,6 +737,8 @@
             if (index < fullText.length) {
               updateCallback(fullText.substring(0, index + 1));
               index++;
+              // Trigger scroll after each character update
+              scrollToBottom(codeScrollRef);
             } else {
               clearInterval(interval);
               resolve();
@@ -1477,7 +1513,11 @@
               </div>
 
               {/* Chat Messages */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-3 scrollbar-thin">
+              <div 
+                ref={chatScrollRef}
+                className="flex-1 overflow-y-auto p-6 space-y-3 scrollbar-thin"
+                style={{ scrollBehavior: 'smooth' }}
+              >
                 {chatMessages.map((msg, idx) => (
                   <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[85%] px-4 py-2.5 ${
@@ -1621,7 +1661,7 @@
                         {/* Tab content */}
                         <div className="flex-1 overflow-hidden bg-slate-950/30 relative">
                           {centerTab==='editor' ? (
-                            <CodeEditor file={activeFile} onEdit={handleFileEdit} />
+                            <CodeEditor file={activeFile} onEdit={handleFileEdit} scrollRef={codeScrollRef} />
                           ) : (
                             <LivePreview file={activeFile} />
                           )}
@@ -1699,7 +1739,7 @@
                     {/* Editor Panel */}
                       <div className="flex-1 overflow-hidden">
                         <div className="panel-title px-3 py-2 border-b border-slate-800 bg-slate-900/60">Editor</div>
-                        <CodeEditor file={activeFile} onEdit={handleFileEdit} />
+                        <CodeEditor file={activeFile} onEdit={handleFileEdit} scrollRef={codeScrollRef} />
                       </div>
                     </div>
 
@@ -1796,7 +1836,7 @@
                         {/* Content area */}
                         <div className="flex-1 overflow-hidden relative">
                           {centerTab==='editor' ? (
-                            <CodeEditor file={activeFile} onEdit={handleFileEdit} />
+                            <CodeEditor file={activeFile} onEdit={handleFileEdit} scrollRef={codeScrollRef} />
                           ) : (
                             <LivePreview file={activeFile} />
                           )}
