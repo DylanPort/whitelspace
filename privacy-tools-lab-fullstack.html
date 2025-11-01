@@ -173,7 +173,7 @@
     // =====================================================
     // FILE TREE COMPONENT
     // =====================================================
-    function FileTree({ files, activeFile, onFileSelect }) {
+    function FileTree({ files, activeFile, onFileSelect, onNewFile, onNewFolder }) {
       const [expandedFolders, setExpandedFolders] = useState(new Set(['']));
 
       const buildTree = (files) => {
@@ -264,13 +264,31 @@
       const tree = buildTree(files);
 
       return (
-        <div className="bg-black border-r border-green-900 overflow-auto h-full">
-          <div className="sticky top-0 bg-black px-3 py-2 border-b border-green-900 flex items-center justify-between">
-            <span className="text-xs text-green-500 font-bold tracking-wider hacker-icon">FILES</span>
-            <span className="text-[10px] text-gray-600">{files.length} files</span>
+        <div className="bg-black border-r border-green-900 overflow-auto h-full flex flex-col">
+          <div className="sticky top-0 bg-black px-3 py-2 border-b border-green-900">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-green-500 font-bold tracking-wider hacker-icon">FILES</span>
+              <span className="text-[10px] text-gray-600">{files.length} files</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={onNewFile}
+                className="flex-1 px-2 py-1 text-[10px] rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-400 transition-all flex items-center justify-center gap-1"
+                title="New File"
+              >
+                <span>+</span> File
+              </button>
+              <button 
+                onClick={onNewFolder}
+                className="flex-1 px-2 py-1 text-[10px] rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-400 transition-all flex items-center justify-center gap-1"
+                title="New Folder"
+              >
+                <span>+</span> Folder
+              </button>
+            </div>
           </div>
 
-          <div className="p-2">
+          <div className="p-2 flex-1 overflow-auto">
             {renderTree(tree)}
           </div>
         </div>
@@ -466,6 +484,10 @@
       const [layoutMode, setLayoutMode] = useState('tabbed'); // 'tabbed' | 'split'
       const [centerTab, setCenterTab] = useState('editor'); // editor | preview
       const [consoleOpen, setConsoleOpen] = useState(false);
+      const [showNewFileModal, setShowNewFileModal] = useState(false);
+      const [showNewFolderModal, setShowNewFolderModal] = useState(false);
+      const [newFileName, setNewFileName] = useState('');
+      const [newFolderName, setNewFolderName] = useState('');
 
       // Chat state
       const [chatMessages, setChatMessages] = useState([
@@ -761,6 +783,90 @@
       };
 
       // Download project as ZIP
+      // Create new file manually
+      const handleCreateFile = () => {
+        if (!newFileName.trim()) return;
+        
+        const filePath = newFileName.trim();
+        
+        // Check if file already exists
+        if (files.find(f => f.path === filePath)) {
+          alert('File already exists!');
+          return;
+        }
+        
+        // Determine file type from extension
+        const ext = filePath.split('.').pop().toLowerCase();
+        const typeMap = {
+          'js': 'javascript',
+          'jsx': 'javascript',
+          'ts': 'typescript',
+          'tsx': 'typescript',
+          'html': 'html',
+          'css': 'css',
+          'json': 'json',
+          'md': 'markdown',
+          'py': 'python',
+          'rs': 'rust',
+          'go': 'go'
+        };
+        const fileType = typeMap[ext] || 'text';
+        
+        // Create file with template content
+        const templates = {
+          'javascript': '// New JavaScript file\n\n',
+          'typescript': '// New TypeScript file\n\n',
+          'html': '<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>Document</title>\n</head>\n<body>\n  \n</body>\n</html>',
+          'css': '/* New stylesheet */\n\n',
+          'json': '{\n  \n}',
+          'markdown': '# New Document\n\n',
+          'text': ''
+        };
+        
+        const newFile = {
+          path: filePath,
+          content: templates[fileType] || '',
+          type: fileType,
+          size: (templates[fileType] || '').length
+        };
+        
+        setFiles(prev => [...prev, newFile]);
+        setActiveFile(newFile);
+        setNewFileName('');
+        setShowNewFileModal(false);
+        
+        console.log(`✅ Created file: ${filePath}`);
+      };
+      
+      // Create new folder (add README.md inside it)
+      const handleCreateFolder = () => {
+        if (!newFolderName.trim()) return;
+        
+        let folderPath = newFolderName.trim();
+        // Ensure it ends with /
+        if (!folderPath.endsWith('/')) folderPath += '/';
+        
+        // Check if folder already has files
+        if (files.find(f => f.path.startsWith(folderPath))) {
+          alert('Folder already exists!');
+          return;
+        }
+        
+        // Create a .gitkeep file to represent the folder
+        const keepFile = {
+          path: `${folderPath}.gitkeep`,
+          content: '# This file keeps the folder in git\n',
+          type: 'text',
+          size: 35
+        };
+        
+        setFiles(prev => [...prev, keepFile]);
+        setNewFolderName('');
+        setShowNewFolderModal(false);
+        
+        console.log(`✅ Created folder: ${folderPath}`);
+      };
+
       // Push to GitHub
       const handlePushToGitHub = async () => {
         const { token, repoName, description, isPrivate } = githubConfig;
@@ -1257,6 +1363,8 @@
                               files={files}
                               activeFile={activeFile}
                               onFileSelect={handleFileSelect}
+                              onNewFile={() => setShowNewFileModal(true)}
+                              onNewFolder={() => setShowNewFolderModal(true)}
                             />
                           ) : (
                             <div className="p-2">
@@ -1325,6 +1433,8 @@
                             files={files}
                             activeFile={activeFile}
                             onFileSelect={handleFileSelect}
+                            onNewFile={() => setShowNewFileModal(true)}
+                            onNewFolder={() => setShowNewFolderModal(true)}
                           />
                         ) : (
                           <div className="p-2">
@@ -1592,6 +1702,98 @@
                             <span>Push to GitHub</span>
                           </>
                         )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* New File Modal */}
+            {showNewFileModal && (
+              <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                <div className="relative w-full max-w-md mx-4 rounded-2xl border border-cyan-900/50 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 shadow-2xl shadow-cyan-500/20">
+                  <div className="px-6 py-4 border-b border-cyan-900/50 flex items-center justify-between bg-gradient-to-r from-cyan-900/20 to-blue-900/20">
+                    <div className="text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">NEW FILE</div>
+                    <button onClick={()=>{setShowNewFileModal(false); setNewFileName('');}} className="text-gray-400 hover:text-gray-200">✕</button>
+                  </div>
+                  
+                  <div className="px-6 py-5 space-y-4">
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">File Path <span className="text-red-400">*</span></label>
+                      <input 
+                        type="text"
+                        value={newFileName}
+                        onChange={(e) => setNewFileName(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleCreateFile()}
+                        placeholder="src/utils/helper.js"
+                        autoFocus
+                        className="w-full px-3 py-2 rounded-lg bg-black border border-slate-700 text-gray-200 text-xs font-mono focus:border-cyan-500 focus:outline-none"
+                      />
+                      <p className="text-[10px] text-gray-500 mt-1">
+                        Include folder path and extension (e.g., <code className="text-cyan-400">api/auth.js</code>)
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-2">
+                      <button 
+                        onClick={()=>{setShowNewFileModal(false); setNewFileName('');}} 
+                        className="flex-1 px-4 py-2.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-gray-300 transition-all"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={handleCreateFile}
+                        disabled={!newFileName.trim()}
+                        className="flex-1 px-4 py-2.5 text-xs rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-medium transition-all shadow-lg shadow-cyan-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        Create File
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* New Folder Modal */}
+            {showNewFolderModal && (
+              <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                <div className="relative w-full max-w-md mx-4 rounded-2xl border border-amber-900/50 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 shadow-2xl shadow-amber-500/20">
+                  <div className="px-6 py-4 border-b border-amber-900/50 flex items-center justify-between bg-gradient-to-r from-amber-900/20 to-orange-900/20">
+                    <div className="text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-400">NEW FOLDER</div>
+                    <button onClick={()=>{setShowNewFolderModal(false); setNewFolderName('');}} className="text-gray-400 hover:text-gray-200">✕</button>
+                  </div>
+                  
+                  <div className="px-6 py-5 space-y-4">
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">Folder Path <span className="text-red-400">*</span></label>
+                      <input 
+                        type="text"
+                        value={newFolderName}
+                        onChange={(e) => setNewFolderName(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleCreateFolder()}
+                        placeholder="src/components"
+                        autoFocus
+                        className="w-full px-3 py-2 rounded-lg bg-black border border-slate-700 text-gray-200 text-xs font-mono focus:border-amber-500 focus:outline-none"
+                      />
+                      <p className="text-[10px] text-gray-500 mt-1">
+                        Folder path without trailing slash (e.g., <code className="text-amber-400">src/utils</code>)
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-2">
+                      <button 
+                        onClick={()=>{setShowNewFolderModal(false); setNewFolderName('');}} 
+                        className="flex-1 px-4 py-2.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-gray-300 transition-all"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={handleCreateFolder}
+                        disabled={!newFolderName.trim()}
+                        className="flex-1 px-4 py-2.5 text-xs rounded-lg bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-medium transition-all shadow-lg shadow-amber-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        Create Folder
                       </button>
                     </div>
                   </div>
