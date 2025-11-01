@@ -24,6 +24,10 @@
       0% { transform: translateX(-100%); }
       100% { transform: translateX(100%); }
     }
+    @keyframes golden-laser {
+      0%, 100% { box-shadow: 0 0 5px rgba(251, 191, 36, 0.5), 0 0 10px rgba(251, 191, 36, 0.3), inset 0 0 5px rgba(251, 191, 36, 0.2); }
+      50% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.8), 0 0 30px rgba(251, 191, 36, 0.6), inset 0 0 10px rgba(251, 191, 36, 0.4); }
+    }
     @keyframes neon-pulse {
       0%, 100% { text-shadow: 0 0 10px rgba(6, 182, 212, 0.8), 0 0 20px rgba(6, 182, 212, 0.5); }
       50% { text-shadow: 0 0 20px rgba(6, 182, 212, 1), 0 0 30px rgba(6, 182, 212, 0.8), 0 0 40px rgba(251, 191, 36, 0.3); }
@@ -498,7 +502,16 @@
       const [showNewFolderModal, setShowNewFolderModal] = useState(false);
       const [newFileName, setNewFileName] = useState('');
       const [newFolderName, setNewFolderName] = useState('');
-      const [creatingPresentation, setCreatingPresentation] = useState(false);
+      const [showCompeteModal, setShowCompeteModal] = useState(false);
+      const [competeData, setCompeteData] = useState({
+        twitterHandle: '',
+        isAnonymous: false,
+        projectLink: '',
+        description: '',
+        submitting: false,
+        error: null,
+        success: null
+      });
 
       // Chat state
       const [chatMessages, setChatMessages] = useState(() => loadFromStorage('chatMessages', [
@@ -912,100 +925,81 @@
         window.location.reload();
       };
 
-      // Create AI-powered presentation
-      const handleCreatePresentation = async () => {
-        if (files.length === 0) {
-          alert('No project to present! Create some files first.');
+      // Submit to competition
+      const handleCompeteSubmit = async () => {
+        const { twitterHandle, isAnonymous, projectLink, description } = competeData;
+
+        // Validation
+        if (!isAnonymous && !twitterHandle.trim()) {
+          setCompeteData(prev => ({ ...prev, error: 'Twitter handle required (or select Anonymous)' }));
           return;
         }
 
-        setCreatingPresentation(true);
+        if (!projectLink.trim()) {
+          setCompeteData(prev => ({ ...prev, error: 'Project link required (GitHub repo or deployed URL)' }));
+          return;
+        }
+
+        if (description.length < 100) {
+          setCompeteData(prev => ({ ...prev, error: `Description must be at least 100 characters (${description.length}/100)` }));
+          return;
+        }
+
+        if (files.length === 0) {
+          setCompeteData(prev => ({ ...prev, error: 'No project files to submit' }));
+          return;
+        }
+
+        setCompeteData(prev => ({ ...prev, submitting: true, error: null, success: null }));
 
         try {
-          // Gather project info
-          const projectFiles = files.map(f => ({
-            path: f.path,
-            type: f.type,
-            size: f.size,
-            preview: f.content.substring(0, 200)
-          }));
+          // Submit to Supabase
+          const SUPABASE_URL = 'https://lqaxmnzxkfwndjhzhhpx.supabase.co';
+          const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxxYXhtbnp4a2Z3bmRqaHpoaHB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjk3NzE0OTksImV4cCI6MjA0NTM0NzQ5OX0.qGXJPzKy9VYdXp7o3WKCa2Wb4DDqrMFPPO9KNEgVIEY';
 
-          const projectSummary = description || 'Privacy tool project';
+          const submissionData = {
+            creator: isAnonymous ? 'Anonymous' : twitterHandle.replace('@', ''),
+            project_link: projectLink,
+            description: description,
+            file_count: files.length,
+            tech_stack: [...new Set(files.map(f => f.type))].join(', '),
+            created_at: new Date().toISOString()
+          };
 
-          // Call AI to generate presentation
-          const res = await fetch(`${API_BASE}/chat-with-ai`, {
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/competition_submissions`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              messages: [
-                {
-                  role: 'user',
-                  content: `Create a beautiful, modern HTML presentation for this project:
-
-PROJECT: ${projectSummary}
-
-FILES (${files.length}):
-${projectFiles.map(f => `- ${f.path} (${f.type})`).join('\n')}
-
-Create a SINGLE PAGE HTML presentation with:
-1. Hero section with project title and tagline
-2. Features showcase (what it does)
-3. Tech stack (technologies used based on file types)
-4. File structure overview
-5. Getting started guide
-6. Dark premium design with gradients
-7. Responsive layout
-8. Smooth animations
-
-Use Tailwind CDN for styling. Make it look like a professional product launch page.
-
-OUTPUT ONLY THE COMPLETE HTML CODE, NO EXPLANATIONS.`
-                }
-              ],
-              hasPreview: false,
-              isEditRequest: false
-            })
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${SUPABASE_KEY}`,
+              'Prefer': 'return=representation'
+            },
+            body: JSON.stringify(submissionData)
           });
 
           if (!res.ok) {
-            throw new Error('Failed to generate presentation');
+            throw new Error('Failed to submit to competition');
           }
 
-          const data = await res.json();
-          let presentationHTML = data.message;
+          setCompeteData(prev => ({
+            ...prev,
+            submitting: false,
+            success: '🎉 Submitted! Your project is now competing for the top spot!',
+            twitterHandle: '',
+            projectLink: '',
+            description: '',
+            isAnonymous: false
+          }));
 
-          // Clean up markdown fences if present
-          presentationHTML = presentationHTML.replace(/```html\n?/g, '').replace(/\n?```/g, '').trim();
-
-          // Create presentation file
-          const presentationFile = {
-            path: 'presentation.html',
-            content: presentationHTML,
-            type: 'html',
-            size: presentationHTML.length
-          };
-
-          // Add to files or replace existing
-          setFiles(prev => {
-            const existingIndex = prev.findIndex(f => f.path === 'presentation.html');
-            if (existingIndex >= 0) {
-              const updated = [...prev];
-              updated[existingIndex] = presentationFile;
-              return updated;
-            }
-            return [...prev, presentationFile];
-          });
-
-          setActiveFile(presentationFile);
-          setCreatingPresentation(false);
-
-          console.log('✅ Presentation created: presentation.html');
-          alert('✅ Presentation created! Open presentation.html in preview.');
+          console.log('✅ Competition submission successful');
 
         } catch (error) {
-          console.error('Presentation generation error:', error);
-          setCreatingPresentation(false);
-          alert('❌ Failed to create presentation. Try again.');
+          console.error('Competition submission error:', error);
+          setCompeteData(prev => ({
+            ...prev,
+            submitting: false,
+            error: error.message || 'Failed to submit. Please try again.'
+          }));
         }
       };
 
@@ -1372,14 +1366,15 @@ OUTPUT ONLY THE COMPLETE HTML CODE, NO EXPLANATIONS.`
                   </button>
                   
                   <button 
-                    onClick={handleCreatePresentation}
-                    disabled={files.length === 0 || creatingPresentation}
-                    className="px-6 py-2 rounded-xl bg-gradient-to-b from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 text-white text-xs font-semibold tracking-wide transition-all duration-200 shadow-xl disabled:opacity-40 disabled:cursor-not-allowed border border-slate-700/50"
+                    onClick={() => setShowCompeteModal(true)}
+                    disabled={files.length === 0}
+                    className="px-6 py-2 rounded-xl bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 hover:from-amber-500 hover:via-yellow-400 hover:to-amber-500 text-black text-xs font-bold tracking-wide transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed border border-amber-400"
                     style={{
-                      boxShadow: '0 4px 14px 0 rgba(0,0,0,0.4), inset 0 1px 0 0 rgba(255,255,255,0.05)'
+                      boxShadow: '0 0 15px rgba(251, 191, 36, 0.6), 0 0 25px rgba(251, 191, 36, 0.4), inset 0 1px 0 0 rgba(255,255,255,0.3)',
+                      animation: 'golden-laser 2s ease-in-out infinite'
                     }}
                   >
-                    {creatingPresentation ? 'Creating...' : 'Create Presentation'}
+                    ⚡ COMPETE ⚡
                   </button>
                   
                   <button 
@@ -2019,6 +2014,129 @@ OUTPUT ONLY THE COMPLETE HTML CODE, NO EXPLANATIONS.`
                         className="flex-1 px-4 py-2.5 text-xs rounded-lg bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-medium transition-all shadow-lg shadow-amber-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         Create Folder
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Compete Modal */}
+            {showCompeteModal && (
+              <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                <div className="relative w-full max-w-lg mx-4 rounded-2xl border-2 border-amber-500/50 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 shadow-2xl" style={{boxShadow: '0 0 30px rgba(251, 191, 36, 0.3)'}}>
+                  <div className="px-6 py-4 border-b border-amber-500/50 flex items-center justify-between bg-gradient-to-r from-amber-900/30 to-yellow-900/30">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">⚡</span>
+                      <div className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400">PRIVACY TOOLS COMPETITION</div>
+                    </div>
+                    <button onClick={()=>{setShowCompeteModal(false); setCompeteData(prev=>({...prev, error: null, success: null}));}} className="text-gray-400 hover:text-gray-200">✕</button>
+                  </div>
+                  
+                  <div className="px-6 py-5 space-y-4">
+                    <div className="px-4 py-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs">
+                      ⚡ Submit your privacy tool to compete for the top spot! Best tools get featured.
+                    </div>
+
+                    {/* Twitter Handle or Anonymous */}
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-2">Creator Identity</label>
+                      <div className="flex items-center gap-3 mb-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input 
+                            type="checkbox"
+                            checked={competeData.isAnonymous}
+                            onChange={(e) => setCompeteData(prev => ({...prev, isAnonymous: e.target.checked}))}
+                            className="accent-amber-500"
+                          />
+                          <span className="text-xs text-gray-300">Submit Anonymously</span>
+                        </label>
+                      </div>
+                      {!competeData.isAnonymous && (
+                        <input 
+                          type="text"
+                          value={competeData.twitterHandle}
+                          onChange={(e) => setCompeteData(prev => ({...prev, twitterHandle: e.target.value}))}
+                          placeholder="@yourhandle"
+                          className="w-full px-3 py-2 rounded-lg bg-black border border-slate-700 text-gray-200 text-xs font-mono focus:border-amber-500 focus:outline-none"
+                        />
+                      )}
+                    </div>
+
+                    {/* Project Link */}
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">Project Link <span className="text-red-400">*</span></label>
+                      <input 
+                        type="url"
+                        value={competeData.projectLink}
+                        onChange={(e) => setCompeteData(prev => ({...prev, projectLink: e.target.value}))}
+                        placeholder="https://github.com/user/repo or https://deployed-tool.com"
+                        className="w-full px-3 py-2 rounded-lg bg-black border border-slate-700 text-gray-200 text-xs font-mono focus:border-amber-500 focus:outline-none"
+                      />
+                      <p className="text-[10px] text-gray-500 mt-1">
+                        GitHub repository URL or deployed tool link
+                      </p>
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">
+                        Description <span className="text-red-400">*</span>
+                        <span className={`ml-2 ${competeData.description.length >= 100 ? 'text-green-400' : 'text-gray-500'}`}>
+                          ({competeData.description.length}/100)
+                        </span>
+                      </label>
+                      <textarea 
+                        value={competeData.description}
+                        onChange={(e) => setCompeteData(prev => ({...prev, description: e.target.value}))}
+                        placeholder="Describe your privacy tool, its features, and what makes it unique. Minimum 100 characters."
+                        rows="4"
+                        className="w-full px-3 py-2 rounded-lg bg-black border border-slate-700 text-gray-200 text-xs focus:border-amber-500 focus:outline-none resize-none"
+                      />
+                    </div>
+
+                    {/* Project Info */}
+                    <div className="px-4 py-3 rounded-lg bg-slate-800/50 border border-slate-700/50">
+                      <div className="text-[10px] text-gray-500 mb-2">YOUR PROJECT</div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-400">Files:</span>
+                        <span className="text-cyan-400 font-mono">{files.length}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs mt-1">
+                        <span className="text-gray-400">Tech Stack:</span>
+                        <span className="text-purple-400 font-mono text-[10px]">{[...new Set(files.map(f => f.type))].join(', ')}</span>
+                      </div>
+                    </div>
+
+                    {/* Error Message */}
+                    {competeData.error && (
+                      <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-xs">
+                        ❌ {competeData.error}
+                      </div>
+                    )}
+
+                    {/* Success Message */}
+                    {competeData.success && (
+                      <div className="px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/30 text-green-300 text-xs">
+                        {competeData.success}
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 pt-2">
+                      <button 
+                        onClick={()=>{setShowCompeteModal(false); setCompeteData(prev=>({...prev, error: null, success: null}));}} 
+                        className="flex-1 px-4 py-2.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-gray-300 transition-all"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={handleCompeteSubmit}
+                        disabled={competeData.submitting}
+                        className="flex-1 px-4 py-2.5 text-xs rounded-lg bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 hover:from-amber-500 hover:via-yellow-400 hover:to-amber-500 text-black font-bold transition-all shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
+                        style={{boxShadow: '0 0 20px rgba(251, 191, 36, 0.5)'}}
+                      >
+                        {competeData.submitting ? '⚡ SUBMITTING...' : '⚡ SUBMIT TO COMPETE ⚡'}
                       </button>
                     </div>
                   </div>
