@@ -259,8 +259,10 @@
       const [progress, setProgress] = useState('');
       const [error, setError] = useState(null);
 
-      // Project state
-      const [files, setFiles] = useState([]);
+      // Project state - Initialize with placeholder to show workspace structure from start
+      const [files, setFiles] = useState([
+        { path: 'README.md', content: '# Your Privacy Tool Workspace\n\n👈 Chat with Whistle AI to describe your tool\n\n⚙️ Click Generate to build it\n\n📁 Files will appear here as they\'re created', type: 'markdown', size: 150 }
+      ]);
       const [activeFile, setActiveFile] = useState(null);
       const [projectStructure, setProjectStructure] = useState(null);
       const [openTabs, setOpenTabs] = useState([]);
@@ -328,12 +330,8 @@
         setError(null);
         setProgress('🎨 Initializing AI...');
         
-        // DON'T clear workspace - keep existing files visible or show empty workspace structure
-        // This ensures the file tree panel is always visible
-        if (files.length === 0) {
-          // Initialize with empty workspace structure to show the layout
-          setFiles([{ path: '.gitkeep', content: '# Generating...', type: 'temp', size: 0 }]);
-        }
+        // Clear placeholder and show generating message
+        setFiles([{ path: '⏳ Generating...', content: '# AI is creating your privacy tool...\n\nFiles will appear here in real-time', type: 'temp', size: 0 }]);
         setActiveFile(null);
         setOpenTabs([]);
         setProjectStructure(null);
