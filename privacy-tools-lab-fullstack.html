@@ -898,10 +898,10 @@
           )}
 
           {/* Main Content */}
-          <div className="flex" style={{ height: 'calc(100vh - 100px)' }}>
+          <div className="flex" style={{ height: 'calc(100vh - 80px)' }}>
             
             {/* Left: Chat Panel */}
-            <div className="w-96 bg-black backdrop-blur-md border-r border-green-900 flex flex-col">
+            <div className="w-96 flex-shrink-0 bg-black backdrop-blur-md border-r border-green-900 flex flex-col">
               <div className="flex-shrink-0 px-6 py-4 border-b border-green-900/50 bg-black">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-black border-2 border-green-500/50 flex items-center justify-center overflow-hidden p-1">
@@ -997,14 +997,15 @@
             </div>
 
             {/* Right: Code Editor (Resizable 3-panel) */}
-            <div className="flex-1" ref={workspaceRef}>
+            <div className="flex-1 min-w-0" ref={workspaceRef}>
               {files.length > 0 ? (
                 <>
                   {/* TABBED layout */}
                   {layoutMode==='tabbed' ? (
-                    <div className="grid h-full" style={{ gridTemplateColumns: `${leftWidth}% ${100 - leftWidth}%` }}>
+                    <div className="flex h-full"  style={{ width: '100%' }}>
+                      <div style={{ width: `${leftWidth}%`, minWidth: '220px' }} className="flex-shrink-0 h-full">
                       {/* Resources Panel (Files | Plan) */}
-                      <div className="min-w-[220px] overflow-hidden border-r border-slate-800 bg-slate-950/40">
+                      <div className="h-full overflow-hidden border-r border-slate-800 bg-slate-950/40">
                         <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-800 bg-slate-900/60">
                           <button onClick={()=>setResourceTab('files')} className={`px-3 py-1.5 rounded text-xs ${resourceTab==='files'?'bg-slate-800 text-cyan-300 border border-slate-700':'text-gray-400 hover:text-gray-200'}`}>Files</button>
                           <button onClick={()=>setResourceTab('plan')} className={`px-3 py-1.5 rounded text-xs ${resourceTab==='plan'?'bg-slate-800 text-amber-300 border border-slate-700':'text-gray-400 hover:text-gray-200'}`}>Plan</button>
@@ -1036,9 +1037,10 @@
                           )}
                         </div>
                       </div>
+                      </div>
 
                       {/* Canvas (Tabbed) */}
-                      <div className="flex flex-col overflow-hidden relative">
+                      <div className="flex-1 flex flex-col overflow-hidden relative min-w-0">
                         {/* Dark overlay */}
                         <div className="pointer-events-none absolute inset-0 bg-black/20" />
 
