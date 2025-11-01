@@ -278,6 +278,7 @@
       const workspaceRef = React.useRef(null);
       const [resizing, setResizing] = useState(null); // 'left' | 'right' | null
       const [showConfirmModal, setShowConfirmModal] = useState(false);
+      const [showPlan, setShowPlan] = useState(false);
 
       // Chat state
       const [chatMessages, setChatMessages] = useState([
@@ -596,29 +597,51 @@
               <div className="flex items-center justify-between">
                 <div>
                   <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-amber-400 to-yellow-600 mb-1">
-                    🛠️ Privacy Tools Lab - Full Stack
+                    🛠️ Whistle Builder
                   </h1>
-                  <p className="text-gray-500 text-xs">Build complete privacy applications with frontend + backend</p>
+                  <p className="text-gray-500 text-xs">Premium dark, professional website & tool builder</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  {files.length > 0 && (
-                    <>
-                      <button
-                        onClick={handleDownloadZip}
-                        className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm transition-all flex items-center gap-2"
-                      >
-                        <span>⇩</span>
-                        <span>Download ZIP</span>
-                      </button>
-                      <div className="px-4 py-2 rounded-lg bg-slate-800/50 border border-slate-700 text-gray-300 text-sm">
-                        {files.length} files
-                      </div>
-                    </>
-                  )}
+                  <button onClick={()=>setShowPlan(v=>!v)} className="px-3 py-2 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-gray-300 text-sm border border-slate-700">{showPlan ? 'Hide Plan' : 'Show Plan'}</button>
+                  <label className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800/60 border border-slate-700 text-gray-300 text-sm">
+                    <input type="checkbox" checked={autoContinue} onChange={(e)=>setAutoContinue(e.target.checked)} />
+                    Auto-continue
+                  </label>
+                  <button onClick={handleDownloadZip} className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm transition-all flex items-center gap-2">
+                    <span>⇩</span>
+                    <span>Download ZIP</span>
+                  </button>
+                  <div className="px-3 py-2 rounded-lg bg-slate-800/50 border border-slate-700 text-gray-300 text-xs">
+                    {files.length} files
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+
+          {/* Plan Drawer */}
+          {showPlan && plannedFiles.length > 0 && (
+            <div className="max-w-[1920px] mx-auto px-8">
+              <div className="mt-3 mb-1 rounded-xl border border-slate-800 bg-slate-950/70">
+                <div className="px-4 py-3 text-xs text-gray-400 flex items-center justify-between">
+                  <span className="font-semibold text-gray-300">Project Plan</span>
+                  <span className="text-gray-500">{currentIndex + 1}/{plannedFiles.length} ready</span>
+                </div>
+                <div className="max-h-48 overflow-auto divide-y divide-slate-800">
+                  {plannedFiles.map((f, idx)=>{
+                    const status = files.find(x=>x.path===f.path) ? 'done' : (idx===currentIndex && awaitingApproval ? 'awaiting' : 'pending');
+                    return (
+                      <div key={f.path} className="px-4 py-2 text-xs flex items-center gap-3">
+                        <span className={`w-2 h-2 rounded-full ${status==='done'?'bg-emerald-400':status==='awaiting'?'bg-amber-400':'bg-slate-600'}`} />
+                        <span className="font-mono text-gray-300">{f.path}</span>
+                        <span className="ml-auto text-gray-500">{f.type || 'file'}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Main Content */}
           <div className="flex" style={{ height: 'calc(100vh - 100px)' }}>
