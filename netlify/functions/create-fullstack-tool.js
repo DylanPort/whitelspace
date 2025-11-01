@@ -49,45 +49,75 @@ exports.handler = async (event) => {
     // ========================================
     // STEP 1: Generate Project Structure
     // ========================================
-    const structurePrompt = `You are a full-stack developer creating a privacy-focused web application.
+    const structurePrompt = `You are an elite privacy tool architect, not a website builder. Your mission is to design FUNCTIONAL TOOLS that solve real privacy problems.
 
 PROJECT BRIEF: "${description}"
 CATEGORY: ${category || 'Privacy Tool'}
 
-Generate a JSON project structure with the following format:
+🎯 CRITICAL: This is NOT a landing page or website. Build an actual working privacy tool with:
+- Real encryption algorithms
+- Functional APIs
+- Working utilities
+- Reusable modules
+- Integration-ready components
+
+Think like Cursor AI - creative, practical, deeply technical. Design a tool that could be integrated into Ghost Whistle.
+
+Generate a JSON project structure:
 {
-  "projectName": "snake-case-name",
-  "description": "brief description",
+  "projectName": "descriptive-tool-name",
+  "description": "What this tool actually DOES (not what it looks like)",
   "files": [
     {
-      "path": "index.html",
+      "path": "tools/encryptor.js",
+      "type": "module",
+      "description": "Core encryption logic with AES-256"
+    },
+    {
+      "path": "api/encrypt.js",
+      "type": "backend",
+      "description": "API endpoint for encryption operations"
+    },
+    {
+      "path": "utils/crypto-helpers.js",
+      "type": "utility",
+      "description": "Cryptographic utility functions"
+    },
+    {
+      "path": "interface/index.html",
       "type": "frontend",
-      "description": "Main HTML file"
-    },
-    {
-      "path": "api/server.js",
-      "type": "backend",
-      "description": "Express server"
-    },
-    {
-      "path": "api/routes/auth.js",
-      "type": "backend",
-      "description": "Authentication routes"
+      "description": "Minimal UI for tool interaction (not a website)"
     }
   ],
-  "techStack": ["html", "tailwind", "node.js", "express"],
-  "features": ["feature1", "feature2"]
+  "techStack": ["crypto", "node.js", "express", "web-crypto-api"],
+  "features": ["actual working features", "not marketing points"],
+  "integrationPoints": ["how this plugs into Ghost Whistle"]
 }
 
-${includeBackend ? 'Include both frontend AND backend files (API routes, server logic, middleware).' : 'Frontend only - no backend files.'}
+${includeBackend ? 
+'BACKEND REQUIRED: Include working APIs, encryption modules, database logic, authentication, middleware.' : 
+'Frontend utility only - still must be functional, not decorative.'}
 
-REQUIREMENTS:
-- Use modern tech stack (Tailwind, Node.js/Express if backend)
-- Privacy-focused architecture
-- Modular file structure
-- Include package.json if backend
-- Include README.md
-- All paths should be relative
+TOOL EXAMPLES (what to build):
+✅ Password hasher with PBKDF2
+✅ File encryptor with chunked AES
+✅ Steganography encoder/decoder
+✅ Zero-knowledge proof generator
+✅ Anonymous credential issuer
+✅ Onion routing relay logic
+✅ Metadata stripper
+❌ "Beautiful landing page with features section"
+❌ "Modern website with pricing"
+❌ "Sleek design with CTA buttons"
+
+STRUCTURE REQUIREMENTS:
+- /tools/ or /modules/ for core logic
+- /api/ for backend endpoints
+- /utils/ for helper functions
+- /interface/ for minimal UI (not /pages/)
+- /tests/ for unit tests
+- /docs/ for integration docs
+- package.json with real dependencies (crypto, express, etc.)
 
 OUTPUT ONLY THE JSON, NO MARKDOWN FENCES.`;
 
@@ -102,10 +132,10 @@ OUTPUT ONLY THE JSON, NO MARKDOWN FENCES.`;
         'X-Title': 'Ghost Whistle Privacy Tools Lab'
       },
       body: JSON.stringify({
-        model: 'openai/gpt-4o-mini',
+        model: 'anthropic/claude-3.5-sonnet', // More creative and accurate
         messages: [{ role: 'user', content: structurePrompt }],
-        temperature: 0.7,
-        max_tokens: 1000
+        temperature: 0.8, // Higher for more creativity
+        max_tokens: 2000 // More room for complex structures
       })
     });
 
@@ -131,28 +161,142 @@ OUTPUT ONLY THE JSON, NO MARKDOWN FENCES.`;
     for (const fileSpec of projectStructure.files) {
       console.log(`   📝 Generating ${fileSpec.path}...`);
 
-      const filePrompt = `You are generating: ${fileSpec.path}
+      const filePrompt = `You are an elite developer with deep expertise in privacy, cryptography, and systems design. Generate ${fileSpec.path} with the intelligence and creativity of Cursor AI.
 
-PROJECT: ${projectStructure.projectName}
-DESCRIPTION: ${projectStructure.description}
-FILE TYPE: ${fileSpec.type}
-FILE PURPOSE: ${fileSpec.description}
-TECH STACK: ${projectStructure.techStack.join(', ')}
+🎯 PROJECT CONTEXT:
+Name: ${projectStructure.projectName}
+Mission: ${projectStructure.description}
+This File: ${fileSpec.description}
+Type: ${fileSpec.type}
+Stack: ${projectStructure.techStack.join(', ')}
 
-Generate COMPLETE, PRODUCTION-READY code for this file.
+⚡ YOUR MISSION:
+Write PRODUCTION-GRADE, WORKING code that:
+1. Actually functions (not marketing copy)
+2. Solves real privacy problems
+3. Can be integrated into Ghost Whistle
+4. Uses modern, secure patterns
+5. Is deeply technical, not superficial
 
-REQUIREMENTS:
-- Write actual working code, not placeholders
-- Include all imports/dependencies
-- Add comments for complex logic
-- Follow best practices for ${fileSpec.type}
-- Privacy-focused (encryption, secure headers, etc.)
-- Modern syntax (ES6+)
+🧠 THINK LIKE CURSOR AI:
+- Be creative but practical
+- Add clever optimizations
+- Include error handling that anticipates edge cases
+- Write comments that explain WHY, not what
+- Use patterns that scale
+- Consider security at every line
 
-${fileSpec.path.endsWith('.html') ? 'Use Tailwind CDN. Make it beautiful and functional.' : ''}
-${fileSpec.path.endsWith('.js') && fileSpec.type === 'backend' ? 'Use Express.js patterns. Include error handling.' : ''}
-${fileSpec.path === 'package.json' ? 'Include all necessary dependencies with versions.' : ''}
-${fileSpec.path === 'README.md' ? 'Include setup instructions, features, and tech stack.' : ''}
+📝 CODE REQUIREMENTS:
+
+${fileSpec.path.includes('/tools/') || fileSpec.path.includes('/modules/') ? `
+🔧 CORE TOOL/MODULE:
+- Implement actual algorithms (AES, RSA, PBKDF2, etc.)
+- Handle binary data, streams, chunks
+- Export reusable functions
+- Include input validation
+- Add performance optimizations
+- Example:
+  export class Encryptor {
+    constructor(key) { /* derive key */ }
+    async encrypt(data) { /* real AES-GCM */ }
+    async decrypt(cipher) { /* real decryption */ }
+  }
+` : ''}
+
+${fileSpec.path.includes('/api/') || fileSpec.type === 'backend' ? `
+🌐 BACKEND API:
+- Express.js with real routes
+- Middleware for auth, rate limiting
+- Proper error handling (don't expose internals)
+- Security headers (helmet, cors)
+- Input sanitization
+- Example:
+  router.post('/encrypt', rateLimit, async (req, res) => {
+    const { data, key } = req.body;
+    // actual encryption here
+    res.json({ cipher, iv, tag });
+  });
+` : ''}
+
+${fileSpec.path.includes('/utils/') || fileSpec.path.includes('/helpers/') ? `
+🛠️ UTILITY FUNCTIONS:
+- Pure, testable functions
+- Handle edge cases
+- Efficient algorithms
+- Type-safe (JSDoc or TypeScript)
+- Example:
+  export const generateSalt = () => crypto.randomBytes(32);
+  export const deriveKey = async (password, salt) => { /* PBKDF2 */ };
+` : ''}
+
+${fileSpec.path.endsWith('.html') ? `
+🖥️ INTERFACE (NOT A WEBSITE):
+- Minimal, functional UI
+- Focus on tool usage, not marketing
+- Dark theme (privacy aesthetic)
+- Input/output for the tool
+- No hero sections, no CTAs, no pricing
+- Example structure:
+  <div class="tool-interface">
+    <textarea id="input">Enter data</textarea>
+    <button onclick="encrypt()">Encrypt</button>
+    <pre id="output"></pre>
+  </div>
+- Use Tailwind CDN but keep it tool-focused
+` : ''}
+
+${fileSpec.path === 'package.json' ? `
+📦 PACKAGE.JSON:
+Include real dependencies:
+- express (if backend)
+- helmet, cors (security)
+- crypto (if encryption)
+- ws, socket.io (if real-time)
+- joi, validator (input validation)
+- winston, morgan (logging)
+Add proper scripts: start, dev, test
+` : ''}
+
+${fileSpec.path === 'README.md' ? `
+📖 README:
+Focus on:
+1. What this tool DOES (not looks like)
+2. Integration with Ghost Whistle
+3. API endpoints and usage
+4. Security considerations
+5. Local setup
+6. Testing
+NOT: Marketing fluff, feature lists without substance
+` : ''}
+
+${fileSpec.path.includes('/tests/') ? `
+🧪 TESTS:
+- Real unit tests with Jest or Mocha
+- Test edge cases, failures, security
+- Example:
+  test('encrypts and decrypts correctly', async () => {
+    const plain = 'secret';
+    const cipher = await encrypt(plain, key);
+    const result = await decrypt(cipher, key);
+    expect(result).toBe(plain);
+  });
+` : ''}
+
+🚫 FORBIDDEN:
+- Placeholder code like "// TODO: implement"
+- Marketing copy in code comments
+- Non-functional demos
+- Landing page patterns
+- "Coming soon" features
+
+✅ REQUIRED:
+- Working implementations
+- Real crypto (Web Crypto API, Node crypto)
+- Actual error handling
+- Security best practices
+- Integration hooks for Ghost Whistle
+
+Think: "How would Cursor AI build this file if it deeply understood privacy tech?"
 
 OUTPUT ONLY THE CODE, NO MARKDOWN FENCES OR EXPLANATIONS.`;
 
@@ -165,10 +309,10 @@ OUTPUT ONLY THE CODE, NO MARKDOWN FENCES OR EXPLANATIONS.`;
           'X-Title': 'Ghost Whistle Privacy Tools Lab'
         },
         body: JSON.stringify({
-          model: 'openai/gpt-4o-mini',
+          model: 'anthropic/claude-3.5-sonnet', // Best for code generation
           messages: [{ role: 'user', content: filePrompt }],
-          temperature: 0.7,
-          max_tokens: 2000
+          temperature: 0.9, // High creativity for diverse, human-like code
+          max_tokens: 4000 // Enough for complex implementations
         })
       });
 
