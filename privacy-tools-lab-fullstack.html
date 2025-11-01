@@ -271,6 +271,13 @@
       const [currentIndex, setCurrentIndex] = useState(-1); // index into plannedFiles
       const [awaitingApproval, setAwaitingApproval] = useState(false); // waiting for user confirmation
       const [autoContinue, setAutoContinue] = useState(false); // auto-approve remaining files
+      // Resizable workspace widths (percentages)
+      const [leftWidth, setLeftWidth] = useState(() => Number(localStorage.getItem('lab_leftWidth')) || 22);
+      const [centerWidth, setCenterWidth] = useState(() => Number(localStorage.getItem('lab_centerWidth')) || 48);
+      const rightWidth = Math.max(100 - leftWidth - centerWidth, 10);
+      const workspaceRef = React.useRef(null);
+      const [resizing, setResizing] = useState(null); // 'left' | 'right' | null
+      const [showConfirmModal, setShowConfirmModal] = useState(false);
 
       // Chat state
       const [chatMessages, setChatMessages] = useState([
@@ -497,6 +504,90 @@
         }
       }, [autoContinue, awaitingApproval, currentIndex]);
 
+      // Actions reused by toolbar and modal
+      const proceedCurrentFile = async () => {
+        if (!(awaitingApproval && plannedFiles[currentIndex])) return;
+        setAwaitingApproval(false);
+        const ok = await generateFileAtIndex(currentIndex, projectStructure);
+        if (ok) {
+          const next = currentIndex + 1;
+          if (next < plannedFiles.length) {
+            setCurrentIndex(next);
+            setAwaitingApproval(true);
+            setProgress(`🟡 Ready to generate: ${plannedFiles[next].path} (${next+1}/${plannedFiles.length})`);
+          } else {
+            setProgress('✅ Project complete!');
+            setCreating(false);
+          }
+        } else {
+          setAwaitingApproval(true);
+        }
+      };
+
+      const regenerateCurrentFile = async () => {
+        if (!plannedFiles[currentIndex]) return;
+        setAwaitingApproval(false);
+        await generateFileAtIndex(currentIndex, projectStructure);
+        setAwaitingApproval(true);
+      };
+
+      const skipCurrentFile = () => {
+        const next = currentIndex + 1;
+        if (next < plannedFiles.length) {
+          setCurrentIndex(next);
+          setProgress(`🟡 Skipped. Ready: ${plannedFiles[next].path} (${next+1}/${plannedFiles.length})`);
+        } else {
+          setProgress('✅ Project complete!');
+          setCreating(false);
+        }
+      };
+
+      // Persist widths
+      useEffect(() => {
+        localStorage.setItem('lab_leftWidth', String(leftWidth));
+        localStorage.setItem('lab_centerWidth', String(centerWidth));
+      }, [leftWidth, centerWidth]);
+
+      // Show confirm modal when awaiting approval
+      useEffect(() => {
+        setShowConfirmModal(awaitingApproval);
+      }, [awaitingApproval]);
+
+      // Mouse move handlers for resizers
+      useEffect(() => {
+        const onMove = (e) => {
+          if (!resizing || !workspaceRef.current) return;
+          const rect = workspaceRef.current.getBoundingClientRect();
+          const x = e.clientX - rect.left; // px from left inside workspace
+          const pct = (x / rect.width) * 100; // percent across
+          const minLeft = 14, maxLeft = 40;
+          const minCenter = 26, maxCenter = 70;
+          if (resizing === 'left') {
+            const newLeft = Math.min(Math.max(pct, minLeft), maxLeft);
+            // Keep center the same unless it squashes right too much
+            const remaining = 100 - newLeft - centerWidth;
+            if (remaining < 14) {
+              const adjustCenter = centerWidth - (14 - remaining);
+              setCenterWidth(Math.min(Math.max(adjustCenter, minCenter), maxCenter));
+            }
+            setLeftWidth(newLeft);
+          } else if (resizing === 'right') {
+            // Right handle sits at left + center
+            let newCenter = Math.min(Math.max(pct - leftWidth, minCenter), maxCenter);
+            const remaining = 100 - leftWidth - newCenter;
+            if (remaining < 14) newCenter = 100 - leftWidth - 14;
+            setCenterWidth(newCenter);
+          }
+        };
+        const onUp = () => setResizing(null);
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+        return () => {
+          window.removeEventListener('mousemove', onMove);
+          window.removeEventListener('mouseup', onUp);
+        };
+      }, [resizing, leftWidth, centerWidth]);
+
       return (
         <div className="w-full min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
           {/* Header */}
@@ -623,21 +714,22 @@
               </div>
             </div>
 
-            {/* Right: Code Editor */}
-            <div className="flex-1 flex">
+            {/* Right: Code Editor (Resizable 3-panel) */}
+            <div className="flex-1" ref={workspaceRef}>
               {files.length > 0 ? (
                 <>
-                  {/* File Tree */}
-                  <div style={{ width: '250px' }}>
-                    <FileTree
-                      files={files}
-                      activeFile={activeFile}
-                      onFileSelect={handleFileSelect}
-                    />
-                  </div>
+                  <div className="grid h-full" style={{ gridTemplateColumns: `${leftWidth}% ${centerWidth}% ${100 - leftWidth - centerWidth}%` }}>
+                    {/* File Tree */}
+                    <div className="min-w-[180px] overflow-hidden">
+                      <FileTree
+                        files={files}
+                        activeFile={activeFile}
+                        onFileSelect={handleFileSelect}
+                      />
+                    </div>
 
-                  {/* Editor + Preview */}
-                  <div className="flex-1 flex flex-col">
+                    {/* Editor Column */}
+                    <div className="flex flex-col overflow-hidden">
                     {/* Approval bar */}
                     {plannedFiles.length > 0 && currentIndex >= 0 && currentIndex < plannedFiles.length && (
                       <div className="flex items-center justify-between px-3 py-2 bg-slate-900 border-b border-slate-800">
@@ -651,39 +743,9 @@
                             <input type="checkbox" checked={autoContinue} onChange={(e)=>setAutoContinue(e.target.checked)} />
                             Auto-continue
                           </label>
-                          <button disabled={!awaitingApproval} onClick={async ()=>{
-                            setAwaitingApproval(false);
-                            const ok = await generateFileAtIndex(currentIndex, projectStructure);
-                            if (ok) {
-                              const next = currentIndex + 1;
-                              if (next < plannedFiles.length) {
-                                setCurrentIndex(next);
-                                setAwaitingApproval(true);
-                                setProgress(`🟡 Ready to generate: ${plannedFiles[next].path} (${next+1}/${plannedFiles.length})`);
-                              } else {
-                                setProgress('✅ Project complete!');
-                                setCreating(false);
-                              }
-                            } else {
-                              setAwaitingApproval(true);
-                            }
-                          }} className="px-3 py-1.5 text-xs rounded bg-green-600 hover:bg-green-700 text-white disabled:opacity-40">Approve & Generate</button>
-                          <button disabled={!awaitingApproval} onClick={async ()=>{
-                            // Regenerate current file (replace if exists)
-                            setAwaitingApproval(false);
-                            const ok = await generateFileAtIndex(currentIndex, projectStructure);
-                            setAwaitingApproval(true);
-                          }} className="px-3 py-1.5 text-xs rounded bg-slate-800 border border-slate-700 text-gray-300 disabled:opacity-40">Regenerate</button>
-                          <button disabled={!awaitingApproval} onClick={()=>{
-                            const next = currentIndex + 1;
-                            if (next < plannedFiles.length) {
-                              setCurrentIndex(next);
-                              setProgress(`🟡 Skipped. Ready: ${plannedFiles[next].path} (${next+1}/${plannedFiles.length})`);
-                            } else {
-                              setProgress('✅ Project complete!');
-                              setCreating(false);
-                            }
-                          }} className="px-3 py-1.5 text-xs rounded bg-red-600 hover:bg-red-700 text-white disabled:opacity-40">Skip</button>
+                          <button disabled={!awaitingApproval} onClick={proceedCurrentFile} className="px-3 py-1.5 text-xs rounded bg-green-600 hover:bg-green-700 text-white disabled:opacity-40">Approve & Generate</button>
+                          <button disabled={!awaitingApproval} onClick={regenerateCurrentFile} className="px-3 py-1.5 text-xs rounded bg-slate-800 border border-slate-700 text-gray-300 disabled:opacity-40">Regenerate</button>
+                          <button disabled={!awaitingApproval} onClick={skipCurrentFile} className="px-3 py-1.5 text-xs rounded bg-red-600 hover:bg-red-700 text-white disabled:opacity-40">Skip</button>
                         </div>
                       </div>
                     )}
@@ -696,17 +758,23 @@
                     />
 
                     {/* Editor & Preview Split */}
-                    <div className="flex-1 flex">
-                      <div className="w-1/2">
-                        <CodeEditor
-                          file={activeFile}
-                          onEdit={handleFileEdit}
-                        />
-                      </div>
-                      <div className="w-1/2 border-l border-slate-800">
-                        <LivePreview file={activeFile} />
+                      <div className="flex-1 overflow-hidden">
+                        <CodeEditor file={activeFile} onEdit={handleFileEdit} />
                       </div>
                     </div>
+
+                    {/* Preview Column */}
+                    <div className="border-l border-slate-800 overflow-hidden">
+                      <LivePreview file={activeFile} />
+                    </div>
+                  </div>
+
+                  {/* Resizers */}
+                  <div onMouseDown={()=>setResizing('left')} className="absolute top-0 bottom-0" style={{ left: `calc(${leftWidth}% - 4px)`, width: '8px', cursor: 'col-resize' }}>
+                    <div className="h-full w-px mx-auto bg-gradient-to-b from-cyan-500/50 via-amber-500/50 to-cyan-500/50" />
+                  </div>
+                  <div onMouseDown={()=>setResizing('right')} className="absolute top-0 bottom-0" style={{ left: `calc(${leftWidth + centerWidth}% - 4px)`, width: '8px', cursor: 'col-resize' }}>
+                    <div className="h-full w-px mx-auto bg-gradient-to-b from-cyan-500/50 via-amber-500/50 to-cyan-500/50" />
                   </div>
                 </>
               ) : (
@@ -758,6 +826,38 @@
                 </div>
               )}
             </div>
+
+            {/* Premium Confirmation Modal */}
+            {showConfirmModal && plannedFiles[currentIndex] && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center">
+                <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={()=>setShowConfirmModal(false)} />
+                <div className="relative w-full max-w-xl mx-4 rounded-2xl border border-slate-700 bg-gradient-to-br from-slate-950/95 via-slate-900/95 to-slate-950/95 shadow-2xl">
+                  <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+                    <div className="text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-amber-300">Approve Generation</div>
+                    <button onClick={()=>setShowConfirmModal(false)} className="text-gray-400 hover:text-gray-200">✕</button>
+                  </div>
+                  <div className="px-6 py-5 space-y-4">
+                    <div className="text-xs text-gray-400">Next file to generate</div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="px-2 py-1 rounded bg-slate-800 text-cyan-300 border border-slate-700 font-mono">{plannedFiles[currentIndex].path}</span>
+                      <span className="text-gray-500">({currentIndex + 1}/{plannedFiles.length})</span>
+                    </div>
+                    <div className="text-xs text-gray-500">Type: {plannedFiles[currentIndex].type || 'file'} · {plannedFiles[currentIndex].description || 'No description provided'}</div>
+                    <div className="flex items-center justify-between pt-2">
+                      <label className="flex items-center gap-2 text-xs text-gray-400">
+                        <input type="checkbox" checked={autoContinue} onChange={(e)=>setAutoContinue(e.target.checked)} />
+                        Auto-continue after this file
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <button onClick={skipCurrentFile} className="px-3 py-1.5 text-xs rounded bg-slate-800 border border-slate-700 text-gray-300">Skip</button>
+                        <button onClick={regenerateCurrentFile} className="px-3 py-1.5 text-xs rounded bg-slate-800 border border-slate-700 text-gray-300">Regenerate</button>
+                        <button onClick={()=>{ setShowConfirmModal(false); proceedCurrentFile(); }} className="px-4 py-1.5 text-xs rounded bg-gradient-to-r from-cyan-600 to-amber-600 hover:from-cyan-500 hover:to-amber-500 text-white">Approve & Generate</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
           </div>
         </div>
