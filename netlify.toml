@@ -15,8 +15,8 @@
   node_bundler = "esbuild"
 
 [dev]
-  # Increase function timeout for local development (AI generation takes 20-40s)
-  timeout = 60
+  # Increase function timeout for local development (AI generation can take up to 2-3 minutes)
+  timeout = 300  # 5 minutes
   
 [[redirects]]
   from = "/x402/quote"
