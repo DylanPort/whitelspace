@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Tools Lab - Full Stack</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    @keyframes spin-flip-zoom {
+      0% { transform: rotate(0deg) rotateY(0deg) scale(1); }
+      25% { transform: rotate(90deg) rotateY(180deg) scale(1.15); }
+      50% { transform: rotate(180deg) rotateY(360deg) scale(1); }
+      75% { transform: rotate(270deg) rotateY(540deg) scale(1.15); }
+      100% { transform: rotate(360deg) rotateY(720deg) scale(1); }
+    }
+    @keyframes progress-slide {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    .scrollbar-thin::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .scrollbar-thin::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.5);
+    }
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, rgba(6, 182, 212, 0.5), rgba(251, 191, 36, 0.5));
+      border-radius: 3px;
+    }
+    .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, rgba(6, 182, 212, 0.8), rgba(251, 191, 36, 0.8));
+    }
+  </style>
+</head>
+<body class="bg-black">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // =====================================================
+    // FILE TREE COMPONENT
+    // =====================================================
+    function FileTree({ files, activeFile, onFileSelect }) {
+      const [expandedFolders, setExpandedFolders] = useState(new Set(['']));
+
+      const buildTree = (files) => {
+        const tree = {};
+        files.forEach(file => {
+          const parts = file.path.split('/');
+          let current = tree;
+          parts.forEach((part, idx) => {
+            if (idx === parts.length - 1) {
+              current[part] = file;
+            } else {
+              current[part] = current[part] || {};
+              current = current[part];
+            }
+          });
+        });
+        return tree;
+      };
+
+      const toggleFolder = (path) => {
+        const newExpanded = new Set(expandedFolders);
+        if (newExpanded.has(path)) {
+          newExpanded.delete(path);
+        } else {
+          newExpanded.add(path);
+        }
+        setExpandedFolders(newExpanded);
+      };
+
+      const getFileIcon = (filename) => {
+        if (filename.endsWith('.html')) return '📄';
+        if (filename.endsWith('.js')) return '📜';
+        if (filename.endsWith('.json')) return '⚙️';
+        if (filename.endsWith('.md')) return '📖';
+        if (filename.endsWith('.css')) return '🎨';
+        if (filename.endsWith('.env')) return '🔐';
+        return '📃';
+      };
+
+      const renderTree = (node, path = '', level = 0) => {
+        return Object.entries(node).map(([key, value]) => {
+          const isFile = value.path !== undefined;
+          const fullPath = path ? `${path}/${key}` : key;
+          
+          if (isFile) {
+            return (
+              <div
+                key={value.path}
+                onClick={() => onFileSelect(value)}
+                className={`
+                  py-1.5 px-2 text-xs cursor-pointer transition-all flex items-center gap-2 rounded-md
+                  ${activeFile?.path === value.path 
+                    ? 'bg-gradient-to-r from-cyan-500/30 to-amber-500/30 text-white border-l-2 border-cyan-400' 
+                    : 'hover:bg-slate-800 text-gray-400 hover:text-gray-200'}
+                `}
+                style={{ paddingLeft: `${(level + 1) * 12 + 8}px` }}
+              >
+                <span>{getFileIcon(key)}</span>
+                <span className="font-mono">{key}</span>
+                <span className="ml-auto text-[10px] text-gray-600">{value.size || 0}b</span>
+              </div>
+            );
+          } else {
+            const isExpanded = expandedFolders.has(fullPath);
+            return (
+              <div key={fullPath}>
+                <div
+                  onClick={() => toggleFolder(fullPath)}
+                  className="py-1.5 px-2 text-xs cursor-pointer text-gray-500 hover:text-gray-300 hover:bg-slate-800/50 flex items-center gap-2 rounded-md transition-all"
+                  style={{ paddingLeft: `${level * 12 + 8}px` }}
+                >
+                  <span className="transition-transform" style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+                  <span>📁</span>
+                  <span className="font-mono font-semibold">{key}/</span>
+                </div>
+                {isExpanded && (
+                  <div>
+                    {renderTree(value, fullPath, level + 1)}
+                  </div>
+                )}
+              </div>
+            );
+          }
+        });
+      };
+
+      const tree = buildTree(files);
+
+      return (
+        <div className="bg-slate-950 border-r border-slate-800 overflow-auto h-full">
+          <div className="sticky top-0 bg-slate-900 px-3 py-2 border-b border-slate-800 flex items-center justify-between">
+            <span className="text-xs text-gray-500 font-bold tracking-wider">FILES</span>
+            <span className="text-[10px] text-gray-600">{files.length} files</span>
+          </div>
+          <div className="p-2">
+            {renderTree(tree)}
+          </div>
+        </div>
+      );
+    }
+
+    // =====================================================
+    // FILE TABS COMPONENT
+    // =====================================================
+    function FileTabs({ files, activeFile, onFileSelect, onCloseFile }) {
+      return (
+        <div className="flex gap-1 bg-slate-900 px-2 py-1 border-b border-slate-700 overflow-x-auto scrollbar-thin">
+          {files.map(file => (
+            <div
+              key={file.path}
+              className={`
+                group flex items-center gap-2 px-3 py-1.5 text-xs rounded-t transition-all cursor-pointer whitespace-nowrap
+                ${activeFile?.path === file.path 
+                  ? 'bg-slate-950 text-cyan-400 border-t border-l border-r border-slate-700 font-semibold' 
+                  : 'text-gray-500 hover:text-gray-300 hover:bg-slate-800'}
+              `}
+              onClick={() => onFileSelect(file)}
+            >
+              <span className="font-mono">{file.path.split('/').pop()}</span>
+              {onCloseFile && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCloseFile(file);
+                  }}
+                  className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 transition-all"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // =====================================================
+    // CODE EDITOR COMPONENT
+    // =====================================================
+    function CodeEditor({ file, onEdit }) {
+      if (!file) {
+        return (
+          <div className="flex-1 flex items-center justify-center text-gray-600">
+            <div className="text-center">
+              <div className="text-4xl mb-4">📂</div>
+              <div>Select a file to view</div>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="flex-1 flex flex-col bg-slate-950">
+          <div className="sticky top-0 bg-slate-900 px-4 py-2 border-b border-slate-700 flex items-center justify-between">
+            <span className="text-xs text-gray-400 font-mono">{file.path}</span>
+            <span className="text-[10px] text-gray-600">{file.type || 'file'}</span>
+          </div>
+          <div className="flex-1 overflow-auto">
+            <textarea
+              value={file.content}
+              onChange={(e) => onEdit(file.path, e.target.value)}
+              className="w-full h-full p-4 bg-transparent text-xs text-gray-300 font-mono leading-relaxed resize-none focus:outline-none"
+              spellCheck="false"
+            />
+          </div>
+        </div>
+      );
+    }
+
+    // =====================================================
+    // LIVE PREVIEW COMPONENT
+    // =====================================================
+    function LivePreview({ file }) {
+      if (!file || !file.path.endsWith('.html')) {
+        return (
+          <div className="flex items-center justify-center text-gray-600 bg-slate-900">
+            <div className="text-center">
+              <div className="text-4xl mb-4">👁️</div>
+              <div className="text-sm">Preview available for HTML files only</div>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="bg-white h-full">
+          <div className="bg-slate-900 px-4 py-2 border-b border-slate-700">
+            <span className="text-xs text-gray-400 font-mono">👁️ Live Preview</span>
+          </div>
+          <iframe
+            srcDoc={file.content}
+            title="Preview"
+            className="w-full h-full"
+            style={{ height: 'calc(100% - 37px)' }}
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals"
+          />
+        </div>
+      );
+    }
+
+    // =====================================================
+    // MAIN FULL-STACK LAB COMPONENT
+    // =====================================================
+    function FullStackPrivacyToolsLab() {
+      // State
+      const [description, setDescription] = useState('');
+      const [category, setCategory] = useState('General');
+      const [includeBackend, setIncludeBackend] = useState(true);
+      const [creating, setCreating] = useState(false);
+      const [progress, setProgress] = useState('');
+      const [error, setError] = useState(null);
+
+      // Project state - Initialize with placeholder to show workspace structure from start
+      const [files, setFiles] = useState([
+        { path: 'README.md', content: '# Your Privacy Tool Workspace\n\n👈 Chat with Whistle AI to describe your tool\n\n⚙️ Click Generate to build it\n\n📁 Files will appear here as they\'re created', type: 'markdown', size: 150 }
+      ]);
+      const [activeFile, setActiveFile] = useState(null);
+      const [projectStructure, setProjectStructure] = useState(null);
+      const [openTabs, setOpenTabs] = useState([]);
+
+      // Chat state
+      const [chatMessages, setChatMessages] = useState([
+        { role: 'assistant', content: '👋 Hi! I\'m **Whistle AI**, your privacy tool architect.\n\n🎯 I build **REAL working privacy tools** with actual code:\n✅ Encryption tools (AES-256, RSA, PBKDF2)\n✅ Backend APIs (Express routes, authentication)\n✅ Crypto modules (key derivation, signing, hashing)\n✅ Privacy utilities (metadata stripping, steganography)\n✅ Full projects ready to integrate into Ghost Whistle\n\n💡 **Try these:**\n• "Build a file encryptor with chunked AES-256 encryption"\n• "Create a password manager with PBKDF2 key derivation"\n• "Build an image metadata stripper with EXIF removal"\n• "Make a steganography tool to hide messages in images"\n\nDescribe the privacy tool you want to build!' }
+      ]);
+      const [userInput, setUserInput] = useState('');
+
+      const API_BASE = window.location.hostname === 'localhost'
+        ? 'http://localhost:8888/.netlify/functions'
+        : '/.netlify/functions';
+
+      // Handle chat
+      const handleChat = async () => {
+        if (!userInput.trim()) return;
+
+        const newMessages = [...chatMessages, { role: 'user', content: userInput }];
+        setChatMessages(newMessages);
+        setUserInput('');
+        setDescription(newMessages.filter(m => m.role === 'user').map(m => m.content).join('\n'));
+
+        // Call real AI chat
+        try {
+          const res = await fetch(`${API_BASE}/chat-with-ai`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              messages: newMessages.map(m => ({ role: m.role, content: m.content })),
+              hasPreview: files.length > 0
+            })
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            setChatMessages([...newMessages, {
+              role: 'assistant',
+              content: data.message || 'Great idea! Ready to build? Click ⚙️ Generate.'
+            }]);
+          } else {
+            // Fallback on error
+            setChatMessages([...newMessages, {
+              role: 'assistant',
+              content: 'I understand. Ready to build? Click ⚙️ Generate to create your full-stack privacy tool.'
+            }]);
+          }
+        } catch (err) {
+          console.error('Chat error:', err);
+          setChatMessages([...newMessages, {
+            role: 'assistant',
+            content: 'Great idea! Ready to build? Click ⚙️ Generate to create your full-stack privacy tool.'
+          }]);
+        }
+      };
+
+      // Generate project CURSOR-STYLE: Plan structure, then build file-by-file
+      const handleGenerate = async () => {
+        if (!description || description.length < 20) {
+          setError('Description must be at least 20 characters');
+          return;
+        }
+
+        setCreating(true);
+        setError(null);
+        setProgress('🧠 Planning project structure...');
+        
+        // Clear placeholder
+        setFiles([]);
+        setActiveFile(null);
+        setOpenTabs([]);
+        setProjectStructure(null);
+
+        try {
+          // STEP 1: Generate project structure (quick, <5 seconds)
+          setProgress('📋 AI is planning your project...');
+          const structureRes = await fetch(`${API_BASE}/create-fullstack-tool`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              description,
+              category,
+              includeBackend,
+              structureOnly: true // Just get the plan, don't generate files
+            })
+          });
+
+          if (!structureRes.ok) {
+            throw new Error(`Planning failed: ${structureRes.status}`);
+          }
+
+          const structureData = await structureRes.json();
+          const projectPlan = structureData.tool || structureData;
+
+          setProjectStructure(projectPlan);
+          const filesToGenerate = projectPlan.files || [];
+
+          console.log(`📋 Project plan: ${filesToGenerate.length} files to build`);
+
+          // STEP 2: Generate files ONE AT A TIME (Cursor-style)
+          const generatedFiles = [];
+
+          for (let i = 0; i < filesToGenerate.length; i++) {
+            const fileSpec = filesToGenerate[i];
+            
+            setProgress(`✍️ Building ${fileSpec.path}... (${i + 1}/${filesToGenerate.length})`);
+
+            // Retry logic for each file (up to 2 attempts)
+            let fileGenerated = false;
+            for (let attempt = 1; attempt <= 2 && !fileGenerated; attempt++) {
+              try {
+                const fileRes = await fetch(`${API_BASE}/generate-single-file`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    fileSpec,
+                    projectContext: {
+                      projectName: projectPlan.projectName || 'privacy-tool',
+                      description: projectPlan.description || description,
+                      techStack: projectPlan.techStack || ['JavaScript', 'Node.js']
+                    }
+                  })
+                });
+
+                if (fileRes.ok) {
+                  const fileData = await fileRes.json();
+                  
+                  if (fileData.success && fileData.file) {
+                    generatedFiles.push(fileData.file);
+                    
+                    // LIVE UPDATE: Add file to workspace immediately
+                    setFiles([...generatedFiles]);
+                    
+                    // Auto-select first file
+                    if (i === 0) {
+                      setActiveFile(fileData.file);
+                      setOpenTabs([fileData.file]);
+                    }
+                    
+                    console.log(`✅ ${fileSpec.path} (${fileData.file.size} chars)`);
+                    fileGenerated = true;
+                  }
+                } else if (attempt < 2) {
+                  console.log(`⏳ Retry ${fileSpec.path} (attempt ${attempt + 1})`);
+                  await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+              } catch (error) {
+                console.error(`❌ Error generating ${fileSpec.path}:`, error);
+                if (attempt < 2) {
+                  console.log(`⏳ Retry ${fileSpec.path} (attempt ${attempt + 1})`);
+                  await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+              }
+            }
+            
+            if (!fileGenerated) {
+              console.error(`⚠️ Failed to generate ${fileSpec.path} after 2 attempts, continuing...`);
+            }
+            
+            // Small delay between files for visual feedback
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+
+          // ALWAYS ensure we have a working HTML interface
+          const hasHTML = generatedFiles.some(f => f.path.endsWith('.html'));
+          if (!hasHTML) {
+            console.log('⚠️ No HTML file generated, creating minimal interface...');
+            const projectName = projectPlan.projectName || 'Privacy Tool';
+            const projectDesc = projectPlan.description || description;
+            const fileList = generatedFiles.map(f => f.path).join(', ');
+            
+            const htmlContent = '<!DOCTYPE html>\n' +
+              '<html lang="en">\n' +
+              '<head>\n' +
+              '  <meta charset="UTF-8">\n' +
+              '  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
+              '  <title>' + projectName + '</title>\n' +
+              '  <script src="https://cdn.tailwindcss.com"></script>\n' +
+              '</head>\n' +
+              '<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center">\n' +
+              '  <div class="max-w-2xl p-8">\n' +
+              '    <h1 class="text-3xl font-bold mb-4">🔐 ' + projectName + '</h1>\n' +
+              '    <p class="text-gray-400 mb-6">' + projectDesc + '</p>\n' +
+              '    <div class="bg-gray-800 p-6 rounded-lg">\n' +
+              '      <p class="text-sm text-gray-500 mb-4">Generated files: ' + fileList + '</p>\n' +
+              '      <div class="space-y-4">\n' +
+              '        <div>\n' +
+              '          <label class="block text-sm mb-2">Input:</label>\n' +
+              '          <input type="text" id="input" class="w-full px-4 py-2 bg-gray-700 rounded" placeholder="Enter data...">\n' +
+              '        </div>\n' +
+              '        <button onclick="processData()" class="w-full px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded font-semibold">Process</button>\n' +
+              '        <div>\n' +
+              '          <label class="block text-sm mb-2">Output:</label>\n' +
+              '          <pre id="output" class="bg-gray-700 p-4 rounded text-xs">Result will appear here...</pre>\n' +
+              '        </div>\n' +
+              '      </div>\n' +
+              '    </div>\n' +
+              '  </div>\n' +
+              '  <script>\n' +
+              '    function processData() {\n' +
+              '      const input = document.getElementById("input").value;\n' +
+              '      const output = document.getElementById("output");\n' +
+              '      if (input) {\n' +
+              '        output.textContent = "Input received: " + input + "\\n\\nIntegrate the generated modules to add real processing.";\n' +
+              '      } else {\n' +
+              '        output.textContent = "Please enter some data to process.";\n' +
+              '      }\n' +
+              '    }\n' +
+              '  </script>\n' +
+              '</body>\n' +
+              '</html>';
+            
+            const minimalHTML = {
+              path: 'interface/index.html',
+              content: htmlContent,
+              type: 'frontend',
+              size: htmlContent.length
+            };
+            generatedFiles.push(minimalHTML);
+            setFiles([...generatedFiles]);
+          }
+
+          setProgress('✅ Project complete!');
+          
+          setTimeout(() => {
+            setCreating(false);
+            setProgress('');
+          }, 2000);
+
+        } catch (err) {
+          console.error('Generation error:', err);
+          setError(`❌ ${err.message}`);
+          setProgress('');
+          setCreating(false);
+        }
+      };
+
+      // File operations
+      const handleFileSelect = (file) => {
+        setActiveFile(file);
+        if (!openTabs.find(f => f.path === file.path)) {
+          setOpenTabs([...openTabs, file]);
+        }
+      };
+
+      const handleCloseTab = (file) => {
+        const newTabs = openTabs.filter(f => f.path !== file.path);
+        setOpenTabs(newTabs);
+        if (activeFile?.path === file.path && newTabs.length > 0) {
+          setActiveFile(newTabs[0]);
+        }
+      };
+
+      const handleFileEdit = (path, content) => {
+        const updatedFiles = files.map(f =>
+          f.path === path ? { ...f, content } : f
+        );
+        setFiles(updatedFiles);
+        if (activeFile?.path === path) {
+          setActiveFile({ ...activeFile, content });
+        }
+      };
+
+      // Download project as ZIP
+      const handleDownloadZip = async () => {
+        if (files.length === 0) return;
+
+        const zip = new JSZip();
+        
+        files.forEach(file => {
+          zip.file(file.path, file.content);
+        });
+
+        const blob = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${projectStructure?.projectName || 'privacy-tool'}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      };
+
+      return (
+        <div className="w-full min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+          {/* Header */}
+          <div className="border-b border-slate-800 bg-slate-950/80 backdrop-blur-xl sticky top-0 z-50">
+            <div className="max-w-[1920px] mx-auto px-8 py-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-amber-400 to-yellow-600 mb-1">
+                    🛠️ Privacy Tools Lab - Full Stack
+                  </h1>
+                  <p className="text-gray-500 text-xs">Build complete privacy applications with frontend + backend</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {files.length > 0 && (
+                    <>
+                      <button
+                        onClick={handleDownloadZip}
+                        className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm transition-all flex items-center gap-2"
+                      >
+                        <span>⇩</span>
+                        <span>Download ZIP</span>
+                      </button>
+                      <div className="px-4 py-2 rounded-lg bg-slate-800/50 border border-slate-700 text-gray-300 text-sm">
+                        {files.length} files
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="flex" style={{ height: 'calc(100vh - 100px)' }}>
+            
+            {/* Left: Chat Panel */}
+            <div className="w-96 bg-slate-900/30 backdrop-blur-md border-r border-slate-800 flex flex-col">
+              <div className="flex-shrink-0 px-6 py-4 border-b border-slate-800/50 bg-slate-950/50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-amber-500/20 border border-cyan-500/30 flex items-center justify-center">
+                    <span className="text-xl">🤖</span>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-cyan-400">Whistle AI</h3>
+                    <p className="text-[10px] text-gray-600">Full-Stack Developer</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Chat Messages */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-3">
+                {chatMessages.map((msg, idx) => (
+                  <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[85%] px-4 py-2.5 rounded-xl ${
+                      msg.role === 'user'
+                        ? 'bg-gradient-to-r from-cyan-600/90 to-amber-600/90 text-white'
+                        : 'bg-slate-800/60 border border-slate-700/50 text-gray-200'
+                    }`}>
+                      <div className="text-sm whitespace-pre-wrap">{msg.content}</div>
+                    </div>
+                  </div>
+                ))}
+
+                {creating && (
+                  <div className="text-center py-4">
+                    <div className="inline-block px-4 py-2 bg-slate-800/60 rounded-lg border border-cyan-500/30">
+                      <div className="text-xs text-cyan-400">{progress}</div>
+                    </div>
+                  </div>
+                )}
+
+                {error && (
+                  <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3 text-red-300 text-xs">
+                    ❌ {error}
+                  </div>
+                )}
+              </div>
+
+              {/* Input */}
+              <div className="flex-shrink-0 p-6 border-t border-slate-800/50 bg-slate-950/30 space-y-3">
+                <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                  <input
+                    type="checkbox"
+                    id="include-backend"
+                    checked={includeBackend}
+                    onChange={(e) => setIncludeBackend(e.target.checked)}
+                    className="w-4 h-4 accent-cyan-500"
+                  />
+                  <label htmlFor="include-backend" className="text-xs text-gray-400 cursor-pointer">
+                    Include Backend (APIs, routes, server)
+                  </label>
+                </div>
+
+                <textarea
+                  value={userInput}
+                  onChange={(e) => setUserInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleChat();
+                    }
+                  }}
+                  placeholder="Describe your privacy tool..."
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-xl bg-slate-800/50 border border-slate-700/50 text-white text-sm resize-none focus:border-cyan-500/50 focus:outline-none transition-all placeholder-gray-600"
+                />
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleChat}
+                    disabled={!userInput.trim()}
+                    className="flex-1 py-2.5 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/50 text-cyan-400 disabled:opacity-30 text-sm"
+                  >
+                    <span className="mr-1">⚡</span> Send
+                  </button>
+                  <button
+                    onClick={handleGenerate}
+                    disabled={creating || !description || description.length < 20}
+                    className="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-cyan-600 to-amber-600 hover:from-cyan-500 hover:to-amber-500 text-white disabled:opacity-30 text-sm"
+                  >
+                    {creating ? '⏳ Building...' : <><span className="mr-1">⚙️</span> Generate</>}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Code Editor */}
+            <div className="flex-1 flex">
+              {files.length > 0 ? (
+                <>
+                  {/* File Tree */}
+                  <div style={{ width: '250px' }}>
+                    <FileTree
+                      files={files}
+                      activeFile={activeFile}
+                      onFileSelect={handleFileSelect}
+                    />
+                  </div>
+
+                  {/* Editor + Preview */}
+                  <div className="flex-1 flex flex-col">
+                    {/* Tabs */}
+                    <FileTabs
+                      files={openTabs}
+                      activeFile={activeFile}
+                      onFileSelect={handleFileSelect}
+                      onCloseTab={handleCloseTab}
+                    />
+
+                    {/* Editor & Preview Split */}
+                    <div className="flex-1 flex">
+                      <div className="w-1/2">
+                        <CodeEditor
+                          file={activeFile}
+                          onEdit={handleFileEdit}
+                        />
+                      </div>
+                      <div className="w-1/2 border-l border-slate-800">
+                        <LivePreview file={activeFile} />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-slate-950 to-slate-900">
+                  <div className="text-center max-w-2xl px-8">
+                    {creating ? (
+                      <>
+                        <div className="relative w-32 h-32 mx-auto mb-8">
+                          <img 
+                            src="whistel_logo_top_right_2048.png" 
+                            alt="Building..."
+                            className="w-full h-full object-contain animate-pulse"
+                            style={{
+                              animation: 'spin-flip-zoom 2s ease-in-out infinite',
+                              filter: 'drop-shadow(0 0 30px rgba(6, 182, 212, 0.6)) drop-shadow(0 0 50px rgba(251, 191, 36, 0.4))'
+                            }}
+                          />
+                        </div>
+                        <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-amber-400 mb-4">
+                          {progress || 'Whistle AI is building...'}
+                        </div>
+                        <div className="text-sm text-gray-500 mb-8">
+                          Files will appear here as they're created
+                        </div>
+                        {/* Progress bar */}
+                        <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-cyan-500 to-amber-500 animate-pulse"
+                            style={{
+                              width: '100%',
+                              animation: 'progress-slide 2s ease-in-out infinite'
+                            }}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-6xl mb-4">🧪</div>
+                        <div className="text-lg mb-2 text-gray-300">Your Full-Stack Workspace</div>
+                        <div className="text-sm text-gray-500 mb-6">
+                          Chat with Whistle AI to design your privacy tool, then click Generate to create a complete project with frontend and backend
+                        </div>
+                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800/50 rounded-lg border border-slate-700">
+                          <span className="text-xs text-gray-400">✨ Full-stack generation enabled</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+          </div>
+        </div>
+      );
+    }
+
+    // Render
+    ReactDOM.render(<FullStackPrivacyToolsLab />, document.getElementById('root'));
+  </script>
+</body>
+</html>
+
