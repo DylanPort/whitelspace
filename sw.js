@@ -1,5 +1,5 @@
-// Ghost Whistle Service Worker v1.5
-const CACHE_NAME = 'ghost-whistle-v1.5.1-premium';
+// Ghost Whistle Service Worker v1.6
+const CACHE_NAME = 'ghost-whistle-v1.6.0-premium';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -61,8 +61,9 @@ self.addEventListener('fetch', (event) => {
   if (event.request.url.includes('/.netlify/functions/')) {
     return; // let the network handle it; avoid SW interference
   }
-  // Network-first strategy for index.html to always get latest
-  if (event.request.url.includes('index.html') || event.request.url.endsWith('/')) {
+  // Network-first strategy for any HTML page to always get latest
+  const accept = event.request.headers.get('accept') || '';
+  if (accept.includes('text/html')) {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
