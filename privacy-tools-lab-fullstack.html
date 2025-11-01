@@ -370,44 +370,102 @@
             
             setProgress(`✍️ Building ${fileSpec.path}... (${i + 1}/${filesToGenerate.length})`);
 
-            // Generate single file
-            const fileRes = await fetch(`${API_BASE}/generate-single-file`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                fileSpec,
-                projectContext: {
-                  projectName: projectPlan.projectName || 'privacy-tool',
-                  description: projectPlan.description || description,
-                  techStack: projectPlan.techStack || ['JavaScript', 'Node.js']
-                }
-              })
-            });
+            // Retry logic for each file (up to 2 attempts)
+            let fileGenerated = false;
+            for (let attempt = 1; attempt <= 2 && !fileGenerated; attempt++) {
+              try {
+                const fileRes = await fetch(`${API_BASE}/generate-single-file`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    fileSpec,
+                    projectContext: {
+                      projectName: projectPlan.projectName || 'privacy-tool',
+                      description: projectPlan.description || description,
+                      techStack: projectPlan.techStack || ['JavaScript', 'Node.js']
+                    }
+                  })
+                });
 
-            if (fileRes.ok) {
-              const fileData = await fileRes.json();
-              
-              if (fileData.success && fileData.file) {
-                generatedFiles.push(fileData.file);
-                
-                // LIVE UPDATE: Add file to workspace immediately
-                setFiles([...generatedFiles]);
-                
-                // Auto-select first file
-                if (i === 0) {
-                  setActiveFile(fileData.file);
-                  setOpenTabs([fileData.file]);
+                if (fileRes.ok) {
+                  const fileData = await fileRes.json();
+                  
+                  if (fileData.success && fileData.file) {
+                    generatedFiles.push(fileData.file);
+                    
+                    // LIVE UPDATE: Add file to workspace immediately
+                    setFiles([...generatedFiles]);
+                    
+                    // Auto-select first file
+                    if (i === 0) {
+                      setActiveFile(fileData.file);
+                      setOpenTabs([fileData.file]);
+                    }
+                    
+                    console.log(`✅ ${fileSpec.path} (${fileData.file.size} chars)`);
+                    fileGenerated = true;
+                  }
+                } else if (attempt < 2) {
+                  console.log(`⏳ Retry ${fileSpec.path} (attempt ${attempt + 1})`);
+                  await new Promise(resolve => setTimeout(resolve, 2000));
                 }
-                
-                console.log(`✅ ${fileSpec.path} (${fileData.file.size} chars)`);
+              } catch (error) {
+                console.error(`❌ Error generating ${fileSpec.path}:`, error);
+                if (attempt < 2) {
+                  console.log(`⏳ Retry ${fileSpec.path} (attempt ${attempt + 1})`);
+                  await new Promise(resolve => setTimeout(resolve, 2000));
+                }
               }
-            } else {
-              console.error(`Failed to generate ${fileSpec.path}`);
-              // Continue with next file even if one fails
+            }
+            
+            if (!fileGenerated) {
+              console.error(`⚠️ Failed to generate ${fileSpec.path} after 2 attempts, continuing...`);
             }
             
             // Small delay between files for visual feedback
             await new Promise(resolve => setTimeout(resolve, 100));
+          }
+
+          // ALWAYS ensure we have a working HTML interface
+          const hasHTML = generatedFiles.some(f => f.path.endsWith('.html'));
+          if (!hasHTML) {
+            console.log('⚠️ No HTML file generated, creating minimal interface...');
+            const minimalHTML = {
+              path: 'interface/index.html',
+              content: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${projectPlan.projectName || 'Privacy Tool'}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center">
+  <div class="max-w-2xl p-8">
+    <h1 class="text-3xl font-bold mb-4">🔐 ${projectPlan.projectName || 'Privacy Tool'}</h1>
+    <p class="text-gray-400 mb-6">${projectPlan.description || description}</p>
+    <div class="bg-gray-800 p-6 rounded-lg">
+      <p class="text-sm text-gray-500 mb-4">This is a minimal interface. Integrate the tool files (${generatedFiles.map(f => f.path).join(', ')}) to add functionality.</p>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm mb-2">Input:</label>
+          <input type="text" class="w-full px-4 py-2 bg-gray-700 rounded" placeholder="Enter data...">
+        </div>
+        <button class="w-full px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded font-semibold">Process</button>
+        <div>
+          <label class="block text-sm mb-2">Output:</label>
+          <pre class="bg-gray-700 p-4 rounded text-xs">Result will appear here...</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`,
+              type: 'frontend',
+              size: 800
+            };
+            generatedFiles.push(minimalHTML);
+            setFiles([...generatedFiles]);
           }
 
           setProgress('✅ Project complete!');

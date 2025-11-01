@@ -133,7 +133,7 @@ OUTPUT ONLY THE CODE, NO MARKDOWN FENCES OR EXPLANATIONS.`;
         model: 'openai/gpt-4o-mini',
         messages: [{ role: 'user', content: filePrompt }],
         temperature: 0.8,
-        max_tokens: 2500
+        max_tokens: 1500  // Reduced for faster generation (5-8s per file)
       })
     });
 

@@ -143,8 +143,11 @@ STRUCTURE REQUIREMENTS:
 - /interface/ for minimal UI (not /pages/)
 - README.md for setup/usage docs
 
-⚠️ KEEP IT LEAN: Generate 3-5 essential files max. Quality over quantity.
+⚠️ KEEP IT LEAN: Generate 3-4 essential files max. Quality over quantity.
 Focus on the CORE functionality. Skip extras like separate test files or long docs.
+
+🚨 CRITICAL: ALWAYS include at least ONE HTML file (interface/index.html) for preview.
+The user needs a working visual interface to test the tool.
 
 OUTPUT ONLY THE JSON, NO MARKDOWN FENCES.`;
 
