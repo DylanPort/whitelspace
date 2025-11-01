@@ -442,26 +442,36 @@
     // MAIN FULL-STACK LAB COMPONENT
     // =====================================================
     function FullStackPrivacyToolsLab() {
-      // State
-      const [description, setDescription] = useState('');
-      const [category, setCategory] = useState('General');
-      const [includeBackend, setIncludeBackend] = useState(true);
+      // Helper to load from localStorage
+      const loadFromStorage = (key, defaultValue) => {
+        try {
+          const stored = localStorage.getItem(`lab_${key}`);
+          return stored ? JSON.parse(stored) : defaultValue;
+        } catch {
+          return defaultValue;
+        }
+      };
+
+      // State with persistence
+      const [description, setDescription] = useState(() => loadFromStorage('description', ''));
+      const [category, setCategory] = useState(() => loadFromStorage('category', 'General'));
+      const [includeBackend, setIncludeBackend] = useState(() => loadFromStorage('includeBackend', true));
       const [creating, setCreating] = useState(false);
       const [progress, setProgress] = useState('');
       const [error, setError] = useState(null);
 
       // Project state - Initialize with placeholder to show workspace structure from start
-      const [files, setFiles] = useState([
+      const [files, setFiles] = useState(() => loadFromStorage('files', [
         { path: 'README.md', content: '# WHISTLE PRIVACY TOOL WORKSPACE\n\n>> CHAT WITH AI TO DESCRIBE YOUR TOOL\n\n>> CLICK GENERATE TO BUILD\n\n>> FILES WILL APPEAR AS CREATED', type: 'markdown', size: 150 }
-      ]);
-      const [activeFile, setActiveFile] = useState(null);
-      const [projectStructure, setProjectStructure] = useState(null);
-      const [openTabs, setOpenTabs] = useState([]);
+      ]));
+      const [activeFile, setActiveFile] = useState(() => loadFromStorage('activeFile', null));
+      const [projectStructure, setProjectStructure] = useState(() => loadFromStorage('projectStructure', null));
+      const [openTabs, setOpenTabs] = useState(() => loadFromStorage('openTabs', []));
       // Incremental build flow (Cursor-style)
-      const [plannedFiles, setPlannedFiles] = useState([]); // array of file specs to build
-      const [currentIndex, setCurrentIndex] = useState(-1); // index into plannedFiles
+      const [plannedFiles, setPlannedFiles] = useState(() => loadFromStorage('plannedFiles', [])); // array of file specs to build
+      const [currentIndex, setCurrentIndex] = useState(() => loadFromStorage('currentIndex', -1)); // index into plannedFiles
       const [awaitingApproval, setAwaitingApproval] = useState(false); // waiting for user confirmation
-      const [autoContinue, setAutoContinue] = useState(false); // auto-approve remaining files
+      const [autoContinue, setAutoContinue] = useState(() => loadFromStorage('autoContinue', false)); // auto-approve remaining files
       // Resizable workspace widths (percentages)
       const [leftWidth, setLeftWidth] = useState(() => Number(localStorage.getItem('lab_leftWidth')) || 22);
       const [centerWidth, setCenterWidth] = useState(() => Number(localStorage.getItem('lab_centerWidth')) || 48);
@@ -491,14 +501,59 @@
       const [creatingPresentation, setCreatingPresentation] = useState(false);
 
       // Chat state
-      const [chatMessages, setChatMessages] = useState([
+      const [chatMessages, setChatMessages] = useState(() => loadFromStorage('chatMessages', [
         { role: 'assistant', content: '>> WHISTLE_AI INITIALIZED\n>> PRIVACY TOOL ARCHITECT ONLINE\n\n[CAPABILITIES]\n[+] ENCRYPTION TOOLS (AES-256, RSA, PBKDF2)\n[+] BACKEND APIS (EXPRESS, AUTH)\n[+] CRYPTO MODULES (KEY DERIVATION, SIGNING)\n[+] PRIVACY UTILS (METADATA STRIP, STEGO)\n[+] FULLSTACK INTEGRATION READY\n\n[EXAMPLES]\n> "Build file encryptor with AES-256"\n> "Create password manager with PBKDF2"\n> "Build metadata stripper with EXIF removal"\n> "Make steganography tool for images"\n\n>> AWAITING YOUR COMMAND...' }
-      ]);
+      ]));
       const [userInput, setUserInput] = useState('');
 
       const API_BASE = window.location.hostname === 'localhost'
         ? 'http://localhost:8888/.netlify/functions'
         : '/.netlify/functions';
+
+      // Persist state to localStorage
+      useEffect(() => {
+        localStorage.setItem('lab_files', JSON.stringify(files));
+      }, [files]);
+
+      useEffect(() => {
+        localStorage.setItem('lab_activeFile', JSON.stringify(activeFile));
+      }, [activeFile]);
+
+      useEffect(() => {
+        localStorage.setItem('lab_openTabs', JSON.stringify(openTabs));
+      }, [openTabs]);
+
+      useEffect(() => {
+        localStorage.setItem('lab_description', JSON.stringify(description));
+      }, [description]);
+
+      useEffect(() => {
+        localStorage.setItem('lab_category', JSON.stringify(category));
+      }, [category]);
+
+      useEffect(() => {
+        localStorage.setItem('lab_includeBackend', JSON.stringify(includeBackend));
+      }, [includeBackend]);
+
+      useEffect(() => {
+        localStorage.setItem('lab_projectStructure', JSON.stringify(projectStructure));
+      }, [projectStructure]);
+
+      useEffect(() => {
+        localStorage.setItem('lab_plannedFiles', JSON.stringify(plannedFiles));
+      }, [plannedFiles]);
+
+      useEffect(() => {
+        localStorage.setItem('lab_currentIndex', JSON.stringify(currentIndex));
+      }, [currentIndex]);
+
+      useEffect(() => {
+        localStorage.setItem('lab_autoContinue', JSON.stringify(autoContinue));
+      }, [autoContinue]);
+
+      useEffect(() => {
+        localStorage.setItem('lab_chatMessages', JSON.stringify(chatMessages));
+      }, [chatMessages]);
 
       // Handle chat
       const handleChat = async () => {
@@ -839,6 +894,24 @@
         console.log(`✅ Created file: ${filePath}`);
       };
       
+      // New Project - Clear all data
+      const handleNewProject = () => {
+        if (!confirm('Start a new project? This will clear all current files and chat history.')) {
+          return;
+        }
+
+        // Clear all localStorage
+        const keysToRemove = [
+          'lab_files', 'lab_activeFile', 'lab_openTabs', 'lab_description',
+          'lab_category', 'lab_includeBackend', 'lab_projectStructure',
+          'lab_plannedFiles', 'lab_currentIndex', 'lab_autoContinue', 'lab_chatMessages'
+        ];
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+
+        // Reload page to reset state
+        window.location.reload();
+      };
+
       // Create AI-powered presentation
       const handleCreatePresentation = async () => {
         if (files.length === 0) {
@@ -1288,6 +1361,16 @@ OUTPUT ONLY THE COMPLETE HTML CODE, NO EXPLANATIONS.`
 
                 {/* Actions */}
                 <div className="flex items-center gap-3">
+                  <button 
+                    onClick={handleNewProject}
+                    className="px-6 py-2 rounded-xl bg-gradient-to-b from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 text-white text-xs font-semibold tracking-wide transition-all duration-200 shadow-xl border border-slate-700/50"
+                    style={{
+                      boxShadow: '0 4px 14px 0 rgba(0,0,0,0.4), inset 0 1px 0 0 rgba(255,255,255,0.05)'
+                    }}
+                  >
+                    New Project
+                  </button>
+                  
                   <button 
                     onClick={handleCreatePresentation}
                     disabled={files.length === 0 || creatingPresentation}
