@@ -34,6 +34,11 @@
   status = 200
 
 [[redirects]]
+  from = "/lab-pro"
+  to = "/privacy-tools-lab-fullstack.html"
+  status = 200
+
+[[redirects]]
   from = "/api/generate-backstory"
   to = "/.netlify/functions/generate-backstory"
   status = 200
