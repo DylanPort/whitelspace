@@ -1,5 +1,5 @@
-// Ghost Whistle Service Worker v1.7
-const CACHE_NAME = 'ghost-whistle-v1.7.0-fullstack-ready';
+// Ghost Whistle Service Worker v1.8
+const CACHE_NAME = 'ghost-whistle-v1.8.0-community-tools';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
