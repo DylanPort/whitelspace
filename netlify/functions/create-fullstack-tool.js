@@ -159,7 +159,7 @@ OUTPUT ONLY THE JSON, NO MARKDOWN FENCES.`;
           'X-Title': 'Ghost Whistle Privacy Tools Lab'
         },
         body: JSON.stringify({
-          model: 'anthropic/claude-3.5-sonnet',
+          model: 'openai/gpt-4o-mini', // Use model user has access to
           messages: [{ role: 'user', content: structurePrompt }],
           temperature: 0.8,
           max_tokens: 2000
@@ -340,7 +340,7 @@ OUTPUT ONLY THE CODE, NO MARKDOWN FENCES OR EXPLANATIONS.`;
             'X-Title': 'Ghost Whistle Privacy Tools Lab'
           },
           body: JSON.stringify({
-            model: 'anthropic/claude-3.5-sonnet',
+            model: 'openai/gpt-4o-mini', // Use model user has access to
             messages: [{ role: 'user', content: filePrompt }],
             temperature: 0.9,
             max_tokens: 4000
