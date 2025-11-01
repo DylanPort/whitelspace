@@ -1,6 +1,5 @@
 // Upvote Competition Submission
 const fetch = require('node-fetch');
-const { getStore } = require('@netlify/blobs');
 
 exports.handler = async (event) => {
   const headers = {
@@ -43,80 +42,64 @@ exports.handler = async (event) => {
     console.log(`⬆️ Upvoting submission: ${id}`);
 
     // First, get current upvotes
-    try {
-      const getRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/competition_submissions?id=eq.${id}&select=upvotes`,
-        {
-          headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': `Bearer ${SUPABASE_KEY}`
-          }
+    const getRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/competition_submissions?id=eq.${id}&select=upvotes`,
+      {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`
         }
-      );
-
-      if (!getRes.ok) {
-        throw new Error('Failed to fetch submission');
       }
+    );
 
-      const submissions = await getRes.json();
-      if (submissions.length === 0) {
-        return {
-          statusCode: 404,
-          headers,
-          body: JSON.stringify({ error: 'Submission not found' })
-        };
-      }
-
-      const currentUpvotes = submissions[0].upvotes || 0;
-      const newUpvotes = currentUpvotes + 1;
-
-      // Update upvotes
-      const updateRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/competition_submissions?id=eq.${id}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': SUPABASE_KEY,
-            'Authorization': `Bearer ${SUPABASE_KEY}`,
-            'Prefer': 'return=representation'
-          },
-          body: JSON.stringify({ upvotes: newUpvotes })
-        }
-      );
-
-      if (!updateRes.ok) {
-        const errorText = await updateRes.text();
-        console.error('❌ Supabase update error:', errorText);
-        throw new Error(`Failed to update: ${updateRes.status}`);
-      }
-
-      const updated = await updateRes.json();
-      console.log(`✅ Upvoted! New count: ${newUpvotes}`);
-
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({
-          success: true,
-          submission: updated[0] || updated
-        })
-      };
-    } catch (supabaseError) {
-      console.warn('⚠️ Supabase unreachable - updating in Netlify Blobs:', supabaseError.message);
-      const store = getStore('competition_submissions');
-      try {
-        const record = await store.get(id, { type: 'json' });
-        if (!record) {
-          return { statusCode: 404, headers, body: JSON.stringify({ error: 'Submission not found' }) };
-        }
-        record.upvotes = (record.upvotes || 0) + 1;
-        await store.set(id, JSON.stringify(record), { contentType: 'application/json' });
-        return { statusCode: 200, headers, body: JSON.stringify({ success: true, submission: record, source: 'blobs' }) };
-      } catch (e) {
-        return { statusCode: 500, headers, body: JSON.stringify({ error: 'Update failed', message: e.message }) };
-      }
+    if (!getRes.ok) {
+      throw new Error('Failed to fetch submission');
     }
+
+    const submissions = await getRes.json();
+    if (submissions.length === 0) {
+      return {
+        statusCode: 404,
+        headers,
+        body: JSON.stringify({ error: 'Submission not found' })
+      };
+    }
+
+    const currentUpvotes = submissions[0].upvotes || 0;
+    const newUpvotes = currentUpvotes + 1;
+
+    // Update upvotes
+    const updateRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/competition_submissions?id=eq.${id}`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({ upvotes: newUpvotes })
+      }
+    );
+
+    if (!updateRes.ok) {
+      const errorText = await updateRes.text();
+      console.error('❌ Supabase update error:', errorText);
+      throw new Error(`Failed to update: ${updateRes.status}`);
+    }
+
+    const updated = await updateRes.json();
+    console.log(`✅ Upvoted! New count: ${newUpvotes}`);
+
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        success: true,
+        submission: updated[0] || updated
+      })
+    };
 
   } catch (error) {
     console.error('❌ Upvote error:', error);

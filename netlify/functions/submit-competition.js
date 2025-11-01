@@ -1,7 +1,5 @@
 // Submit Competition Entry
 const fetch = require('node-fetch');
-const { getStore } = require('@netlify/blobs');
-const crypto = require('crypto');
 
 exports.handler = async (event) => {
   const headers = {
@@ -56,49 +54,34 @@ exports.handler = async (event) => {
 
     console.log('📝 Submitting to competition:', submissionData);
 
-    try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/competition_submissions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify(submissionData)
-      });
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/competition_submissions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify(submissionData)
+    });
 
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error('❌ Supabase error:', errorText);
-        throw new Error(`Failed to submit: ${res.status} ${errorText}`);
-      }
-
-      const data = await res.json();
-      console.log('✅ Submission created (Supabase):', data);
-
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({
-          success: true,
-          submission: data[0] || data
-        })
-      };
-    } catch (supabaseError) {
-      console.warn('⚠️ Supabase unreachable - falling back to Netlify Blobs:', supabaseError.message);
-      const store = getStore('competition_submissions');
-      const id = crypto.randomUUID ? crypto.randomUUID() : `blob_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
-      const blobRecord = { id, ...submissionData };
-      await store.set(id, JSON.stringify(blobRecord), { contentType: 'application/json' });
-      console.log('✅ Submission stored in Blobs:', id);
-
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ success: true, submission: blobRecord, source: 'blobs' })
-      };
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('❌ Supabase error:', errorText);
+      throw new Error(`Failed to submit: ${res.status} ${errorText}`);
     }
+
+    const data = await res.json();
+    console.log('✅ Submission created (Supabase):', data);
+
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        success: true,
+        submission: data[0] || data
+      })
+    };
 
   } catch (error) {
     console.error('❌ Competition submission error:', error);

@@ -27,6 +27,13 @@ CREATE POLICY "Anyone can submit to competition"
   FOR INSERT
   WITH CHECK (true);
 
+-- Policy: Anyone can update upvotes/views (adjust later to restrict if needed)
+CREATE POLICY "Anyone can upvote or add views"
+  ON public.competition_submissions
+  FOR UPDATE
+  USING (true)
+  WITH CHECK (true);
+
 -- Create index for performance
 CREATE INDEX IF NOT EXISTS idx_competition_created_at ON public.competition_submissions(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_competition_upvotes ON public.competition_submissions(upvotes DESC);
