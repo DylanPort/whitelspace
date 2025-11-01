@@ -23483,9 +23483,6 @@ If a user requests non-privacy tools, politely redirect: "I specialize in privac
       const [submissions, setSubmissions] = useState([]);
       const [sortBy, setSortBy] = useState('recent'); // recent, top, featured
       
-      const SUPABASE_URL = 'https://lqaxmnzxkfwndjhzhhpx.supabase.co';
-      const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxxYXhtbnp4a2Z3bmRqaHpoaHB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjk3NzE0OTksImV4cCI6MjA0NTM0NzQ5OX0.qGXJPzKy9VYdXp7o3WKCa2Wb4DDqrMFPPO9KNEgVIEY';
-      
       // Fetch submissions on mount
       React.useEffect(() => {
         loadSubmissions();
@@ -23494,26 +23491,22 @@ If a user requests non-privacy tools, politely redirect: "I specialize in privac
       const loadSubmissions = async () => {
         setLoading(true);
         try {
-          let orderColumn = 'created_at';
-          let ascending = false;
+          const API_BASE = window.location.hostname === 'localhost'
+            ? 'http://localhost:8888/.netlify/functions'
+            : '/.netlify/functions';
           
-          if (sortBy === 'top') {
-            orderColumn = 'upvotes';
-          } else if (sortBy === 'featured') {
-            orderColumn = 'featured';
+          console.log(`📊 Loading submissions (sortBy: ${sortBy})`);
+          
+          const res = await fetch(`${API_BASE}/get-competition-submissions?sortBy=${sortBy}`);
+          
+          if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.message || 'Failed to load submissions');
           }
           
-          const res = await fetch(`${SUPABASE_URL}/rest/v1/competition_submissions?order=${orderColumn}.desc${sortBy === 'featured' ? '&featured=eq.true' : ''}`, {
-            headers: {
-              'apikey': SUPABASE_KEY,
-              'Authorization': `Bearer ${SUPABASE_KEY}`
-            }
-          });
-          
-          if (!res.ok) throw new Error('Failed to load submissions');
-          
           const data = await res.json();
-          setSubmissions(data);
+          console.log(`✅ Loaded ${data.submissions.length} submissions`);
+          setSubmissions(data.submissions || []);
           setLoading(false);
         } catch (error) {
           console.error('Error loading submissions:', error);
@@ -23524,27 +23517,30 @@ If a user requests non-privacy tools, politely redirect: "I specialize in privac
       
       const handleUpvote = async (id) => {
         try {
-          // Get current submission
-          const submission = submissions.find(s => s.id === id);
-          if (!submission) return;
+          const API_BASE = window.location.hostname === 'localhost'
+            ? 'http://localhost:8888/.netlify/functions'
+            : '/.netlify/functions';
           
-          // Update upvotes
-          const res = await fetch(`${SUPABASE_URL}/rest/v1/competition_submissions?id=eq.${id}`, {
-            method: 'PATCH',
+          console.log(`⬆️ Upvoting submission: ${id}`);
+          
+          const res = await fetch(`${API_BASE}/upvote-submission`, {
+            method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
-              'apikey': SUPABASE_KEY,
-              'Authorization': `Bearer ${SUPABASE_KEY}`,
-              'Prefer': 'return=representation'
+              'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ upvotes: submission.upvotes + 1 })
+            body: JSON.stringify({ id })
           });
           
-          if (!res.ok) throw new Error('Failed to upvote');
+          if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.message || 'Failed to upvote');
+          }
+          
+          console.log('✅ Upvoted successfully');
           
           // Reload submissions
           loadSubmissions();
-          pushToast('Upvoted! 🎉', 'success');
+          pushToast('Upvoted!', 'success');
         } catch (error) {
           console.error('Error upvoting:', error);
           pushToast('Failed to upvote', 'error');
