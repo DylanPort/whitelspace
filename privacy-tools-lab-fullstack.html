@@ -381,8 +381,8 @@
         setError(null);
         setProgress('🧠 Planning project structure...');
         
-        // Clear placeholder
-        setFiles([]);
+        // Ensure workspace is visible (keep placeholder if empty)
+        setFiles(prev => (prev.length ? prev : [{ path: 'README.md', content: '# Preparing project...\n\nThe AI will propose a plan, then we\'ll build files step by step.', type: 'markdown', size: 0 }]));
         setActiveFile(null);
         setOpenTabs([]);
         setProjectStructure(null);
