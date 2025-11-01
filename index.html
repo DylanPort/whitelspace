@@ -2835,15 +2835,15 @@
             const bs58Helper = await window.ensureBs58();
             if (bs58Helper) {
               const decoded = bs58Helper.decode(input);
-              console.log('✅ Base58 decoded, length:', decoded.length);
-              if (decoded.length === 64) {
-                keypair = solanaWeb3.Keypair.fromSecretKey(decoded);
-                method = 'Base58-64byte';
-              } else if (decoded.length === 32) {
-                keypair = solanaWeb3.Keypair.fromSeed(decoded);
-                method = 'Base58-32byte';
-              }
-              if (keypair) console.log('✅', method, 'success!');
+            console.log('✅ Base58 decoded, length:', decoded.length);
+            if (decoded.length === 64) {
+              keypair = solanaWeb3.Keypair.fromSecretKey(decoded);
+              method = 'Base58-64byte';
+            } else if (decoded.length === 32) {
+              keypair = solanaWeb3.Keypair.fromSeed(decoded);
+              method = 'Base58-32byte';
+            }
+            if (keypair) console.log('✅', method, 'success!');
             }
           } catch (e) {
             console.log('⏭️ Base58 skip:', e.message);
@@ -3363,7 +3363,7 @@
                             />
                             <div className="text-xs text-white/50">
                               Supports: Base58 (Phantom), Base64, JSON array [1,2,3...], or comma-separated numbers
-                            </div>
+                          </div>
                           </div>
                           
                           <button onClick={handleImportMobileWallet} className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold">
@@ -3459,7 +3459,7 @@
                   <div className="mt-2 p-2 rounded-lg bg-cyan-500/10 border border-cyan-400/20">
                     <div className="text-xs text-white/60">WHISTLE Balance</div>
                     <div className="text-lg font-bold text-cyan-400">{whistleBalance.toLocaleString()} WHISTLE</div>
-                  </div>
+              </div>
                 )}
               </div>
               {isMobile && (
@@ -9574,8 +9574,8 @@ console.log('✅ Fingerprint spoofing active!');`;
                       )}
                           {isPrivacyTools && (
                             <i data-lucide={privacyToolsExpanded ? 'chevron-down' : 'chevron-right'} className="w-4 h-4"></i>
-                      )}
-                      </div>
+                        )}
+                        </div>
                       </span>
                   </button>
                   
@@ -16092,7 +16092,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             if (bs58Helper) {
               const sk = bs58Helper.decode(stored);
               if (sk && sk.length === 64) {
-                return solanaWeb3.Keypair.fromSecretKey(sk);
+            return solanaWeb3.Keypair.fromSecretKey(sk);
               }
             }
           } catch (e) {
@@ -23482,12 +23482,6 @@ If a user requests non-privacy tools, politely redirect: "I specialize in privac
       const [loading, setLoading] = useState(true);
       const [submissions, setSubmissions] = useState([]);
       const [sortBy, setSortBy] = useState('recent'); // recent, top, featured
-      const [votedIds, setVotedIds] = useState(() => {
-        // Load voted IDs from localStorage to prevent multiple votes
-        const saved = localStorage.getItem('whistle_voted_submissions');
-        return saved ? JSON.parse(saved) : [];
-      });
-      const [showShareModal, setShowShareModal] = useState(false);
       
       const SUPABASE_URL = 'https://lqaxmnzxkfwndjhzhhpx.supabase.co';
       const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxxYXhtbnp4a2Z3bmRqaHpoaHB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjk3NzE0OTksImV4cCI6MjA0NTM0NzQ5OX0.qGXJPzKy9VYdXp7o3WKCa2Wb4DDqrMFPPO9KNEgVIEY';
@@ -23528,19 +23522,13 @@ If a user requests non-privacy tools, politely redirect: "I specialize in privac
         }
       };
       
-      const handleVote = async (id) => {
-        // Check if already voted
-        if (votedIds.includes(id)) {
-          pushToast('You have already voted for this project', 'info');
-          return;
-        }
-        
+      const handleUpvote = async (id) => {
         try {
           // Get current submission
           const submission = submissions.find(s => s.id === id);
           if (!submission) return;
           
-          // Update upvotes in Supabase
+          // Update upvotes
           const res = await fetch(`${SUPABASE_URL}/rest/v1/competition_submissions?id=eq.${id}`, {
             method: 'PATCH',
             headers: {
@@ -23552,44 +23540,15 @@ If a user requests non-privacy tools, politely redirect: "I specialize in privac
             body: JSON.stringify({ upvotes: submission.upvotes + 1 })
           });
           
-          if (!res.ok) throw new Error('Failed to vote');
-          
-          // Save voted ID to localStorage
-          const newVotedIds = [...votedIds, id];
-          setVotedIds(newVotedIds);
-          localStorage.setItem('whistle_voted_submissions', JSON.stringify(newVotedIds));
+          if (!res.ok) throw new Error('Failed to upvote');
           
           // Reload submissions
           loadSubmissions();
-          pushToast('Vote recorded! Thank you for participating.', 'success');
+          pushToast('Upvoted! 🎉', 'success');
         } catch (error) {
-          console.error('Error voting:', error);
-          pushToast('Failed to vote. Please try again.', 'error');
+          console.error('Error upvoting:', error);
+          pushToast('Failed to upvote', 'error');
         }
-      };
-      
-      const twitterPostTemplate = `Ghost Whistle Privacy Tools Competition
-
-We're awarding $500 to the most voted privacy tool built by our community.
-
-Current submissions showcase:
-• Advanced encryption tools
-• Anonymous communication systems
-• Privacy-focused utilities
-• Secure authentication methods
-
-Vote for your favorite and help shape the future of privacy technology.
-
-The tool with the majority community vote wins $500.
-
-Join the competition: https://ghostwhistle.xyz
-
-#Privacy #OpenSource #Cryptography #Security #Web3`;
-
-      const copyTwitterPost = () => {
-        navigator.clipboard.writeText(twitterPostTemplate);
-        pushToast('Twitter post copied! Share on X to amplify reach.', 'success');
-        setShowShareModal(false);
       };
       
       return (
@@ -23599,68 +23558,15 @@ Join the competition: https://ghostwhistle.xyz
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-600 mb-2">
-                  Community Privacy Tools Competition
+                  🏆 Community Privacy Tools
                 </h1>
                 <p className="text-gray-400 text-sm">
-                  Vote for the best privacy tools built by our community
+                  Explore amazing privacy tools created by our community
                 </p>
               </div>
               
-              {/* Share Button */}
-              <button
-                onClick={() => setShowShareModal(true)}
-                className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-sm font-semibold transition-all shadow-lg flex items-center gap-2"
-              >
-                <span>Share on X</span>
-                <span>→</span>
-              </button>
-            </div>
-            
-            {/* Prize Banner */}
-            <div className="mb-6 p-6 rounded-2xl bg-gradient-to-br from-amber-900/30 via-yellow-900/30 to-amber-900/30 border-2 border-amber-500/50 shadow-2xl relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-500/10 to-transparent animate-shimmerWave"></div>
-              <div className="relative z-10">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="inline-block px-4 py-1 rounded-full bg-amber-500/20 border border-amber-500/50 text-amber-300 text-xs font-bold mb-3">
-                      COMPETITION PRIZE
-                    </div>
-                    <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300 mb-2">
-                      $500 Prize for the Most Voted Privacy Tool
-                    </h2>
-                    <p className="text-gray-300 text-sm leading-relaxed mb-4">
-                      The privacy tool that receives the majority of community votes will be awarded $500. This competition celebrates innovation, security, and the advancement of privacy technology. Every vote counts toward determining the winning submission.
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="px-4 py-3 rounded-lg bg-slate-900/50 border border-amber-500/30">
-                        <div className="text-amber-400 text-lg font-bold mb-1">Vote</div>
-                        <div className="text-gray-400 text-xs">Review submissions and cast your vote for the best privacy tool</div>
-                      </div>
-                      <div className="px-4 py-3 rounded-lg bg-slate-900/50 border border-amber-500/30">
-                        <div className="text-amber-400 text-lg font-bold mb-1">Compete</div>
-                        <div className="text-gray-400 text-xs">Submit your own privacy tool to compete for the prize</div>
-                      </div>
-                      <div className="px-4 py-3 rounded-lg bg-slate-900/50 border border-amber-500/30">
-                        <div className="text-amber-400 text-lg font-bold mb-1">Share</div>
-                        <div className="text-gray-400 text-xs">Amplify reach by sharing on X to increase participation</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="ml-6 flex flex-col items-center justify-center px-8 py-6 rounded-xl bg-gradient-to-br from-amber-600 to-yellow-600 shadow-xl">
-                    <div className="text-black text-5xl font-black mb-1">$500</div>
-                    <div className="text-black/80 text-xs font-bold text-center">GRAND PRIZE</div>
-                  </div>
-                </div>
-                <div className="px-4 py-2 rounded-lg bg-blue-500/10 border border-blue-500/30">
-                  <p className="text-blue-300 text-xs">
-                    <strong>How to increase your reach:</strong> Share this competition on X (Twitter) to bring more voters and increase visibility for all submissions. Use the "Share on X" button above to copy a professional post template.
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            {/* Sort Filter */}
-            <div className="flex items-center gap-2 bg-slate-800/50 rounded-xl p-1 border border-slate-700/50">
+              {/* Sort Filter */}
+              <div className="flex items-center gap-2 bg-slate-800/50 rounded-xl p-1 border border-slate-700/50">
                 <button
                   onClick={() => setSortBy('recent')}
                   className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
@@ -23691,6 +23597,74 @@ Join the competition: https://ghostwhistle.xyz
                 >
                   ⭐ Featured
                 </button>
+              </div>
+            </div>
+            
+            {/* Prize Announcement Banner */}
+            <div className="mb-8 rounded-2xl bg-gradient-to-br from-amber-900/30 via-yellow-900/30 to-amber-900/30 border-2 border-amber-500/50 p-8 shadow-2xl" style={{boxShadow: '0 0 40px rgba(251, 191, 36, 0.2)'}}>
+              <div className="max-w-4xl mx-auto">
+                <div className="flex items-start gap-6">
+                  <div className="flex-shrink-0 w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center text-4xl font-bold text-black shadow-lg">
+                    $500
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-400 mb-3">
+                      Monthly Prize for Top Voted Privacy Tool
+                    </h2>
+                    <p className="text-gray-300 text-sm leading-relaxed mb-4">
+                      Every month, the privacy tool with the most community votes wins $500. The winning project must receive majority approval from the Ghost Whistle community to claim the prize. This competition rewards innovation, security, and real-world utility in privacy technology.
+                    </p>
+                    <div className="flex items-start gap-6 text-xs text-gray-400 mb-4">
+                      <div className="flex-1">
+                        <div className="font-semibold text-amber-400 mb-1">Eligibility Criteria:</div>
+                        <ul className="space-y-1 list-disc list-inside">
+                          <li>Functional privacy tool with working code</li>
+                          <li>Open source (GitHub repository required)</li>
+                          <li>Must achieve majority community approval</li>
+                          <li>Original work, not plagiarized</li>
+                        </ul>
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-semibold text-amber-400 mb-1">How Voting Works:</div>
+                        <ul className="space-y-1 list-disc list-inside">
+                          <li>Community members upvote their favorite tools</li>
+                          <li>Voting period: 30 days per cycle</li>
+                          <li>Winner announced on the 1st of each month</li>
+                          <li>Transparent vote counting via blockchain</li>
+                        </ul>
+                      </div>
+                    </div>
+                    
+                    {/* X Post Section */}
+                    <div className="mt-6 p-4 rounded-xl bg-slate-950/50 border border-slate-700/50">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="text-sm font-semibold text-gray-300">Amplify Your Reach on X (Twitter)</div>
+                        <button
+                          onClick={() => {
+                            const xPost = `I just submitted my privacy tool to @GhostWhistle's monthly competition! \n\nCompeting for $500 prize with the community's top-voted privacy innovation.\n\nCheck out the competition and vote for your favorite tools:\nhttps://ghostwhistle.xyz\n\n#PrivacyTech #Web3 #Solana #OpenSource #CyberSecurity`;
+                            navigator.clipboard.writeText(xPost);
+                            pushToast('X post copied to clipboard!', 'success');
+                          }}
+                          className="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-medium transition-all shadow-lg"
+                        >
+                          Copy X Post Template
+                        </button>
+                      </div>
+                      <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800">
+                        <div className="text-xs text-gray-400 font-mono leading-relaxed whitespace-pre-wrap">
+I just submitted my privacy tool to @GhostWhistle's monthly competition!{'\n\n'}
+Competing for $500 prize with the community's top-voted privacy innovation.{'\n\n'}
+Check out the competition and vote for your favorite tools:{'\n'}
+https://ghostwhistle.xyz{'\n\n'}
+#PrivacyTech #Web3 #Solana #OpenSource #CyberSecurity
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Share this post on X to increase visibility for your submission and attract more community votes.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
             
@@ -23785,15 +23759,10 @@ Join the competition: https://ghostwhistle.xyz
                     {/* Actions */}
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => handleVote(submission.id)}
-                        disabled={votedIds.includes(submission.id)}
-                        className={`flex-1 px-4 py-2 rounded-lg text-xs font-medium transition-all shadow-lg ${
-                          votedIds.includes(submission.id)
-                            ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                            : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white'
-                        }`}
+                        onClick={() => handleUpvote(submission.id)}
+                        className="flex-1 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-medium transition-all shadow-lg"
                       >
-                        {votedIds.includes(submission.id) ? '✓ Voted' : `Vote`} ({submission.upvotes})
+                        ⬆️ Upvote ({submission.upvotes})
                       </button>
                       <a
                         href={submission.project_link}
@@ -23801,7 +23770,7 @@ Join the competition: https://ghostwhistle.xyz
                         rel="noopener noreferrer"
                         className="flex-1 px-4 py-2 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 text-cyan-400 text-xs font-medium transition-all text-center border border-slate-600"
                       >
-                        View Project
+                        🔗 View Project
                       </a>
                     </div>
                   </div>
@@ -23809,73 +23778,6 @@ Join the competition: https://ghostwhistle.xyz
               </div>
             )}
           </div>
-          
-          {/* Share Modal */}
-          {showShareModal && (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-              <div className="relative w-full max-w-2xl mx-4 rounded-2xl border border-cyan-500/50 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 shadow-2xl">
-                <div className="px-6 py-4 border-b border-cyan-500/50 flex items-center justify-between bg-gradient-to-r from-cyan-900/30 to-blue-900/30">
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
-                      SHARE ON X (TWITTER)
-                    </div>
-                  </div>
-                  <button onClick={() => setShowShareModal(false)} className="text-gray-400 hover:text-gray-200">✕</button>
-                </div>
-                
-                <div className="px-6 py-5 space-y-4">
-                  <div className="px-4 py-3 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-200 text-xs">
-                    Help amplify this competition by sharing on X. Copy the professional post template below and share it with your network to increase participation and visibility for all submissions.
-                  </div>
-                  
-                  <div>
-                    <label className="block text-xs text-gray-400 mb-2 font-semibold">PROFESSIONAL POST TEMPLATE</label>
-                    <div className="relative">
-                      <textarea 
-                        value={twitterPostTemplate}
-                        readOnly
-                        rows="14"
-                        className="w-full px-4 py-3 rounded-lg bg-black border border-slate-700 text-gray-200 text-sm focus:border-cyan-500 focus:outline-none resize-none font-mono"
-                      />
-                      <button
-                        onClick={copyTwitterPost}
-                        className="absolute top-2 right-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-medium transition-all shadow-lg"
-                      >
-                        Copy to Clipboard
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className="px-4 py-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
-                    <div className="text-amber-300 text-xs font-semibold mb-1">Why share?</div>
-                    <ul className="text-gray-300 text-xs space-y-1">
-                      <li>• Increase voter participation for a fairer competition</li>
-                      <li>• Help quality submissions get the recognition they deserve</li>
-                      <li>• Grow the Ghost Whistle privacy community</li>
-                      <li>• Support open-source privacy technology development</li>
-                    </ul>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => setShowShareModal(false)}
-                      className="flex-1 px-4 py-2.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-gray-300 transition-all"
-                    >
-                      Close
-                    </button>
-                    <a
-                      href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterPostTemplate)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 px-4 py-2.5 text-xs rounded-lg bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-medium transition-all shadow-lg text-center"
-                    >
-                      Open X (Twitter)
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       );
     }
