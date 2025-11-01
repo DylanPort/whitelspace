@@ -10,12 +10,6 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    
-    * {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    }
-
     @keyframes spin-flip-zoom {
       0% { transform: rotate(0deg) rotateY(0deg) scale(1); }
       25% { transform: rotate(90deg) rotateY(180deg) scale(1.15); }
@@ -27,97 +21,23 @@
       0% { transform: translateX(-100%); }
       100% { transform: translateX(100%); }
     }
-    @keyframes gradient-shift {
-      0%, 100% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-    }
-    @keyframes slide-up {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    
-    /* Cursor-style professional scrollbars */
-    ::-webkit-scrollbar {
-      width: 10px;
-      height: 10px;
-    }
-    ::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.03);
-    }
-    ::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 5px;
-      border: 2px solid transparent;
-      background-clip: padding-box;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: rgba(255, 255, 255, 0.15);
-      background-clip: padding-box;
-    }
-    
     .scrollbar-thin::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
+      width: 6px;
+      height: 6px;
     }
     .scrollbar-thin::-webkit-scrollbar-track {
-      background: rgba(15, 23, 42, 0.3);
+      background: rgba(15, 23, 42, 0.5);
     }
     .scrollbar-thin::-webkit-scrollbar-thumb {
       background: linear-gradient(180deg, rgba(6, 182, 212, 0.5), rgba(251, 191, 36, 0.5));
-      border-radius: 4px;
+      border-radius: 3px;
     }
     .scrollbar-thin::-webkit-scrollbar-thumb:hover {
       background: linear-gradient(180deg, rgba(6, 182, 212, 0.8), rgba(251, 191, 36, 0.8));
     }
-    
-    /* Glass effects */
-    .glass-panel {
-      background: rgba(15, 23, 42, 0.4);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(148, 163, 184, 0.1);
-    }
-    
-    /* Smooth transitions */
-    .transition-smooth {
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    
-    /* Button hover effects */
-    .btn-hover:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(6, 182, 212, 0.2);
-    }
-    
-    /* File item hover */
-    .file-item {
-      transition: all 0.15s ease;
-    }
-    .file-item:hover {
-      background: rgba(6, 182, 212, 0.08);
-      border-left: 2px solid rgba(6, 182, 212, 0.5);
-    }
-    .file-item.active {
-      background: rgba(6, 182, 212, 0.12);
-      border-left: 2px solid #06b6d4;
-    }
-    
-    /* Gradient text */
-    .gradient-text {
-      background: linear-gradient(135deg, #06b6d4 0%, #fbbf24 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    
-    /* Code editor font */
-    .code-font {
-      font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', monospace;
-      font-size: 13px;
-      line-height: 1.7;
-    }
   </style>
 </head>
-<body style="background: #0a0a0a; margin: 0; padding: 0; overflow: hidden;">
+<body class="bg-black">
   <div id="root"></div>
 
   <script type="text/babel">
@@ -444,15 +364,20 @@
 
           // STEP 2: Generate files ONE AT A TIME (Cursor-style)
           const generatedFiles = [];
+          let htmlFileGenerated = false;
 
           for (let i = 0; i < filesToGenerate.length; i++) {
             const fileSpec = filesToGenerate[i];
             
             setProgress(`✍️ Building ${fileSpec.path}... (${i + 1}/${filesToGenerate.length})`);
 
-            // Retry logic for each file (up to 2 attempts)
+            // Retry up to 2 times for each file
+            let attempts = 0;
             let fileGenerated = false;
-            for (let attempt = 1; attempt <= 2 && !fileGenerated; attempt++) {
+            
+            while (attempts < 2 && !fileGenerated) {
+              attempts++;
+              
               try {
                 const fileRes = await fetch(`${API_BASE}/generate-single-file`, {
                   method: 'POST',
@@ -473,6 +398,11 @@
                   if (fileData.success && fileData.file) {
                     generatedFiles.push(fileData.file);
                     
+                    // Track if HTML was generated
+                    if (fileSpec.path.endsWith('.html')) {
+                      htmlFileGenerated = true;
+                    }
+                    
                     // LIVE UPDATE: Add file to workspace immediately
                     setFiles([...generatedFiles]);
                     
@@ -485,84 +415,107 @@
                     console.log(`✅ ${fileSpec.path} (${fileData.file.size} chars)`);
                     fileGenerated = true;
                   }
-                } else if (attempt < 2) {
-                  console.log(`⏳ Retry ${fileSpec.path} (attempt ${attempt + 1})`);
-                  await new Promise(resolve => setTimeout(resolve, 2000));
+                } else {
+                  throw new Error(`HTTP ${fileRes.status}`);
                 }
-              } catch (error) {
-                console.error(`❌ Error generating ${fileSpec.path}:`, error);
-                if (attempt < 2) {
-                  console.log(`⏳ Retry ${fileSpec.path} (attempt ${attempt + 1})`);
+              } catch (err) {
+                console.error(`Attempt ${attempts} failed for ${fileSpec.path}:`, err.message);
+                
+                if (attempts < 2) {
+                  console.log(`⏳ Retrying ${fileSpec.path}...`);
                   await new Promise(resolve => setTimeout(resolve, 2000));
                 }
               }
             }
             
             if (!fileGenerated) {
-              console.error(`⚠️ Failed to generate ${fileSpec.path} after 2 attempts, continuing...`);
+              console.error(`⚠️ Failed to generate ${fileSpec.path} after ${attempts} attempts, continuing...`);
             }
             
             // Small delay between files for visual feedback
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 200));
           }
 
-          // ALWAYS ensure we have a working HTML interface
-          const hasHTML = generatedFiles.some(f => f.path.endsWith('.html'));
-          if (!hasHTML) {
-            console.log('⚠️ No HTML file generated, creating minimal interface...');
-            const projectName = projectPlan.projectName || 'Privacy Tool';
-            const projectDesc = projectPlan.description || description;
-            const fileList = generatedFiles.map(f => f.path).join(', ');
+          // CRITICAL: Ensure we ALWAYS have an HTML interface for preview
+          if (!htmlFileGenerated) {
+            console.log('🚨 No HTML file generated - creating fallback interface...');
+            setProgress('📝 Creating interface...');
             
-            const htmlContent = '<!DOCTYPE html>\n' +
-              '<html lang="en">\n' +
-              '<head>\n' +
-              '  <meta charset="UTF-8">\n' +
-              '  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
-              '  <title>' + projectName + '</title>\n' +
-              '  <script src="https://cdn.tailwindcss.com"></script>\n' +
-              '</head>\n' +
-              '<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center">\n' +
-              '  <div class="max-w-2xl p-8">\n' +
-              '    <h1 class="text-3xl font-bold mb-4">🔐 ' + projectName + '</h1>\n' +
-              '    <p class="text-gray-400 mb-6">' + projectDesc + '</p>\n' +
-              '    <div class="bg-gray-800 p-6 rounded-lg">\n' +
-              '      <p class="text-sm text-gray-500 mb-4">Generated files: ' + fileList + '</p>\n' +
-              '      <div class="space-y-4">\n' +
-              '        <div>\n' +
-              '          <label class="block text-sm mb-2">Input:</label>\n' +
-              '          <input type="text" id="input" class="w-full px-4 py-2 bg-gray-700 rounded" placeholder="Enter data...">\n' +
-              '        </div>\n' +
-              '        <button onclick="processData()" class="w-full px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded font-semibold">Process</button>\n' +
-              '        <div>\n' +
-              '          <label class="block text-sm mb-2">Output:</label>\n' +
-              '          <pre id="output" class="bg-gray-700 p-4 rounded text-xs">Result will appear here...</pre>\n' +
-              '        </div>\n' +
-              '      </div>\n' +
-              '    </div>\n' +
-              '  </div>\n' +
-              '  <script>\n' +
-              '    function processData() {\n' +
-              '      const input = document.getElementById("input").value;\n' +
-              '      const output = document.getElementById("output");\n' +
-              '      if (input) {\n' +
-              '        output.textContent = "Input received: " + input + "\\n\\nIntegrate the generated modules to add real processing.";\n' +
-              '      } else {\n' +
-              '        output.textContent = "Please enter some data to process.";\n' +
-              '      }\n' +
-              '    }\n' +
-              '  </script>\n' +
-              '</body>\n' +
-              '</html>';
-            
-            const minimalHTML = {
+            const fallbackHTML = {
               path: 'interface/index.html',
-              content: htmlContent,
+              content: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${projectPlan.projectName || 'Privacy Tool'}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-8">
+  <div class="max-w-2xl w-full space-y-6">
+    <div class="text-center mb-8">
+      <h1 class="text-4xl font-bold mb-2 bg-gradient-to-r from-cyan-400 to-amber-400 bg-clip-text text-transparent">
+        🔐 ${projectPlan.projectName || 'Privacy Tool'}
+      </h1>
+      <p class="text-gray-400">${projectPlan.description || description}</p>
+    </div>
+    
+    <div class="bg-gray-800 rounded-lg p-6 space-y-4">
+      <div>
+        <label class="block text-sm font-semibold mb-2 text-cyan-400">Input</label>
+        <textarea 
+          id="input" 
+          rows="4"
+          class="w-full px-4 py-3 bg-gray-700 rounded border border-gray-600 focus:border-cyan-500 focus:outline-none"
+          placeholder="Enter data to process..."></textarea>
+      </div>
+      
+      <button 
+        onclick="processData()" 
+        class="w-full px-6 py-3 bg-gradient-to-r from-cyan-600 to-amber-600 hover:from-cyan-500 hover:to-amber-500 rounded font-semibold transition-all shadow-lg">
+        Process
+      </button>
+      
+      <div>
+        <label class="block text-sm font-semibold mb-2 text-cyan-400">Output</label>
+        <pre id="output" class="bg-gray-700 p-4 rounded text-xs overflow-auto max-h-64 border border-gray-600">Result will appear here...</pre>
+      </div>
+    </div>
+    
+    <div class="text-center text-xs text-gray-600">
+      <p>Generated by Whistle AI • ${generatedFiles.length} files created</p>
+    </div>
+  </div>
+  
+  <script>
+    function processData() {
+      const input = document.getElementById('input').value;
+      const output = document.getElementById('output');
+      
+      if (!input.trim()) {
+        output.textContent = 'Please enter some data to process.';
+        return;
+      }
+      
+      output.textContent = \`Input received: \${input.length} characters\\n\\nProcessing with ${projectPlan.projectName || 'Privacy Tool'}...\\n\\nIntegrate the generated modules (${generatedFiles.map(f => f.path).join(', ')}) to add real functionality.\`;
+    }
+  </script>
+</body>
+</html>`,
               type: 'frontend',
-              size: htmlContent.length
+              size: 0
             };
-            generatedFiles.push(minimalHTML);
+            
+            fallbackHTML.size = fallbackHTML.content.length;
+            generatedFiles.push(fallbackHTML);
             setFiles([...generatedFiles]);
+            
+            if (generatedFiles.length === 1) {
+              setActiveFile(fallbackHTML);
+              setOpenTabs([fallbackHTML]);
+            }
+            
+            console.log('✅ Fallback interface created');
           }
 
           setProgress('✅ Project complete!');
