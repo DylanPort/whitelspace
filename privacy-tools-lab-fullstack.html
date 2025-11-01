@@ -903,28 +903,6 @@
 
                 {/* Actions */}
                 <div className="flex items-center gap-2">
-                  <button onClick={()=>setShowPlan(v=>!v)} className="px-3 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700/50 text-gray-300 hover:text-white text-xs transition-all">
-                    {showPlan ? 'Hide Plan' : 'Show Plan'}
-                  </button>
-                  <label className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/60 border border-slate-700/50 text-gray-300 text-xs cursor-pointer hover:bg-slate-700/80 transition-all">
-                    <input type="checkbox" checked={autoContinue} onChange={(e)=>setAutoContinue(e.target.checked)} className="accent-cyan-500" />
-                    Auto-continue
-                  </label>
-                  
-                  {/* Layout Switch */}
-                  <div className="hidden md:flex items-center gap-1 px-1 py-1 rounded-lg bg-slate-800/60 border border-slate-700/50">
-                    <button onClick={()=>setLayoutMode('tabbed')} className={`px-3 py-1 text-xs rounded transition-all ${layoutMode==='tabbed'?'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-500/30':'text-gray-400 hover:text-white'}`}>
-                      Tabbed
-                    </button>
-                    <button onClick={()=>setLayoutMode('split')} className={`px-3 py-1 text-xs rounded transition-all ${layoutMode==='split'?'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-500/30':'text-gray-400 hover:text-white'}`}>
-                      Split
-                    </button>
-                  </div>
-
-                  <button onClick={()=>setConsoleOpen(v=>!v)} className="px-3 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700/50 text-gray-300 hover:text-white text-xs transition-all">
-                    {consoleOpen?'Hide Console':'Show Console'}
-                  </button>
-                  
                   <button onClick={handleDownloadZip} className="px-4 py-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-medium transition-all shadow-lg shadow-cyan-500/30 flex items-center gap-2">
                     <span>⬇</span>
                     <span>Download ZIP</span>
