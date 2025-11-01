@@ -218,6 +218,7 @@
             return (
               <div
                 key={value.path}
+                data-file-path={value.path}
                 onClick={() => onFileSelect(value)}
                 className={`
                   py-1.5 px-2 text-xs cursor-pointer transition-all flex items-center gap-2 rounded-md
@@ -468,22 +469,85 @@
 
         const newMessages = [...chatMessages, { role: 'user', content: userInput }];
         setChatMessages(newMessages);
+        const currentInput = userInput;
         setUserInput('');
         setDescription(newMessages.filter(m => m.role === 'user').map(m => m.content).join('\n'));
 
-        // Call real AI chat
+        // Check if user is asking to edit a specific file
+        const editRequest = currentInput.toLowerCase();
+        const isEditRequest = editRequest.includes('edit') || 
+                              editRequest.includes('change') || 
+                              editRequest.includes('modify') || 
+                              editRequest.includes('update') ||
+                              editRequest.includes('fix');
+
+        // Build context with current workspace files
+        const workspaceContext = files.length > 0 ? {
+          files: files.map(f => ({
+            path: f.path,
+            content: f.content,
+            type: f.type,
+            size: f.size
+          })),
+          activeFile: activeFile ? {
+            path: activeFile.path,
+            content: activeFile.content
+          } : null
+        } : null;
+
+        // Call real AI chat with workspace context
         try {
           const res = await fetch(`${API_BASE}/chat-with-ai`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               messages: newMessages.map(m => ({ role: m.role, content: m.content })),
-              hasPreview: files.length > 0
+              hasPreview: files.length > 0,
+              workspaceContext: workspaceContext,
+              isEditRequest: isEditRequest
             })
           });
 
           if (res.ok) {
             const data = await res.json();
+            
+            // If AI returned file edits, apply them with visual feedback
+            if (data.fileEdits && Array.isArray(data.fileEdits)) {
+              console.log(`📝 Applying ${data.fileEdits.length} file edit(s)...`);
+              
+              data.fileEdits.forEach((edit, idx) => {
+                setTimeout(() => {
+                  setFiles(prev => {
+                    const fileIndex = prev.findIndex(f => f.path === edit.path);
+                    if (fileIndex >= 0) {
+                      const updated = [...prev];
+                      updated[fileIndex] = {
+                        ...updated[fileIndex],
+                        content: edit.content,
+                        size: edit.content.length
+                      };
+                      console.log(`✅ Updated ${edit.path}`);
+                      
+                      // Update active file if it's the one being edited
+                      if (activeFile?.path === edit.path) {
+                        setActiveFile(updated[fileIndex]);
+                      }
+                      
+                      // Flash the file in the tree (add/remove highlight class)
+                      const fileElement = document.querySelector(`[data-file-path="${edit.path}"]`);
+                      if (fileElement) {
+                        fileElement.classList.add('bg-cyan-500/20');
+                        setTimeout(() => fileElement.classList.remove('bg-cyan-500/20'), 1000);
+                      }
+                      
+                      return updated;
+                    }
+                    return prev;
+                  });
+                }, idx * 200); // Stagger edits for visual effect
+              });
+            }
+
             setChatMessages([...newMessages, {
               role: 'assistant',
               content: data.message || '>> COMMAND ACKNOWLEDGED\n>> READY TO BUILD\n>> CLICK [>] GENERATE TO INITIATE'

@@ -26,7 +26,7 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const { messages, hasPreview } = JSON.parse(event.body);
+    const { messages, hasPreview, workspaceContext, isEditRequest } = JSON.parse(event.body);
 
     if (!messages || !Array.isArray(messages)) {
       return {
@@ -47,8 +47,83 @@ exports.handler = async (event, context) => {
       };
     }
 
+    // Build workspace context string
+    let workspaceInfo = '';
+    if (workspaceContext && workspaceContext.files) {
+      workspaceInfo = '\n\n📁 CURRENT WORKSPACE:\n';
+      workspaceContext.files.forEach(f => {
+        workspaceInfo += `\n[${f.path}] (${f.type}, ${f.size} bytes)`;
+        if (workspaceContext.activeFile?.path === f.path) {
+          workspaceInfo += ' ← CURRENTLY OPEN';
+        }
+      });
+
+      // If this is an edit request, include full file contents
+      if (isEditRequest && workspaceContext.files.length > 0) {
+        workspaceInfo += '\n\n📄 FILE CONTENTS:\n';
+        workspaceContext.files.forEach(f => {
+          workspaceInfo += `\n--- ${f.path} ---\n${f.content}\n`;
+        });
+      }
+    }
+
     // Build system prompt based on context
-    const systemPrompt = hasPreview ? 
+    const systemPrompt = hasPreview && isEditRequest ? 
+      `You are Whistle AI, a Cursor-like AI coding assistant specializing in privacy tools.
+
+${workspaceInfo}
+
+USER WANTS TO EDIT CODE:
+The user has requested changes to their workspace files.
+
+YOUR MISSION:
+1. READ the current file contents carefully
+2. UNDERSTAND what they want to change
+3. Generate the EDITED file content
+4. Respond with BOTH:
+   a) A brief explanation of changes (2-3 sentences)
+   b) JSON with edited files
+
+RESPONSE FORMAT:
+First, explain the changes in natural language (2-3 sentences).
+
+Then, if you're making edits, output a JSON block:
+\`\`\`json
+{
+  "fileEdits": [
+    {
+      "path": "exact/file/path.js",
+      "content": "FULL EDITED FILE CONTENT HERE"
+    }
+  ]
+}
+\`\`\`
+
+EDITING RULES:
+- Output the ENTIRE file with changes applied
+- Maintain code style and structure
+- Add comments explaining complex changes
+- Fix any obvious bugs or issues
+- Be precise with line-level edits
+- Preserve imports, exports, and structure
+
+EXAMPLE USER REQUEST: "Change the button color to cyan in index.html"
+EXAMPLE RESPONSE:
+"I'll update the button styles to use cyan instead of the current color. The change is in the main button class.
+
+\`\`\`json
+{
+  "fileEdits": [
+    {
+      "path": "interface/index.html",
+      "content": "<full html with cyan button classes>"
+    }
+  ]
+}
+\`\`\`"
+
+Think like Cursor AI: understand context, make surgical edits, explain clearly.` :
+      hasPreview ? 
       `You are Whistle AI. The user has generated a privacy tool and wants to edit it.
 
 USER'S EDITING REQUEST:
@@ -89,6 +164,9 @@ If a user requests non-privacy tools, politely redirect: "I specialize in privac
 
     console.log('🤖 Calling OpenRouter for chat...');
 
+    // Increase max_tokens for edit requests (need to return full files)
+    const maxTokens = isEditRequest ? 4000 : 150;
+
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -104,7 +182,7 @@ If a user requests non-privacy tools, politely redirect: "I specialize in privac
           ...messages
         ],
         temperature: 0.8,
-        max_tokens: 150
+        max_tokens: maxTokens
       })
     });
 
@@ -122,16 +200,36 @@ If a user requests non-privacy tools, politely redirect: "I specialize in privac
     }
 
     const data = await response.json();
-    const aiMessage = data?.choices?.[0]?.message?.content || 'Could you tell me more about your vision?';
+    let aiMessage = data?.choices?.[0]?.message?.content || 'Could you tell me more about your vision?';
 
     console.log('✅ AI response generated');
+
+    // Extract JSON file edits if present (for edit requests)
+    let fileEdits = null;
+    if (isEditRequest && aiMessage.includes('```json')) {
+      const jsonMatch = aiMessage.match(/```json\n([\s\S]*?)\n```/);
+      if (jsonMatch) {
+        try {
+          const editData = JSON.parse(jsonMatch[1]);
+          if (editData.fileEdits && Array.isArray(editData.fileEdits)) {
+            fileEdits = editData.fileEdits;
+            // Remove JSON block from message, keep only explanation
+            aiMessage = aiMessage.replace(/```json\n[\s\S]*?\n```/, '').trim();
+            console.log(`✅ Parsed ${fileEdits.length} file edit(s)`);
+          }
+        } catch (e) {
+          console.error('⚠️ Failed to parse file edits JSON:', e);
+        }
+      }
+    }
 
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         success: true,
-        message: aiMessage
+        message: aiMessage,
+        fileEdits: fileEdits
       })
     };
 
