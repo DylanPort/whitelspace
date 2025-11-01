@@ -8,6 +8,30 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
+// Auto-retry helper with exponential backoff
+async function retryWithBackoff(fn, maxRetries = 3, label = 'operation') {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔄 ${label} - Attempt ${attempt}/${maxRetries}`);
+      const result = await fn();
+      console.log(`✅ ${label} - Success on attempt ${attempt}`);
+      return result;
+    } catch (error) {
+      const isLastAttempt = attempt === maxRetries;
+      
+      if (isLastAttempt) {
+        console.error(`❌ ${label} - Failed after ${maxRetries} attempts:`, error.message);
+        throw error;
+      }
+      
+      // Exponential backoff: 2s, 4s, 8s
+      const delay = Math.pow(2, attempt) * 1000;
+      console.log(`⏳ ${label} - Retry in ${delay/1000}s...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+}
+
 exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -41,6 +65,7 @@ exports.handler = async (event) => {
 
     console.log('🚀 Generating full-stack tool:', description);
     console.log('   Backend:', includeBackend ? 'Yes' : 'Frontend only');
+    console.log('   🔄 Auto-retry enabled: Up to 3 attempts per operation\n');
 
     if (!OPENROUTER_API_KEY) {
       throw new Error('OPENROUTER_API_KEY not configured');
@@ -123,32 +148,36 @@ OUTPUT ONLY THE JSON, NO MARKDOWN FENCES.`;
 
     console.log('📋 Step 1: Generating project structure...');
     
-    const structureRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://ghostwhistle.xyz',
-        'X-Title': 'Ghost Whistle Privacy Tools Lab'
-      },
-      body: JSON.stringify({
-        model: 'anthropic/claude-3.5-sonnet', // More creative and accurate
-        messages: [{ role: 'user', content: structurePrompt }],
-        temperature: 0.8, // Higher for more creativity
-        max_tokens: 2000 // More room for complex structures
-      })
-    });
+    // Auto-retry structure generation
+    const projectStructure = await retryWithBackoff(async () => {
+      const structureRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://ghostwhistle.xyz',
+          'X-Title': 'Ghost Whistle Privacy Tools Lab'
+        },
+        body: JSON.stringify({
+          model: 'anthropic/claude-3.5-sonnet',
+          messages: [{ role: 'user', content: structurePrompt }],
+          temperature: 0.8,
+          max_tokens: 2000
+        })
+      });
 
-    if (!structureRes.ok) {
-      throw new Error(`OpenRouter structure error: ${structureRes.status}`);
-    }
+      if (!structureRes.ok) {
+        const errorText = await structureRes.text();
+        throw new Error(`OpenRouter error ${structureRes.status}: ${errorText}`);
+      }
 
-    const structureData = await structureRes.json();
-    const structureJson = structureData?.choices?.[0]?.message?.content || '{}';
-    
-    // Parse structure (remove markdown fences if present)
-    const cleanJson = structureJson.replace(/```json\n?|\n?```/g, '').trim();
-    const projectStructure = JSON.parse(cleanJson);
+      const structureData = await structureRes.json();
+      const structureJson = structureData?.choices?.[0]?.message?.content || '{}';
+      
+      // Parse structure (remove markdown fences if present)
+      const cleanJson = structureJson.replace(/```json\n?|\n?```/g, '').trim();
+      return JSON.parse(cleanJson);
+    }, 3, 'Project Structure Generation');
 
     console.log('✅ Project structure:', projectStructure.projectName);
     console.log('   Files to generate:', projectStructure.files.length);
@@ -159,9 +188,11 @@ OUTPUT ONLY THE JSON, NO MARKDOWN FENCES.`;
     const generatedFiles = [];
 
     for (const fileSpec of projectStructure.files) {
-      console.log(`   📝 Generating ${fileSpec.path}...`);
+      console.log(`\n   📝 Generating ${fileSpec.path}...`);
 
-      const filePrompt = `You are an elite developer with deep expertise in privacy, cryptography, and systems design. Generate ${fileSpec.path} with the intelligence and creativity of Cursor AI.
+      // Auto-retry individual file generation
+      const generatedFile = await retryWithBackoff(async () => {
+        const filePrompt = `You are an elite developer with deep expertise in privacy, cryptography, and systems design. Generate ${fileSpec.path} with the intelligence and creativity of Cursor AI.
 
 🎯 PROJECT CONTEXT:
 Name: ${projectStructure.projectName}
@@ -300,44 +331,50 @@ Think: "How would Cursor AI build this file if it deeply understood privacy tech
 
 OUTPUT ONLY THE CODE, NO MARKDOWN FENCES OR EXPLANATIONS.`;
 
-      const fileRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://ghostwhistle.xyz',
-          'X-Title': 'Ghost Whistle Privacy Tools Lab'
-        },
-        body: JSON.stringify({
-          model: 'anthropic/claude-3.5-sonnet', // Best for code generation
-          messages: [{ role: 'user', content: filePrompt }],
-          temperature: 0.9, // High creativity for diverse, human-like code
-          max_tokens: 4000 // Enough for complex implementations
-        })
-      });
+        const fileRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://ghostwhistle.xyz',
+            'X-Title': 'Ghost Whistle Privacy Tools Lab'
+          },
+          body: JSON.stringify({
+            model: 'anthropic/claude-3.5-sonnet',
+            messages: [{ role: 'user', content: filePrompt }],
+            temperature: 0.9,
+            max_tokens: 4000
+          })
+        });
 
-      if (!fileRes.ok) {
-        console.error(`Failed to generate ${fileSpec.path}`);
-        continue;
-      }
+        if (!fileRes.ok) {
+          const errorText = await fileRes.text();
+          throw new Error(`File generation failed ${fileRes.status}: ${errorText}`);
+        }
 
-      const fileData = await fileRes.json();
-      let code = fileData?.choices?.[0]?.message?.content || '';
+        const fileData = await fileRes.json();
+        let code = fileData?.choices?.[0]?.message?.content || '';
 
-      // Clean up markdown fences
-      const langMatch = fileSpec.path.match(/\.(\w+)$/);
-      const ext = langMatch ? langMatch[1] : '';
-      const fenceRegex = new RegExp(`\`\`\`${ext}\\n?|\\n?\`\`\`|\`\`\`\\n?`, 'g');
-      code = code.replace(fenceRegex, '').trim();
+        if (!code || code.length < 50) {
+          throw new Error('Generated code too short or empty');
+        }
 
-      generatedFiles.push({
-        path: fileSpec.path,
-        content: code,
-        type: fileSpec.type,
-        size: code.length
-      });
+        // Clean up markdown fences
+        const langMatch = fileSpec.path.match(/\.(\w+)$/);
+        const ext = langMatch ? langMatch[1] : '';
+        const fenceRegex = new RegExp(`\`\`\`${ext}\\n?|\\n?\`\`\`|\`\`\`\\n?`, 'g');
+        code = code.replace(fenceRegex, '').trim();
 
-      console.log(`   ✅ Generated ${fileSpec.path} (${code.length} chars)`);
+        return {
+          path: fileSpec.path,
+          content: code,
+          type: fileSpec.type,
+          size: code.length
+        };
+      }, 3, `File: ${fileSpec.path}`);
+
+      generatedFiles.push(generatedFile);
+      console.log(`   ✅ Generated ${fileSpec.path} (${generatedFile.size} chars)`);
     }
 
     // ========================================
