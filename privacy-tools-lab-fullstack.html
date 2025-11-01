@@ -488,6 +488,7 @@
       const [showNewFolderModal, setShowNewFolderModal] = useState(false);
       const [newFileName, setNewFileName] = useState('');
       const [newFolderName, setNewFolderName] = useState('');
+      const [creatingPresentation, setCreatingPresentation] = useState(false);
 
       // Chat state
       const [chatMessages, setChatMessages] = useState([
@@ -838,6 +839,103 @@
         console.log(`✅ Created file: ${filePath}`);
       };
       
+      // Create AI-powered presentation
+      const handleCreatePresentation = async () => {
+        if (files.length === 0) {
+          alert('No project to present! Create some files first.');
+          return;
+        }
+
+        setCreatingPresentation(true);
+
+        try {
+          // Gather project info
+          const projectFiles = files.map(f => ({
+            path: f.path,
+            type: f.type,
+            size: f.size,
+            preview: f.content.substring(0, 200)
+          }));
+
+          const projectSummary = description || 'Privacy tool project';
+
+          // Call AI to generate presentation
+          const res = await fetch(`${API_BASE}/chat-with-ai`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              messages: [
+                {
+                  role: 'user',
+                  content: `Create a beautiful, modern HTML presentation for this project:
+
+PROJECT: ${projectSummary}
+
+FILES (${files.length}):
+${projectFiles.map(f => `- ${f.path} (${f.type})`).join('\n')}
+
+Create a SINGLE PAGE HTML presentation with:
+1. Hero section with project title and tagline
+2. Features showcase (what it does)
+3. Tech stack (technologies used based on file types)
+4. File structure overview
+5. Getting started guide
+6. Dark premium design with gradients
+7. Responsive layout
+8. Smooth animations
+
+Use Tailwind CDN for styling. Make it look like a professional product launch page.
+
+OUTPUT ONLY THE COMPLETE HTML CODE, NO EXPLANATIONS.`
+                }
+              ],
+              hasPreview: false,
+              isEditRequest: false
+            })
+          });
+
+          if (!res.ok) {
+            throw new Error('Failed to generate presentation');
+          }
+
+          const data = await res.json();
+          let presentationHTML = data.message;
+
+          // Clean up markdown fences if present
+          presentationHTML = presentationHTML.replace(/```html\n?/g, '').replace(/\n?```/g, '').trim();
+
+          // Create presentation file
+          const presentationFile = {
+            path: 'presentation.html',
+            content: presentationHTML,
+            type: 'html',
+            size: presentationHTML.length
+          };
+
+          // Add to files or replace existing
+          setFiles(prev => {
+            const existingIndex = prev.findIndex(f => f.path === 'presentation.html');
+            if (existingIndex >= 0) {
+              const updated = [...prev];
+              updated[existingIndex] = presentationFile;
+              return updated;
+            }
+            return [...prev, presentationFile];
+          });
+
+          setActiveFile(presentationFile);
+          setCreatingPresentation(false);
+
+          console.log('✅ Presentation created: presentation.html');
+          alert('✅ Presentation created! Open presentation.html in preview.');
+
+        } catch (error) {
+          console.error('Presentation generation error:', error);
+          setCreatingPresentation(false);
+          alert('❌ Failed to create presentation. Try again.');
+        }
+      };
+
       // Create new folder (add README.md inside it)
       const handleCreateFolder = () => {
         if (!newFolderName.trim()) return;
@@ -1190,6 +1288,17 @@
 
                 {/* Actions */}
                 <div className="flex items-center gap-3">
+                  <button 
+                    onClick={handleCreatePresentation}
+                    disabled={files.length === 0 || creatingPresentation}
+                    className="px-6 py-2 rounded-xl bg-gradient-to-b from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 text-white text-xs font-semibold tracking-wide transition-all duration-200 shadow-xl disabled:opacity-40 disabled:cursor-not-allowed border border-slate-700/50"
+                    style={{
+                      boxShadow: '0 4px 14px 0 rgba(0,0,0,0.4), inset 0 1px 0 0 rgba(255,255,255,0.05)'
+                    }}
+                  >
+                    {creatingPresentation ? 'Creating...' : 'Create Presentation'}
+                  </button>
+                  
                   <button 
                     onClick={() => setShowGitHubModal(true)} 
                     disabled={files.length === 0}
