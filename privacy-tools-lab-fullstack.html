@@ -388,7 +388,15 @@
           }
 
         } catch (err) {
-          setError(err.message);
+          console.error('Generation error:', err);
+          
+          // Check if it's a timeout (generation might still have succeeded on server)
+          if (err.message.includes('504') || err.message.includes('timeout')) {
+            setError('⏱️ Generation took longer than expected. The tool may have been created - check back in a moment or try with a simpler description.');
+          } else {
+            setError(`❌ ${err.message}`);
+          }
+          
           setProgress('');
           setCreating(false);
         }

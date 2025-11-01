@@ -137,12 +137,13 @@ TOOL EXAMPLES (what to build):
 
 STRUCTURE REQUIREMENTS:
 - /tools/ or /modules/ for core logic
-- /api/ for backend endpoints
+- /api/ for backend endpoints (if backend enabled)
 - /utils/ for helper functions
 - /interface/ for minimal UI (not /pages/)
-- /tests/ for unit tests
-- /docs/ for integration docs
-- package.json with real dependencies (crypto, express, etc.)
+- README.md for setup/usage docs
+
+⚠️ KEEP IT LEAN: Generate 3-5 essential files max. Quality over quantity.
+Focus on the CORE functionality. Skip extras like separate test files or long docs.
 
 OUTPUT ONLY THE JSON, NO MARKDOWN FENCES.`;
 
@@ -159,10 +160,10 @@ OUTPUT ONLY THE JSON, NO MARKDOWN FENCES.`;
           'X-Title': 'Ghost Whistle Privacy Tools Lab'
         },
         body: JSON.stringify({
-          model: 'openai/gpt-4o-mini', // Use model user has access to
+          model: 'openai/gpt-4o-mini',
           messages: [{ role: 'user', content: structurePrompt }],
-          temperature: 0.8,
-          max_tokens: 2000
+          temperature: 0.7, // Lower for faster, more focused output
+          max_tokens: 800 // Smaller structure = faster
         })
       });
 
@@ -340,10 +341,10 @@ OUTPUT ONLY THE CODE, NO MARKDOWN FENCES OR EXPLANATIONS.`;
             'X-Title': 'Ghost Whistle Privacy Tools Lab'
           },
           body: JSON.stringify({
-            model: 'openai/gpt-4o-mini', // Use model user has access to
+            model: 'openai/gpt-4o-mini',
             messages: [{ role: 'user', content: filePrompt }],
-            temperature: 0.9,
-            max_tokens: 4000
+            temperature: 0.8, // Lower for faster generation
+            max_tokens: 2500 // Reduced for speed (still enough for good code)
           })
         });
 
