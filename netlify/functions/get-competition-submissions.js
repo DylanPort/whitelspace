@@ -1,5 +1,6 @@
 // Get Competition Submissions
 const fetch = require('node-fetch');
+const { getStore } = require('@netlify/blobs');
 
 exports.handler = async (event) => {
   const headers = {
@@ -43,33 +44,61 @@ exports.handler = async (event) => {
 
     console.log(`📊 Fetching submissions (sort: ${sortBy})`);
 
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/competition_submissions?order=${orderColumn}.desc${filter}`,
-      {
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/competition_submissions?order=${orderColumn}.desc${filter}`,
+        {
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`
+          }
         }
+      );
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('❌ Supabase error:', errorText);
+        throw new Error(`Failed to fetch: ${res.status} ${errorText}`);
       }
-    );
 
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.error('❌ Supabase error:', errorText);
-      throw new Error(`Failed to fetch: ${res.status} ${errorText}`);
+      const data = await res.json();
+      console.log(`✅ Fetched ${data.length} submissions (Supabase)`);
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          success: true,
+          submissions: data
+        })
+      };
+    } catch (supabaseError) {
+      console.warn('⚠️ Supabase unreachable - loading from Netlify Blobs:', supabaseError.message);
+      const store = getStore('competition_submissions');
+      const list = await store.list();
+      const blobs = list && Array.isArray(list.blobs) ? list.blobs : [];
+      const items = [];
+      for (const b of blobs) {
+        try {
+          const json = await store.get(b.key, { type: 'json' });
+          if (json) items.push(json);
+        } catch {}
+      }
+      // Sort fallback according to sortBy
+      if (sortBy === 'top') {
+        items.sort((a,b) => (b.upvotes||0) - (a.upvotes||0));
+      } else if (sortBy === 'featured') {
+        items.sort((a,b) => (b.featured?1:0) - (a.featured?1:0));
+      } else {
+        items.sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0));
+      }
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ success: true, submissions: items, source: 'blobs' })
+      };
     }
-
-    const data = await res.json();
-    console.log(`✅ Fetched ${data.length} submissions`);
-
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
-        success: true,
-        submissions: data
-      })
-    };
 
   } catch (error) {
     console.error('❌ Fetch submissions error:', error);

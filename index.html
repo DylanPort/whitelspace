@@ -23497,7 +23497,12 @@ If a user requests non-privacy tools, politely redirect: "I specialize in privac
           
           console.log(`📊 Loading submissions (sortBy: ${sortBy})`);
           
-          const res = await fetch(`${API_BASE}/get-competition-submissions?sortBy=${sortBy}`);
+          const res = await fetch(`${API_BASE}/get-competition-submissions?sortBy=${sortBy}`, {
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache'
+            }
+          });
           
           if (!res.ok) {
             const errorData = await res.json();

@@ -1,5 +1,5 @@
-// Ghost Whistle Service Worker v1.7
-const CACHE_NAME = 'ghost-whistle-v1.7.0-fullstack-ready';
+// Ghost Whistle Service Worker v1.7.1
+const CACHE_NAME = 'ghost-whistle-v1.7.1-competition-fixed';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -67,10 +67,18 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
+          try {
+            const url = event.request.url || '';
+            // Cache only http(s) responses to avoid chrome-extension errors
+            if ((url.startsWith('http://') || url.startsWith('https://')) && response && response.ok) {
+              const responseToCache = response.clone();
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(event.request, responseToCache).catch(() => {});
+              });
+            }
+          } catch (e) {
+            // Swallow caching errors
+          }
           return response;
         })
         .catch(() => caches.match(event.request))
@@ -104,13 +112,18 @@ self.addEventListener('fetch', (event) => {
             return response;
           }
 
-          // Clone the response
-          const responseToCache = response.clone();
-
-          caches.open(CACHE_NAME)
-            .then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
+          try {
+            const url = event.request.url || '';
+            if (url.startsWith('http://') || url.startsWith('https://')) {
+              const responseToCache = response.clone();
+              caches.open(CACHE_NAME)
+                .then((cache) => {
+                  cache.put(event.request, responseToCache).catch(() => {});
+                });
+            }
+          } catch (e) {
+            // ignore caching errors
+          }
 
           return response;
         });
