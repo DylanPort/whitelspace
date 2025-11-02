@@ -56,6 +56,7 @@
   <script src="https://unpkg.com/@solana/spl-token@0.3.8/lib/index.iife.js"></script>
   <!-- Anchor script removed (unused and caused ESM import error in non-module) -->
   <script src="https://unpkg.com/bn.js@5.2.1/lib/bn.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="/x402-client.js?v=15"></script>
   <script>
     // BS58 Helper - Inline fallback implementation + CDN detection
@@ -602,6 +603,7 @@
     @keyframes slideInLeft{0%{opacity:0;transform:translateX(-20px)}100%{opacity:1;transform:translateX(0)}}
     @keyframes slideInRight{0%{opacity:0;transform:translateX(20px)}100%{opacity:1;transform:translateX(0)}}
     @keyframes scaleIn{0%{opacity:0;transform:scale(.94)}100%{opacity:1;transform:scale(1)}}
+    @keyframes float{0%,100%{transform:translateY(0) translateX(0)}25%{transform:translateY(-20px) translateX(10px)}50%{transform:translateY(-10px) translateX(-10px)}75%{transform:translateY(-15px) translateX(5px)}}
     @keyframes shimmer{0%{background-position:200% center}100%{background-position:-200% center}}
     @keyframes shimmer-slide{0%{transform:translateX(-100%)}100%{transform:translateX(200%)}}
     @keyframes laser-border{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
@@ -9461,15 +9463,13 @@ console.log('✅ Fingerprint spoofing active!');`;
     function Sidebar({ step, setStep }){
       const [privacyToolsExpanded, setPrivacyToolsExpanded] = useState(true);
       const [privacyLabExpanded, setPrivacyLabExpanded] = useState(true);
+      const [ghostWhistleExpanded, setGhostWhistleExpanded] = useState(true);
       
       const items = [
         { id:'home',    label:'Home', icon:'home', color:'cyan' },
         { id:'privacy-tools-lab', label:'🛠️ Privacy Tools Lab', icon:'wrench', color:'gold', isNew: true, badge: '$500', isPremium: true },
         { id:'offline-network', label:'Ghost Whistle', icon:'network', special: true, color:'emerald' },
-        { id:'anonymous-relay', label:'Anonymous Relay', icon:'shuffle', special: true, color:'purple' },
-        { id:'claim-rewards', label:'Claim Rewards', icon:'gift', color:'yellow' },
-        { id:'social-hub', label:'Ghost Terminal', icon:'terminal', color:'cyan' },
-        { id:'services', label:'Ghost Services', icon:'activity', color:'purple' },
+        { id:'whistle-ids', label:'Whistle IDs', icon:'id-card', color:'purple', isNew: true },
         { id:'how-it-works', label:'How It Works', icon:'book-open', color:'blue' },
         { id:'swap', label:'Privacy Swap', image:'public/4DqRlDPT_400x400.png.png', color:'orange' },
         { id:'solana-privacy', label:'Solana Privacy', image:'public/solana.png', color:'indigo' },
@@ -9486,10 +9486,18 @@ console.log('✅ Fingerprint spoofing active!');`;
         { id:'community-tools', label:'Community Tools', icon:'users' },
         { id:'pro-creators', label:'Pro Creators', icon:'shield' }
       ];
+
+      // Submenu for Ghost Whistle
+      const ghostWhistleItems = [
+        { id:'anonymous-relay', label:'Anonymous Relay', icon:'shuffle', color:'purple', isHot: true },
+        { id:'claim-rewards', label:'Claim Rewards', icon:'gift', color:'yellow' },
+        { id:'social-hub', label:'Ghost Terminal', icon:'terminal', color:'cyan' },
+        { id:'services', label:'Ghost Services', icon:'activity', color:'purple' },
+      ];
       
       useEffect(()=>{
         if(window.lucide) window.lucide.createIcons();
-      },[step, privacyToolsExpanded, privacyLabExpanded]);
+      },[step, privacyToolsExpanded, privacyLabExpanded, ghostWhistleExpanded]);
       
       return (
         <aside className="hidden md:block w-[280px] shrink-0">
@@ -9505,15 +9513,17 @@ console.log('✅ Fingerprint spoofing active!');`;
             <nav className="space-y-2">
               {items.map((x,i)=> {
                 const isGhostWhistle = x.id === 'offline-network';
-                const isAnonymousRelay = x.id === 'anonymous-relay';
                 const isPrivacyTools = x.id === 'privacy-tools';
                 const isPremiumLab = x.isPremium;
                 const isPrivacyLab = x.id === 'privacy-tools-lab';
-                const isSpecial = isGhostWhistle || isAnonymousRelay;
+                const isSpecial = isGhostWhistle;
                 const isActive = step === x.id;
                 
                 // Check if any privacy tool is active
                 const isPrivacyToolActive = privacyToolsItems.some(tool => tool.id === step);
+                
+                // Check if any Ghost Whistle item is active
+                const isGhostWhistleItemActive = ghostWhistleItems.some(item => item.id === step);
                 
                 return (
                 <div key={x.id} className="space-y-1">
@@ -9527,6 +9537,9 @@ console.log('✅ Fingerprint spoofing active!');`;
                   } else if (x.id === 'privacy-tools-lab') {
                       setPrivacyLabExpanded(!privacyLabExpanded);
                       setStep(x.id);
+                  } else if (x.id === 'offline-network') {
+                      setGhostWhistleExpanded(!ghostWhistleExpanded);
+                      setStep(x.id);
                   } else {
                     setStep(x.id);
                   }
@@ -9537,17 +9550,13 @@ console.log('✅ Fingerprint spoofing active!');`;
                           ? 'premium-lab-active relative border-transparent bg-gradient-to-r from-cyan-600/30 via-amber-600/30 to-cyan-600/30 text-white shadow-lg shadow-cyan-500/40 animate-pulse'
                           : 'premium-lab relative border-transparent bg-gradient-to-r from-cyan-500/20 via-amber-500/20 to-cyan-500/20 text-amber-100 hover:shadow-2xl hover:shadow-amber-500/40 hover:scale-[1.05]'
                       : isGhostWhistle 
-                        ? isActive
+                        ? (isActive || isGhostWhistleItemActive)
                           ? 'relative border-emerald-400/60 bg-gradient-to-r from-emerald-400/20 via-teal-400/20 to-cyan-400/20 text-white shadow-lg shadow-emerald-500/30 animate-pulse'
                           : 'relative border-emerald-500/40 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-cyan-500/10 text-emerald-100 hover:border-emerald-400/60 hover:shadow-lg hover:shadow-emerald-500/20 hover:scale-[1.03] animate-shimmer'
-                          : isAnonymousRelay
-                          ? isActive
-                            ? 'relative border-amber-400/60 bg-gradient-to-r from-amber-400/20 via-orange-400/20 to-yellow-400/20 text-white shadow-lg shadow-amber-500/40 animate-pulse'
-                            : 'relative border-amber-500/40 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-yellow-500/10 text-amber-100 hover:border-amber-400/60 hover:shadow-lg hover:shadow-amber-500/30 hover:scale-[1.03]'
-                          : isPrivacyTools && (isActive || isPrivacyToolActive)
-                          ? 'border-slate-400/60 bg-slate-400/15 text-slate-100'
+                      : isPrivacyTools && (isActive || isPrivacyToolActive)
+                        ? 'border-slate-400/60 bg-slate-400/15 text-slate-100'
                         : isActive
-                    ? 'border-cyan-400/60 bg-cyan-400/15 text-cyan-100 scale-in'
+                          ? 'border-cyan-400/60 bg-cyan-400/15 text-cyan-100 scale-in'
                           : 'border-white/10 bg-white/[0.03] text-white/80 hover:bg-white/[0.07] hover:scale-[1.02]'
                     } stagger-${i+1}`}>
                     <span className="relative z-10 flex items-center gap-3 w-full">
@@ -9573,14 +9582,12 @@ console.log('✅ Fingerprint spoofing active!');`;
                           </span>
                         )}
                       {isGhostWhistle && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 font-bold uppercase tracking-wider border border-emerald-400/40">
-                          Earn
-                        </span>
-                      )}
-                          {isAnonymousRelay && (
-                            <span className="text-[9px] px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500/30 to-orange-500/30 text-amber-200 font-bold uppercase tracking-wider border border-amber-400/50 animate-pulse shadow-lg shadow-amber-500/20">
-                          HOT
-                        </span>
+                            <>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 font-bold uppercase tracking-wider border border-emerald-400/40">
+                                Earn
+                              </span>
+                              <i data-lucide={ghostWhistleExpanded ? 'chevron-down' : 'chevron-right'} className="w-4 h-4"></i>
+                            </>
                       )}
                           {isPrivacyTools && (
                             <i data-lucide={privacyToolsExpanded ? 'chevron-down' : 'chevron-right'} className="w-4 h-4"></i>
@@ -9591,6 +9598,58 @@ console.log('✅ Fingerprint spoofing active!');`;
                         </div>
                       </span>
                   </button>
+                  
+                  {/* Ghost Whistle Sub-menu */}
+                  {isGhostWhistle && ghostWhistleExpanded && (
+                    <div className="ml-4 space-y-1 mt-1">
+                      {ghostWhistleItems.map((item, itemIndex) => {
+                        const isItemActive = step === item.id;
+                        const isAnonymousRelayItem = item.id === 'anonymous-relay';
+                        const isClaimRewards = item.id === 'claim-rewards';
+                        const isGhostTerminal = item.id === 'social-hub';
+                        const isGhostServices = item.id === 'services';
+                        
+                        return (
+                          <button 
+                            key={item.id}
+                            onClick={() => {
+                              console.log('🎯 Ghost Whistle item clicked:', item.id);
+                              setStep(item.id);
+                            }}
+                            className={`w-full flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-all ${
+                              isAnonymousRelayItem
+                                ? isItemActive
+                                  ? 'bg-gradient-to-r from-amber-400/20 via-orange-400/20 to-yellow-400/20 text-amber-100 border border-amber-400/40 shadow-lg shadow-amber-500/20'
+                                  : 'bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-yellow-500/10 text-amber-200 hover:bg-amber-500/15 border border-amber-500/30'
+                                : isClaimRewards
+                                ? isItemActive
+                                  ? 'bg-yellow-500/20 text-yellow-100 border border-yellow-400/40'
+                                  : 'bg-yellow-500/10 text-yellow-200 hover:bg-yellow-500/15 border border-yellow-500/20'
+                                : isGhostTerminal
+                                ? isItemActive
+                                  ? 'bg-cyan-500/20 text-cyan-100 border border-cyan-400/40'
+                                  : 'bg-cyan-500/10 text-cyan-200 hover:bg-cyan-500/15 border border-cyan-500/20'
+                                : isGhostServices
+                                ? isItemActive
+                                  ? 'bg-purple-500/20 text-purple-100 border border-purple-400/40'
+                                  : 'bg-purple-500/10 text-purple-200 hover:bg-purple-500/15 border border-purple-500/20'
+                                : isItemActive
+                                ? 'bg-white/15 text-white border border-white/20'
+                                : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                            }`}
+                          >
+                            <i data-lucide={item.icon} className="w-4 h-4"></i>
+                            <span>{item.label}</span>
+                            {item.isHot && (
+                              <span className="ml-auto text-[8px] px-1.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500/40 to-orange-500/40 text-amber-200 font-bold uppercase animate-pulse">
+                                HOT
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                   
                   {/* Privacy Tools Sub-menu */}
                   {isPrivacyTools && privacyToolsExpanded && (
@@ -23519,26 +23578,6 @@ If a user requests non-privacy tools, politely redirect: "I specialize in privac
       const [loading, setLoading] = useState(true);
       const [submissions, setSubmissions] = useState([]);
       const [sortBy, setSortBy] = useState('recent'); // recent, top, featured
-      // 24h countdown to start
-      const [startTarget, setStartTarget] = useState(() => {
-        const saved = localStorage.getItem('competition_countdown_target');
-        if (saved) return parseInt(saved, 10);
-        const t = Date.now() + 24*60*60*1000;
-        localStorage.setItem('competition_countdown_target', t.toString());
-        return t;
-      });
-      const [startLeft, setStartLeft] = useState(() => Math.max(0, startTarget - Date.now()));
-      useEffect(() => {
-        const id = setInterval(() => setStartLeft(Math.max(0, startTarget - Date.now())), 1000);
-        return () => clearInterval(id);
-      }, [startTarget]);
-      const fmt = (ms) => {
-        const s = Math.floor(ms/1000);
-        const h = String(Math.floor(s/3600)).padStart(2,'0');
-        const m = String(Math.floor((s%3600)/60)).padStart(2,'0');
-        const sec = String(s%60).padStart(2,'0');
-        return `${h}:${m}:${sec}`;
-      };
       
       // Fetch submissions on mount
       React.useEffect(() => {
@@ -23613,72 +23652,6 @@ If a user requests non-privacy tools, politely redirect: "I specialize in privac
         <div className="w-full min-h-screen bg-black p-8">
           {/* Header */}
           <div className="max-w-7xl mx-auto mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <svg className="w-10 h-10 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                  </svg>
-                  <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-600">
-                    Community Privacy Tools
-                  </h1>
-                </div>
-                <p className="text-gray-500 text-sm ml-13">
-                  Premium privacy tools created by our developer community
-                </p>
-              </div>
-              
-              {/* Countdown (starts in 24h) */}
-              <div className="w-full mt-4">
-                <div className="px-4 py-3 rounded-xl bg-slate-900/70 border border-slate-800 flex items-center justify-between">
-                  <span className="text-xs text-gray-400">Competition starts in</span>
-                  <span className="font-mono text-amber-400 text-lg">{fmt(startLeft)}</span>
-                </div>
-              </div>
-
-              {/* Sort Filter */}
-              <div className="flex items-center gap-2 bg-slate-900/80 rounded-xl p-1.5 border border-slate-800">
-                <button
-                  onClick={() => setSortBy('recent')}
-                  className={`px-4 py-2.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
-                    sortBy === 'recent'
-                      ? 'bg-slate-800 text-white shadow-lg border border-slate-700'
-                      : 'text-gray-500 hover:text-gray-300'
-                  }`}
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                  </svg>
-                  Recent
-                </button>
-                <button
-                  onClick={() => setSortBy('top')}
-                  className={`px-4 py-2.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
-                    sortBy === 'top'
-                      ? 'bg-slate-800 text-white shadow-lg border border-slate-700'
-                      : 'text-gray-500 hover:text-gray-300'
-                  }`}
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7"/>
-                  </svg>
-                  Top Voted
-                </button>
-                <button
-                  onClick={() => setSortBy('featured')}
-                  className={`px-4 py-2.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
-                    sortBy === 'featured'
-                      ? 'bg-gradient-to-r from-amber-600 to-yellow-600 text-black shadow-lg shadow-amber-500/20'
-                      : 'text-gray-500 hover:text-gray-300'
-                  }`}
-                >
-                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                  </svg>
-                  Featured
-                </button>
-              </div>
-            </div>
             
             {/* Prize Announcement Banner */}
             <div className="mb-8 rounded-2xl bg-slate-900/50 border border-amber-500/30 p-8 backdrop-blur-xl" style={{boxShadow: '0 0 40px rgba(251, 191, 36, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.05)'}}>
@@ -23917,6 +23890,1082 @@ https://whistle.ninja
       );
     }
 
+    // ============= WHISTLE IDS - DECENTRALIZED IDENTITY =============
+    function WhistleIDs({ pushToast, setStep }) {
+      const [connectedWallet, setConnectedWallet] = React.useState(null);
+      const [vanityId, setVanityId] = React.useState('');
+      const [messageEndpoint, setMessageEndpoint] = React.useState('');
+      const [registeredDIDs, setRegisteredDIDs] = React.useState([]);
+      const [loading, setLoading] = React.useState(false);
+      const [selectedDIDForCard, setSelectedDIDForCard] = React.useState(null);
+
+      // Connect wallet using existing pattern
+      const connectWallet = async () => {
+        try {
+          const provider = (window?.solana?.isPhantom ? window.solana : null) || 
+                          (window?.solflare?.isSolflare ? window.solflare : null);
+          if (!provider) {
+            pushToast?.('Install Phantom or Solflare to connect your wallet.', 'err');
+            return;
+          }
+          const resp = await provider.connect();
+          setConnectedWallet(resp.publicKey.toString());
+          pushToast?.('✅ Wallet connected successfully', 'ok');
+        } catch (err) {
+          console.error('Wallet connection error:', err);
+          pushToast?.('Failed to connect wallet', 'err');
+        }
+      };
+
+      // Generate W3C DID Document
+      const generateDIDDocument = (did, publicKeyHex, endpoint) => {
+        return {
+          "@context": ["https://www.w3.org/ns/did/v1"],
+          "id": did,
+          "verificationMethod": [{
+            "id": `${did}#keys-1`,
+            "type": "Ed25519VerificationKey2020",
+            "controller": did,
+            "publicKeyMultibase": `z${publicKeyHex}`
+          }],
+          "service": [{
+            "id": `${did}#messaging`,
+            "type": "MessagingService",
+            "serviceEndpoint": endpoint || `https://ghost-whistle-signaling.onrender.com/messaging/${did}`
+          }],
+          "created": new Date().toISOString(),
+          "updated": new Date().toISOString()
+        };
+      };
+
+      // Register DID on Solana
+      const registerDID = async () => {
+        if (!connectedWallet) {
+          pushToast?.('Please connect your wallet first', 'err');
+          return;
+        }
+
+        if (!vanityId) {
+          pushToast?.('Please enter a Vanity ID', 'err');
+          return;
+        }
+
+        setLoading(true);
+        try {
+          const connection = new solanaWeb3.Connection(
+            'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba',
+            'confirmed'
+          );
+
+          const provider = (window?.solana?.isPhantom ? window.solana : null) || 
+                           (window?.solflare?.isSolflare ? window.solflare : null);
+          if (!provider) throw new Error('No wallet provider');
+
+          const publicKeyObj = provider.publicKey;
+          
+          // Generate full DID
+          const fullDID = `did:whistle:+W/${vanityId}`;
+
+          // Convert Solana public key to hex
+          const pubKeyBytes = publicKeyObj.toBytes();
+          const pubKeyHex = Buffer.from(pubKeyBytes).toString('hex');
+
+          // Create DID Document
+          const didDocument = generateDIDDocument(
+            fullDID,
+            pubKeyHex,
+            messageEndpoint
+          );
+
+          // Create memo instruction
+          const MEMO_PROGRAM_ID = new solanaWeb3.PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
+          const memoText = JSON.stringify({
+            type: 'whistle-did-registration',
+            did: fullDID,
+            document: didDocument,
+            timestamp: Date.now()
+          });
+
+          const memoInstruction = new solanaWeb3.TransactionInstruction({
+            keys: [{ pubkey: publicKeyObj, isSigner: true, isWritable: false }],
+            programId: MEMO_PROGRAM_ID,
+            data: new TextEncoder().encode(memoText)
+          });
+
+          // Add compute budget instructions using proper web3.js methods
+          const modifyComputeUnits = solanaWeb3.ComputeBudgetProgram.setComputeUnitLimit({ 
+            units: 400000 
+          });
+          
+          const addPriorityFee = solanaWeb3.ComputeBudgetProgram.setComputeUnitPrice({ 
+            microLamports: 1000 
+          });
+
+          // Create and send transaction
+          const transaction = new solanaWeb3.Transaction();
+          transaction.add(modifyComputeUnits);
+          transaction.add(addPriorityFee);
+          transaction.add(memoInstruction);
+
+          const { blockhash } = await connection.getLatestBlockhash();
+          transaction.recentBlockhash = blockhash;
+          transaction.feePayer = publicKeyObj;
+
+          pushToast?.('📝 Please approve transaction in wallet...', 'info');
+
+          const signedTx = await provider.signTransaction(transaction);
+          const signature = await connection.sendRawTransaction(signedTx.serialize());
+          
+          pushToast?.('⏳ Transaction sent! Confirming...', 'info');
+          await connection.confirmTransaction(signature, 'confirmed');
+
+          pushToast?.(`✅ DID registered: ${fullDID}`, 'ok');
+          
+          // Add to registered DIDs
+          const newDID = {
+            did: fullDID,
+            tx: signature,
+            timestamp: Date.now(),
+            explorerUrl: `https://solscan.io/tx/${signature}`,
+            endpoint: messageEndpoint || `https://ghost-whistle-signaling.onrender.com/messaging/${fullDID}`
+          };
+          setRegisteredDIDs([...registeredDIDs, newDID]);
+          
+          // Store in localStorage
+          const stored = JSON.parse(localStorage.getItem('whistle_dids') || '[]');
+          stored.push(newDID);
+          localStorage.setItem('whistle_dids', JSON.stringify(stored));
+
+          // Clear form
+          setVanityId('');
+          setMessageEndpoint('');
+
+        } catch (error) {
+          console.error('DID registration error:', error);
+          pushToast?.('❌ Failed to register DID: ' + error.message, 'err');
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      // Load DIDs from localStorage on mount
+      React.useEffect(() => {
+        const stored = JSON.parse(localStorage.getItem('whistle_dids') || '[]');
+        setRegisteredDIDs(stored);
+      }, []);
+
+      return (
+        <div className="space-y-8">
+          {/* Hero Section */}
+          <div style={{
+            position: 'relative',
+            textAlign: 'center',
+            padding: '32px 24px',
+            overflow: 'hidden',
+            borderRadius: '20px',
+            border: '1px solid #2a2a2a',
+            background: '#0f0f0f'
+          }} className="fade-up">
+            <div style={{ position: 'relative', zIndex: 10 }}>
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 16px',
+                borderRadius: '10px',
+                background: '#1a1a1a',
+                border: '1px solid #2a2a2a',
+                marginBottom: '16px'
+              }}>
+                <svg style={{ width: '16px', height: '16px' }} fill="none" stroke="#C4A572" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"/>
+                </svg>
+                <span style={{ color: '#C4A572', fontFamily: 'monospace', fontSize: '12px', fontWeight: '700', letterSpacing: '0.1em' }}>WHISTLE DID NAMESPACE</span>
+              </div>
+              
+              <h1 style={{
+                fontSize: 'clamp(28px, 5vw, 42px)',
+                fontWeight: '700',
+                color: '#fff',
+                marginBottom: '12px',
+                lineHeight: '1.2'
+              }}>
+                <span style={{ color: '#C4A572' }}>Decentralized</span>
+                <br />
+                <span style={{ color: 'rgba(255,255,255,0.9)' }}>Identity System</span>
+              </h1>
+              
+              <p style={{
+                fontSize: '16px',
+                color: 'rgba(255,255,255,0.7)',
+                maxWidth: '700px',
+                margin: '0 auto 8px',
+                lineHeight: '1.5'
+              }}>
+                Register your unique <span style={{ color: '#C4A572', fontFamily: 'monospace', fontWeight: '700' }}>+W/your.name</span> identity
+              </p>
+              
+              <p style={{
+                fontSize: '14px',
+                color: 'rgba(255,255,255,0.5)',
+                maxWidth: '600px',
+                margin: '0 auto'
+              }}>
+                Decentralized identifiers (DIDs) anchored to Solana blockchain. Store service endpoints, public keys, and messaging addresses on-chain.
+              </p>
+            </div>
+          </div>
+
+          {/* Registration Card */}
+          <div style={{
+            borderRadius: '16px',
+            border: '1px solid #2a2a2a',
+            background: '#0f0f0f',
+            padding: '32px'
+          }}>
+            <div className="flex items-center gap-3 mb-6">
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: '#1a1a1a',
+                border: '1px solid #2a2a2a',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <svg style={{ width: '24px', height: '24px' }} fill="none" stroke="#C4A572" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+                </svg>
+              </div>
+              <div>
+                <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#fff' }}>Register Your Whistle ID</h2>
+                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px' }}>Create a permanent, decentralized identity</p>
+              </div>
+            </div>
+            
+            {!connectedWallet ? (
+              <div className="text-center py-8">
+                <button
+                  onClick={connectWallet}
+                  style={{
+                    position: 'relative',
+                    padding: '16px 32px',
+                    borderRadius: '12px',
+                    background: '#C4A572',
+                    border: 'none',
+                    color: '#0a0a0a',
+                    fontWeight: '700',
+                    fontSize: '16px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.background = '#d4b582';
+                    e.currentTarget.style.transform = 'scale(1.05)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.background = '#C4A572';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                >
+                  <svg style={{ width: '20px', height: '20px' }} fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M21 18v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1"/>
+                    <polyline points="15 10 20 10 20 14 15 14"/>
+                  </svg>
+                  <span>Connect Wallet to Register</span>
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="bg-emerald-500/10 border border-emerald-400/30 rounded-xl p-4">
+                  <p className="text-emerald-400 font-mono text-sm flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                    </svg>
+                    <span>Connected: {connectedWallet.slice(0, 8)}...{connectedWallet.slice(-8)}</span>
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-white font-semibold mb-2 text-sm uppercase tracking-wide">
+                    Vanity ID <span style={{ color: '#C4A572' }}>*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 font-mono">+W/</div>
+                    <input
+                      type="text"
+                      value={vanityId}
+                      onChange={(e) => setVanityId(e.target.value.toLowerCase().replace(/[^a-z0-9.-]/g, ''))}
+                      placeholder="your.name"
+                      style={{
+                        width: '100%',
+                        paddingLeft: '64px',
+                        paddingRight: '16px',
+                        paddingTop: '16px',
+                        paddingBottom: '16px',
+                        borderRadius: '12px',
+                        background: '#1a1a1a',
+                        border: '1px solid #2a2a2a',
+                        color: '#fff',
+                        fontFamily: 'monospace',
+                        fontSize: '16px',
+                        outline: 'none',
+                        transition: 'all 0.2s'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = '#3a3a3a'}
+                      onBlur={(e) => e.target.style.borderColor = '#2a2a2a'}
+                    />
+                  </div>
+                  <p className="text-xs text-white/50 mt-2 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/>
+                    </svg>
+                    Will create: <span style={{ fontFamily: 'monospace', color: '#C4A572', fontWeight: '700' }}>did:whistle:+W/{vanityId || 'your.name'}</span>
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-white font-semibold mb-2 text-sm uppercase tracking-wide">
+                    Message Endpoint <span className="text-white/50">(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={messageEndpoint}
+                    onChange={(e) => setMessageEndpoint(e.target.value)}
+                    placeholder="https://your-endpoint.com/messages"
+                    style={{
+                      width: '100%',
+                      padding: '16px',
+                      borderRadius: '12px',
+                      background: '#1a1a1a',
+                      border: '1px solid #2a2a2a',
+                      color: '#fff',
+                      fontSize: '14px',
+                      outline: 'none',
+                      transition: 'all 0.2s'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#3a3a3a'}
+                    onBlur={(e) => e.target.style.borderColor = '#2a2a2a'}
+                  />
+                  <p className="text-xs text-white/50 mt-2">Custom endpoint for receiving encrypted messages</p>
+                </div>
+
+                <button
+                  onClick={registerDID}
+                  disabled={loading || !vanityId}
+                  style={{
+                    width: '100%',
+                    padding: '16px 24px',
+                    borderRadius: '12px',
+                    background: loading || !vanityId ? '#666' : '#C4A572',
+                    border: 'none',
+                    color: '#0a0a0a',
+                    fontWeight: '700',
+                    fontSize: '16px',
+                    cursor: loading || !vanityId ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                  onMouseOver={(e) => {
+                    if (!loading && vanityId) {
+                      e.currentTarget.style.background = '#d4b582';
+                      e.currentTarget.style.transform = 'scale(1.02)';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (!loading && vanityId) {
+                      e.currentTarget.style.background = '#C4A572';
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }
+                  }}
+                >
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                      </svg>
+                      <span>Registering on Solana...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg style={{ width: '20px', height: '20px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                      </svg>
+                      <span>Register DID on Solana</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Features Grid */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div style={{
+              borderRadius: '12px',
+              border: '1px solid #2a2a2a',
+              background: '#0f0f0f',
+              padding: '24px',
+              transition: 'all 0.2s'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: '#1a1a1a',
+                border: '1px solid #2a2a2a',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '16px'
+              }}>
+                <svg style={{ width: '24px', height: '24px' }} fill="none" stroke="#C4A572" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+              </div>
+              <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#fff', marginBottom: '12px' }}>W3C Standard</h3>
+              <ul className="space-y-2 text-sm text-white/70">
+                <li className="flex items-start gap-2">
+                  <span style={{ color: '#C4A572', marginTop: '4px' }}>✓</span>
+                  <span>Full W3C DID specification compliance</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span style={{ color: '#C4A572', marginTop: '4px' }}>✓</span>
+                  <span>Ed25519 verification keys</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span style={{ color: '#C4A572', marginTop: '4px' }}>✓</span>
+                  <span>Service endpoint registration</span>
+                </li>
+              </ul>
+            </div>
+
+            <div style={{
+              borderRadius: '12px',
+              border: '1px solid #2a2a2a',
+              background: '#0f0f0f',
+              padding: '24px',
+              transition: 'all 0.2s'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: '#1a1a1a',
+                border: '1px solid #2a2a2a',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '16px'
+              }}>
+                <svg style={{ width: '24px', height: '24px' }} fill="none" stroke="#C4A572" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                </svg>
+              </div>
+              <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#fff', marginBottom: '12px' }}>On-Chain Storage</h3>
+              <ul className="space-y-2 text-sm text-white/70">
+                <li className="flex items-start gap-2">
+                  <span style={{ color: '#C4A572', marginTop: '4px' }}>✓</span>
+                  <span>Permanently stored on Solana</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span style={{ color: '#C4A572', marginTop: '4px' }}>✓</span>
+                  <span>Immutable and verifiable</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span style={{ color: '#C4A572', marginTop: '4px' }}>✓</span>
+                  <span>Public key cryptography</span>
+                </li>
+              </ul>
+            </div>
+
+            <div style={{
+              borderRadius: '12px',
+              border: '1px solid #2a2a2a',
+              background: '#0f0f0f',
+              padding: '24px',
+              transition: 'all 0.2s'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: '#1a1a1a',
+                border: '1px solid #2a2a2a',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '16px'
+              }}>
+                <svg style={{ width: '24px', height: '24px' }} fill="none" stroke="#C4A572" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+              </div>
+              <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#fff', marginBottom: '12px' }}>Privacy First</h3>
+              <ul className="space-y-2 text-sm text-white/70">
+                <li className="flex items-start gap-2">
+                  <span style={{ color: '#C4A572', marginTop: '4px' }}>✓</span>
+                  <span>Vanity IDs for anonymity</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span style={{ color: '#C4A572', marginTop: '4px' }}>✓</span>
+                  <span>Encrypted messaging endpoints</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span style={{ color: '#C4A572', marginTop: '4px' }}>✓</span>
+                  <span>No personal data required</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Registered DIDs */}
+          {registeredDIDs.length > 0 && (
+            <div style={{
+              borderRadius: '16px',
+              border: '1px solid #2a2a2a',
+              background: '#0f0f0f',
+              padding: '32px'
+            }}>
+              <h3 style={{
+                fontSize: '20px',
+                fontWeight: '700',
+                color: '#fff',
+                marginBottom: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <svg style={{ width: '24px', height: '24px' }} fill="none" stroke="#C4A572" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <span>Your Registered DIDs</span>
+                <span style={{ fontSize: '14px', fontWeight: '400', color: '#666' }}>({registeredDIDs.length})</span>
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {registeredDIDs.map((did, idx) => (
+                  <div key={idx} style={{
+                    background: '#1a1a1a',
+                    borderRadius: '12px',
+                    padding: '24px',
+                    border: '1px solid #2a2a2a',
+                    transition: 'all 0.2s'
+                  }} className="group">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <svg style={{ width: '20px', height: '20px' }} fill="none" stroke="#C4A572" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"/>
+                          </svg>
+                          <p style={{ color: '#C4A572', fontFamily: 'monospace', fontSize: '16px', fontWeight: '700', wordBreak: 'break-all' }}>{did.did}</p>
+                        </div>
+                        <div className="space-y-1 text-sm">
+                          <p className="text-white/50">
+                            <span className="text-white/70 font-semibold">TX:</span> {did.tx.slice(0, 8)}...{did.tx.slice(-8)}
+                          </p>
+                          <p className="text-white/50">
+                            <span className="text-white/70 font-semibold">Registered:</span> {new Date(did.timestamp).toLocaleString()}
+                          </p>
+                          {did.endpoint && (
+                            <p className="text-white/50">
+                              <span className="text-white/70 font-semibold">Endpoint:</span> {did.endpoint}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <button
+                          onClick={() => setSelectedDIDForCard(did)}
+                          style={{
+                            padding: '10px 16px',
+                            borderRadius: '10px',
+                            background: '#C4A572',
+                            border: 'none',
+                            color: '#0a0a0a',
+                            fontSize: '13px',
+                            fontWeight: '700',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.background = '#d4b582';
+                            e.currentTarget.style.transform = 'scale(1.05)';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.background = '#C4A572';
+                            e.currentTarget.style.transform = 'scale(1)';
+                          }}
+                        >
+                          <span>View Card</span>
+                          <svg style={{ width: '16px', height: '16px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"/>
+                          </svg>
+                        </button>
+                        <a
+                          href={did.explorerUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            padding: '10px 16px',
+                            borderRadius: '10px',
+                            background: '#1a1a1a',
+                            border: '1px solid #2a2a2a',
+                            color: '#999',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            textDecoration: 'none',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.background = '#222';
+                            e.currentTarget.style.borderColor = '#3a3a3a';
+                            e.currentTarget.style.transform = 'scale(1.05)';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.background = '#1a1a1a';
+                            e.currentTarget.style.borderColor = '#2a2a2a';
+                            e.currentTarget.style.transform = 'scale(1)';
+                          }}
+                        >
+                          <span>View TX</span>
+                          <svg style={{ width: '14px', height: '14px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                          </svg>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* DID Card Modal */}
+          {selectedDIDForCard && (
+            <div className="fixed inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center z-50 p-4" onClick={() => setSelectedDIDForCard(null)}>
+              <div className="relative max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
+                {/* Close button */}
+                <button
+                  onClick={() => setSelectedDIDForCard(null)}
+                  className="absolute -top-12 right-0 text-white/70 hover:text-white transition-all"
+                >
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+
+                {/* Card - Compact ID size */}
+                <div className="w-full max-w-5xl mx-auto">
+                  <div id="did-card-capture" className="relative rounded-2xl overflow-hidden shadow-2xl" style={{
+                    background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%)',
+                    border: '1px solid #2a2a2a',
+                    boxShadow: '0 25px 50px -12px rgba(196, 165, 114, 0.15), 0 0 0 1px rgba(196, 165, 114, 0.1)',
+                    position: 'relative'
+                  }}>
+                    {/* Animated Background Effects */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '-50%',
+                      right: '-20%',
+                      width: '300px',
+                      height: '300px',
+                      background: 'radial-gradient(circle, rgba(196, 165, 114, 0.08) 0%, transparent 70%)',
+                      borderRadius: '50%',
+                      filter: 'blur(40px)',
+                      animation: 'float 6s ease-in-out infinite',
+                      pointerEvents: 'none'
+                    }}></div>
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '-30%',
+                      left: '-10%',
+                      width: '250px',
+                      height: '250px',
+                      background: 'radial-gradient(circle, rgba(196, 165, 114, 0.06) 0%, transparent 70%)',
+                      borderRadius: '50%',
+                      filter: 'blur(40px)',
+                      animation: 'float 8s ease-in-out infinite reverse',
+                      pointerEvents: 'none'
+                    }}></div>
+                    <div style={{ padding: '28px 36px', position: 'relative', zIndex: 1 }}>
+                      {/* Header */}
+                      <div className="flex items-center justify-between mb-4 pb-4" style={{ borderBottom: '1px solid #2a2a2a' }}>
+                        <div className="flex items-center gap-3">
+                          <div style={{
+                            width: '56px',
+                            height: '56px',
+                            borderRadius: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
+                            border: '1px solid #3a3a3a',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05)'
+                          }}>
+                            <svg style={{ width: '34px', height: '34px' }} viewBox="0 0 24 24" fill="none">
+                              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="#C4A572"/>
+                            </svg>
+                          </div>
+                          <div>
+                            <h3 style={{ 
+                              fontSize: '22px', 
+                              fontWeight: '700',
+                              color: '#C4A572',
+                              letterSpacing: '0.05em',
+                              marginBottom: '2px',
+                              lineHeight: '1'
+                            }}>WHISTLE IDENTITY</h3>
+                            <p style={{ 
+                              fontSize: '13px',
+                              color: '#666',
+                              fontWeight: '500',
+                              lineHeight: '1.2'
+                            }}>Decentralized ID Card</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* DID Display */}
+                      <div className="mb-4">
+                        <div style={{ 
+                          fontSize: '9px',
+                          color: '#666',
+                          letterSpacing: '0.15em',
+                          fontWeight: '600',
+                          marginBottom: '6px'
+                        }}>DECENTRALIZED IDENTIFIER</div>
+                        <div style={{ 
+                          fontSize: '28px',
+                          fontWeight: '500',
+                          color: '#C4A572',
+                          fontFamily: 'monospace',
+                          letterSpacing: '0.02em',
+                          wordBreak: 'break-all',
+                          lineHeight: '1',
+                          textShadow: '0 0 20px rgba(196, 165, 114, 0.3), 0 0 40px rgba(196, 165, 114, 0.1)',
+                          filter: 'brightness(1.1)'
+                        }}>
+                          {selectedDIDForCard.did}
+                        </div>
+                      </div>
+
+                      <div style={{ borderTop: '1px solid #2a2a2a', margin: '16px 0' }}></div>
+
+                      {/* Info Grid with QR Code */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        {/* Left Column - Info */}
+                        <div className="md:col-span-2 space-y-3">
+                          {/* Wallet and Registered */}
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <div style={{ 
+                                fontSize: '9px',
+                                color: '#666',
+                                letterSpacing: '0.15em',
+                                fontWeight: '600',
+                                marginBottom: '4px'
+                              }}>WALLET</div>
+                              <div style={{ 
+                                fontSize: '12px',
+                                color: '#999',
+                                fontFamily: 'monospace',
+                                wordBreak: 'break-all'
+                              }}>
+                                {connectedWallet?.slice(0, 8)}...{connectedWallet?.slice(-8)}
+                              </div>
+                            </div>
+
+                            <div>
+                              <div style={{ 
+                                fontSize: '9px',
+                                color: '#666',
+                                letterSpacing: '0.15em',
+                                fontWeight: '600',
+                                marginBottom: '4px'
+                              }}>REGISTERED</div>
+                              <div style={{ 
+                                fontSize: '12px',
+                                color: '#999'
+                              }}>
+                                {new Date(selectedDIDForCard.timestamp).toLocaleDateString('en-US', { 
+                                  month: 'short', 
+                                  day: 'numeric', 
+                                  year: 'numeric' 
+                                })}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* TX Hash and Status */}
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <div style={{ 
+                                fontSize: '9px',
+                                color: '#666',
+                                letterSpacing: '0.15em',
+                                fontWeight: '600',
+                                marginBottom: '4px'
+                              }}>TX HASH</div>
+                              <div style={{ 
+                                fontSize: '11px',
+                                color: '#999',
+                                fontFamily: 'monospace',
+                                wordBreak: 'break-all'
+                              }}>
+                                {selectedDIDForCard.tx.slice(0, 12)}...{selectedDIDForCard.tx.slice(-12)}
+                              </div>
+                            </div>
+
+                            <div>
+                              <div style={{ 
+                                fontSize: '9px',
+                                color: '#666',
+                                letterSpacing: '0.15em',
+                                fontWeight: '600',
+                                marginBottom: '4px'
+                              }}>STATUS</div>
+                              <div className="flex items-center gap-1.5">
+                                <div style={{
+                                  width: '5px',
+                                  height: '5px',
+                                  borderRadius: '50%',
+                                  background: '#C4A572'
+                                }}></div>
+                                <span style={{ 
+                                  fontSize: '12px',
+                                  color: '#999'
+                                }}>Active</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right Column - QR Code */}
+                        <div className="flex items-center justify-center">
+                          <div style={{
+                            padding: '12px',
+                            borderRadius: '10px',
+                            background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
+                            border: '1px solid #3a3a3a',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05)'
+                          }}>
+                            <div style={{
+                              width: '110px',
+                              height: '110px',
+                              background: 'linear-gradient(135deg, #C4A572 0%, #d4b582 100%)',
+                              borderRadius: '6px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.2), 0 0 0 2px rgba(196, 165, 114, 0.1)'
+                            }}>
+                              <svg style={{ width: '85px', height: '85px' }} viewBox="0 0 24 24" fill="#1a1a1a">
+                                <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm-2 8h8v8H3v-8zm2 2v4h4v-4H5zm8-12v8h8V3h-8zm6 6h-4V5h4v4zm-6 4h2v2h-2v-2zm2 2h2v2h-2v-2zm-2 2h2v2h-2v-2zm4-4h2v2h-2v-2zm0 4h2v2h-2v-2zm2-2h2v2h-2v-2z"/>
+                              </svg>
+                            </div>
+                            <div style={{
+                              textAlign: 'center',
+                              marginTop: '6px',
+                              fontSize: '8px',
+                              color: '#666',
+                              fontWeight: '600'
+                            }}>Scan to Verify</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Footer */}
+                      <div style={{ borderTop: '1px solid #2a2a2a', paddingTop: '14px' }}>
+                        <div className="flex items-center justify-between">
+                          <div style={{ 
+                            fontSize: '9px',
+                            color: '#666',
+                            letterSpacing: '0.15em',
+                            fontWeight: '600'
+                          }}>SOLANA MAINNET</div>
+                          <div className="flex items-center gap-1.5">
+                            <div style={{
+                              width: '4px',
+                              height: '4px',
+                              borderRadius: '50%',
+                              background: '#C4A572'
+                            }}></div>
+                            <span style={{ 
+                              fontSize: '9px',
+                              color: '#C4A572',
+                              letterSpacing: '0.15em',
+                              fontWeight: '600'
+                            }}>VERIFIED ON-CHAIN</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="grid grid-cols-3 gap-3 mt-6">
+                  <button
+                    onClick={async () => {
+                      try {
+                        const card = document.getElementById('did-card-capture');
+                        if (!card) {
+                          pushToast?.('Card not found', 'err');
+                          return;
+                        }
+                        
+                        pushToast?.('Generating image...', 'info');
+                        
+                        // Capture the card
+                        const canvas = await html2canvas(card, {
+                          backgroundColor: null,
+                          scale: 2,
+                          logging: false,
+                          useCORS: true
+                        });
+                        
+                        // Convert to blob and download
+                        canvas.toBlob((blob) => {
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `whistle-id-${selectedDIDForCard.did.replace(/[^a-z0-9]/gi, '-')}.png`;
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                          URL.revokeObjectURL(url);
+                          pushToast?.('Card saved successfully!', 'ok');
+                        });
+                      } catch (error) {
+                        console.error('Screenshot error:', error);
+                        pushToast?.('Failed to save card', 'err');
+                      }
+                    }}
+                    style={{
+                      padding: '14px 20px',
+                      borderRadius: '12px',
+                      background: '#C4A572',
+                      border: 'none',
+                      color: '#0a0a0a',
+                      fontWeight: '700',
+                      fontSize: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      boxShadow: '0 4px 6px -1px rgba(196, 165, 114, 0.3)'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.background = '#d4b582';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(196, 165, 114, 0.4)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.background = '#C4A572';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(196, 165, 114, 0.3)';
+                    }}
+                  >
+                    <svg style={{ width: '18px', height: '18px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    <span>Save Card</span>
+                  </button>
+                  <a
+                    href={selectedDIDForCard.explorerUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      padding: '14px 20px',
+                      borderRadius: '12px',
+                      background: '#1a1a1a',
+                      border: '1px solid #2a2a2a',
+                      color: '#999',
+                      fontWeight: '600',
+                      fontSize: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      textDecoration: 'none',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.background = '#222';
+                      e.currentTarget.style.borderColor = '#3a3a3a';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.background = '#1a1a1a';
+                      e.currentTarget.style.borderColor = '#2a2a2a';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <span>Explorer</span>
+                    <svg style={{ width: '16px', height: '16px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                    </svg>
+                  </a>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(selectedDIDForCard.did);
+                      pushToast?.('DID copied to clipboard!', 'ok');
+                    }}
+                    style={{
+                      padding: '14px 20px',
+                      borderRadius: '12px',
+                      background: '#1a1a1a',
+                      border: '1px solid #2a2a2a',
+                      color: '#999',
+                      fontWeight: '600',
+                      fontSize: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.background = '#222';
+                      e.currentTarget.style.borderColor = '#3a3a3a';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.background = '#1a1a1a';
+                      e.currentTarget.style.borderColor = '#2a2a2a';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <span>Copy</span>
+                    <svg style={{ width: '16px', height: '16px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
     function App() {
       const { toasts, push } = useToasts();
       const [step, setStep] = usePersistentState('uiStep', "home");
@@ -23945,7 +24994,7 @@ https://whistle.ninja
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'offline-network', 'decentralized-storage', 'breach-monitor', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'privacy-tools-lab', 'community-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
+      const validSteps = ['home', 'webrtc', 'offline-network', 'whistle-ids', 'decentralized-storage', 'breach-monitor', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'privacy-tools-lab', 'community-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -23980,6 +25029,7 @@ https://whistle.ninja
                       case 'home': return <Home setStep={setStepGuarded} />;
                       case 'webrtc': return <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />;
                       case 'offline-network': return <OfflineNetworkHub pushToast={push} setStep={setStepGuarded} />;
+                      case 'whistle-ids': return <WhistleIDs pushToast={push} setStep={setStepGuarded} />;
                       case 'decentralized-storage': return <DecentralizedStorage pushToast={push} />;
                       case 'breach-monitor': return <BreachMonitor pushToast={push} />;
                       case 'claim-rewards': return <ClaimRewards pushToast={push} />;
@@ -24818,7 +25868,7 @@ https://whistle.ninja
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'offline-network', 'decentralized-storage', 'breach-monitor', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'privacy-tools-lab', 'community-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
+      const validSteps = ['home', 'webrtc', 'offline-network', 'whistle-ids', 'decentralized-storage', 'breach-monitor', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'privacy-tools-lab', 'community-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -24853,6 +25903,7 @@ https://whistle.ninja
                       case 'home': return <Home setStep={setStepGuarded} />;
                       case 'webrtc': return <WebRTCTransfer pushToast={push} onHashReady={setHashFromFlow} setVerifyHash={setHashFromFlow} />;
                       case 'offline-network': return <OfflineNetworkHub pushToast={push} setStep={setStepGuarded} />;
+                      case 'whistle-ids': return <WhistleIDs pushToast={push} setStep={setStepGuarded} />;
                       case 'decentralized-storage': return <DecentralizedStorage pushToast={push} />;
                       case 'breach-monitor': return <BreachMonitor pushToast={push} />;
                       case 'claim-rewards': return <ClaimRewards pushToast={push} />;

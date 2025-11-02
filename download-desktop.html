@@ -71,16 +71,29 @@
             <div>
               <h3 class="text-2xl font-bold mb-2">Linux</h3>
               <p class="text-slate-400">Ubuntu, Fedora, Debian, and more</p>
-              <p class="text-sm text-slate-500 mt-1">AppImage • ~120 MB</p>
+              <p class="text-sm text-slate-500 mt-1">Standalone Executable • 65 MB</p>
+              <p class="text-xs text-emerald-400 mt-1">✅ No Node.js required!</p>
             </div>
           </div>
           <a 
-            href="javascript:void(0)"
-            onclick="showBuildInstructions('Linux')"
-            class="px-8 py-4 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 rounded-xl font-bold text-white transition-all transform hover:scale-105 shadow-lg opacity-50 cursor-not-allowed"
+            href="https://github.com/DylanPort/whitelspace/releases/latest/download/ghost-node-runner-linux"
+            class="px-8 py-4 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 rounded-xl font-bold text-white transition-all transform hover:scale-105 shadow-lg"
+            download
           >
-            Coming Soon
+            Download for Linux
           </a>
+        </div>
+        <div class="mt-4 pt-4 border-t border-slate-700">
+          <p class="text-sm text-slate-400 mb-2">📋 Quick Start:</p>
+          <pre class="bg-slate-950 p-3 rounded-lg text-xs text-green-400 overflow-x-auto">chmod +x ghost-node-runner-linux && ./ghost-node-runner-linux</pre>
+          <div class="flex gap-4 mt-3">
+            <a href="https://github.com/DylanPort/whitelspace/releases" target="_blank" class="text-xs text-cyan-400 hover:text-cyan-300">
+              📦 View All Releases
+            </a>
+            <a href="#" onclick="showLinuxInstructions(); return false;" class="text-xs text-cyan-400 hover:text-cyan-300">
+              📖 Installation Guide
+            </a>
+          </div>
         </div>
       </div>
 
@@ -335,6 +348,91 @@ chmod +x install-and-run.sh
               The source code will be available on GitHub soon.
               <br>Check back in a few days for the public repository!
             </p>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('modal-content').innerHTML = content;
+      document.getElementById('modal').classList.remove('hidden');
+    }
+
+    function showLinuxInstructions() {
+      const content = `
+        <h2 class="text-3xl font-bold mb-6">🐧 Linux Node Runner - Installation Guide</h2>
+        
+        <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6 mb-6">
+          <div class="font-bold text-emerald-400 mb-2">✅ Standalone Executable</div>
+          <p class="text-sm text-slate-300">
+            This is a standalone executable that doesn't require Node.js installation!
+          </p>
+        </div>
+
+        <div class="space-y-4 text-left">
+          <div class="bg-slate-800 rounded-lg p-4">
+            <div class="font-bold mb-2 text-cyan-400">Step 1: Download</div>
+            <pre class="bg-slate-950 p-3 rounded text-sm text-green-400 overflow-x-auto">wget https://github.com/DylanPort/whitelspace/releases/latest/download/ghost-node-runner-linux
+
+# Or use curl
+curl -L -O https://github.com/DylanPort/whitelspace/releases/latest/download/ghost-node-runner-linux</pre>
+          </div>
+
+          <div class="bg-slate-800 rounded-lg p-4">
+            <div class="font-bold mb-2 text-cyan-400">Step 2: Make Executable</div>
+            <pre class="bg-slate-950 p-3 rounded text-sm text-green-400 overflow-x-auto">chmod +x ghost-node-runner-linux</pre>
+          </div>
+
+          <div class="bg-slate-800 rounded-lg p-4">
+            <div class="font-bold mb-2 text-cyan-400">Step 3: Run the Node</div>
+            <pre class="bg-slate-950 p-3 rounded text-sm text-green-400 overflow-x-auto">./ghost-node-runner-linux</pre>
+            <p class="text-sm text-slate-400 mt-2">
+              That's it! Your node is now running and participating in the Ghost Whistle network.
+            </p>
+          </div>
+
+          <div class="bg-slate-800 rounded-lg p-4">
+            <div class="font-bold mb-2 text-cyan-400">Optional: Configure</div>
+            <pre class="bg-slate-950 p-3 rounded text-sm text-green-400 overflow-x-auto">export NODE_ID="my-custom-node"
+export NODE_REGION="EU-West"
+export SIGNALING_SERVER="wss://ghost-whistle-signaling.onrender.com"
+./ghost-node-runner-linux</pre>
+          </div>
+
+          <div class="bg-slate-800 rounded-lg p-4">
+            <div class="font-bold mb-2 text-cyan-400">Run as System Service (systemd)</div>
+            <pre class="bg-slate-950 p-3 rounded text-sm text-green-400 overflow-x-auto">sudo nano /etc/systemd/system/ghost-node.service
+
+# Add:
+[Unit]
+Description=Ghost Whistle Node Runner
+After=network.target
+
+[Service]
+Type=simple
+User=YOUR_USERNAME
+WorkingDirectory=/home/YOUR_USERNAME
+ExecStart=/home/YOUR_USERNAME/ghost-node-runner-linux
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+# Then:
+sudo systemctl enable ghost-node
+sudo systemctl start ghost-node</pre>
+          </div>
+
+          <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+            <div class="font-bold text-blue-400 mb-2">📖 Full Documentation</div>
+            <p class="text-sm text-slate-300">
+              For complete setup guide, systemd configuration, Docker instructions, and troubleshooting, 
+              see the <code>NODE-RUNNER-LINUX-README.md</code> file included with the download.
+            </p>
+          </div>
+
+          <div class="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
+            <div class="font-bold text-purple-400 mb-2">🔐 Verify Checksum (Recommended)</div>
+            <pre class="bg-slate-950 p-3 rounded text-sm text-green-400 overflow-x-auto">sha256sum ghost-node-runner-linux
+# Compare with the official checksum</pre>
           </div>
         </div>
       `;
