@@ -3,738 +3,1166 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Whistle Whitepaper - Interactive Privacy Revolution</title>
+  <title>Ghost Whistle Whitepaper - Complete Privacy Ecosystem</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
     
     body {
-      font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #000000;
+      color: #ffffff;
       overflow-x: hidden;
     }
     
-    .particle {
+    /* Premium Dark Background */
+    .premium-bg {
+      background: linear-gradient(135deg, #000000 0%, #0a0a0a 25%, #000000 50%, #0a0a0a 75%, #000000 100%);
+      background-size: 400% 400%;
+      animation: gradientShift 15s ease infinite;
+    }
+    
+    @keyframes gradientShift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    
+    /* Floating Orbs */
+    .floating-orb {
       position: fixed;
-      width: 2px;
-      height: 2px;
-      background: rgba(96, 165, 250, 0.5);
+      border-radius: 50%;
+      filter: blur(80px);
       pointer-events: none;
+      z-index: 0;
       animation: float 20s infinite;
     }
     
+    .orb-1 {
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(16,185,129,0.15) 0%, transparent 70%);
+      top: -200px;
+      left: -200px;
+      animation-delay: 0s;
+    }
+    
+    .orb-2 {
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(6,182,212,0.12) 0%, transparent 70%);
+      bottom: -250px;
+      right: -250px;
+      animation-delay: 7s;
+    }
+    
+    .orb-3 {
+      width: 350px;
+      height: 350px;
+      background: radial-gradient(circle, rgba(196,165,114,0.1) 0%, transparent 70%);
+      top: 50%;
+      left: 50%;
+      animation-delay: 14s;
+    }
+    
     @keyframes float {
-      0%, 100% { transform: translateY(0) translateX(0); opacity: 0; }
-      10% { opacity: 1; }
-      90% { opacity: 1; }
-      100% { transform: translateY(-100vh) translateX(50px); opacity: 0; }
+      0%, 100% { transform: translate(0, 0) rotate(0deg); }
+      25% { transform: translate(50px, -50px) rotate(90deg); }
+      50% { transform: translate(0, -100px) rotate(180deg); }
+      75% { transform: translate(-50px, -50px) rotate(270deg); }
     }
     
-    .glow {
-      box-shadow: 0 0 20px rgba(96, 165, 250, 0.3);
-      animation: pulse 2s infinite;
+    /* Grid Pattern */
+    .grid-pattern {
+      position: fixed;
+      inset: 0;
+      background-image: 
+        linear-gradient(rgba(16,185,129,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(16,185,129,0.05) 1px, transparent 1px);
+      background-size: 50px 50px;
+      pointer-events: none;
+      z-index: 0;
+      animation: gridMove 20s linear infinite;
     }
     
-    @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 20px rgba(96, 165, 250, 0.3); }
-      50% { box-shadow: 0 0 40px rgba(96, 165, 250, 0.6); }
+    @keyframes gridMove {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(50px, 50px); }
     }
     
-    .feature-card {
-      background: rgba(15, 23, 42, 0.6);
+    /* Content Container */
+    .content {
+      position: relative;
+      z-index: 1;
+    }
+    
+    /* Premium Card */
+    .premium-card {
+      background: rgba(15, 15, 15, 0.8);
       backdrop-filter: blur(20px);
-      border: 1px solid rgba(96, 165, 250, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 24px;
+      padding: 2rem;
       transition: all 0.3s ease;
     }
     
-    .feature-card:hover {
-      transform: translateY(-10px) scale(1.02);
-      border-color: rgba(96, 165, 250, 0.6);
-      box-shadow: 0 20px 60px rgba(96, 165, 250, 0.3);
+    .premium-card:hover {
+      border-color: rgba(16,185,129,0.3);
+      transform: translateY(-4px);
+      box-shadow: 0 20px 60px rgba(16,185,129,0.15);
     }
     
-    .interactive-demo {
-      position: relative;
-      background: linear-gradient(45deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));
-      border-radius: 20px;
-      padding: 2rem;
-      margin: 2rem 0;
+    /* Glow Effect */
+    .glow-text {
+      text-shadow: 0 0 20px rgba(16,185,129,0.5);
     }
     
-    .code-block {
-      background: rgba(0, 0, 0, 0.4);
-      border-left: 4px solid #60a5fa;
-      padding: 1rem;
-      margin: 1rem 0;
-      font-family: 'Courier New', monospace;
-      overflow-x: auto;
+    .glow-border {
+      box-shadow: 0 0 30px rgba(16,185,129,0.3);
     }
     
-    .typing-text {
-      overflow: hidden;
-      white-space: nowrap;
-      animation: typing 3s steps(40, end);
+    /* Scroll Progress */
+    .scroll-progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #10b981, #06b6d4, #C4A572);
+      z-index: 9999;
+      transition: width 0.1s;
     }
     
-    @keyframes typing {
-      from { width: 0; }
-      to { width: 100%; }
+    /* Section Divider */
+    .section-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(16,185,129,0.3), transparent);
+      margin: 4rem 0;
     }
     
-    .parallax-section {
-      transform-style: preserve-3d;
-      perspective: 1000px;
-    }
-    
-    .live-counter {
-      font-size: 3rem;
-      font-weight: bold;
-      background: linear-gradient(45deg, #60a5fa, #a855f7);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      animation: count-up 2s ease-out;
-    }
-    
-    @keyframes count-up {
-      from { opacity: 0; transform: scale(0.5); }
-      to { opacity: 1; transform: scale(1); }
-    }
-    
-    .interactive-stego-demo {
-      cursor: crosshair;
-    }
-    
+    /* Tool Badge */
     .tool-badge {
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
       padding: 0.5rem 1rem;
-      background: rgba(96, 165, 250, 0.1);
-      border: 1px solid rgba(96, 165, 250, 0.3);
-      border-radius: 9999px;
+      background: rgba(16,185,129,0.1);
+      border: 1px solid rgba(16,185,129,0.3);
+      border-radius: 999px;
+      font-size: 0.875rem;
+      font-weight: 600;
       transition: all 0.3s;
+      cursor: pointer;
     }
     
     .tool-badge:hover {
-      background: rgba(96, 165, 250, 0.2);
-      transform: scale(1.1);
+      background: rgba(16,185,129,0.2);
+      border-color: rgba(16,185,129,0.5);
+      transform: scale(1.05);
     }
     
-    .scroll-indicator {
-      position: fixed;
-      top: 0;
-      left: 0;
-      height: 4px;
-      background: linear-gradient(90deg, #60a5fa, #a855f7, #ec4899);
-      transition: width 0.1s;
-      z-index: 9999;
+    /* Stats Counter */
+    .stats-counter {
+      font-size: 3rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, #10b981, #06b6d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    /* Code Block */
+    .code-block {
+      background: rgba(0, 0, 0, 0.6);
+      border-left: 4px solid #10b981;
+      padding: 1.5rem;
+      border-radius: 12px;
+      font-family: 'Courier New', monospace;
+      overflow-x: auto;
+      margin: 1.5rem 0;
+    }
+    
+    /* Tab System */
+    .tab-btn {
+      padding: 0.75rem 1.5rem;
+      border-radius: 12px;
+      font-weight: 600;
+      transition: all 0.3s;
+      border: 1px solid transparent;
+    }
+    
+    .tab-btn.active {
+      background: linear-gradient(135deg, #10b981, #06b6d4);
+      border-color: rgba(16,185,129,0.5);
+      box-shadow: 0 10px 30px rgba(16,185,129,0.3);
+    }
+    
+    .tab-btn:not(.active) {
+      background: rgba(255, 255, 255, 0.03);
+      color: rgba(255, 255, 255, 0.6);
+    }
+    
+    .tab-btn:not(.active):hover {
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(255, 255, 255, 0.9);
+    }
+    
+    /* Feature Grid Animation */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .fade-in-up {
+      animation: fadeInUp 0.6s ease-out forwards;
+    }
+    
+    /* Icon Container */
+    .icon-container {
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(6,182,212,0.2));
+      border: 1px solid rgba(16,185,129,0.3);
+    }
+    
+    /* Manifesto Quote */
+    .manifesto-quote {
+      position: relative;
+      padding: 2rem;
+      background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(6,182,212,0.1));
+      border-left: 4px solid #C4A572;
+      border-radius: 12px;
+      font-size: 1.125rem;
+      font-style: italic;
+      color: rgba(255, 255, 255, 0.9);
+    }
+    
+    .manifesto-quote::before {
+      content: '"';
+      position: absolute;
+      top: -10px;
+      left: 20px;
+      font-size: 4rem;
+      color: #C4A572;
+      opacity: 0.3;
     }
   </style>
 </head>
-<body>
+<body class="premium-bg">
+  <!-- Floating Orbs -->
+  <div class="floating-orb orb-1"></div>
+  <div class="floating-orb orb-2"></div>
+  <div class="floating-orb orb-3"></div>
+  
+  <!-- Grid Pattern -->
+  <div class="grid-pattern"></div>
+  
   <div id="root"></div>
   
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
     
-    // Particle Background
-    function ParticleBackground() {
-      useEffect(() => {
-        const particles = [];
-        for (let i = 0; i < 50; i++) {
-          const particle = document.createElement('div');
-          particle.className = 'particle';
-          particle.style.left = Math.random() * 100 + '%';
-          particle.style.animationDelay = Math.random() * 20 + 's';
-          particle.style.animationDuration = (15 + Math.random() * 10) + 's';
-          document.body.appendChild(particle);
-          particles.push(particle);
-        }
-        return () => particles.forEach(p => p.remove());
-      }, []);
-      return null;
-    }
-    
-    // Scroll Progress
+    // Scroll Progress Component
     function ScrollProgress() {
       const [progress, setProgress] = useState(0);
       
       useEffect(() => {
         const handleScroll = () => {
           const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
-          const progress = (window.scrollY / totalHeight) * 100;
-          setProgress(progress);
+          const scrolled = (window.scrollY / totalHeight) * 100;
+          setProgress(scrolled);
         };
+        
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
       }, []);
       
-      return <div className="scroll-indicator" style={{ width: `${progress}%` }} />;
+      return <div className="scroll-progress" style={{ width: `${progress}%` }} />;
     }
     
-    // Live Stats Counter
-    function LiveStats() {
-      const [stats, setStats] = useState({ users: 0, transfers: 0, privacy: 0 });
-      
-      useEffect(() => {
-        const interval = setInterval(() => {
-          setStats({
-            users: Math.min(stats.users + Math.floor(Math.random() * 50), 10000),
-            transfers: Math.min(stats.transfers + Math.floor(Math.random() * 100), 50000),
-            privacy: Math.min(stats.privacy + 0.01, 100)
-          });
-        }, 100);
-        return () => clearInterval(interval);
-      }, [stats]);
-      
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-12">
-          <div className="feature-card p-6 text-center">
-            <div className="live-counter">{stats.users.toLocaleString()}</div>
-            <p className="text-white/80 mt-2">Privacy Advocates</p>
-          </div>
-          <div className="feature-card p-6 text-center">
-            <div className="live-counter">{stats.transfers.toLocaleString()}</div>
-            <p className="text-white/80 mt-2">Secure Transfers</p>
-          </div>
-          <div className="feature-card p-6 text-center">
-            <div className="live-counter">{stats.privacy.toFixed(2)}%</div>
-            <p className="text-white/80 mt-2">Privacy Score</p>
-          </div>
-        </div>
-      );
-    }
-    
-    // Solana Privacy Section with Tabs
-    function SolanaPrivacySection() {
-      const [activeTab, setActiveTab] = useState(0);
-      
-      useEffect(() => {
-        if (window.lucide) window.lucide.createIcons();
-      }, [activeTab]);
-      
-      const tabs = [
-        { id: 0, name: 'Proof of Existence', icon: 'shield-check' },
-        { id: 1, name: 'How It Works', icon: 'cpu' },
-        { id: 2, name: 'Use Cases', icon: 'lightbulb' },
-        { id: 3, name: 'Privacy Guarantees', icon: 'lock' }
-      ];
-      
-      const tabContent = {
-        0: {
-          title: 'Blockchain Proof of Existence',
-          content: (
-            <div className="space-y-6">
-              <p className="text-lg text-white/90">
-                After sending an encrypted bundle, Whistle posts a SHA-256 hash to the Solana blockchain. This creates an immutable, publicly verifiable timestamp without revealing any content.
-              </p>
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="bg-white/[0.03] p-6 rounded-xl border border-yellow-400/20">
-                  <h4 className="text-xl font-bold text-yellow-300 mb-4 flex items-center gap-2">
-                    <i data-lucide="zap" className="w-5 h-5"></i>
-                    Lightning Fast
-                  </h4>
-                  <ul className="space-y-2 text-white/80">
-                    <li>✓ Confirms in under 1 second</li>
-                    <li>✓ 400ms average confirmation time</li>
-                    <li>✓ Real-time verification</li>
-                  </ul>
-                </div>
-                <div className="bg-white/[0.03] p-6 rounded-xl border border-yellow-400/20">
-                  <h4 className="text-xl font-bold text-yellow-300 mb-4 flex items-center gap-2">
-                    <i data-lucide="coins" className="w-5 h-5"></i>
-                    Ultra Cheap
-                  </h4>
-                  <ul className="space-y-2 text-white/80">
-                    <li>✓ ~$0.0001 per transaction</li>
-                    <li>✓ Accessible to everyone</li>
-                    <li>✓ No barriers to entry</li>
-                  </ul>
-                </div>
-              </div>
-              <div className="code-block">
-                <code className="text-yellow-400">
-                  const hash = await sha256(encryptedBundle);<br/>
-                  await postToSolana(hash); // Immutable proof created!<br/>
-                  // Content private, timestamp public and verifiable
-                </code>
-              </div>
-            </div>
-          )
-        },
-        1: {
-          title: 'How Solana Privacy Works',
-          content: (
-            <div className="space-y-6">
-              <div className="grid gap-6">
-                <div className="bg-gradient-to-r from-yellow-500/10 to-amber-500/10 p-6 rounded-xl border border-yellow-400/30">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-xl flex items-center justify-center shrink-0">
-                      <span className="text-2xl font-bold text-white">1</span>
-                    </div>
-                    <div>
-                      <h4 className="text-xl font-bold text-white mb-2">Bundle Encryption</h4>
-                      <p className="text-white/80">Your message and files are encrypted using AES-256-GCM before any transmission occurs.</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-gradient-to-r from-yellow-500/10 to-amber-500/10 p-6 rounded-xl border border-yellow-400/30">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-xl flex items-center justify-center shrink-0">
-                      <span className="text-2xl font-bold text-white">2</span>
-                    </div>
-                    <div>
-                      <h4 className="text-xl font-bold text-white mb-2">Hash Generation</h4>
-                      <p className="text-white/80">A unique SHA-256 hash (fingerprint) is computed from the encrypted bundle. This hash is 64 characters long.</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-gradient-to-r from-yellow-500/10 to-amber-500/10 p-6 rounded-xl border border-yellow-400/30">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-xl flex items-center justify-center shrink-0">
-                      <span className="text-2xl font-bold text-white">3</span>
-                    </div>
-                    <div>
-                      <h4 className="text-xl font-bold text-white mb-2">Blockchain Posting</h4>
-                      <p className="text-white/80">Only the hash is posted to Solana using a Memo transaction. The actual content never touches the blockchain.</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-gradient-to-r from-yellow-500/10 to-amber-500/10 p-6 rounded-xl border border-yellow-400/30">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-xl flex items-center justify-center shrink-0">
-                      <span className="text-2xl font-bold text-white">4</span>
-                    </div>
-                    <div>
-                      <h4 className="text-xl font-bold text-white mb-2">Immutable Timestamp</h4>
-                      <p className="text-white/80">The transaction is permanently recorded with a timestamp that anyone can verify but no one can alter.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )
-        },
-        2: {
-          title: 'Real-World Use Cases',
-          content: (
-            <div className="space-y-6">
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="bg-white/[0.03] p-6 rounded-xl border border-yellow-400/20 hover:border-yellow-400/40 transition-all">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mb-4">
-                    <i data-lucide="briefcase" className="w-6 h-6 text-white"></i>
-                  </div>
-                  <h4 className="text-xl font-bold text-white mb-3">Corporate Whistleblower</h4>
-                  <p className="text-white/80 text-sm">
-                    Send documents on January 1st. Story breaks January 5th. Company claims fraud on January 10th? 
-                    Your Solana timestamp proves the documents existed before the accusation.
-                  </p>
-                </div>
-                
-                <div className="bg-white/[0.03] p-6 rounded-xl border border-yellow-400/20 hover:border-yellow-400/40 transition-all">
-                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-4">
-                    <i data-lucide="newspaper" className="w-6 h-6 text-white"></i>
-                  </div>
-                  <h4 className="text-xl font-bold text-white mb-3">Investigative Journalism</h4>
-                  <p className="text-white/80 text-sm">
-                    Receive a tip with blockchain proof. Verify the timeline. Protect your source's credibility. 
-                    The timestamp proves authenticity without revealing identity.
-                  </p>
-                </div>
-                
-                <div className="bg-white/[0.03] p-6 rounded-xl border border-yellow-400/20 hover:border-yellow-400/40 transition-all">
-                  <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mb-4">
-                    <i data-lucide="scale" className="w-6 h-6 text-white"></i>
-                  </div>
-                  <h4 className="text-xl font-bold text-white mb-3">Legal Protection</h4>
-                  <p className="text-white/80 text-sm">
-                    Prove you possessed evidence at a specific time. Defend against fabrication claims. 
-                    Blockchain timestamps are admissible in legal proceedings.
-                  </p>
-                </div>
-                
-                <div className="bg-white/[0.03] p-6 rounded-xl border border-yellow-400/20 hover:border-yellow-400/40 transition-all">
-                  <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-orange-500 rounded-xl flex items-center justify-center mb-4">
-                    <i data-lucide="users" className="w-6 h-6 text-white"></i>
-                  </div>
-                  <h4 className="text-xl font-bold text-white mb-3">Human Rights Documentation</h4>
-                  <p className="text-white/80 text-sm">
-                    Document abuses with immutable timestamps. Share evidence internationally. 
-                    Prove events occurred when claimed, preventing historical revisionism.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )
-        },
-        3: {
-          title: 'Privacy & Security Guarantees',
-          content: (
-            <div className="space-y-6">
-              <div className="grid gap-4">
-                <div className="flex items-start gap-4 p-6 rounded-xl bg-white/[0.03] border border-green-400/30">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shrink-0">
-                    <i data-lucide="check" className="w-5 h-5 text-white"></i>
-                  </div>
-                  <div>
-                    <h4 className="text-lg font-bold text-white mb-2">Content Privacy</h4>
-                    <p className="text-white/70">Only the hash is stored on-chain. Your actual message content never touches the blockchain. Impossible to reverse engineer content from hash.</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-4 p-6 rounded-xl bg-white/[0.03] border border-green-400/30">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shrink-0">
-                    <i data-lucide="check" className="w-5 h-5 text-white"></i>
-                  </div>
-                  <div>
-                    <h4 className="text-lg font-bold text-white mb-2">Identity Protection</h4>
-                    <p className="text-white/70">Use any Solana wallet. No KYC required. Wallet addresses don't reveal real-world identity. Complete pseudonymity maintained.</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-4 p-6 rounded-xl bg-white/[0.03] border border-green-400/30">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shrink-0">
-                    <i data-lucide="check" className="w-5 h-5 text-white"></i>
-                  </div>
-                  <div>
-                    <h4 className="text-lg font-bold text-white mb-2">Immutability</h4>
-                    <p className="text-white/70">Once posted, the timestamp cannot be altered or deleted. Provides permanent proof. Protected by Solana's network security.</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-4 p-6 rounded-xl bg-white/[0.03] border border-green-400/30">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shrink-0">
-                    <i data-lucide="check" className="w-5 h-5 text-white"></i>
-                  </div>
-                  <div>
-                    <h4 className="text-lg font-bold text-white mb-2">Public Verifiability</h4>
-                    <p className="text-white/70">Anyone can verify the timestamp using Solana explorers. No special access required. Transparency without compromising privacy.</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-r from-yellow-500/20 to-amber-500/20 border border-yellow-400/40 rounded-xl p-6 mt-6">
-                <div className="flex items-start gap-4">
-                  <i data-lucide="info" className="w-6 h-6 text-yellow-400 shrink-0 mt-1"></i>
-                  <div>
-                    <h4 className="text-lg font-bold text-white mb-2">What This Means</h4>
-                    <p className="text-white/90">
-                      You get the best of both worlds: <span className="text-yellow-400 font-bold">complete content privacy</span> from encryption, 
-                      and <span className="text-yellow-400 font-bold">verifiable proof</span> from blockchain. No one can see your message, 
-                      but everyone can verify it existed at a specific time.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )
-        }
-      };
-      
-      return (
-        <div className="max-w-6xl mx-auto px-6 my-20">
-          <div className="feature-card p-8">
-            <h3 className="text-3xl font-bold mb-8 text-center flex items-center justify-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-500 to-amber-500 flex items-center justify-center">
-                <i data-lucide="link-2" className="w-6 h-6 text-white"></i>
-              </div>
-              Solana Blockchain Privacy
-            </h3>
-            
-            {/* Tabs */}
-            <div className="flex flex-wrap gap-3 mb-8 justify-center">
-              {tabs.map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 ${
-                    activeTab === tab.id
-                      ? 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-lg shadow-yellow-500/30'
-                      : 'bg-white/[0.05] text-white/70 hover:bg-white/[0.1] hover:text-white'
-                  }`}
-                >
-                  <i data-lucide={tab.icon} className="w-4 h-4"></i>
-                  {tab.name}
-                </button>
-              ))}
-            </div>
-            
-            {/* Tab Content */}
-            <div className="mt-8">
-              <h4 className="text-2xl font-bold text-white mb-6">{tabContent[activeTab].title}</h4>
-              {tabContent[activeTab].content}
-            </div>
-          </div>
-        </div>
-      );
-    }
-    
-    // Main App
+    // Main Whitepaper App
     function WhitepaperApp() {
+      const [activeSection, setActiveSection] = useState('overview');
+      
       useEffect(() => {
         if (window.lucide) window.lucide.createIcons();
-      });
+      }, [activeSection]);
       
-      const tools = [
-        { icon: 'activity', name: 'WebRTC P2P', desc: 'Direct encrypted transfers, no servers', color: 'blue', gradient: 'from-blue-500 to-cyan-500' },
-        { icon: 'image', name: 'Image Stego', desc: 'LSB & Spread Spectrum encoding', color: 'purple', gradient: 'from-purple-500 to-pink-500' },
-        { icon: 'mic', name: 'Audio Stego', desc: 'Hide messages in sound waves', color: 'pink', gradient: 'from-pink-500 to-rose-500' },
-        { icon: 'film', name: 'Video Stego', desc: 'Distribute data across frames', color: 'violet', gradient: 'from-violet-500 to-purple-500' },
-        { icon: 'scan', name: 'Metadata Scrubber', desc: 'Remove EXIF and GPS data', color: 'cyan', gradient: 'from-cyan-500 to-blue-500' },
-        { icon: 'timer', name: 'Self-Destruct', desc: 'Auto-delete after timer', color: 'orange', gradient: 'from-orange-500 to-red-500' },
-        { icon: 'shield-alert', name: 'OpSec Checklist', desc: 'Pre-send security validation', color: 'green', gradient: 'from-green-500 to-emerald-500' },
-        { icon: 'link-2', name: 'Blockchain Proof', desc: 'Immutable Solana timestamps', color: 'yellow', gradient: 'from-yellow-500 to-amber-500' }
+      const sections = [
+        { id: 'overview', name: 'Overview', icon: 'eye' },
+        { id: 'core', name: 'Core Protocol', icon: 'shield' },
+        { id: 'identity', name: 'Whistle IDs', icon: 'fingerprint' },
+        { id: 'network', name: 'Node Network', icon: 'globe' },
+        { id: 'tools', name: 'Privacy Tools', icon: 'tool' },
+        { id: 'usecases', name: 'Use Cases', icon: 'lightbulb' },
+        { id: 'manifesto', name: 'Manifesto', icon: 'flag' }
       ];
       
       return (
-        <div className="min-h-screen text-white">
-          <ParticleBackground />
+        <div className="content min-h-screen">
           <ScrollProgress />
           
-          {/* Hero */}
-          <div className="relative overflow-hidden py-20 px-6">
+          {/* Hero Section */}
+          <section className="relative overflow-hidden py-20 px-6">
             <div className="max-w-6xl mx-auto text-center">
-              <div className="mb-8 inline-block">
-                <div className="relative w-32 h-32 mx-auto mb-4">
-                  <img 
-                    src="whistel_logo_top_right_2048.png" 
-                    alt="Whistle Logo" 
-                    className="w-full h-full object-contain animate-pulse"
-                    style={{ animationDuration: '3s' }}
-                  />
-                </div>
-              </div>
-              <h1 className="text-6xl md:text-8xl font-bold mb-6 typing-text">
-                WHISTLE
+              <div className="mb-8">
+                <img 
+                  src="whistel_logo_top_right_2048.png" 
+                  alt="Ghost Whistle Logo" 
+                  className="w-32 h-32 mx-auto animate-pulse"
+                  style={{ animationDuration: '3s' }}
+                />
+          </div>
+              <h1 className="text-6xl md:text-8xl font-black mb-6 glow-text">
+                GHOST WHISTLE
               </h1>
-              <p className="text-3xl md:text-4xl mb-8 text-blue-300">
-                The Privacy Revolution
+              <p className="text-3xl md:text-4xl mb-8 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent font-bold">
+                Complete Privacy Ecosystem
               </p>
-              <div className="text-xl md:text-2xl text-white/80 max-w-3xl mx-auto">
-                <p className="mb-4">Open source. Forever free. Built for liberation.</p>
-                <p className="text-blue-400 font-bold">Privacy isn't a feature. It's the final boss.</p>
-              </div>
-            </div>
+              <p className="text-xl md:text-2xl text-white/80 max-w-4xl mx-auto mb-12">
+                Decentralized Identity • Privacy Network • Whistleblowing Protocol
+                <br/>
+                <span className="text-emerald-400">Built on Solana • Powered by Mathematics • Ungovernable by Design</span>
+              </p>
+              
+              {/* Quick Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto mt-16">
+                <div className="premium-card text-center">
+                  <div className="stats-counter">103M+</div>
+                  <p className="text-white/60 mt-2">$WHISTLE Staked</p>
           </div>
-          
-          {/* Live Stats */}
-          <div className="max-w-6xl mx-auto px-6">
-            <LiveStats />
+                <div className="premium-card text-center">
+                  <div className="stats-counter">87</div>
+                  <p className="text-white/60 mt-2">Active Nodes</p>
           </div>
-          
-          {/* Mission Statement */}
-          <div className="max-w-4xl mx-auto px-6 my-20">
-            <div className="feature-card p-8 glow">
-              <h2 className="text-4xl font-bold mb-6 text-center flex items-center justify-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
-                  <i data-lucide="flag" className="w-6 h-6 text-white"></i>
+                <div className="premium-card text-center">
+                  <div className="stats-counter">15+</div>
+                  <p className="text-white/60 mt-2">Privacy Tools</p>
+        </div>
+                <div className="premium-card text-center">
+                  <div className="stats-counter">100%</div>
+                  <p className="text-white/60 mt-2">Open Source</p>
                 </div>
-                Our Mission
-              </h2>
-              <p className="text-xl text-white/90 leading-relaxed text-center">
-                We're not here for market caps. We're here to <span className="text-blue-400 font-bold">break chains</span>.
-                Every tool we build is a weapon against surveillance. Every line of code is open source.
-                Every feature is free. <span className="text-purple-400 font-bold">Power to the people through utility.</span>
-              </p>
+              </div>
+            </div>
+          </section>
+          
+          {/* Navigation Tabs */}
+          <div className="sticky top-0 z-50 backdrop-blur-xl bg-black/80 border-b border-white/10">
+            <div className="max-w-7xl mx-auto px-6 py-4">
+              <div className="flex gap-2 overflow-x-auto">
+                {sections.map(section => (
+                  <button
+                    key={section.id}
+                    onClick={() => {
+                      setActiveSection(section.id);
+                      document.getElementById(section.id)?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className={`tab-btn whitespace-nowrap flex items-center gap-2 ${
+                      activeSection === section.id ? 'active' : ''
+                    }`}
+                  >
+                    <i data-lucide={section.icon} className="w-4 h-4"></i>
+                    {section.name}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
           
-          
-          {/* Tools Grid */}
-          <div className="max-w-6xl mx-auto px-6 my-20">
-            <h2 className="text-5xl font-bold mb-12 text-center flex items-center justify-center gap-4">
-              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">
-                <i data-lucide="shield" className="w-8 h-8 text-white"></i>
-              </div>
-              Arsenal of Privacy
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {tools.map((tool, i) => (
-                <div key={i} className="feature-card p-6 hover:rotate-1 relative overflow-hidden group" style={{ animationDelay: `${i * 0.1}s` }}>
-                  <div className={`absolute inset-0 bg-gradient-to-br ${tool.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}></div>
-                  <div className="relative z-10">
-                    <div className={`w-16 h-16 mb-4 rounded-xl bg-gradient-to-br ${tool.gradient} flex items-center justify-center`}>
-                      <i data-lucide={tool.icon} className="w-8 h-8 text-white"></i>
-                    </div>
-                    <h3 className="text-xl font-bold mb-2 text-white">{tool.name}</h3>
-                    <p className="text-white/70 text-sm">{tool.desc}</p>
+          {/* Content Sections */}
+          <div className="max-w-6xl mx-auto px-6 py-12 space-y-20">
+            
+            {/* Overview Section */}
+            <section id="overview" className="fade-in-up">
+              <div className="premium-card">
+                <h2 className="text-4xl font-bold mb-6 flex items-center gap-4">
+                  <div className="icon-container">
+                    <i data-lucide="eye" className="w-8 h-8 text-emerald-400"></i>
                   </div>
+                  What is Ghost Whistle?
+                </h2>
+                <div className="space-y-6 text-lg text-white/80 leading-relaxed">
+                  <p>
+                    <span className="text-emerald-400 font-bold">Ghost Whistle</span> is not just a whistleblowing platform. 
+                    It's a <span className="text-white font-semibold">complete privacy ecosystem</span> built on the principle that 
+                    <span className="text-cyan-400"> privacy is infrastructure, not a service</span>.
+                  </p>
+                  <p>
+                    We've built the full stack:
+                  </p>
+                  <div className="grid md:grid-cols-2 gap-4 my-6">
+                    <div className="flex items-start gap-3 p-4 rounded-xl bg-white/[0.03]">
+                      <i data-lucide="shield-check" className="w-6 h-6 text-emerald-400 shrink-0 mt-1"></i>
+                      <div>
+                        <div className="font-bold text-white mb-1">Whistleblowing Protocol</div>
+                        <div className="text-sm text-white/60">P2P encrypted file transfers with blockchain proof</div>
+                </div>
+                </div>
+                    <div className="flex items-start gap-3 p-4 rounded-xl bg-white/[0.03]">
+                      <i data-lucide="fingerprint" className="w-6 h-6 text-cyan-400 shrink-0 mt-1"></i>
+                      <div>
+                        <div className="font-bold text-white mb-1">Decentralized Identity</div>
+                        <div className="text-sm text-white/60">W3C-compliant DIDs on Solana blockchain</div>
+              </div>
+              </div>
+                    <div className="flex items-start gap-3 p-4 rounded-xl bg-white/[0.03]">
+                      <i data-lucide="globe" className="w-6 h-6 text-blue-400 shrink-0 mt-1"></i>
+                      <div>
+                        <div className="font-bold text-white mb-1">Privacy Node Network</div>
+                        <div className="text-sm text-white/60">Decentralized relay nodes with staking rewards</div>
+            </div>
+                    </div>
+                    <div className="flex items-start gap-3 p-4 rounded-xl bg-white/[0.03]">
+                      <i data-lucide="tool" className="w-6 h-6 text-purple-400 shrink-0 mt-1"></i>
+                    <div>
+                        <div className="font-bold text-white mb-1">Privacy Tools Lab</div>
+                        <div className="text-sm text-white/60">15+ tools for encryption, anonymity & security</div>
+                    </div>
+                  </div>
+                </div>
+                
+                  <div className="manifesto-quote mt-8">
+                    ⚠️ WARNING: This software may be illegal in your jurisdiction. We do not care. Your government does not have your consent to monitor you 24/7. Civil disobedience is not only acceptable - it is mandatory. If privacy is outlawed, only outlaws will have privacy. <span className="text-emerald-400 font-bold">Become ungovernable.</span>
+                    </div>
+                    </div>
+                  </div>
+            </section>
+            
+            <div className="section-divider"></div>
+            
+            {/* Core Protocol Section */}
+            <section id="core" className="fade-in-up">
+              <div className="premium-card">
+                <h2 className="text-4xl font-bold mb-6 flex items-center gap-4">
+                  <div className="icon-container">
+                    <i data-lucide="shield" className="w-8 h-8 text-emerald-400"></i>
+                </div>
+                  Core Whistleblowing Protocol
+                </h2>
+                
+                <p className="text-lg text-white/80 mb-8">
+                  The foundation: <span className="text-emerald-400 font-bold">peer-to-peer encrypted communication</span> with 
+                  <span className="text-cyan-400 font-bold"> blockchain proof of existence</span>.
+                </p>
+                
+                {/* How It Works */}
+                <div className="space-y-6">
+                  <h3 className="text-2xl font-bold text-white flex items-center gap-3">
+                    <i data-lucide="cpu" className="w-6 h-6 text-cyan-400"></i>
+                    How It Works
+                  </h3>
+                  
+                  <div className="grid gap-4">
+                    {[
+                      { num: 1, title: 'Bundle Encryption', desc: 'Messages and files (up to 5GB) are encrypted client-side using AES-256-GCM before any transmission.', gradient: 'linear-gradient(135deg, #10b981, #059669)' },
+                      { num: 2, title: 'WebRTC P2P Transfer', desc: 'Data streams directly between sender and receiver via encrypted WebRTC channels. No servers ever see your content.', gradient: 'linear-gradient(135deg, #06b6d4, #0891b2)' },
+                      { num: 3, title: 'Hash Generation', desc: 'A unique SHA-256 hash (cryptographic fingerprint) is computed from the encrypted bundle.', gradient: 'linear-gradient(135deg, #3b82f6, #2563eb)' },
+                      { num: 4, title: 'Blockchain Proof', desc: 'Only the hash is posted to Solana blockchain using Memo program. Creates immutable timestamp.', gradient: 'linear-gradient(135deg, #a855f7, #9333ea)' },
+                      { num: 5, title: 'Verification', desc: 'Anyone can verify the timestamp on Solana explorers. Content remains private, proof is public.', gradient: 'linear-gradient(135deg, #ec4899, #db2777)' }
+                    ].map(step => (
+                      <div key={step.num} className="flex items-start gap-4 p-6 rounded-xl bg-white/[0.03] border border-white/10 hover:border-emerald-400/30 transition-all">
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: step.gradient }}>
+                          <span className="text-2xl font-bold text-white">{step.num}</span>
+                    </div>
+                    <div>
+                          <h4 className="text-xl font-bold text-white mb-2">{step.title}</h4>
+                          <p className="text-white/70">{step.desc}</p>
+                    </div>
+                  </div>
+                    ))}
+                </div>
+                
+                  {/* Technical Specs */}
+                  <div className="mt-8 grid md:grid-cols-3 gap-6">
+                    <div className="premium-card text-center">
+                      <i data-lucide="zap" className="w-12 h-12 text-yellow-400 mx-auto mb-3"></i>
+                      <div className="text-2xl font-bold text-white mb-2">~$0.0001</div>
+                      <div className="text-white/60">Cost per proof</div>
+                    </div>
+                    <div className="premium-card text-center">
+                      <i data-lucide="clock" className="w-12 h-12 text-blue-400 mx-auto mb-3"></i>
+                      <div className="text-2xl font-bold text-white mb-2">&lt;1 sec</div>
+                      <div className="text-white/60">Confirmation time</div>
+                    </div>
+                    <div className="premium-card text-center">
+                      <i data-lucide="shield-check" className="w-12 h-12 text-emerald-400 mx-auto mb-3"></i>
+                      <div className="text-2xl font-bold text-white mb-2">0 servers</div>
+                      <div className="text-white/60">No central point of failure</div>
+                  </div>
+                </div>
+                  
+                  <div className="code-block">
+                    <code className="text-emerald-400">
+                      // End-to-end encryption + blockchain proof<br/>
+                      const encrypted = await AES_GCM_encrypt(data, key);<br/>
+                      const hash = SHA256(encrypted);<br/>
+                      await postToSolana(hash); // Immutable timestamp<br/>
+                      await WebRTC_send(encrypted); // Direct P2P transfer<br/>
+                      <span className="text-white/60">// Content private. Proof public. Source protected.</span>
+                    </code>
+              </div>
+            </div>
+                  </div>
+            </section>
+            
+            <div className="section-divider"></div>
+            
+            {/* Whistle IDs Section */}
+            <section id="identity" className="fade-in-up">
+              <div className="premium-card">
+                <h2 className="text-4xl font-bold mb-6 flex items-center gap-4">
+                  <div className="icon-container">
+                    <i data-lucide="fingerprint" className="w-8 h-8 text-cyan-400"></i>
+                  </div>
+                  Whistle IDs: Decentralized Identity
+                </h2>
+                
+                <p className="text-lg text-white/80 mb-8">
+                  <span className="text-cyan-400 font-bold">W3C-compliant Decentralized Identifiers (DIDs)</span> registered on Solana blockchain. 
+                  Your identity, your control. No centralized authority. Ever.
+                </p>
+                
+                <div className="grid md:grid-cols-2 gap-6 mb-8">
+                  <div className="space-y-4">
+                    <h3 className="text-2xl font-bold text-white flex items-center gap-3">
+                      <i data-lucide="key" className="w-6 h-6 text-cyan-400"></i>
+                      What You Get
+                    </h3>
+                    <ul className="space-y-3">
+                      {[
+                        'Unique DID format: did:whistle:+W/yourname',
+                        'Registered permanently on Solana blockchain',
+                        'W3C DID Document standard compliance',
+                        'Cryptographically verifiable identity',
+                        'Premium 3D identity card (downloadable)',
+                        'QR code for instant identity sharing',
+                        'Messaging endpoint for encrypted comms',
+                        'Transaction hash proof of registration'
+                      ].map((feature, i) => (
+                        <li key={i} className="flex items-start gap-3 text-white/80">
+                          <i data-lucide="check" className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5"></i>
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                </div>
+                
+                  <div className="space-y-4">
+                    <h3 className="text-2xl font-bold text-white flex items-center gap-3">
+                      <i data-lucide="zap" className="w-6 h-6 text-yellow-400"></i>
+                      Use Cases
+                    </h3>
+                    <div className="space-y-3">
+                      {[
+                        { icon: 'message-circle', title: 'Verifiable Messaging', desc: 'Send encrypted messages with cryptographic signatures' },
+                        { icon: 'award', title: 'Reputation Building', desc: 'Build trust without revealing personal data' },
+                        { icon: 'globe', title: 'Cross-Platform Identity', desc: 'Use your DID across any Ghost Whistle service' },
+                        { icon: 'shield', title: 'Privacy-First Comms', desc: 'No email, no phone, just your DID' },
+                        { icon: 'lock', title: 'Truly Owned', desc: 'Registered on-chain, immutable and censorship-resistant' }
+                      ].map((use, i) => (
+                        <div key={i} className="p-4 rounded-xl bg-white/[0.03] border border-cyan-400/20">
+                          <div className="flex items-start gap-3">
+                            <i data-lucide={use.icon} className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5"></i>
+                            <div>
+                              <div className="font-bold text-white text-sm mb-1">{use.title}</div>
+                              <div className="text-xs text-white/60">{use.desc}</div>
+                  </div>
+                </div>
+                  </div>
+                      ))}
+                </div>
+              </div>
+            </div>
+                
+                <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-400/30 rounded-xl p-6">
+                  <h4 className="text-xl font-bold text-white mb-3 flex items-center gap-2">
+                    <i data-lucide="info" className="w-6 h-6 text-cyan-400"></i>
+                    Identity Sovereignty
+                  </h4>
+                  <p className="text-white/80">
+                    Your Whistle ID is <span className="text-cyan-400 font-bold">permanently yours</span>. 
+                    No government can revoke it. No corporation can suspend it. No platform can delete it. 
+                    It exists on the blockchain, protected by mathematics and consensus, not by the mercy of centralized authorities.
+                  </p>
+                  </div>
+                  </div>
+            </section>
+            
+            <div className="section-divider"></div>
+            
+            {/* Node Network Section */}
+            <section id="network" className="fade-in-up">
+              <div className="premium-card">
+                <h2 className="text-4xl font-bold mb-6 flex items-center gap-4">
+                  <div className="icon-container">
+                    <i data-lucide="globe" className="w-8 h-8 text-blue-400"></i>
+                </div>
+                  Ghost Whistle Node Network
+                </h2>
+                
+                <p className="text-lg text-white/80 mb-8">
+                  A <span className="text-blue-400 font-bold">decentralized network of privacy nodes</span> that anyone can run. 
+                  Earn rewards for providing privacy infrastructure. Even on Raspberry Pi.
+                </p>
+                
+                {/* Node Types */}
+                <div className="grid md:grid-cols-3 gap-6 mb-8">
+                  {[
+                    { 
+                      icon: 'wifi', 
+                      title: 'Relay Nodes', 
+                      desc: 'Anonymous relay service for routing encrypted traffic',
+                      badge: 'HOT',
+                      gradient: 'linear-gradient(135deg, #f97316, #ea580c)'
+                    },
+                    { 
+                      icon: 'server', 
+                      title: 'Storage Nodes', 
+                      desc: 'Distributed storage with Reed-Solomon error correction',
+                      gradient: 'linear-gradient(135deg, #a855f7, #9333ea)'
+                    },
+                    { 
+                      icon: 'radio', 
+                      title: 'Signaling Nodes', 
+                      desc: 'WebRTC signaling for peer discovery and connection',
+                      gradient: 'linear-gradient(135deg, #06b6d4, #0891b2)'
+                    }
+                  ].map((node, i) => (
+                    <div key={i} className="premium-card group">
+                      <div className="w-16 h-16 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform" style={{ background: node.gradient }}>
+                        <i data-lucide={node.icon} className="w-8 h-8 text-white"></i>
+                  </div>
+                      <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                        {node.title}
+                        {node.badge && (
+                          <span className="px-2 py-0.5 text-xs bg-orange-500 text-white rounded-full font-bold">
+                            {node.badge}
+                          </span>
+                        )}
+                      </h3>
+                      <p className="text-white/70 text-sm">{node.desc}</p>
+                  </div>
+                  ))}
+                </div>
+                
+                {/* Staking & Rewards */}
+                <div className="grid md:grid-cols-2 gap-6 mb-8">
+                  <div className="premium-card">
+                    <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-3">
+                      <i data-lucide="coins" className="w-6 h-6 text-yellow-400"></i>
+                      Staking & Rewards
+                    </h3>
+                    <ul className="space-y-3">
+                      {[
+                        'Stake $WHISTLE to run a node',
+                        'Earn rewards for uptime and bandwidth',
+                        'Monthly leaderboard competitions',
+                        'Top nodes get bonus rewards',
+                        'Withdraw anytime, no lock periods',
+                        '103.9M+ $WHISTLE currently staked'
+                      ].map((item, i) => (
+                        <li key={i} className="flex items-start gap-3 text-white/80">
+                          <i data-lucide="arrow-right" className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5"></i>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  
+                  <div className="premium-card">
+                    <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-3">
+                      <i data-lucide="download" className="w-6 h-6 text-emerald-400"></i>
+                      Run A Node
+                    </h3>
+                    <div className="space-y-4">
+                  <div>
+                        <div className="font-bold text-white mb-2 flex items-center gap-2">
+                          <i data-lucide="monitor" className="w-5 h-5 text-blue-400"></i>
+                          Windows Desktop
+                  </div>
+                        <p className="text-sm text-white/60">One-click installer, ~150MB, runs in background</p>
+                  </div>
+                  <div>
+                        <div className="font-bold text-white mb-2 flex items-center gap-2">
+                          <i data-lucide="terminal" className="w-5 h-5 text-orange-400"></i>
+                          Linux (Raspberry Pi)
+                  </div>
+                        <p className="text-sm text-white/60">Standalone executable, no Node.js required, 65MB</p>
+                        <div className="code-block mt-2 text-xs">
+                          <code className="text-emerald-400">
+                            chmod +x ghost-node-runner-linux<br/>
+                            ./ghost-node-runner-linux
+                          </code>
+                </div>
+              </div>
+                  <div>
+                        <div className="font-bold text-white mb-2 flex items-center gap-2">
+                          <i data-lucide="code" className="w-5 h-5 text-cyan-400"></i>
+                          Build from Source
+                  </div>
+                        <p className="text-sm text-white/60">Open source on GitHub, fully auditable</p>
+                </div>
+              </div>
+            </div>
+                
+                <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-400/30 rounded-xl p-6">
+                  <h4 className="text-xl font-bold text-white mb-3 flex items-center gap-2">
+                    <i data-lucide="trophy" className="w-6 h-6 text-yellow-400"></i>
+                    Current Network Stats
+                  </h4>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <div className="text-3xl font-bold text-blue-400">87</div>
+                      <div className="text-sm text-white/60">Active Nodes</div>
+              </div>
+                    <div>
+                      <div className="text-3xl font-bold text-emerald-400">103.9M+</div>
+                      <div className="text-sm text-white/60">$WHISTLE Staked</div>
+            </div>
+                    <div>
+                      <div className="text-3xl font-bold text-cyan-400">24/7</div>
+                      <div className="text-sm text-white/60">Network Uptime</div>
+            </div>
+          </div>
+        </div>
+              </div>
+            </section>
+            
+            <div className="section-divider"></div>
+            
+            {/* Privacy Tools Section */}
+            <section id="tools" className="fade-in-up">
+              <div className="premium-card">
+                <h2 className="text-4xl font-bold mb-6 flex items-center gap-4">
+                  <div className="icon-container">
+                    <i data-lucide="tool" className="w-8 h-8 text-purple-400"></i>
+                  </div>
+                  Privacy Tools Arsenal (15+ Tools)
+                </h2>
+                
+                <p className="text-lg text-white/80 mb-8">
+                  A complete toolkit for <span className="text-purple-400 font-bold">encryption, anonymity, and security</span>. 
+                  Every tool is free, open source, and runs entirely in your browser.
+                </p>
+                
+                {/* Tools Grid */}
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[
+                    { icon: 'image', name: 'Image Steganography', desc: 'Hide messages in images with LSB & Spread Spectrum', gradient: 'linear-gradient(135deg, #a855f7, #9333ea)' },
+                    { icon: 'mic', name: 'Audio Steganography', desc: 'Encode data in sound waves, survives compression', gradient: 'linear-gradient(135deg, #ec4899, #db2777)' },
+                    { icon: 'film', name: 'Video Steganography', desc: 'Distribute messages across video frames', gradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' },
+                    { icon: 'shield-off', name: 'Metadata Scrubber', desc: 'Remove EXIF, GPS, and identifying data', gradient: 'linear-gradient(135deg, #06b6d4, #0891b2)' },
+                    { icon: 'timer', name: 'Self-Destruct Messages', desc: 'Auto-delete after countdown or view', gradient: 'linear-gradient(135deg, #f97316, #ea580c)' },
+                    { icon: 'shield-check', name: 'OpSec Checklist', desc: 'Pre-send security validation', gradient: 'linear-gradient(135deg, #10b981, #059669)' },
+                    { icon: 'map-pin', name: 'Location Spoofer', desc: 'Override GPS for website testing', gradient: 'linear-gradient(135deg, #3b82f6, #2563eb)' },
+                    { icon: 'user-x', name: 'Ghost Identity Generator', desc: 'AI-powered fake identities with faces', gradient: 'linear-gradient(135deg, #64748b, #475569)' },
+                    { icon: 'activity', name: 'WebRTC File Transfer', desc: 'Direct P2P transfers, no servers', gradient: 'linear-gradient(135deg, #10b981, #059669)' },
+                    { icon: 'hard-drive', name: 'Decentralized Storage', desc: 'Reed-Solomon distributed storage', gradient: 'linear-gradient(135deg, #6366f1, #4f46e5)' },
+                    { icon: 'alert-triangle', name: 'Breach Monitor', desc: 'Check if your data was leaked', gradient: 'linear-gradient(135deg, #ef4444, #dc2626)' },
+                    { icon: 'shuffle', name: 'Privacy Swap', desc: 'Anonymous crypto swaps', gradient: 'linear-gradient(135deg, #eab308, #ca8a04)' },
+                    { icon: 'globe', name: 'Censorship Map', desc: 'Real-time internet freedom data', gradient: 'linear-gradient(135deg, #f43f5e, #e11d48)' },
+                    { icon: 'fingerprint', name: 'Fingerprint Spoofer', desc: 'Randomize browser fingerprints', gradient: 'linear-gradient(135deg, #f59e0b, #d97706)' },
+                    { icon: 'search', name: 'Privacy Checkup', desc: 'Scan your digital footprint', gradient: 'linear-gradient(135deg, #14b8a6, #0d9488)' }
+                  ].map((tool, i) => (
+                    <div key={i} className="premium-card group hover:scale-105 transition-transform">
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-3 group-hover:rotate-12 transition-transform" style={{ background: tool.gradient }}>
+                        <i data-lucide={tool.icon} className="w-6 h-6 text-white"></i>
+                </div>
+                      <h3 className="text-lg font-bold text-white mb-2">{tool.name}</h3>
+                      <p className="text-sm text-white/60">{tool.desc}</p>
+              </div>
+                  ))}
+              </div>
+                
+                {/* Steganography Deep Dive */}
+                <div className="mt-12 space-y-6">
+                  <h3 className="text-3xl font-bold text-white flex items-center gap-3">
+                    <i data-lucide="eye-off" className="w-8 h-8 text-purple-400"></i>
+                    Steganography: Hide in Plain Sight
+                  </h3>
+                  
+                  <div className="grid md:grid-cols-3 gap-6">
+                    <div className="premium-card">
+                      <h4 className="text-xl font-bold text-white mb-3 flex items-center gap-2">
+                        <i data-lucide="image" className="w-6 h-6 text-purple-400"></i>
+                        Image
+                      </h4>
+                      <ul className="space-y-2 text-sm text-white/70 mb-4">
+                        <li>• LSB encoding in RGB channels</li>
+                        <li>• Spread Spectrum technique</li>
+                        <li>• ~1KB per 100x100 image</li>
+                        <li>• Survives social media uploads</li>
+                      </ul>
+                      <div className="text-xs text-emerald-400">✓ Instagram, Twitter, Facebook safe</div>
+            </div>
+                    
+                    <div className="premium-card">
+                      <h4 className="text-xl font-bold text-white mb-3 flex items-center gap-2">
+                        <i data-lucide="mic" className="w-6 h-6 text-pink-400"></i>
+                        Audio
+                      </h4>
+                      <ul className="space-y-2 text-sm text-white/70 mb-4">
+                        <li>• LSB in 16-bit samples</li>
+                        <li>• Web Audio API processing</li>
+                        <li>• ~10K chars per minute</li>
+                        <li>• Inaudible to human ear</li>
+                      </ul>
+                      <div className="text-xs text-emerald-400">✓ WhatsApp, SoundCloud safe</div>
+          </div>
+          
+                    <div className="premium-card">
+                      <h4 className="text-xl font-bold text-white mb-3 flex items-center gap-2">
+                        <i data-lucide="film" className="w-6 h-6 text-violet-400"></i>
+                        Video
+                      </h4>
+                      <ul className="space-y-2 text-sm text-white/70 mb-4">
+                        <li>• 100 bits per frame @ 30FPS</li>
+                        <li>• Canvas API manipulation</li>
+                        <li>• ~1K chars per 10 seconds</li>
+                        <li>• Invisible to naked eye</li>
+                      </ul>
+                      <div className="text-xs text-emerald-400">✓ YouTube, TikTok safe</div>
+                    </div>
+          </div>
+          
+                  <div className="code-block">
+                    <code className="text-purple-400">
+                      // Example: Image Steganography<br/>
+                      const imageData = canvas.getContext('2d').getImageData(0,0,w,h);<br/>
+                      for(let i=0; i&lt;message.length; i++) &#123;<br/>
+                      &nbsp;&nbsp;imageData.data[i*4] = (pixel & ~1) | messageBit; // LSB<br/>
+                      &#125;<br/>
+                      <span className="text-white/60">// Image looks identical. Message is hidden forever.</span>
+                    </code>
+                </div>
+                </div>
+                
+                {/* Community Tools Competition */}
+                <div className="mt-12 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-400/30 rounded-xl p-6">
+                  <h4 className="text-2xl font-bold text-white mb-3 flex items-center gap-2">
+                    <i data-lucide="trophy" className="w-7 h-7 text-yellow-400"></i>
+                    Community Tools Competition - NOW LIVE!
+                  </h4>
+                  <p className="text-white/80 mb-4">
+                    Developers can submit their own privacy tools. Community votes. Winners get featured + rewards in $GHOST tokens.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <span className="tool-badge">🔐 Encryption Tools</span>
+                    <span className="tool-badge">🌐 Anonymity Services</span>
+                    <span className="tool-badge">💬 Secure Communication</span>
+                    <span className="tool-badge">🛡️ Anti-Surveillance</span>
+                    <span className="tool-badge">🎭 Identity Protection</span>
+            </div>
+          </div>
+              </div>
+            </section>
+            
+            <div className="section-divider"></div>
+            
+            {/* Use Cases Section */}
+            <section id="usecases" className="fade-in-up">
+              <div className="premium-card">
+                <h2 className="text-4xl font-bold mb-6 flex items-center gap-4">
+                  <div className="icon-container">
+                    <i data-lucide="lightbulb" className="w-8 h-8 text-yellow-400"></i>
+              </div>
+                  Real-World Use Cases
+            </h2>
+                
+                <div className="grid md:grid-cols-2 gap-6">
+                  {[
+                    {
+                      icon: 'briefcase',
+                      title: 'Corporate Whistleblowing',
+                      desc: 'Expose fraud, corruption, or misconduct without risking your career or freedom. Blockchain timestamps prove authenticity.',
+                      gradient: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                      examples: ['Financial fraud documentation', 'Safety violation reports', 'Harassment evidence']
+                    },
+                    {
+                      icon: 'newspaper',
+                      title: 'Investigative Journalism',
+                      desc: 'Receive tips from sources with cryptographic proof. Protect source identity while maintaining evidence credibility.',
+                      gradient: 'linear-gradient(135deg, #a855f7, #9333ea)',
+                      examples: ['Anonymous source protection', 'Document verification', 'Timeline authentication']
+                    },
+                    {
+                      icon: 'users',
+                      title: 'Activism & Organizing',
+                      desc: 'Coordinate actions without surveillance. Communicate securely across borders. Build movements that can\'t be infiltrated.',
+                      gradient: 'linear-gradient(135deg, #10b981, #059669)',
+                      examples: ['Protest coordination', 'Cross-border solidarity', 'Secure group messaging']
+                    },
+                    {
+                      icon: 'scale',
+                      title: 'Legal & Human Rights',
+                      desc: 'Document abuses with immutable timestamps. Collect evidence that can\'t be disputed. Prove events occurred when claimed.',
+                      gradient: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                      examples: ['Human rights documentation', 'Evidence timestamping', 'Legal protection']
+                    },
+                    {
+                      icon: 'shield',
+                      title: 'Personal Privacy',
+                      desc: 'Communicate without metadata collection. Share files without cloud storage. Create identity without KYC.',
+                      gradient: 'linear-gradient(135deg, #06b6d4, #0891b2)',
+                      examples: ['Private file sharing', 'Anonymous communication', 'Identity sovereignty']
+                    },
+                    {
+                      icon: 'globe',
+                      title: 'Circumventing Censorship',
+                      desc: 'Route around internet filters. Access information despite government blocks. Share truth where truth is banned.',
+                      gradient: 'linear-gradient(135deg, #f97316, #ea580c)',
+                      examples: ['Firewall bypass', 'Information access', 'Censorship resistance']
+                    }
+                  ].map((usecase, i) => (
+                    <div key={i} className="premium-card">
+                      <div className="w-16 h-16 rounded-xl flex items-center justify-center mb-4" style={{ background: usecase.gradient }}>
+                        <i data-lucide={usecase.icon} className="w-8 h-8 text-white"></i>
+                    </div>
+                      <h3 className="text-2xl font-bold text-white mb-3">{usecase.title}</h3>
+                      <p className="text-white/70 mb-4">{usecase.desc}</p>
+                      <div className="space-y-2">
+                        <div className="text-sm font-bold text-white/50">Examples:</div>
+                        {usecase.examples.map((ex, j) => (
+                          <div key={j} className="text-sm text-white/60 flex items-center gap-2">
+                            <i data-lucide="check" className="w-4 h-4 text-emerald-400"></i>
+                            {ex}
                 </div>
               ))}
             </div>
+                    </div>
+                  ))}
           </div>
           
-          {/* Technical Deep Dive - Audio */}
-          <div className="max-w-6xl mx-auto px-6 my-20">
-            <div className="feature-card p-8">
-              <h3 className="text-3xl font-bold mb-6 flex items-center">
-                <i data-lucide="headphones" className="w-8 h-8 mr-3 text-pink-400"></i>
-                Audio Steganography Deep Dive
+                {/* Real Stories */}
+                <div className="mt-12 space-y-6">
+                  <h3 className="text-3xl font-bold text-white flex items-center gap-3">
+                    <i data-lucide="book-open" className="w-8 h-8 text-cyan-400"></i>
+                    Why This Matters
               </h3>
-              <div className="grid md:grid-cols-2 gap-8">
-                <div>
-                  <h4 className="text-xl font-bold mb-4 text-pink-300">How It Works</h4>
-                  <ul className="space-y-3 text-white/80">
-                    <li>✓ LSB encoding in 16-bit audio samples</li>
-                    <li>✓ Web Audio API for processing</li>
-                    <li>✓ WAV output with hidden data</li>
-                    <li>✓ ~10,000 chars per minute of audio</li>
-                    <li>✓ Survives WhatsApp, SoundCloud, email</li>
-                  </ul>
+                  
+                  <div className="grid md:grid-cols-3 gap-6">
+                    {[
+                      { name: 'Edward Snowden', desc: 'Exposed mass surveillance. Lives in exile.', result: 'Punishment' },
+                      { name: 'Chelsea Manning', desc: 'Leaked war crimes. Tortured in prison.', result: 'Punishment' },
+                      { name: 'Reality Winner', desc: 'Leaked election interference. 5+ years imprisoned.', result: 'Punishment' }
+                    ].map((story, i) => (
+                      <div key={i} className="p-6 rounded-xl bg-red-500/10 border border-red-400/30">
+                        <div className="font-bold text-white mb-2">{story.name}</div>
+                        <div className="text-sm text-white/70 mb-3">{story.desc}</div>
+                        <div className="inline-block px-3 py-1 bg-red-500/20 text-red-400 text-xs font-bold rounded-full">
+                          {story.result}
                 </div>
-                <div>
-                  <h4 className="text-xl font-bold mb-4 text-pink-300">Use Cases</h4>
-                  <ul className="space-y-3 text-white/80">
-                    <li>🎙️ Voice memos with hidden coordinates</li>
-                    <li>🎵 Podcast clips with encrypted data</li>
-                    <li>📱 Phone recordings with secure messages</li>
-                    <li>☁️ Cloud-shared audio files</li>
-                    <li>💬 Messaging app voice notes</li>
-                  </ul>
                 </div>
-              </div>
-              <div className="code-block mt-6">
-                <code className="text-green-400">
-                  const samples = audioBuffer.getChannelData(0);<br/>
-                  samples[i] = (samples[i] & ~1) | messageBit; // LSB injection<br/>
-                  // Audio sounds identical, data is hidden forever
-                </code>
-              </div>
-            </div>
+                    ))}
           </div>
           
-          {/* Technical Deep Dive - Video */}
-          <div className="max-w-6xl mx-auto px-6 my-20">
-            <div className="feature-card p-8">
-              <h3 className="text-3xl font-bold mb-6 flex items-center">
-                <i data-lucide="film" className="w-8 h-8 mr-3 text-violet-400"></i>
-                Video Steganography Deep Dive
-              </h3>
-              <div className="grid md:grid-cols-2 gap-8">
-                <div>
-                  <h4 className="text-xl font-bold mb-4 text-violet-300">How It Works</h4>
-                  <ul className="space-y-3 text-white/80">
-                    <li>✓ LSB encoding across video frames</li>
-                    <li>✓ 100 bits per frame at 30 FPS</li>
-                    <li>✓ Canvas API for pixel manipulation</li>
-                    <li>✓ ~1,000 chars per 10 seconds</li>
-                    <li>✓ WebM output with VP9 codec</li>
-                  </ul>
+                  <div className="manifesto-quote">
+                    Every whistleblower above exposed truth and got destroyed. They used centralized platforms. 
+                    Traceable servers. Identifiable metadata. <span className="text-emerald-400 font-bold">Ghost Whistle fixes all of that.</span>
+                    <br/><br/>
+                    <span className="text-white font-bold">The next truth-teller will not end up in a cage.</span>
                 </div>
-                <div>
-                  <h4 className="text-xl font-bold mb-4 text-violet-300">Use Cases</h4>
-                  <ul className="space-y-3 text-white/80">
-                    <li>📹 YouTube uploads with hidden data</li>
-                    <li>🎵 TikTok videos with secret messages</li>
-                    <li>📷 Instagram Reels coordination</li>
-                    <li>💬 Video messages on social media</li>
-                    <li>📧 Email attachments that look normal</li>
-                  </ul>
                 </div>
               </div>
-              <div className="code-block mt-6">
-                <code className="text-purple-400">
-                  for each frame:<br/>
-                  &nbsp;&nbsp;imageData[i] = (pixel & ~1) | messageBit;<br/>
-                  // Message distributed across time, invisible to eye
-                </code>
-              </div>
-            </div>
-          </div>
-          
-          {/* Solana Privacy Section with Tabs */}
-          <SolanaPrivacySection />
-          
-          {/* The Manifesto */}
-          <div className="max-w-4xl mx-auto px-6 my-20">
-            <div className="feature-card p-12 glow text-center">
-              <h2 className="text-5xl font-bold mb-8 flex items-center justify-center gap-4">
-                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                  <i data-lucide="book-open" className="w-8 h-8 text-white"></i>
+            </section>
+            
+            <div className="section-divider"></div>
+            
+            {/* Manifesto Section */}
+            <section id="manifesto" className="fade-in-up">
+              <div className="premium-card glow-border">
+                <h2 className="text-5xl font-bold mb-8 text-center flex items-center justify-center gap-4">
+                  <div className="icon-container">
+                    <i data-lucide="flag" className="w-10 h-10 text-emerald-400"></i>
                 </div>
-                The Manifesto
+                  The Ghost Whistle Manifesto
               </h2>
-              <div className="space-y-8 text-lg text-white/90">
-                <div className="flex items-start gap-4 p-6 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-blue-400/30 transition-all">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shrink-0">
-                    <i data-lucide="lock-open" className="w-6 h-6 text-white"></i>
+                
+                <div className="space-y-8 max-w-4xl mx-auto">
+                  {[
+                    {
+                      title: 'Privacy is Infrastructure, Not a Service',
+                      desc: 'Privacy cannot depend on a company\'s goodwill or a government\'s permission. It must be architectural - built into the protocol itself.',
+                      icon: 'shield'
+                    },
+                    {
+                      title: 'Mathematics > Legislation',
+                      desc: 'Your parliament can outlaw encryption. Your congress can mandate backdoors. But they cannot repeal SHA-256 or break AES-256. We build on math, not mercy.',
+                      icon: 'calculator'
+                    },
+                    {
+                      title: 'Whistleblowers Are Heroes, Not Criminals',
+                      desc: 'Every major reform in history came from someone breaking rules to expose truth. We build tools so they can do it without losing their freedom.',
+                      icon: 'award'
+                    },
+                    {
+                      title: 'Surveillance is Violence',
+                      desc: 'They watch everything you read, track everywhere you go, record everyone you talk to, profile what you might do. That is not security. That is control.',
+                      icon: 'eye-off'
+                    },
+                    {
+                      title: 'Open Source Forever',
+                      desc: 'No backdoors. No compromises. Every line of code auditable by everyone. Transparency is the only path to trust in privacy tools.',
+                      icon: 'code-2'
+                    },
+                    {
+                      title: 'Ungovernable by Design',
+                      desc: 'No CEO to arrest. No servers to seize. No compliance department to threaten. We are not asking permission. We are building freedom.',
+                      icon: 'zap'
+                    }
+                  ].map((principle, i) => (
+                    <div key={i} className="flex items-start gap-6 p-8 rounded-2xl bg-white/[0.02] border border-white/10 hover:border-emerald-400/30 transition-all">
+                      <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center shrink-0">
+                        <i data-lucide={principle.icon} className="w-8 h-8 text-white"></i>
                   </div>
                   <div>
-                    <p className="text-xl font-bold text-white mb-2">Privacy is not a feature.</p>
-                    <p className="text-white/70">It's a fundamental right. The foundation of human dignity in the digital age.</p>
+                        <h3 className="text-2xl font-bold text-white mb-3">{principle.title}</h3>
+                        <p className="text-lg text-white/70 leading-relaxed">{principle.desc}</p>
                   </div>
+                    </div>
+                  ))}
                 </div>
                 
-                <div className="flex items-start gap-4 p-6 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-purple-400/30 transition-all">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shrink-0">
-                    <i data-lucide="users" className="w-6 h-6 text-white"></i>
+                {/* Final Declaration */}
+                <div className="mt-16 p-12 rounded-3xl bg-gradient-to-br from-emerald-500/10 via-cyan-500/10 to-blue-500/10 border-2 border-emerald-400/30 text-center">
+                  <h3 className="text-4xl font-bold text-white mb-6">
+                    Ghost Whistle is Not a Product. It is a Weapon.
+                  </h3>
+                  <div className="text-xl text-white/80 space-y-4 max-w-3xl mx-auto">
+                    <p>A weapon against surveillance capitalism.</p>
+                    <p>A weapon against government overreach.</p>
+                    <p>A weapon against technological tyranny.</p>
+                    <p className="text-2xl font-bold text-emerald-400 mt-8">
+                      Because privacy is not a feature. It is a human right.
+                    </p>
+                    <p className="text-lg text-white/60">
+                      And human rights do not require permission.
+                    </p>
                   </div>
-                  <div>
-                    <p className="text-xl font-bold text-white mb-2">We are not speculators.</p>
-                    <p className="text-white/70">We are freedom fighters building tools for liberation, not portfolios.</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-4 p-6 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-green-400/30 transition-all">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shrink-0">
-                    <i data-lucide="globe" className="w-6 h-6 text-white"></i>
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold text-white mb-2">This is not about tokens.</p>
-                    <p className="text-white/70">It's about liberation. Breaking the chains of surveillance and control.</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-4 p-6 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-cyan-400/30 transition-all">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shrink-0">
-                    <i data-lucide="code-2" className="w-6 h-6 text-white"></i>
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold text-white mb-2">Open source forever.</p>
-                    <p className="text-white/70">No backdoors. No compromises. Every line auditable by everyone.</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-4 p-6 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-red-400/30 transition-all">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center shrink-0">
-                    <i data-lucide="zap" className="w-6 h-6 text-white"></i>
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold text-white mb-2">We are the final boss.</p>
-                    <p className="text-white/70">Because after privacy falls, everything falls. This is the last stand.</p>
+                  
+                  <div className="mt-12 flex flex-col sm:flex-row gap-4 justify-center">
+                    <a href="/" className="inline-block px-10 py-5 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white text-xl font-bold rounded-2xl hover:scale-110 transition-all glow-border">
+                      Join the Revolution
+                    </a>
+                    <a href="https://github.com/DylanPort/whitelspace" target="_blank" rel="noopener" className="inline-block px-10 py-5 border-2 border-white/20 hover:border-white/40 text-white text-xl font-bold rounded-2xl hover:scale-110 transition-all">
+                      View on GitHub
+                    </a>
                   </div>
                 </div>
               </div>
-              <div className="mt-12">
-                <a href="/" className="inline-block px-12 py-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xl font-bold rounded-full hover:scale-110 transition-all glow">
-                  Join the Revolution
-                </a>
+            </section>
+            
+            {/* Technical Specs Section */}
+            <section className="fade-in-up mt-20">
+              <div className="premium-card">
+                <h2 className="text-4xl font-bold mb-8 text-center flex items-center justify-center gap-4">
+                  <div className="icon-container">
+                    <i data-lucide="cpu" className="w-8 h-8 text-blue-400"></i>
+                  </div>
+                  Technical Specifications
+                </h2>
+                
+                <div className="grid md:grid-cols-2 gap-8">
+                  <div>
+                    <h3 className="text-2xl font-bold text-white mb-4">Encryption</h3>
+                    <ul className="space-y-2 text-white/70">
+                      <li>• AES-256-GCM symmetric encryption</li>
+                      <li>• RSA-OAEP 2048-bit key exchange</li>
+                      <li>• SHA-256 hashing for integrity</li>
+                      <li>• Client-side encryption only</li>
+                      <li>• Zero-knowledge architecture</li>
+                    </ul>
+                </div>
+                
+                  <div>
+                    <h3 className="text-2xl font-bold text-white mb-4">Network</h3>
+                    <ul className="space-y-2 text-white/70">
+                      <li>• WebRTC for P2P connections</li>
+                      <li>• STUN/TURN for NAT traversal</li>
+                      <li>• WebSocket signaling servers</li>
+                      <li>• Distributed node network</li>
+                      <li>• No central point of failure</li>
+                    </ul>
+                </div>
+                
+                  <div>
+                    <h3 className="text-2xl font-bold text-white mb-4">Blockchain</h3>
+                    <ul className="space-y-2 text-white/70">
+                      <li>• Solana blockchain for DIDs</li>
+                      <li>• Memo program for proof of existence</li>
+                      <li>• ~$0.0001 per transaction</li>
+                      <li>• Sub-second confirmation times</li>
+                      <li>• Immutable timestamp proofs</li>
+                    </ul>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-2xl font-bold text-white mb-4">Platform</h3>
+                    <ul className="space-y-2 text-white/70">
+                      <li>• Browser-based (Chrome, Firefox, Safari)</li>
+                      <li>• Desktop nodes (Windows, Linux, macOS)</li>
+                      <li>• Raspberry Pi compatible</li>
+                      <li>• Mobile wallet support</li>
+                      <li>• 100% open source</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
-            </div>
+            </section>
+            
           </div>
           
           {/* Footer */}
-          <div className="text-center py-12 px-6 text-white/60">
-            <p className="text-lg mb-4">Built by the people. For the people.</p>
-            <p className="text-sm">Open source. Auditable. Unstoppable.</p>
-            <div className="mt-6 flex justify-center gap-6">
-              <a href="https://github.com/DylanPort/whitelspace" target="_blank" rel="noopener noreferrer" className="tool-badge hover:bg-blue-400/30">
+          <footer className="content py-16 px-6 text-center border-t border-white/10">
+            <div className="max-w-4xl mx-auto">
+              <p className="text-2xl text-white/80 mb-4">
+                Built by the people. For the people.
+              </p>
+              <p className="text-lg text-white/60 mb-8">
+                Open source. Auditable. Unstoppable.
+              </p>
+              
+              <div className="flex flex-wrap justify-center gap-4 mb-12">
+                <a href="https://github.com/DylanPort/whitelspace" target="_blank" rel="noopener" className="tool-badge">
                 <i data-lucide="github" className="w-4 h-4"></i>
                 GitHub
               </a>
-              <a href="https://x.com/Whistle_Ninja" target="_blank" rel="noopener noreferrer" className="tool-badge hover:bg-blue-400/30">
+                <a href="https://x.com/Whistle_Ninja" target="_blank" rel="noopener" className="tool-badge">
                 <i data-lucide="twitter" className="w-4 h-4"></i>
                 @Whistle_Ninja
               </a>
+                <a href="/" className="tool-badge">
+                  <i data-lucide="home" className="w-4 h-4"></i>
+                  Launch App
+              </a>
             </div>
+              
+              <div className="text-sm text-white/40">
+                <p>⚠️ WARNING: This software may be illegal in your jurisdiction. We do not care.</p>
+                <p className="mt-2">Your government does not have your consent to monitor you 24/7.</p>
+                <p className="mt-2 text-emerald-400 font-bold">Become ungovernable.</p>
           </div>
+            </div>
+          </footer>
         </div>
       );
     }
@@ -747,7 +1175,12 @@
     setTimeout(() => {
       if (window.lucide) window.lucide.createIcons();
     }, 100);
+    
+    // Re-initialize on any dynamic content changes
+    const observer = new MutationObserver(() => {
+      if (window.lucide) window.lucide.createIcons();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
   </script>
 </body>
 </html>
-
