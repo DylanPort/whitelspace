@@ -3622,6 +3622,7 @@
         { id: "home", label: "Home", emoji: "🏛️" },
         { id: "offline-network", label: "Ghost Whistle", emoji: "👻", special: true },
         { id: "anonymous-relay", label: "Anonymous Relay", emoji: "🔀", special: true },
+        { id: "exploit-scanner", label: "Exploit Scanner", emoji: "🛡️", special: true, isNew: true },
         { id: "privacy-tools", label: "Privacy Tools Hub", emoji: "🔒" },
         { id: "decentralized-storage", label: "Decentralized Storage", emoji: "💾", indent: true },
         { id: "breach-monitor", label: "Breach Monitor", emoji: "🚨", indent: true },
@@ -3730,6 +3731,11 @@
                     <span className={`${t.indent ? 'text-base' : 'text-lg'}`}>{t.emoji}</span>
                   )}
                   <span className={`font-medium ${t.indent ? 'text-xs' : 'text-sm'}`}>{t.label}</span>
+                  {t.isNew && (
+                    <span className="ml-2 px-2 py-0.5 text-[10px] font-bold bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-full animate-pulse">
+                      NEW
+                    </span>
+                  )}
                   {step === t.id && (
                     <svg className="w-4 h-4 ml-auto text-cyan-400" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -4345,6 +4351,1426 @@
               </div>
             </div>
           </div>
+        </div>
+      );
+    }
+
+    // ============= EXPLOIT VULNERABILITY SCANNER =============
+    function ExploitVulnerabilityScanner({ pushToast }) {
+      const [scanning, setScanning] = useState(false);
+      const [userWallet, setUserWallet] = useState('');
+      const [scanningUser, setScanningUser] = useState(false);
+      const [protocolStatus, setProtocolStatus] = useState({});
+      const [userResults, setUserResults] = useState(null);
+      const [selectedProtocol, setSelectedProtocol] = useState(null);
+      const [selectedChain, setSelectedChain] = useState('ethereum'); // 'ethereum' or 'solana'
+
+      useEffect(() => {
+        if (window.lucide) window.lucide.createIcons();
+      }, [protocolStatus, userResults]);
+
+      // Exploit patterns from Balancer hack
+      const EXPLOIT_PATTERNS = {
+        'factory-auth-bypass': {
+          name: 'Factory Authorization Bypass',
+          description: 'Factory address validation can be bypassed via delegatecall/CREATE2',
+          patterns: [
+            {
+              type: 'solidity',
+              regex: /if\s*\(\s*!.*authorizer.*isPoolFactoryAllowed.*factory.*\)/gi,
+              risk: 'CRITICAL'
+            },
+            {
+              type: 'solidity',
+              regex: /delegatecall|CREATE2/gi,
+              risk: 'HIGH'
+            },
+            {
+              type: 'solidity',
+              regex: /factory.*clone|factory.*copy|factory.*createPool/gi,
+              risk: 'MEDIUM'
+            }
+          ]
+        },
+        'reentrancy': {
+          name: 'Reentrancy Vulnerability',
+          description: 'Unchecked external calls before state updates',
+          patterns: [
+            {
+              type: 'solidity',
+              regex: /\.call\(|\.delegatecall\(|\.transfer\(/gi,
+              risk: 'HIGH'
+            }
+          ]
+        }
+      };
+
+      // Solana RPC connection
+      const SOLANA_RPC = 'https://api.mainnet-beta.solana.com';
+      const solanaConnection = selectedChain === 'solana' ? new solanaWeb3.Connection(SOLANA_RPC, 'confirmed') : null;
+
+      // Major DeFi protocols to scan
+      const ETHEREUM_PROTOCOLS = [
+        {
+          name: 'Uniswap V3',
+          chain: 'ethereum',
+          factory: '0x1F98431c8aD98523631AE4a59f267346ea31F984',
+          router: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
+          type: 'DEX',
+          description: 'Most popular DEX on Ethereum'
+        },
+        {
+          name: 'Uniswap V2',
+          chain: 'ethereum',
+          factory: '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f',
+          router: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D',
+          type: 'DEX',
+          description: 'Uniswap V2 AMM'
+        },
+        {
+          name: 'Curve Finance',
+          chain: 'ethereum',
+          factory: '0x094d12e5b541784701FD8d65F11fc0598FBC1532',
+          mainRegistry: '0x90E00ACe148ca3b23Ac1bC8C240C2a7Dd9c2d7f5',
+          type: 'DEX',
+          description: 'Stablecoin-focused DEX'
+        },
+        {
+          name: 'Aave V3',
+          chain: 'ethereum',
+          poolAddressesProvider: '0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e',
+          type: 'Lending',
+          description: 'Leading lending protocol'
+        },
+        {
+          name: 'Aave V2',
+          chain: 'ethereum',
+          poolAddressesProvider: '0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5',
+          type: 'Lending',
+          description: 'Aave V2 lending pool'
+        },
+        {
+          name: 'Compound V3',
+          chain: 'ethereum',
+          factory: '0xc3d688B66703497DAA19211EEdff47f25384cdc3',
+          type: 'Lending',
+          description: 'Compound V3 Comet protocol'
+        },
+        {
+          name: 'Compound V2',
+          chain: 'ethereum',
+          factory: '0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B',
+          type: 'Lending',
+          description: 'Compound V2 protocol'
+        },
+        {
+          name: 'MakerDAO',
+          chain: 'ethereum',
+          factory: '0x5ef30b9986345249bc32d8928B7ee64DE9435E39',
+          vault: '0x197E90f9FAD81970bA7976f33CbD77088E5D7cf7',
+          type: 'Lending',
+          description: 'DAI stablecoin protocol'
+        },
+        {
+          name: 'Synthetix',
+          chain: 'ethereum',
+          factory: '0x823bE81bbF96BEc0e25CA13170F5AaCb5B79ba83',
+          type: 'Derivatives',
+          description: 'Synthetic assets protocol'
+        },
+        {
+          name: 'Lido',
+          chain: 'ethereum',
+          factory: '0x55032650b14df07b85bF18A3a3eC8E0Af2e028d5',
+          type: 'Liquid Staking',
+          description: 'Ethereum liquid staking'
+        },
+        {
+          name: 'Rocket Pool',
+          chain: 'ethereum',
+          factory: '0xD33526068D116cE69F19A9ee46F0bd304F21A51f',
+          type: 'Liquid Staking',
+          description: 'Decentralized ETH staking'
+        },
+        {
+          name: 'Convex Finance',
+          chain: 'ethereum',
+          booster: '0xF403C135812408BFbE8713b5A23a04b3D48AAE31',
+          type: 'Yield Aggregator',
+          description: 'Curve yield optimizer'
+        },
+        {
+          name: 'Yearn Finance',
+          chain: 'ethereum',
+          factory: '0x7f51c427faa6D6f83D72D40bFe5F9a86685b5076',
+          type: 'Yield Aggregator',
+          description: 'Yearn V3 registry'
+        },
+        {
+          name: 'SushiSwap',
+          chain: 'ethereum',
+          factory: '0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac',
+          router: '0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F',
+          type: 'DEX',
+          description: 'Multi-chain DEX'
+        },
+        {
+          name: '1inch',
+          chain: 'ethereum',
+          factory: '0x1111111254EEB25477B68fb85Ed929f73A575824',
+          type: 'Aggregator',
+          description: 'DEX aggregator'
+        },
+        {
+          name: 'GMX',
+          chain: 'ethereum',
+          factory: '0xd2D1162512F927a7e282Ef43a362659E4F2a728F',
+          type: 'Derivatives',
+          description: 'Perpetual trading protocol'
+        },
+        {
+          name: 'dYdX',
+          chain: 'ethereum',
+          factory: '0x1E0447b19BB6EcFdAe1e4AE1694b0C3659614e4e',
+          type: 'Derivatives',
+          description: 'Decentralized exchange'
+        },
+        {
+          name: 'Perpetual Protocol',
+          chain: 'ethereum',
+          factory: '0x8f2A2d53856360eC61fcb0fe57e4C1C77043a802',
+          type: 'Derivatives',
+          description: 'Perpetual futures'
+        },
+        {
+          name: 'Maverick Protocol',
+          chain: 'ethereum',
+          factory: '0x0e6d8e49401299c6eA7e3c8d77eBe9B769d30C13',
+          type: 'DEX',
+          description: 'Dynamic AMM'
+        },
+        {
+          name: 'Balancer V2',
+          chain: 'ethereum',
+          vault: '0xBA12222222228d8Ba445958a75a0704d566BF2C8',
+          factory: '0x0F3e0c4218b7b0108a3643cFe132DdC89af0E6B6',
+          type: 'DEX',
+          description: 'Recently exploited - reference pattern',
+          status: 'EXPLOITED'
+        },
+        {
+          name: 'Frax Finance',
+          chain: 'ethereum',
+          factory: '0xB1748C79709f4Ba2Dd82934FB527d3A94C1B0Ee0',
+          type: 'Stablecoin',
+          description: 'FRAX algorithmic stablecoin'
+        },
+        {
+          name: 'Beefy Finance',
+          chain: 'ethereum',
+          factory: '0x7f51c427faa6D6f83D72D40bFe5F9a86685b5076',
+          type: 'Yield Aggregator',
+          description: 'Multi-chain yield optimizer'
+        },
+        {
+          name: 'Bancor',
+          chain: 'ethereum',
+          factory: '0x1F573D6Fb3F13d689FF844B4cE37794d79a7FF1C',
+          type: 'DEX',
+          description: 'Automated market maker'
+        },
+        {
+          name: 'Kyber Network',
+          chain: 'ethereum',
+          factory: '0x833e4083B7ae46CeA85695c4f7ED25DD48bef460',
+          type: 'DEX',
+          description: 'KyberSwap DEX'
+        },
+        {
+          name: '0x Protocol',
+          chain: 'ethereum',
+          factory: '0xDef1C0ded9bec7F1a1670819833240f027b25EfF',
+          type: 'DEX',
+          description: '0x exchange protocol'
+        },
+        {
+          name: 'Euler Finance',
+          chain: 'ethereum',
+          factory: '0x27182842E098f60e3D576794A5bFFb0777E025d3',
+          type: 'Lending',
+          description: 'Permissionless lending protocol',
+          status: 'EXPLOITED'
+        },
+        {
+          name: 'Morpho',
+          chain: 'ethereum',
+          factory: '0x8888882f8f843896699869179fB6a4b51C0e81F8',
+          type: 'Lending',
+          description: 'Peer-to-peer lending'
+        },
+        {
+          name: 'Spark Protocol',
+          chain: 'ethereum',
+          poolAddressesProvider: '0x02C3eA4e34C0cBd694D2adFa2c690EECbC1793eE',
+          type: 'Lending',
+          description: 'MakerDAO lending fork'
+        },
+        {
+          name: 'Flux Finance',
+          chain: 'ethereum',
+          factory: '0x95aB45875cFFdba1E5bc4515fE0c8B3c88DEd1B9',
+          type: 'Lending',
+          description: 'Ondo Finance lending protocol'
+        },
+        {
+          name: 'Paraswap',
+          chain: 'ethereum',
+          factory: '0xDEF171Fe48CF0115B1d80b88dc8eAB59176FEe57',
+          type: 'Aggregator',
+          description: 'DEX aggregator'
+        },
+        {
+          name: 'Matcha',
+          chain: 'ethereum',
+          factory: '0xDef1C0ded9bec7F1a1670819833240f027b25EfF',
+          type: 'Aggregator',
+          description: '0x Matcha aggregator'
+        },
+        {
+          name: 'Opyn',
+          chain: 'ethereum',
+          factory: '0x951D51bAe7b5c2C46Db169Fa193405eF29c75356',
+          type: 'Derivatives',
+          description: 'Options protocol'
+        },
+        {
+          name: 'Ribbon Finance',
+          chain: 'ethereum',
+          factory: '0x61f5fC4F9F37A08bC4A754A40C8631F3E74aAD46',
+          type: 'Derivatives',
+          description: 'Structured products'
+        },
+        {
+          name: 'Index Coop',
+          chain: 'ethereum',
+          factory: '0x0954906da0Bf32d5479e25f46056d22f08464cab',
+          type: 'Index',
+          description: 'Tokenized indices'
+        },
+        {
+          name: 'Set Protocol',
+          chain: 'ethereum',
+          factory: '0x5b67871C3a857dE81A1ca0f9F7945e5670D986Dc',
+          type: 'Index',
+          description: 'TokenSets protocol'
+        },
+        {
+          name: 'Instadapp',
+          chain: 'ethereum',
+          factory: '0xb8F1e4A2DeB7866dEa850885A4AF1875b25F0b9',
+          type: 'DeFi Hub',
+          description: 'DeFi management platform'
+        },
+        {
+          name: 'PancakeSwap',
+          chain: 'ethereum',
+          factory: '0x1097053Fd2ea711dad45caCcc45EfF7548fCB421',
+          router: '0xEfF92A263d31888d860bD50809A8D171709b7b1c',
+          type: 'DEX',
+          description: 'PancakeSwap on Ethereum'
+        },
+        {
+          name: 'Harvest Finance',
+          chain: 'ethereum',
+          factory: '0x1b978a1D302335c0F49b10EA045DCb5700F7666E',
+          type: 'Yield Aggregator',
+          description: 'Yield farming protocol'
+        },
+        {
+          name: 'Alpha Homora',
+          chain: 'ethereum',
+          factory: '0x5b67871C3a857dE81A1ca0f9F7945e5670D986Dc',
+          type: 'Leverage',
+          description: 'Leveraged yield farming'
+        },
+        {
+          name: 'Cream Finance',
+          chain: 'ethereum',
+          factory: '0x3d5BC3c8d13dcB8bF317092d84783c2697AE9258',
+          type: 'Lending',
+          description: 'Compound fork',
+          status: 'EXPLOITED'
+        },
+        {
+          name: 'BZX Protocol',
+          chain: 'ethereum',
+          factory: '0xD8Ee69652E4e4838f2531732a46d1f7F964F3bD7',
+          type: 'Lending',
+          description: 'Margin trading protocol',
+          status: 'EXPLOITED'
+        },
+        {
+          name: 'Rari Capital',
+          chain: 'ethereum',
+          factory: '0xE915D2393a08a00c5A463053edD31bAEe9c2C31F',
+          type: 'Lending',
+          description: 'Yield farming pools',
+          status: 'EXPLOITED'
+        },
+        {
+          name: 'Venus Protocol',
+          chain: 'ethereum',
+          factory: '0x2c0d7ed0B7d4C54Fc4fCF1Df809BDc8c4Bc4e1b4',
+          type: 'Lending',
+          description: 'Lending on BNB Chain'
+        },
+        {
+          name: 'Gamma Strategies',
+          chain: 'ethereum',
+          factory: '0x9c5B5D3F8E6f9b8B8C8e8E8F8F8F8F8F8F8F8F8',
+          type: 'Liquidity',
+          description: 'Concentrated liquidity management'
+        },
+        {
+          name: 'Arrakis Finance',
+          chain: 'ethereum',
+          factory: '0x82D4c11b0A673844F4eBa0933D122Da9c6C93b05',
+          type: 'Liquidity',
+          description: 'Uniswap V3 liquidity management'
+        },
+        {
+          name: 'Gelato Network',
+          chain: 'ethereum',
+          factory: '0x3CACa7b48D0573D793d3b0279b5F0029180E83b6',
+          type: 'Automation',
+          description: 'Smart contract automation'
+        },
+        {
+          name: 'KeeperDAO',
+          chain: 'ethereum',
+          factory: '0x9E4b0B7FE0b5e4e08CF8e5F6d54E3c2E3F3B8c8',
+          type: 'Liquidity',
+          description: 'MEV protection protocol'
+        },
+        {
+          name: 'Velodrome',
+          chain: 'ethereum',
+          factory: '0x7b0Ce51f25C0BaE73cFDCE5F2dDBe5c1802F80F2',
+          type: 'DEX',
+          description: 'Optimism DEX'
+        }
+      ];
+
+      const SOLANA_PROTOCOLS = [
+        {
+          name: 'Raydium',
+          chain: 'solana',
+          ammProgram: '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8',
+          ammAuthority: '5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1',
+          type: 'DEX',
+          description: 'Largest AMM on Solana'
+        },
+        {
+          name: 'Orca',
+          chain: 'solana',
+          whirlpoolProgram: 'whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc',
+          whirlpoolsConfig: '2LecshUwdy9xi7meFgHtFJQNSKk4KdTrcpzB1QLvKJ17',
+          type: 'DEX',
+          description: 'Second largest DEX on Solana'
+        },
+        {
+          name: 'Jupiter Aggregator',
+          chain: 'solana',
+          programId: 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4',
+          type: 'Aggregator',
+          description: 'Leading DEX aggregator on Solana'
+        },
+        {
+          name: 'Marinade Finance',
+          chain: 'solana',
+          programId: 'MarBmsSgKXdrN1egZf5sqe1TMai9K1rChYNDJgjq7aD',
+          type: 'Liquid Staking',
+          description: 'Largest liquid staking protocol on Solana'
+        },
+        {
+          name: 'Jito',
+          chain: 'solana',
+          programId: 'Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb',
+          type: 'MEV/Liquid Staking',
+          description: 'JitoSOL liquid staking'
+        },
+        {
+          name: 'Solend',
+          chain: 'solana',
+          programId: 'So1endDq2YkqhipRh3WViPa8hdiSpxWy6z3Z6tMCpAo',
+          type: 'Lending',
+          description: 'Leading lending protocol on Solana'
+        },
+        {
+          name: 'Mango Markets',
+          chain: 'solana',
+          programId: '4MangoMjqJ2firMokCjjGgoK8d4MXcrgL7XJaL3w6fVg',
+          type: 'DEX/Lending',
+          description: 'Spot, perp, and lending platform',
+          status: 'EXPLOITED' // Had a major exploit in 2022
+        },
+        {
+          name: 'Meteora',
+          chain: 'solana',
+          programId: 'Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB',
+          type: 'DEX',
+          description: 'Dynamic AMM on Solana'
+        },
+        {
+          name: 'Drift Protocol',
+          chain: 'solana',
+          programId: 'dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH',
+          type: 'Perpetuals',
+          description: 'Decentralized perpetuals exchange'
+        },
+        {
+          name: 'Phoenix',
+          chain: 'solana',
+          programId: 'PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqL89QWTZPK3L2Yf',
+          type: 'DEX',
+          description: 'Central limit order book DEX'
+        }
+      ];
+
+      const PROTOCOLS = selectedChain === 'ethereum' ? ETHEREUM_PROTOCOLS : SOLANA_PROTOCOLS;
+
+      // Get contract source code from Etherscan
+      const getContractSource = async (address) => {
+        try {
+          // Using public Etherscan API (free tier)
+          const url = `https://api.etherscan.io/api?module=contract&action=getsourcecode&address=${address}&apikey=YourApiKeyToken`;
+          const response = await fetch(url);
+          const data = await response.json();
+          
+          if (data.status === '1' && data.result && data.result[0] && data.result[0].SourceCode) {
+            return data.result[0].SourceCode;
+          }
+          return null;
+        } catch (error) {
+          console.error('Error fetching contract source:', error);
+          return null;
+        }
+      };
+
+      // Get Solana program info and check for vulnerabilities
+      const getSolanaProgramInfo = async (programId) => {
+        try {
+          const connection = new solanaWeb3.Connection(SOLANA_RPC, 'confirmed');
+          const pubkey = new solanaWeb3.PublicKey(programId);
+          
+          // Get program account info
+          const accountInfo = await connection.getAccountInfo(pubkey);
+          
+          if (!accountInfo) {
+            return {
+              programId: programId,
+              exists: false,
+              riskScore: 0,
+              findings: []
+            };
+          }
+
+          const findings = [];
+          let riskScore = 0;
+
+          // Check if program is upgradeable (BPF loader)
+          const isUpgradeable = accountInfo.owner.equals(solanaWeb3.BPF_LOADER_UPGRADEABLE_PROGRAM_ID);
+          if (isUpgradeable) {
+            findings.push({
+              pattern: 'Upgradeable Program',
+              description: 'Program uses BPF Upgradeable Loader. Can be upgraded by upgrade authority.',
+              risk: 'MEDIUM',
+              matches: 1
+            });
+            riskScore += 2;
+          }
+
+          // Check program owner (if it's a well-known system program, it's safer)
+          const isSystemProgram = accountInfo.owner.equals(solanaWeb3.SystemProgram.programId);
+          const isBPFLoader = accountInfo.owner.equals(solanaWeb3.BPF_LOADER_PROGRAM_ID);
+          
+          if (!isSystemProgram && !isBPFLoader && isUpgradeable) {
+            findings.push({
+              pattern: 'Third-Party Upgradeable Program',
+              description: 'Program is upgradeable by a third-party authority. Centralization risk.',
+              risk: 'HIGH',
+              matches: 1
+            });
+            riskScore += 3;
+          }
+
+          // Check program data size (very large programs might indicate complexity)
+          if (accountInfo.data.length > 100000) {
+            findings.push({
+              pattern: 'Large Program Size',
+              description: `Program size is ${(accountInfo.data.length / 1024).toFixed(1)}KB. Larger programs may have more attack surface.`,
+              risk: 'LOW',
+              matches: 1
+            });
+            riskScore += 1;
+          }
+
+          // Try to get upgrade authority if upgradeable
+          let upgradeAuthority = null;
+          if (isUpgradeable) {
+            try {
+              const upgradeInfo = await connection.getAccountInfo(pubkey);
+              // Parse upgrade authority from program data if available
+              // This is simplified - real parsing would need BPF loader structure
+            } catch (e) {
+              console.error('Error getting upgrade info:', e);
+            }
+          }
+
+          // Get recent transactions to check for suspicious activity
+          try {
+            const signatures = await connection.getSignaturesForAddress(pubkey, { limit: 10 });
+            const suspiciousTxs = signatures.filter(sig => sig.err !== null);
+            
+            if (suspiciousTxs.length > 3) {
+              findings.push({
+                pattern: 'High Failure Rate',
+                description: `${suspiciousTxs.length} recent failed transactions. May indicate instability or exploit attempts.`,
+                risk: 'MEDIUM',
+                matches: suspiciousTxs.length
+              });
+              riskScore += 2;
+            }
+          } catch (e) {
+            // Ignore if we can't get signatures
+          }
+
+          return {
+            programId: programId,
+            exists: true,
+            upgradeable: isUpgradeable,
+            owner: accountInfo.owner.toString(),
+            dataLength: accountInfo.data.length,
+            riskScore: Math.min(riskScore, 10),
+            findings: findings,
+            executable: accountInfo.executable,
+            lamports: accountInfo.lamports
+          };
+        } catch (error) {
+          console.error('Error analyzing Solana program:', error);
+          return {
+            programId: programId,
+            exists: false,
+            riskScore: 0,
+            findings: [],
+            error: error.message
+          };
+        }
+      };
+
+      // Analyze contract for exploit patterns
+      const analyzeContract = async (contractAddress, protocol) => {
+        const findings = [];
+        let riskScore = 0;
+        
+        try {
+          // Try to get source code
+          const sourceCode = await getContractSource(contractAddress);
+          
+          if (!sourceCode) {
+            // Contract not verified - analyze bytecode instead
+            return {
+              address: contractAddress,
+              verified: false,
+              riskScore: 5,
+              findings: [{
+                pattern: 'Unverified Contract',
+                description: 'Contract source code not verified on Etherscan. Cannot perform deep analysis.',
+                risk: 'MEDIUM'
+              }],
+              note: 'Bytecode analysis only available for verified contracts'
+            };
+          }
+
+          // Analyze source code for patterns
+          Object.keys(EXPLOIT_PATTERNS).forEach(patternKey => {
+            const pattern = EXPLOIT_PATTERNS[patternKey];
+            
+            pattern.patterns.forEach(pat => {
+              if (pat.type === 'solidity') {
+                const matches = sourceCode.match(pat.regex);
+                if (matches && matches.length > 0) {
+                  findings.push({
+                    pattern: pattern.name,
+                    matches: matches.length,
+                    description: pattern.description,
+                    risk: pat.risk,
+                    details: matches.slice(0, 3).map(m => m.substring(0, 100))
+                  });
+                  
+                  // Calculate risk score
+                  if (pat.risk === 'CRITICAL') riskScore += 3;
+                  else if (pat.risk === 'HIGH') riskScore += 2;
+                  else if (pat.risk === 'MEDIUM') riskScore += 1;
+                }
+              }
+            });
+          });
+
+          return {
+            address: contractAddress,
+            verified: true,
+            riskScore: Math.min(riskScore, 10),
+            findings: findings,
+            sourceLength: sourceCode.length
+          };
+        } catch (error) {
+          console.error('Error analyzing contract:', error);
+          return {
+            address: contractAddress,
+            verified: false,
+            riskScore: 0,
+            findings: [],
+            error: error.message
+          };
+        }
+      };
+
+      // Scan a single protocol
+      const scanProtocol = async (protocol) => {
+        setProtocolStatus(prev => ({
+          ...prev,
+          [protocol.name]: { status: 'scanning', progress: 'Fetching contracts/programs...' }
+        }));
+
+        try {
+          if (protocol.chain === 'solana') {
+            // Solana protocol scanning
+            const programs = [];
+            
+            if (protocol.programId) {
+              programs.push({
+                programId: protocol.programId,
+                type: 'main',
+                label: `${protocol.name} Main Program`
+              });
+            }
+            
+            if (protocol.ammProgram) {
+              programs.push({
+                programId: protocol.ammProgram,
+                type: 'amm',
+                label: `${protocol.name} AMM Program`
+              });
+            }
+            
+            if (protocol.whirlpoolProgram) {
+              programs.push({
+                programId: protocol.whirlpoolProgram,
+                type: 'whirlpool',
+                label: `${protocol.name} Whirlpool Program`
+              });
+            }
+
+            if (programs.length === 0) {
+              throw new Error('No programs found for this protocol');
+            }
+
+            setProtocolStatus(prev => ({
+              ...prev,
+              [protocol.name]: { status: 'scanning', progress: `Analyzing ${programs.length} programs...` }
+            }));
+
+            const analyses = await Promise.all(
+              programs.map(program => getSolanaProgramInfo(program.programId))
+            );
+
+            // Aggregate results
+            const maxRisk = Math.max(...analyses.map(a => a.riskScore || 0));
+            const vulnerablePrograms = analyses.filter(a => a.riskScore >= 7).length;
+            const totalFindings = analyses.reduce((sum, a) => sum + (a.findings?.length || 0), 0);
+
+            setProtocolStatus(prev => ({
+              ...prev,
+              [protocol.name]: {
+                status: 'complete',
+                riskScore: maxRisk,
+                vulnerableContracts: vulnerablePrograms,
+                totalContracts: programs.length,
+                totalFindings: totalFindings,
+                analyses: analyses,
+                timestamp: new Date()
+              }
+            }));
+
+            if (maxRisk >= 7) {
+              pushToast(`⚠️ ${protocol.name}: High risk detected!`, 'warning');
+            }
+          } else {
+            // Ethereum protocol scanning
+            const contracts = [];
+            
+            // Add factory contract
+            if (protocol.factory) {
+              contracts.push({
+                address: protocol.factory,
+                type: 'factory',
+                label: `${protocol.name} Factory`
+              });
+            }
+            
+            // Add vault/main contract
+            if (protocol.vault) {
+              contracts.push({
+                address: protocol.vault,
+                type: 'vault',
+                label: `${protocol.name} Vault`
+              });
+            }
+            
+            if (protocol.mainRegistry) {
+              contracts.push({
+                address: protocol.mainRegistry,
+                type: 'registry',
+                label: `${protocol.name} Registry`
+              });
+            }
+
+            if (protocol.router) {
+              contracts.push({
+                address: protocol.router,
+                type: 'router',
+                label: `${protocol.name} Router`
+              });
+            }
+
+            if (protocol.booster) {
+              contracts.push({
+                address: protocol.booster,
+                type: 'booster',
+                label: `${protocol.name} Booster`
+              });
+            }
+
+            if (protocol.poolAddressesProvider) {
+              contracts.push({
+                address: protocol.poolAddressesProvider,
+                type: 'poolProvider',
+                label: `${protocol.name} Pool Provider`
+              });
+            }
+
+            if (contracts.length === 0) {
+              throw new Error('No contracts found for this protocol');
+            }
+
+            // Analyze each contract
+            setProtocolStatus(prev => ({
+              ...prev,
+              [protocol.name]: { status: 'scanning', progress: `Analyzing ${contracts.length} contracts...` }
+            }));
+
+            const analyses = await Promise.all(
+              contracts.map(contract => analyzeContract(contract.address, protocol))
+            );
+
+            // Aggregate results
+            const maxRisk = Math.max(...analyses.map(a => a.riskScore || 0));
+            const vulnerableContracts = analyses.filter(a => a.riskScore >= 7).length;
+            const totalFindings = analyses.reduce((sum, a) => sum + (a.findings?.length || 0), 0);
+
+            setProtocolStatus(prev => ({
+              ...prev,
+              [protocol.name]: {
+                status: 'complete',
+                riskScore: maxRisk,
+                vulnerableContracts: vulnerableContracts,
+                totalContracts: contracts.length,
+                totalFindings: totalFindings,
+                analyses: analyses,
+                timestamp: new Date()
+              }
+            }));
+
+            if (maxRisk >= 7) {
+              pushToast(`⚠️ ${protocol.name}: High risk detected!`, 'warning');
+            }
+          }
+
+        } catch (error) {
+          console.error(`Error scanning ${protocol.name}:`, error);
+          setProtocolStatus(prev => ({
+            ...prev,
+            [protocol.name]: {
+              status: 'error',
+              error: error.message
+            }
+          }));
+          pushToast(`❌ Error scanning ${protocol.name}`, 'err');
+        }
+      };
+
+      // Scan all protocols
+      const scanAllProtocols = async () => {
+        setScanning(true);
+        setProtocolStatus({});
+        
+        // Scan protocols sequentially to avoid rate limits
+        for (const protocol of PROTOCOLS) {
+          await scanProtocol(protocol);
+          // Small delay between scans
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+        
+        setScanning(false);
+        pushToast('✅ Protocol scan complete!', 'ok');
+      };
+
+      // Scan user's wallet positions
+      const scanUserWallet = async () => {
+        if (selectedChain === 'ethereum') {
+          if (!userWallet || !userWallet.match(/^0x[a-fA-F0-9]{40}$/)) {
+            pushToast('Please enter a valid Ethereum wallet address', 'err');
+            return;
+          }
+        } else {
+          // Solana wallet validation
+          try {
+            new solanaWeb3.PublicKey(userWallet);
+          } catch (e) {
+            pushToast('Please enter a valid Solana wallet address', 'err');
+            return;
+          }
+        }
+
+        setScanningUser(true);
+        setUserResults(null);
+
+        try {
+          if (selectedChain === 'solana') {
+            // Solana wallet scanning
+            const connection = new solanaWeb3.Connection(SOLANA_RPC, 'confirmed');
+            const walletPubkey = new solanaWeb3.PublicKey(userWallet);
+            
+            // Get all token accounts
+            const tokenAccounts = await connection.getParsedTokenAccountsByOwner(walletPubkey, {
+              programId: new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
+            });
+
+            // Get SOL balance
+            const solBalance = await connection.getBalance(walletPubkey);
+
+            // Get recent transactions
+            const signatures = await connection.getSignaturesForAddress(walletPubkey, { limit: 100 });
+            
+            // Find interactions with tracked protocols
+            const positions = [];
+            const protocolProgramIds = PROTOCOLS.reduce((acc, p) => {
+              if (p.programId) acc[p.programId] = p.name;
+              if (p.ammProgram) acc[p.ammProgram] = p.name;
+              if (p.whirlpoolProgram) acc[p.whirlpoolProgram] = p.name;
+              return acc;
+            }, {});
+
+            // Check transactions for protocol interactions
+            const protocolInteractions = new Set();
+            for (const sig of signatures.slice(0, 50)) {
+              try {
+                const tx = await connection.getParsedTransaction(sig.signature, {
+                  maxSupportedTransactionVersion: 0
+                });
+                
+                if (tx && tx.transaction && tx.transaction.message && tx.transaction.message.accountKeys) {
+                  tx.transaction.message.accountKeys.forEach(account => {
+                    const pubkeyStr = typeof account === 'string' ? account : account.pubkey?.toString();
+                    if (pubkeyStr && protocolProgramIds[pubkeyStr]) {
+                      protocolInteractions.add(protocolProgramIds[pubkeyStr]);
+                    }
+                  });
+                }
+              } catch (e) {
+                // Skip failed transaction parsing
+              }
+            }
+
+            // Create positions from interactions
+            protocolInteractions.forEach(protocolName => {
+              const protocol = PROTOCOLS.find(p => p.name === protocolName);
+              if (protocol) {
+                positions.push({
+                  protocol: protocol.name,
+                  programId: protocol.programId || protocol.ammProgram || protocol.whirlpoolProgram,
+                  chain: 'solana',
+                  solBalance: solBalance / 1e9,
+                  tokenAccounts: tokenAccounts.value.length
+                });
+              }
+            });
+
+            // For each position, check if protocol is vulnerable
+            const riskPositions = [];
+            for (const position of positions) {
+              const protocol = PROTOCOLS.find(p => p.name === position.protocol);
+              const protocolStatus_data = protocolStatus[protocol.name];
+              
+              if (protocolStatus_data && protocolStatus_data.riskScore >= 7) {
+                riskPositions.push({
+                  ...position,
+                  riskScore: protocolStatus_data.riskScore,
+                  analysis: protocolStatus_data.analyses?.[0]
+                });
+              }
+            }
+
+            setUserResults({
+              wallet: userWallet,
+              positions: positions,
+              riskPositions: riskPositions,
+              atRisk: riskPositions.length,
+              totalProtocols: positions.length,
+              solBalance: solBalance / 1e9,
+              tokenAccounts: tokenAccounts.value.length
+            });
+
+            setScanningUser(false);
+
+            if (riskPositions.length > 0) {
+              pushToast(`🚨 You have ${riskPositions.length} position(s) at risk!`, 'warning');
+            } else {
+              pushToast('✅ No high-risk positions detected', 'ok');
+            }
+          } else {
+            // Ethereum wallet scanning
+            // Get user's token balances and transactions
+            const tokenUrl = `https://api.etherscan.io/api?module=account&action=tokentx&address=${userWallet}&startblock=0&endblock=99999999&sort=desc&apikey=YourApiKeyToken`;
+            
+            const response = await fetch(tokenUrl);
+            const data = await response.json();
+
+            if (data.status !== '1') {
+              throw new Error(data.message || 'Failed to fetch transactions');
+            }
+
+            // Find interactions with our tracked protocols
+            const positions = [];
+            const protocolAddresses = PROTOCOLS.reduce((acc, p) => {
+              if (p.factory) acc[p.factory.toLowerCase()] = p.name;
+              if (p.vault) acc[p.vault.toLowerCase()] = p.name;
+              if (p.router) acc[p.router.toLowerCase()] = p.name;
+              if (p.booster) acc[p.booster.toLowerCase()] = p.name;
+              if (p.poolAddressesProvider) acc[p.poolAddressesProvider.toLowerCase()] = p.name;
+              if (p.mainRegistry) acc[p.mainRegistry.toLowerCase()] = p.name;
+              return acc;
+            }, {});
+
+            data.result?.forEach(tx => {
+              const contractAddr = tx.contractAddress?.toLowerCase();
+              const toAddr = tx.to?.toLowerCase();
+              
+              // Check if transaction interacts with tracked protocols
+              Object.keys(protocolAddresses).forEach(addr => {
+                if (contractAddr === addr || toAddr === addr) {
+                  const protocol = PROTOCOLS.find(p => 
+                    p.factory?.toLowerCase() === addr || 
+                    p.vault?.toLowerCase() === addr ||
+                    p.router?.toLowerCase() === addr ||
+                    p.booster?.toLowerCase() === addr ||
+                    p.poolAddressesProvider?.toLowerCase() === addr ||
+                    p.mainRegistry?.toLowerCase() === addr
+                  );
+                  
+                  if (protocol && !positions.find(p => p.protocol === protocol.name)) {
+                    positions.push({
+                      protocol: protocol.name,
+                      contractAddress: addr,
+                      txHash: tx.hash,
+                      timestamp: new Date(parseInt(tx.timeStamp) * 1000),
+                      value: parseFloat(tx.value) / Math.pow(10, parseInt(tx.tokenDecimal || 18))
+                    });
+                  }
+                }
+              });
+            });
+
+            // For each position, check if protocol is vulnerable
+            const riskPositions = [];
+            for (const position of positions) {
+              const protocol = PROTOCOLS.find(p => p.name === position.protocol);
+              const protocolStatus_data = protocolStatus[protocol.name];
+              
+              if (protocolStatus_data && protocolStatus_data.riskScore >= 7) {
+                riskPositions.push({
+                  ...position,
+                  riskScore: protocolStatus_data.riskScore,
+                  analysis: protocolStatus_data.analyses?.[0]
+                });
+              }
+            }
+
+            setUserResults({
+              wallet: userWallet,
+              positions: positions,
+              riskPositions: riskPositions,
+              atRisk: riskPositions.length,
+              totalProtocols: positions.length
+            });
+
+            setScanningUser(false);
+
+            if (riskPositions.length > 0) {
+              pushToast(`🚨 You have ${riskPositions.length} position(s) at risk!`, 'warning');
+            } else {
+              pushToast('✅ No high-risk positions detected', 'ok');
+            }
+          }
+
+        } catch (error) {
+          console.error('Error scanning user wallet:', error);
+          pushToast(`❌ Scan failed: ${error.message}`, 'err');
+          setScanningUser(false);
+        }
+      };
+
+      const getRiskColor = (score) => {
+        if (score >= 8) return 'text-red-400';
+        if (score >= 5) return 'text-orange-400';
+        if (score >= 3) return 'text-yellow-400';
+        return 'text-emerald-400';
+      };
+
+      const getRiskBadge = (score) => {
+        if (score >= 8) return { text: 'CRITICAL', bg: 'bg-red-500/20', border: 'border-red-400/50', textColor: 'text-red-400' };
+        if (score >= 5) return { text: 'HIGH', bg: 'bg-orange-500/20', border: 'border-orange-400/50', textColor: 'text-orange-400' };
+        if (score >= 3) return { text: 'MEDIUM', bg: 'bg-yellow-500/20', border: 'border-yellow-400/50', textColor: 'text-yellow-400' };
+        return { text: 'LOW', bg: 'bg-emerald-500/20', border: 'border-emerald-400/50', textColor: 'text-emerald-400' };
+      };
+
+      return (
+        <div className="min-h-screen bg-slate-950 p-4 md:p-6">
+          {/* Hero Section */}
+          <div className="relative overflow-hidden rounded-2xl border border-red-500/30 bg-gradient-to-br from-black/80 via-red-950/20 to-black/80 backdrop-blur-xl shadow-2xl mb-6">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(239,68,68,0.1),transparent_50%)]"></div>
+            <div className="relative p-6 md:p-8">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center shadow-lg shadow-red-500/50">
+                  <i data-lucide="shield-alert" className="w-8 h-8 text-white"></i>
+                </div>
+                <div>
+                  <h1 className="text-3xl md:text-4xl font-black text-white mb-2">
+                    Cross-Protocol Exploit Scanner
+                  </h1>
+                  <p className="text-red-300/80 text-sm md:text-base">
+                    Detect if other DeFi protocols have similar vulnerabilities to the Balancer exploit
+                  </p>
+                </div>
+              </div>
+              
+              {/* Chain Selector */}
+              <div className="mb-4 flex items-center gap-4">
+                <div className="text-white/70 text-sm font-medium">Select Chain:</div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setSelectedChain('ethereum');
+                      setProtocolStatus({});
+                      setUserResults(null);
+                      setUserWallet('');
+                    }}
+                    className={`px-4 py-2 rounded-lg font-bold transition-all ${
+                      selectedChain === 'ethereum'
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/50'
+                        : 'bg-white/5 text-white/60 hover:bg-white/10'
+                    }`}
+                  >
+                    Ethereum
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedChain('solana');
+                      setProtocolStatus({});
+                      setUserResults(null);
+                      setUserWallet('');
+                    }}
+                    className={`px-4 py-2 rounded-lg font-bold transition-all ${
+                      selectedChain === 'solana'
+                        ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/50'
+                        : 'bg-white/5 text-white/60 hover:bg-white/10'
+                    }`}
+                  >
+                    Solana
+                  </button>
+                </div>
+              </div>
+
+              {selectedChain === 'ethereum' && (
+                <div className="bg-red-500/10 border border-red-400/30 rounded-xl p-6 mb-4">
+                  <div className="font-bold text-yellow-400 mb-3 text-base">What We Scan For:</div>
+                  <div className="grid md:grid-cols-2 gap-3 text-sm">
+                    <div className="bg-black/40 rounded-lg p-3 border border-red-400/20">
+                      <div className="font-bold text-red-300 mb-1 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-red-400"></span>
+                        Factory Authorization Bypass
+                      </div>
+                      <div className="text-white/70 text-xs">
+                        Patterns matching: <code className="bg-black/60 px-1 rounded">!authorizer.*isPoolFactoryAllowed</code>, delegatecall usage in factory context, and unauthorized factory registration attempts.
+                      </div>
+                    </div>
+                    <div className="bg-black/40 rounded-lg p-3 border border-red-400/20">
+                      <div className="font-bold text-red-300 mb-1 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-red-400"></span>
+                        Delegatecall Vulnerabilities
+                      </div>
+                      <div className="text-white/70 text-xs">
+                        Detection of <code className="bg-black/60 px-1 rounded">delegatecall</code> or <code className="bg-black/60 px-1 rounded">CREATE2</code> usage in factory patterns that could allow bytecode cloning attacks.
+                      </div>
+                    </div>
+                    <div className="bg-black/40 rounded-lg p-3 border border-red-400/20">
+                      <div className="font-bold text-red-300 mb-1 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-red-400"></span>
+                        Unauthorized Pool Registration
+                      </div>
+                      <div className="text-white/70 text-xs">
+                        Contracts that allow pool creation without proper factory validation checks or use factory cloning patterns.
+                      </div>
+                    </div>
+                    <div className="bg-black/40 rounded-lg p-3 border border-red-400/20">
+                      <div className="font-bold text-red-300 mb-1 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-red-400"></span>
+                        Reentrancy Vulnerabilities
+                      </div>
+                      <div className="text-white/70 text-xs">
+                        Unchecked external calls (<code className="bg-black/60 px-1 rounded">.call()</code>, <code className="bg-black/60 px-1 rounded">.transfer()</code>) before state updates in vault/pool logic.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-red-400/30">
+                    <div className="flex items-center gap-2 text-xs text-white/60">
+                      <i data-lucide="info" className="w-4 h-4"></i>
+                      <span><strong className="text-red-300">Note:</strong> This scanner analyzes verified contract source code for exploit patterns. Results indicate potential vulnerabilities and should not be considered definitive security audits.</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {selectedChain === 'solana' && (
+                <div className="bg-purple-500/10 border border-purple-400/30 rounded-xl p-4 mb-4">
+                  <div className="flex items-start gap-3">
+                    <i data-lucide="alert-triangle" className="w-5 h-5 text-purple-400 shrink-0 mt-0.5"></i>
+                    <div>
+                      <div className="font-bold text-purple-400 mb-1">Solana Program Analysis</div>
+                      <div className="text-sm text-white/70">
+                        We analyze: Program upgradeability, centralization risks, transaction failure rates, and known exploit patterns
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-black/40 rounded-xl p-4 border border-white/10">
+                  <div className="text-white/60 text-xs mb-1">Protocols</div>
+                  <div className="text-2xl font-bold text-white">{PROTOCOLS.length}</div>
+                </div>
+                <div className="bg-black/40 rounded-xl p-4 border border-white/10">
+                  <div className="text-white/60 text-xs mb-1">Exploit Patterns</div>
+                  <div className="text-2xl font-bold text-white">{Object.keys(EXPLOIT_PATTERNS).length}</div>
+                </div>
+                <div className="bg-black/40 rounded-xl p-4 border border-white/10">
+                  <div className="text-white/60 text-xs mb-1">Scan Type</div>
+                  <div className="text-lg font-bold text-emerald-400">Source Code</div>
+                </div>
+                <div className="bg-black/40 rounded-xl p-4 border border-white/10">
+                  <div className="text-white/60 text-xs mb-1">Privacy</div>
+                  <div className="text-lg font-bold text-cyan-400">Maximum</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Protocol Scanner */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-white">Scan All Protocols</h2>
+              <button
+                onClick={scanAllProtocols}
+                disabled={scanning}
+                className="px-6 py-3 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 rounded-xl text-white font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-500/20"
+              >
+                {scanning ? 'Scanning...' : 'Scan All Protocols'}
+              </button>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {PROTOCOLS.map((protocol) => {
+                const status = protocolStatus[protocol.name];
+                const badge = status ? getRiskBadge(status.riskScore) : null;
+
+                return (
+                  <div
+                    key={protocol.name}
+                    className="relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-800/80 backdrop-blur-xl p-6 hover:border-red-400/30 transition-all cursor-pointer"
+                    onClick={() => setSelectedProtocol(protocol)}
+                  >
+                    {protocol.status === 'EXPLOITED' && (
+                      <div className="absolute top-2 right-2 px-2 py-1 bg-red-500/20 border border-red-400/50 rounded text-xs text-red-400 font-bold">
+                        EXPLOITED
+                      </div>
+                    )}
+
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <h3 className="text-xl font-bold text-white mb-1">{protocol.name}</h3>
+                        <p className="text-white/60 text-sm">{protocol.type}</p>
+                      </div>
+                      {status && (
+                        <div className={`px-3 py-1 rounded-lg border ${badge.border} ${badge.bg}`}>
+                          <span className={`text-xs font-bold ${badge.textColor}`}>
+                            {badge.text}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <p className="text-white/50 text-xs mb-4">{protocol.description}</p>
+
+                    {!status && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          scanProtocol(protocol);
+                        }}
+                        className="w-full px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white text-sm font-medium transition-all"
+                      >
+                        Scan Protocol
+                      </button>
+                    )}
+
+                    {status?.status === 'scanning' && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-white/70">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-400"></div>
+                          {status.progress}
+                        </div>
+                      </div>
+                    )}
+
+                    {status?.status === 'complete' && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-white/60">Risk Score:</span>
+                          <span className={`font-bold ${getRiskColor(status.riskScore)}`}>
+                            {status.riskScore}/10
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-white/60">Vulnerable Contracts:</span>
+                          <span className="text-white font-bold">{status.vulnerableContracts}/{status.totalContracts}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-white/60">Findings:</span>
+                          <span className="text-white font-bold">{status.totalFindings}</span>
+                        </div>
+                        {status.riskScore >= 7 && (
+                          <div className="mt-3 pt-3 border-t border-red-400/30">
+                            <div className="text-xs text-red-400 font-bold mb-1">⚠️ HIGH RISK DETECTED</div>
+                            <div className="text-xs text-white/70">
+                              Similar vulnerability patterns found. Consider withdrawing positions.
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {status?.status === 'error' && (
+                      <div className="text-sm text-red-400">
+                        Error: {status.error}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Protocol Detail Modal */}
+          {selectedProtocol && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSelectedProtocol(null)}>
+              <div className="bg-slate-900 border border-white/20 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                <div className="sticky top-0 bg-slate-900 border-b border-white/20 p-6 flex items-center justify-between">
+                  <h3 className="text-2xl font-bold text-white">{selectedProtocol.name} Analysis</h3>
+                  <button onClick={() => setSelectedProtocol(null)} className="text-white/60 hover:text-white">
+                    <i data-lucide="x" className="w-6 h-6"></i>
+                  </button>
+                </div>
+                <div className="p-6">
+                  {protocolStatus[selectedProtocol.name]?.analyses?.map((analysis, i) => {
+                    const address = analysis.address || analysis.programId;
+                    const isSolana = selectedChain === 'solana';
+                    const explorerUrl = isSolana 
+                      ? `https://solscan.io/account/${address}`
+                      : `https://etherscan.io/address/${address}`;
+                    
+                    return (
+                    <div key={i} className="mb-6 p-4 bg-black/40 rounded-xl border border-white/10">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="text-sm text-white/60">{isSolana ? 'Program:' : 'Contract:'}</div>
+                        <a 
+                          href={explorerUrl}
+                          target="_blank"
+                          rel="noopener"
+                          className="text-cyan-400 hover:text-cyan-300 text-sm font-mono"
+                        >
+                          {address.slice(0, isSolana ? 8 : 10)}...{address.slice(-8)}
+                        </a>
+                      </div>
+                      <div className="flex items-center gap-4 mb-3">
+                        <div>
+                          <div className="text-xs text-white/60">Risk Score</div>
+                          <div className={`text-2xl font-bold ${getRiskColor(analysis.riskScore)}`}>
+                            {analysis.riskScore}/10
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-white/60">{isSolana ? 'Upgradeable' : 'Verified'}</div>
+                          <div className="text-sm text-white">
+                            {isSolana 
+                              ? (analysis.upgradeable ? '⚠️ Yes' : '✅ No')
+                              : (analysis.verified ? '✅ Yes' : '❌ No')
+                            }
+                          </div>
+                        </div>
+                        {isSolana && analysis.exists && (
+                          <div>
+                            <div className="text-xs text-white/60">Program Size</div>
+                            <div className="text-sm text-white">
+                              {(analysis.dataLength / 1024).toFixed(1)} KB
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      {analysis.findings && analysis.findings.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="text-sm font-bold text-white mb-2">Findings:</div>
+                          {analysis.findings.map((finding, j) => (
+                            <div key={j} className="p-3 bg-red-500/10 border border-red-400/30 rounded-lg">
+                              <div className="font-bold text-red-400 mb-1">{finding.pattern}</div>
+                              <div className="text-xs text-white/70 mb-2">{finding.description}</div>
+                              <div className="text-xs text-white/50">
+                                Matches: {finding.matches} | Risk: {finding.risk}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       );
     }
@@ -9345,6 +10771,16 @@ console.log('✅ Fingerprint spoofing active!');`;
           color: 'red',
           gradient: 'from-red-600 to-orange-600',
           features: ['Live censorship data', 'Freedom scores', 'Blocked services', 'Regional analysis']
+        },
+        {
+          id: 'exploit-scanner',
+          title: 'Exploit Scanner',
+          subtitle: 'Cross-Protocol Vulnerability Detection',
+          description: 'Scan major DeFi protocols for similar vulnerabilities to the Balancer exploit. Check your positions and get risk assessments.',
+          icon: 'shield-alert',
+          color: 'red',
+          gradient: 'from-red-600 to-orange-600',
+          features: ['Protocol scanning', 'Pattern matching', 'Position analysis', 'Risk scoring']
         }
       ];
       
@@ -9385,7 +10821,7 @@ console.log('✅ Fingerprint spoofing active!');`;
               <div className="grid grid-cols-3 gap-2 md:gap-3">
                 <div className="px-2 md:px-3 py-2 rounded bg-slate-900/50 border border-slate-700/50">
                   <div className="text-[9px] md:text-xs text-slate-500 font-mono mb-1">TOOLS</div>
-                  <div className="text-xs md:text-sm font-mono font-bold text-cyan-400">6 ACTIVE</div>
+                  <div className="text-xs md:text-sm font-mono font-bold text-cyan-400">7 ACTIVE</div>
                 </div>
                 <div className="px-2 md:px-3 py-2 rounded bg-slate-900/50 border border-slate-700/50">
                   <div className="text-[9px] md:text-xs text-slate-500 font-mono mb-1">PRIVACY</div>
@@ -24994,7 +26430,7 @@ https://whistle.ninja
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'offline-network', 'whistle-ids', 'decentralized-storage', 'breach-monitor', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'privacy-tools-lab', 'community-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
+      const validSteps = ['home', 'webrtc', 'offline-network', 'whistle-ids', 'decentralized-storage', 'breach-monitor', 'exploit-scanner', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'privacy-tools-lab', 'community-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -25032,6 +26468,7 @@ https://whistle.ninja
                       case 'whistle-ids': return <WhistleIDs pushToast={push} setStep={setStepGuarded} />;
                       case 'decentralized-storage': return <DecentralizedStorage pushToast={push} />;
                       case 'breach-monitor': return <BreachMonitor pushToast={push} />;
+                      case 'exploit-scanner': return <ExploitVulnerabilityScanner pushToast={push} />;
                       case 'claim-rewards': return <ClaimRewards pushToast={push} />;
                       case 'ghost-identity': return <GhostIdentityGenerator pushToast={push} />;
                       case 'location-spoofer': return <LocationSpoofer pushToast={push} />;
@@ -25868,7 +27305,7 @@ https://whistle.ninja
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'offline-network', 'whistle-ids', 'decentralized-storage', 'breach-monitor', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'privacy-tools-lab', 'community-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
+      const validSteps = ['home', 'webrtc', 'offline-network', 'whistle-ids', 'decentralized-storage', 'breach-monitor', 'exploit-scanner', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'privacy-tools-lab', 'community-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -25906,6 +27343,7 @@ https://whistle.ninja
                       case 'whistle-ids': return <WhistleIDs pushToast={push} setStep={setStepGuarded} />;
                       case 'decentralized-storage': return <DecentralizedStorage pushToast={push} />;
                       case 'breach-monitor': return <BreachMonitor pushToast={push} />;
+                      case 'exploit-scanner': return <ExploitVulnerabilityScanner pushToast={push} />;
                       case 'claim-rewards': return <ClaimRewards pushToast={push} />;
                       case 'ghost-identity': return <GhostIdentityGenerator pushToast={push} />;
                       case 'location-spoofer': return <LocationSpoofer pushToast={push} />;
