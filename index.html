@@ -3621,18 +3621,20 @@
       
       const tabs = [
         { id: "home", label: "Home", emoji: "🏛️" },
+        { id: "privacy-tools-lab", label: "🛠️ Privacy Tools Lab", emoji: "🔧", isNew: true, isPremium: true },
         { id: "offline-network", label: "Ghost Whistle", emoji: "👻", special: true },
-        { id: "anonymous-relay", label: "Anonymous Relay", emoji: "🔀", special: true },
-        { id: "exploit-scanner", label: "Exploit Scanner", emoji: "🛡️", special: true, isNew: true },
-        { id: "privacy-tools", label: "Privacy Tools Hub", emoji: "🔒" },
-        { id: "decentralized-storage", label: "Decentralized Storage", emoji: "💾", indent: true },
-        { id: "breach-monitor", label: "Breach Monitor", emoji: "🚨", indent: true },
-        { id: "claim-rewards", label: "Claim Rewards", emoji: "💰" },
-        { id: "social-hub", label: "Ghost Terminal", emoji: "🖥️" },
-        { id: "services", label: "Ghost Services", emoji: "✨" },
+        { id: "ghost-calls", label: "Ghost Calls", emoji: "📞", indent: true, isNew: true, isPremium: true },
+        { id: "anonymous-relay", label: "Anonymous Relay", emoji: "🔀", indent: true, special: true },
+        { id: "claim-rewards", label: "Claim Rewards", emoji: "💰", indent: true },
+        { id: "social-hub", label: "Ghost Terminal", emoji: "🖥️", indent: true },
+        { id: "services", label: "Ghost Services", emoji: "✨", indent: true },
+        { id: "whistle-ids", label: "Whistle IDs", emoji: "🆔", isNew: true },
         { id: "how-it-works", label: "How It Works", emoji: "💡" },
         { id: "swap", label: "Privacy Swap", image: "public/4DqRlDPT_400x400.png.png" },
         { id: "solana-privacy", label: "Solana Privacy", image: "public/solana.png" },
+        { id: "privacy-tools", label: "Privacy Tools Hub", emoji: "🔒" },
+        { id: "decentralized-storage", label: "Decentralized Storage", emoji: "💾", indent: true },
+        { id: "breach-monitor", label: "Breach Monitor", emoji: "🚨", indent: true },
       ];
       
       const currentTab = tabs.find(t => t.id === step) || tabs[0];
