@@ -21787,6 +21787,10 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           const stream = await navigator.mediaDevices.getUserMedia(constraints);
           setLocalStream(stream);
           
+          // Log stream details
+          console.log('✅ Media stream acquired');
+          console.log('📊 Stream tracks:', stream.getTracks().map(t => `${t.kind} - enabled: ${t.enabled}, readyState: ${t.readyState}`));
+          
           // Attach to local video element
           setTimeout(() => {
             const localVideo = document.getElementById('local-video');
@@ -21824,16 +21828,25 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         
         // Add local stream tracks to peer connection
         if (mediaStream) {
-          console.log('➕ Adding local tracks to peer connection');
-          mediaStream.getTracks().forEach(track => {
+          const tracks = mediaStream.getTracks();
+          console.log(`➕ Adding ${tracks.length} local tracks to peer connection`);
+          tracks.forEach(track => {
             pc.addTrack(track, mediaStream);
-            console.log('  ✓ Added track:', track.kind);
+            console.log(`  ✓ Added ${track.kind} track - enabled: ${track.enabled}, readyState: ${track.readyState}`);
           });
+        } else {
+          console.error('❌ No media stream to add to peer connection!');
         }
         
         // Handle incoming tracks (remote stream)
         pc.ontrack = (event) => {
-          console.log('📥 Received remote track:', event.track.kind, event.streams[0]);
+          console.log('📥 Received remote track:', event.track.kind);
+          console.log('📊 Remote stream info:', {
+            tracks: event.streams[0]?.getTracks().map(t => `${t.kind} (enabled: ${t.enabled}, readyState: ${t.readyState})`),
+            trackCount: event.streams[0]?.getTracks().length,
+            trackReadyState: event.track.readyState,
+            trackEnabled: event.track.enabled
+          });
           setRemoteStream(event.streams[0]);
           
           // Attach to remote audio/video element
