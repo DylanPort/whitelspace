@@ -21793,7 +21793,19 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           pushToast(`✅ ${type === 'video' ? 'Camera' : 'Microphone'} ready`, 'ok');
           return stream;
         } catch (error) {
-          pushToast(`❌ Media access denied: ${error.message}`, 'err');
+          console.error('Media access error:', error);
+          
+          // User-friendly error messages
+          if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+            pushToast('❌ Permission denied! Click the 🔒 icon in address bar → Allow camera/mic', 'err');
+          } else if (error.name === 'NotFoundError') {
+            pushToast('❌ No camera/microphone found on this device', 'err');
+          } else if (error.name === 'NotReadableError') {
+            pushToast('❌ Camera/mic is being used by another app. Close it and try again.', 'err');
+          } else {
+            pushToast(`❌ Media access error: ${error.message}`, 'err');
+          }
+          
           throw error;
         }
       };
@@ -22193,6 +22205,16 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                       <div className="flex items-start gap-2">
                         <span className="text-emerald-500">▸</span>
                         <span>AUTO_DELETE_24H</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
+                    <div className="text-xs font-mono text-yellow-200 flex items-start gap-2">
+                      <span className="text-yellow-400 text-sm">⚠️</span>
+                      <div>
+                        <div className="font-bold text-yellow-300 mb-1">IMPORTANT:</div>
+                        <div>When prompted, click <span className="text-yellow-300 font-bold">"Allow"</span> to grant microphone/camera access. If blocked, click the 🔒 icon in your address bar to enable.</div>
                       </div>
                     </div>
                   </div>
