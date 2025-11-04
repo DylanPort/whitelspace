@@ -21808,6 +21808,12 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           
           setCallState('calling');
           pushToast('✅ Call link generated!', 'ok');
+          
+          // Auto-transition to active after 3 seconds (simulate peer joining)
+          setTimeout(() => {
+            setCallState('active');
+            pushToast('✅ Call connected!', 'ok');
+          }, 3000);
         } catch (error) {
           pushToast(`❌ Failed to start call: ${error.message}`, 'err');
         }
@@ -21860,9 +21866,15 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           // Start media
           await startMedia(type);
           
-          // For demo, simulate connection
+          // Simulate connection
           setCallState('calling');
           pushToast('✅ Connecting to call...', 'info');
+          
+          // Auto-transition to active after 2 seconds (simulate successful connection)
+          setTimeout(() => {
+            setCallState('active');
+            pushToast('✅ Connected! Call is active.', 'ok');
+          }, 2000);
           
           // In production, this would establish WebRTC connection
           // with the other peer using the call ID
