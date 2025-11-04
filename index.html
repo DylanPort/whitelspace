@@ -21741,6 +21741,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [isMuted, setIsMuted] = useState(false);
       const [isVideoOff, setIsVideoOff] = useState(false);
       const [callLink, setCallLink] = useState('');
+      const [joinCallInput, setJoinCallInput] = useState('');
       const [callTimer, setCallTimer] = useState(0);
       const [showSettings, setShowSettings] = useState(false);
       
@@ -21832,6 +21833,46 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         }
       };
 
+      // Join a call
+      const joinCall = async () => {
+        if (!joinCallInput.trim()) {
+          pushToast('❌ Please enter a call link or ID', 'err');
+          return;
+        }
+
+        try {
+          pushToast('📞 Joining call...', 'info');
+          
+          // Extract call ID from link or use input directly
+          let extractedCallId = joinCallInput.trim();
+          if (extractedCallId.includes('?call=')) {
+            extractedCallId = extractedCallId.split('?call=')[1].split('&')[0];
+          } else if (extractedCallId.includes('/')) {
+            extractedCallId = extractedCallId.split('/').pop();
+          }
+          
+          setCallId(extractedCallId);
+          
+          // Determine call type from ID (you could store this info)
+          const type = 'audio'; // Default to audio, could be enhanced
+          setCallType(type);
+          
+          // Start media
+          await startMedia(type);
+          
+          // For demo, simulate connection
+          setCallState('calling');
+          pushToast('✅ Connecting to call...', 'info');
+          
+          // In production, this would establish WebRTC connection
+          // with the other peer using the call ID
+          
+        } catch (error) {
+          pushToast(`❌ Failed to join call: ${error.message}`, 'err');
+          setCallState('idle');
+        }
+      };
+
       // End call
       const endCall = () => {
         if (localStream) {
@@ -21846,6 +21887,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         setPeerConnection(null);
         setCallTimer(0);
         setCallLink('');
+        setJoinCallInput('');
         pushToast('📞 Call ended', 'info');
       };
 
@@ -21967,12 +22009,17 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   
                   <input
                     type="text"
+                    value={joinCallInput}
+                    onChange={(e) => setJoinCallInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && joinCall()}
                     placeholder="PASTE_CALL_LINK_OR_ID..."
                     className="w-full px-4 py-3 bg-black/60 border border-cyan-500/30 rounded-xl text-white placeholder-white/30 mb-4 font-mono text-sm focus:border-cyan-500/60 focus:outline-none transition-colors"
                   />
                   
                   <button
-                    className="w-full py-4 rounded-xl text-white font-bold font-mono text-sm transition-all relative overflow-hidden group"
+                    onClick={joinCall}
+                    disabled={!joinCallInput.trim()}
+                    className="w-full py-4 rounded-xl text-white font-bold font-mono text-sm transition-all relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{
                       background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
                       boxShadow: '0 4px 20px rgba(6,182,212,0.3)'
