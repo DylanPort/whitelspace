@@ -22352,6 +22352,27 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         <div className="min-h-screen" style={{
           background: 'linear-gradient(135deg, #0a0e14 0%, #1a1f2e 50%, #0f1419 100%)',
         }}>
+          {/* Hidden Audio/Video Elements - ALWAYS PRESENT */}
+          <audio 
+            id="remote-audio" 
+            autoPlay 
+            playsInline 
+            style={{ display: 'none' }}
+          />
+          <video 
+            id="remote-video" 
+            autoPlay 
+            playsInline 
+            style={{ display: 'none' }}
+          />
+          <video 
+            id="local-video" 
+            autoPlay 
+            playsInline 
+            muted 
+            style={{ display: 'none' }}
+          />
+          
           {/* Terminal-style header */}
           <div className="border-b border-emerald-500/20 bg-black/40 backdrop-blur-sm">
             <div className="max-w-6xl mx-auto px-6 py-4">
