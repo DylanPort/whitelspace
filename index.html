@@ -21811,38 +21811,59 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       };
 
       // Create WebRTC peer connection
-      const createPeerConnection = () => {
+      const createPeerConnection = (stream = null, ws = null, roomId = null) => {
         const pc = new RTCPeerConnection(rtcConfig);
         
+        // Use passed stream or state
+        const mediaStream = stream || localStream;
+        const socket = ws || signalingSocket;
+        const room = roomId || callId;
+        
         // Add local stream tracks to peer connection
-        if (localStream) {
-          localStream.getTracks().forEach(track => {
-            pc.addTrack(track, localStream);
+        if (mediaStream) {
+          console.log('➕ Adding local tracks to peer connection');
+          mediaStream.getTracks().forEach(track => {
+            pc.addTrack(track, mediaStream);
+            console.log('  ✓ Added track:', track.kind);
           });
         }
         
         // Handle incoming tracks (remote stream)
         pc.ontrack = (event) => {
-          console.log('📥 Received remote track:', event.streams[0]);
+          console.log('📥 Received remote track:', event.track.kind, event.streams[0]);
           setRemoteStream(event.streams[0]);
           
-          // Attach to remote video element
+          // Attach to remote audio/video element
           setTimeout(() => {
+            const remoteAudio = document.getElementById('remote-audio');
             const remoteVideo = document.getElementById('remote-video');
-            if (remoteVideo && event.streams[0]) {
-              remoteVideo.srcObject = event.streams[0];
-              console.log('✅ Remote video attached');
+            
+            if (event.streams[0]) {
+              // Always attach audio
+              if (remoteAudio) {
+                remoteAudio.srcObject = event.streams[0];
+                remoteAudio.volume = 1.0;
+                remoteAudio.play().catch(e => console.log('Audio autoplay prevented:', e));
+                console.log('✅ Remote audio attached and playing');
+              }
+              
+              // Attach video if video call
+              if (remoteVideo) {
+                remoteVideo.srcObject = event.streams[0];
+                remoteVideo.play().catch(e => console.log('Video autoplay prevented:', e));
+                console.log('✅ Remote video attached');
+              }
             }
           }, 100);
         };
         
         // Handle ICE candidates
         pc.onicecandidate = (event) => {
-          if (event.candidate && signalingSocket) {
+          if (event.candidate && socket) {
             console.log('📤 Sending ICE candidate');
-            signalingSocket.send(JSON.stringify({
+            socket.send(JSON.stringify({
               type: 'ice-candidate',
-              callId: callId,
+              callId: room,
               candidate: event.candidate
             }));
           }
@@ -21911,7 +21932,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           setIsInitiator(true);
           
           // Get media first
-          await startMedia(type);
+          const stream = await startMedia(type);
+          console.log('✅ Media stream obtained (initiator):', stream.id);
           
           // Generate call ID
           const newCallId = `ghost-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -21925,14 +21947,17 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           
           // Connect to signaling server
           const ws = await connectSignaling(newCallId);
+          setSignalingSocket(ws);
+          console.log('✅ Signaling socket connected (initiator)');
           
-          // Create peer connection
-          const pc = createPeerConnection();
+          // Create peer connection with explicit stream, socket, and callId
+          const pc = createPeerConnection(stream, ws, newCallId);
+          console.log('✅ Peer connection created (initiator)');
           
           // Set up signaling message handler
           ws.onmessage = async (event) => {
             const data = JSON.parse(event.data);
-            console.log('📨 Signaling message:', data.type);
+            console.log('📨 Signaling message (initiator):', data.type);
             
             if (data.type === 'peer-joined') {
               console.log('👤 Peer joined, creating offer...');
@@ -21947,12 +21972,20 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 callId: newCallId,
                 offer: offer
               }));
+              
+              console.log('📤 Sent offer');
             } else if (data.type === 'answer') {
               console.log('📥 Received answer');
               await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-            } else if (data.type === 'ice-candidate') {
-              console.log('📥 Received ICE candidate');
+              pushToast('✅ Call connected!', 'ok');
+              setCallState('active');
+            } else if (data.type === 'ice-candidate' && data.candidate) {
+              console.log('📥 Received ICE candidate (initiator)');
               await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+            } else if (data.type === 'peer-left') {
+              console.log('👋 Peer left the call');
+              pushToast('📞 Peer disconnected', 'info');
+              endCall();
             }
           };
           
@@ -22105,14 +22138,18 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
               setIsInitiator(false);
               setCallType('audio');
               
-              // Get media
-              await startMedia('audio');
+              // Get media first
+              const stream = await startMedia('audio');
+              console.log('✅ Media stream obtained:', stream.id);
               
               // Connect to signaling server
               const ws = await connectSignaling(callParam);
+              setSignalingSocket(ws);
+              console.log('✅ Signaling socket connected');
               
-              // Create peer connection
-              const pc = createPeerConnection();
+              // Create peer connection with explicit stream, socket, and callId
+              const pc = createPeerConnection(stream, ws, callParam);
+              console.log('✅ Peer connection created');
               
               // Set up signaling message handler
               ws.onmessage = async (event) => {
@@ -22136,7 +22173,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   pushToast('📞 Connected! Call started.', 'ok');
                   setCallState('active');
                 } else if (data.type === 'ice-candidate' && data.candidate) {
-                  console.log('📥 Received ICE candidate');
+                  console.log('📥 Received ICE candidate (joiner)');
                   await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
                 } else if (data.type === 'peer-left') {
                   console.log('👋 Peer left the call');
@@ -22386,6 +22423,155 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                     <div className="text-xs text-emerald-400/60 font-mono">
                       INITIALIZING_PEER_CONNECTION...
                     </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Active Call Screen */}
+            {callState === 'active' && (
+              <div className="max-w-4xl mx-auto space-y-6">
+                <div className="rounded-2xl border border-emerald-500/30 bg-black/60 backdrop-blur-xl p-8"
+                  style={{
+                    boxShadow: '0 0 60px rgba(16,185,129,0.2), inset 0 1px 0 rgba(255,255,255,0.05)'
+                  }}>
+                  <div className="text-center mb-8">
+                    <h3 className="text-3xl font-mono text-emerald-400 mb-2 flex items-center justify-center gap-3">
+                      <div className="w-3 h-3 bg-emerald-400 rounded-full animate-pulse"></div>
+                      CALL_ACTIVE
+                    </h3>
+                    <div className="text-white/60 font-mono text-lg">
+                      ⏱️ {formatTime(callTimer)}
+                    </div>
+                  </div>
+
+                  {/* Hidden Audio Elements */}
+                  <audio id="remote-audio" autoPlay playsInline style={{ display: 'none' }} />
+
+                  {/* Audio Visualizers */}
+                  <div className="space-y-4 mb-8">
+                    <div className="p-6 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-3 h-3 bg-emerald-400 rounded-full animate-pulse"></div>
+                        <span className="text-emerald-400 font-mono text-sm font-bold">YOUR_AUDIO</span>
+                        <span className="ml-auto text-emerald-400/60 font-mono text-xs">{isMuted ? '🔇 MUTED' : '🎤 LIVE'}</span>
+                      </div>
+                      <div className="flex items-end gap-1 h-16">
+                        {[...Array(30)].map((_, i) => (
+                          <div
+                            key={i}
+                            className="flex-1 bg-emerald-500/40 rounded-t-lg animate-pulse"
+                            style={{
+                              height: `${20 + Math.random() * 80}%`,
+                              animationDelay: `${i * 0.05}s`,
+                              animationDuration: '0.8s'
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="p-6 rounded-xl bg-cyan-500/5 border border-cyan-500/20">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-3 h-3 bg-cyan-400 rounded-full animate-pulse"></div>
+                        <span className="text-cyan-400 font-mono text-sm font-bold">PEER_AUDIO</span>
+                        <span className="ml-auto text-cyan-400/60 font-mono text-xs">🔊 RECEIVING</span>
+                      </div>
+                      <div className="flex items-end gap-1 h-16">
+                        {[...Array(30)].map((_, i) => (
+                          <div
+                            key={i}
+                            className="flex-1 bg-cyan-500/40 rounded-t-lg animate-pulse"
+                            style={{
+                              height: `${20 + Math.random() * 80}%`,
+                              animationDelay: `${i * 0.05}s`,
+                              animationDuration: '0.7s'
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Video Display (if video call) */}
+                  {callType === 'video' && (
+                    <div className="grid grid-cols-2 gap-4 mb-8">
+                      <div className="relative aspect-video bg-black/60 rounded-xl overflow-hidden border border-emerald-500/30">
+                        <video
+                          id="local-video"
+                          autoPlay
+                          muted
+                          playsInline
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute bottom-2 left-2 bg-black/70 px-2 py-1 rounded text-xs text-white/80 font-mono">
+                          YOU
+                        </div>
+                      </div>
+                      
+                      <div className="relative aspect-video bg-black/60 rounded-xl overflow-hidden border border-cyan-500/30">
+                        <video
+                          id="remote-video"
+                          autoPlay
+                          playsInline
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute bottom-2 left-2 bg-black/70 px-2 py-1 rounded text-xs text-white/80 font-mono">
+                          PEER
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Connection Info */}
+                  <div className="p-4 rounded-xl bg-black/60 border border-emerald-500/20 mb-8">
+                    <div className="text-xs font-mono text-white/60 space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span>CONNECTION:</span>
+                        <span className="text-emerald-400 font-bold">ESTABLISHED</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span>ENCRYPTION:</span>
+                        <span className="text-emerald-400 font-bold">AES-256-GCM</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span>PROTOCOL:</span>
+                        <span className="text-cyan-400 font-bold">WebRTC_P2P</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span>PRIVACY:</span>
+                        <span className="text-emerald-400 font-bold">MAXIMUM</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Call Controls */}
+                  <div className="flex items-center justify-center gap-4">
+                    <button
+                      onClick={toggleMute}
+                      className={`p-6 rounded-2xl ${isMuted ? 'bg-red-500/20 border-red-500' : 'bg-emerald-500/20 border-emerald-500'} border-2 hover:scale-110 transition-all`}
+                      title={isMuted ? 'Unmute' : 'Mute'}
+                    >
+                      <span className="text-4xl">{isMuted ? '🔇' : '🎤'}</span>
+                    </button>
+                    
+                    {callType === 'video' && (
+                      <button
+                        onClick={toggleVideo}
+                        className={`p-6 rounded-2xl ${isVideoOff ? 'bg-red-500/20 border-red-500' : 'bg-cyan-500/20 border-cyan-500'} border-2 hover:scale-110 transition-all`}
+                        title={isVideoOff ? 'Turn on camera' : 'Turn off camera'}
+                      >
+                        <span className="text-4xl">{isVideoOff ? '📹' : '📷'}</span>
+                      </button>
+                    )}
+                    
+                    <button
+                      onClick={endCall}
+                      className="p-6 rounded-2xl bg-red-500 hover:bg-red-600 hover:scale-110 transition-all"
+                      title="End call"
+                    >
+                      <span className="text-4xl">📞</span>
+                    </button>
                   </div>
                 </div>
               </div>
