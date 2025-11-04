@@ -21845,8 +21845,33 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
               if (remoteAudio) {
                 remoteAudio.srcObject = event.streams[0];
                 remoteAudio.volume = 1.0;
-                remoteAudio.play().catch(e => console.log('Audio autoplay prevented:', e));
-                console.log('✅ Remote audio attached and playing');
+                remoteAudio.muted = false; // Ensure not muted
+                
+                // Force play with user interaction context
+                const playPromise = remoteAudio.play();
+                if (playPromise !== undefined) {
+                  playPromise
+                    .then(() => {
+                      console.log('✅ Remote audio playing successfully');
+                    })
+                    .catch(e => {
+                      console.error('❌ Audio play failed:', e);
+                      // Retry play on next user interaction
+                      const retryPlay = () => {
+                        remoteAudio.play()
+                          .then(() => {
+                            console.log('✅ Remote audio playing after retry');
+                            document.removeEventListener('click', retryPlay);
+                            document.removeEventListener('touchstart', retryPlay);
+                          })
+                          .catch(err => console.error('Retry failed:', err));
+                      };
+                      document.addEventListener('click', retryPlay, { once: true });
+                      document.addEventListener('touchstart', retryPlay, { once: true });
+                      console.log('⚠️ Click/tap anywhere to enable audio');
+                    });
+                }
+                console.log('✅ Remote audio attached, volume:', remoteAudio.volume);
               }
               
               // Attach video if video call
@@ -22448,7 +22473,12 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   </div>
 
                   {/* Hidden Audio Elements */}
-                  <audio id="remote-audio" autoPlay playsInline style={{ display: 'none' }} />
+                  <audio 
+                    id="remote-audio" 
+                    autoPlay 
+                    playsInline 
+                    style={{ display: 'none' }}
+                  />
 
                   {/* Audio Visualizers */}
                   <div className="space-y-4 mb-8">
