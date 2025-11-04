@@ -22499,13 +22499,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                     </div>
                   </div>
 
-                  {/* Hidden Audio Elements */}
-                  <audio 
-                    id="remote-audio" 
-                    autoPlay 
-                    playsInline 
-                    style={{ display: 'none' }}
-                  />
+                  {/* Audio element moved to top level - always present in DOM */}
 
                   {/* Audio Visualizers */}
                   <div className="space-y-4 mb-8">
