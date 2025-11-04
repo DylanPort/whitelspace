@@ -21748,6 +21748,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [showSettings, setShowSettings] = useState(false);
       const [signalingSocket, setSignalingSocket] = useState(null);
       const [isInitiator, setIsInitiator] = useState(false);
+      const [audioBlocked, setAudioBlocked] = useState(false);
       
       // WebRTC Configuration
       const rtcConfig = {
@@ -21853,22 +21854,14 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   playPromise
                     .then(() => {
                       console.log('✅ Remote audio playing successfully');
+                      setAudioBlocked(false);
+                      pushToast('🔊 Audio enabled!', 'ok');
                     })
                     .catch(e => {
                       console.error('❌ Audio play failed:', e);
-                      // Retry play on next user interaction
-                      const retryPlay = () => {
-                        remoteAudio.play()
-                          .then(() => {
-                            console.log('✅ Remote audio playing after retry');
-                            document.removeEventListener('click', retryPlay);
-                            document.removeEventListener('touchstart', retryPlay);
-                          })
-                          .catch(err => console.error('Retry failed:', err));
-                      };
-                      document.addEventListener('click', retryPlay, { once: true });
-                      document.addEventListener('touchstart', retryPlay, { once: true });
-                      console.log('⚠️ Click/tap anywhere to enable audio');
+                      setAudioBlocked(true);
+                      pushToast('⚠️ Click "Enable Audio" button to hear peer', 'err');
+                      console.log('⚠️ Audio autoplay blocked - user must enable');
                     });
                 }
                 console.log('✅ Remote audio attached, volume:', remoteAudio.volume);
@@ -22555,6 +22548,35 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                     </div>
                   )}
 
+                  {/* Audio Enable Button (if blocked) */}
+                  {audioBlocked && (
+                    <div className="mb-8">
+                      <button
+                        onClick={() => {
+                          const remoteAudio = document.getElementById('remote-audio');
+                          if (remoteAudio && remoteAudio.srcObject) {
+                            remoteAudio.play()
+                              .then(() => {
+                                console.log('✅ Audio enabled by user');
+                                setAudioBlocked(false);
+                                pushToast('🔊 Audio enabled!', 'ok');
+                              })
+                              .catch(e => {
+                                console.error('❌ Still blocked:', e);
+                                pushToast('❌ Please allow audio in browser settings', 'err');
+                              });
+                          }
+                        }}
+                        className="w-full py-4 px-6 rounded-xl bg-gradient-to-r from-red-500 to-orange-500 text-white font-bold text-lg animate-pulse hover:scale-105 transition-transform shadow-2xl"
+                      >
+                        🔊 CLICK TO ENABLE AUDIO 🔊
+                      </button>
+                      <div className="text-center text-yellow-300 text-xs font-mono mt-2">
+                        Browser blocked audio autoplay. Click above to hear peer.
+                      </div>
+                    </div>
+                  )}
+
                   {/* Connection Info */}
                   <div className="p-4 rounded-xl bg-black/60 border border-emerald-500/20 mb-8">
                     <div className="text-xs font-mono text-white/60 space-y-2">
@@ -22573,6 +22595,12 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                       <div className="flex justify-between items-center">
                         <span>PRIVACY:</span>
                         <span className="text-emerald-400 font-bold">MAXIMUM</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span>AUDIO:</span>
+                        <span className={`font-bold ${audioBlocked ? 'text-red-400' : 'text-emerald-400'}`}>
+                          {audioBlocked ? 'BLOCKED - CLICK BUTTON' : 'ENABLED'}
+                        </span>
                       </div>
                     </div>
                   </div>
