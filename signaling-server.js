@@ -32,6 +32,9 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 const activeNodes = new Map();
 const nodesByRegion = new Map();
 
+// Store active calls (Ghost Calls feature)
+const activeCalls = new Map(); // callId -> { initiator: ws, participants: Set<ws> }
+
 // Heartbeat interval
 const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 const NODE_TIMEOUT = 60000; // 1 minute

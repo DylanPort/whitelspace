@@ -21729,7 +21729,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       );
     }
 
-    // ============ GHOST CALLS - Anonymous Voice/Video ============
+    // ============ GHOST CALLS - Anonymous Voice/Video (Real WebRTC) ============
     function GhostCalls({ pushToast }) {
       console.log('🎯 GhostCalls component loaded!', { pushToast });
       const [callState, setCallState] = useState('idle');
@@ -21744,12 +21744,17 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [joinCallInput, setJoinCallInput] = useState('');
       const [callTimer, setCallTimer] = useState(0);
       const [showSettings, setShowSettings] = useState(false);
+      const [signalingSocket, setSignalingSocket] = useState(null);
+      const [isInitiator, setIsInitiator] = useState(false);
       
       // WebRTC Configuration
       const rtcConfig = {
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' }
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' },
+          { urls: 'stun:stun3.l.google.com:19302' },
+          { urls: 'stun:stun4.l.google.com:19302' }
         ]
       };
 
@@ -21793,13 +21798,110 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         }
       };
 
-      // Start a call
+      // Create WebRTC peer connection
+      const createPeerConnection = () => {
+        const pc = new RTCPeerConnection(rtcConfig);
+        
+        // Add local stream tracks to peer connection
+        if (localStream) {
+          localStream.getTracks().forEach(track => {
+            pc.addTrack(track, localStream);
+          });
+        }
+        
+        // Handle incoming tracks (remote stream)
+        pc.ontrack = (event) => {
+          console.log('📥 Received remote track:', event.streams[0]);
+          setRemoteStream(event.streams[0]);
+          
+          // Attach to remote video element
+          setTimeout(() => {
+            const remoteVideo = document.getElementById('remote-video');
+            if (remoteVideo && event.streams[0]) {
+              remoteVideo.srcObject = event.streams[0];
+              console.log('✅ Remote video attached');
+            }
+          }, 100);
+        };
+        
+        // Handle ICE candidates
+        pc.onicecandidate = (event) => {
+          if (event.candidate && signalingSocket) {
+            console.log('📤 Sending ICE candidate');
+            signalingSocket.send(JSON.stringify({
+              type: 'ice-candidate',
+              callId: callId,
+              candidate: event.candidate
+            }));
+          }
+        };
+        
+        // Handle connection state changes
+        pc.onconnectionstatechange = () => {
+          console.log('🔄 Connection state:', pc.connectionState);
+          if (pc.connectionState === 'connected') {
+            setCallState('active');
+            pushToast('✅ Call connected!', 'ok');
+          } else if (pc.connectionState === 'disconnected') {
+            pushToast('⚠️ Connection lost', 'err');
+          } else if (pc.connectionState === 'failed') {
+            pushToast('❌ Connection failed', 'err');
+            endCall();
+          }
+        };
+        
+        // Handle ICE connection state
+        pc.oniceconnectionstatechange = () => {
+          console.log('🧊 ICE state:', pc.iceConnectionState);
+        };
+        
+        setPeerConnection(pc);
+        return pc;
+      };
+
+      // Connect to signaling server
+      const connectSignaling = (roomId) => {
+        return new Promise((resolve, reject) => {
+          const signalingUrl = window.location.hostname === 'localhost' 
+            ? 'ws://localhost:8080' 
+            : 'wss://ghost-whistle-signaling.onrender.com';
+          
+          console.log('🔌 Connecting to signaling server:', signalingUrl);
+          const ws = new WebSocket(signalingUrl);
+          
+          ws.onopen = () => {
+            console.log('✅ Signaling connected');
+            ws.send(JSON.stringify({
+              type: 'join',
+              callId: roomId
+            }));
+            setSignalingSocket(ws);
+            resolve(ws);
+          };
+          
+          ws.onerror = (error) => {
+            console.error('❌ Signaling error:', error);
+            reject(error);
+          };
+          
+          ws.onclose = () => {
+            console.log('🔌 Signaling disconnected');
+            setSignalingSocket(null);
+          };
+        });
+      };
+
+      // Start a call (caller/initiator)
       const startCall = async (type = 'audio') => {
         try {
           pushToast('📞 Initializing Ghost Call...', 'info');
           setCallType(type);
+          setIsInitiator(true);
+          
+          // Get media first
           await startMedia(type);
           
+          // Generate call ID
           const newCallId = `ghost-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
           setCallId(newCallId);
           
@@ -21807,14 +21909,43 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           setCallLink(link);
           
           setCallState('calling');
-          pushToast('✅ Call link generated!', 'ok');
+          pushToast('✅ Call link generated! Share it to connect.', 'ok');
           
-          // Auto-transition to active after 3 seconds (simulate peer joining)
-          setTimeout(() => {
-            setCallState('active');
-            pushToast('✅ Call connected!', 'ok');
-          }, 3000);
+          // Connect to signaling server
+          const ws = await connectSignaling(newCallId);
+          
+          // Create peer connection
+          const pc = createPeerConnection();
+          
+          // Set up signaling message handler
+          ws.onmessage = async (event) => {
+            const data = JSON.parse(event.data);
+            console.log('📨 Signaling message:', data.type);
+            
+            if (data.type === 'peer-joined') {
+              console.log('👤 Peer joined, creating offer...');
+              pushToast('📞 Peer joined! Connecting...', 'info');
+              
+              // Create and send offer
+              const offer = await pc.createOffer();
+              await pc.setLocalDescription(offer);
+              
+              ws.send(JSON.stringify({
+                type: 'offer',
+                callId: newCallId,
+                offer: offer
+              }));
+            } else if (data.type === 'answer') {
+              console.log('📥 Received answer');
+              await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+            } else if (data.type === 'ice-candidate') {
+              console.log('📥 Received ICE candidate');
+              await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+            }
+          };
+          
         } catch (error) {
+          console.error('❌ Start call error:', error);
           pushToast(`❌ Failed to start call: ${error.message}`, 'err');
         }
       };
@@ -21839,7 +21970,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         }
       };
 
-      // Join a call
+      // Join a call (answerer)
       const joinCall = async () => {
         if (!joinCallInput.trim()) {
           pushToast('❌ Please enter a call link or ID', 'err');
@@ -21858,28 +21989,54 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           }
           
           setCallId(extractedCallId);
+          setIsInitiator(false);
           
-          // Determine call type from ID (you could store this info)
-          const type = 'audio'; // Default to audio, could be enhanced
+          // Determine call type (default to audio)
+          const type = 'audio';
           setCallType(type);
           
-          // Start media
+          // Get media
           await startMedia(type);
           
-          // Simulate connection
           setCallState('calling');
-          pushToast('✅ Connecting to call...', 'info');
+          pushToast('✅ Connecting to peer...', 'info');
           
-          // Auto-transition to active after 2 seconds (simulate successful connection)
-          setTimeout(() => {
-            setCallState('active');
-            pushToast('✅ Connected! Call is active.', 'ok');
-          }, 2000);
+          // Connect to signaling server
+          const ws = await connectSignaling(extractedCallId);
           
-          // In production, this would establish WebRTC connection
-          // with the other peer using the call ID
+          // Create peer connection
+          const pc = createPeerConnection();
+          
+          // Set up signaling message handler
+          ws.onmessage = async (event) => {
+            const data = JSON.parse(event.data);
+            console.log('📨 Signaling message:', data.type);
+            
+            if (data.type === 'offer') {
+              console.log('📥 Received offer, creating answer...');
+              
+              // Set remote description (offer)
+              await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+              
+              // Create and send answer
+              const answer = await pc.createAnswer();
+              await pc.setLocalDescription(answer);
+              
+              ws.send(JSON.stringify({
+                type: 'answer',
+                callId: extractedCallId,
+                answer: answer
+              }));
+              
+              pushToast('✅ Answer sent, connecting...', 'info');
+            } else if (data.type === 'ice-candidate') {
+              console.log('📥 Received ICE candidate');
+              await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+            }
+          };
           
         } catch (error) {
+          console.error('❌ Join call error:', error);
           pushToast(`❌ Failed to join call: ${error.message}`, 'err');
           setCallState('idle');
         }
@@ -21887,21 +22044,53 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
 
       // End call
       const endCall = () => {
+        // Stop all media tracks
         if (localStream) {
           localStream.getTracks().forEach(track => track.stop());
         }
+        
+        // Close peer connection
         if (peerConnection) {
           peerConnection.close();
         }
+        
+        // Close signaling socket
+        if (signalingSocket) {
+          signalingSocket.send(JSON.stringify({
+            type: 'leave',
+            callId: callId
+          }));
+          signalingSocket.close();
+        }
+        
+        // Reset state
         setCallState('idle');
         setLocalStream(null);
         setRemoteStream(null);
         setPeerConnection(null);
+        setSignalingSocket(null);
         setCallTimer(0);
         setCallLink('');
         setJoinCallInput('');
+        setIsInitiator(false);
+        
         pushToast('📞 Call ended', 'info');
       };
+      
+      // Cleanup on unmount
+      useEffect(() => {
+        return () => {
+          if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+          }
+          if (peerConnection) {
+            peerConnection.close();
+          }
+          if (signalingSocket) {
+            signalingSocket.close();
+          }
+        };
+      }, []);
 
       // Call timer
       useEffect(() => {
