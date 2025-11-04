@@ -332,6 +332,19 @@ wss.on('connection', (ws, req) => {
           console.log(`📍 Node joined relay ${message.requestId}`);
           break;
         
+        // ========== GHOST CALLS HANDLERS ==========
+        case 'join':
+          handleGhostCallJoin(ws, message);
+          break;
+        
+        // Note: 'offer', 'answer', 'ice-candidate' for calls use the same message type
+        // as node WebRTC, but with callId instead of from/to
+        // The existing handlers will work, but let's add specific Ghost Calls forwarding
+        
+        case 'leave':
+          handleGhostCallLeave(ws, message);
+          break;
+        
         default:
           console.log('⚠️ Unknown message type:', message.type);
       }
@@ -506,6 +519,22 @@ wss.on('connection', (ws, req) => {
   }
 
   function handleOffer(message) {
+    // Ghost Calls: forward offer to participants
+    if (message.callId && activeCalls.has(message.callId)) {
+      const call = activeCalls.get(message.callId);
+      call.participants.forEach(participant => {
+        if (participant.readyState === WebSocket.OPEN) {
+          participant.send(JSON.stringify({
+            type: 'offer',
+            offer: message.offer
+          }));
+          console.log(`➡️ Forwarded offer for call ${message.callId}`);
+        }
+      });
+      return;
+    }
+    
+    // Node connections: original behavior
     const { from, to, offer } = message;
     const targetNode = activeNodes.get(to);
     
@@ -525,6 +554,20 @@ wss.on('connection', (ws, req) => {
   }
 
   function handleAnswer(message) {
+    // Ghost Calls: forward answer to initiator
+    if (message.callId && activeCalls.has(message.callId)) {
+      const call = activeCalls.get(message.callId);
+      if (call.initiator && call.initiator.readyState === WebSocket.OPEN) {
+        call.initiator.send(JSON.stringify({
+          type: 'answer',
+          answer: message.answer
+        }));
+        console.log(`⬅️ Forwarded answer for call ${message.callId}`);
+      }
+      return;
+    }
+    
+    // Node connections: original behavior
     const { from, to, answer } = message;
     const targetNode = activeNodes.get(to);
     
@@ -545,6 +588,29 @@ wss.on('connection', (ws, req) => {
   }
 
   function handleIceCandidate(message) {
+    // Ghost Calls: forward ICE candidates to all call participants
+    if (message.callId && activeCalls.has(message.callId)) {
+      const call = activeCalls.get(message.callId);
+      call.participants.forEach(participant => {
+        if (participant.readyState === WebSocket.OPEN) {
+          participant.send(JSON.stringify({
+            type: 'ice-candidate',
+            candidate: message.candidate
+          }));
+        }
+      });
+      // Also send to initiator if it came from a participant
+      if (call.initiator && call.initiator.readyState === WebSocket.OPEN) {
+        call.initiator.send(JSON.stringify({
+          type: 'ice-candidate',
+          candidate: message.candidate
+        }));
+      }
+      console.log(`🧊 Forwarded ICE candidate for call ${message.callId}`);
+      return;
+    }
+    
+    // Node connections: original behavior
     const { from, to, candidate } = message;
     const targetNode = activeNodes.get(to);
     
@@ -596,6 +662,77 @@ wss.on('connection', (ws, req) => {
       activeNodes.delete(nodeId);
       console.log(`👋 Node ${nodeId} gracefully disconnected`);
       broadcastNodeList();
+    }
+  }
+
+  // ========== GHOST CALLS HANDLERS ==========
+  function handleGhostCallJoin(ws, message) {
+    const callId = message.callId;
+    
+    if (!callId) {
+      console.log('❌ No callId provided for Ghost Call join');
+      return;
+    }
+    
+    if (!activeCalls.has(callId)) {
+      // First person (initiator)
+      activeCalls.set(callId, {
+        initiator: ws,
+        participants: new Set()
+      });
+      console.log(`📞 Ghost Call created: ${callId}`);
+      
+      ws.send(JSON.stringify({
+        type: 'joined',
+        role: 'initiator'
+      }));
+    } else {
+      // Second person joining
+      const call = activeCalls.get(callId);
+      call.participants.add(ws);
+      console.log(`👤 Peer joined Ghost Call: ${callId}`);
+      
+      // Notify initiator that peer joined
+      if (call.initiator.readyState === WebSocket.OPEN) {
+        call.initiator.send(JSON.stringify({
+          type: 'peer-joined'
+        }));
+      }
+      
+      ws.send(JSON.stringify({
+        type: 'joined',
+        role: 'participant'
+      }));
+    }
+  }
+  
+  function handleGhostCallLeave(ws, message) {
+    const callId = message.callId;
+    
+    if (callId && activeCalls.has(callId)) {
+      const call = activeCalls.get(callId);
+      call.participants.delete(ws);
+      console.log(`👋 Peer left Ghost Call: ${callId}. Remaining participants: ${call.participants.size}`);
+      
+      if (call.participants.size === 0 || call.initiator === ws) {
+        // Call ended
+        activeCalls.delete(callId);
+        console.log(`🗑️ Ghost Call ${callId} ended`);
+        
+        // Notify remaining participants
+        call.participants.forEach(participant => {
+          if (participant.readyState === WebSocket.OPEN) {
+            participant.send(JSON.stringify({ type: 'peer-left' }));
+          }
+        });
+      } else {
+        // Notify remaining participants
+        call.participants.forEach(participant => {
+          if (participant.readyState === WebSocket.OPEN) {
+            participant.send(JSON.stringify({ type: 'peer-left' }));
+          }
+        });
+      }
     }
   }
 
