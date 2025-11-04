@@ -21844,27 +21844,48 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             if (event.streams[0]) {
               // Always attach audio
               if (remoteAudio) {
+                console.log('🔌 Attaching remote stream to audio element...');
                 remoteAudio.srcObject = event.streams[0];
                 remoteAudio.volume = 1.0;
-                remoteAudio.muted = false; // Ensure not muted
+                remoteAudio.muted = false;
+                
+                // Check if stream has audio tracks
+                const audioTracks = event.streams[0].getAudioTracks();
+                console.log(`🎵 Remote stream has ${audioTracks.length} audio tracks`);
+                audioTracks.forEach((track, i) => {
+                  console.log(`   Track ${i}: ${track.kind}, enabled: ${track.enabled}, muted: ${track.muted}, readyState: ${track.readyState}`);
+                });
+                
+                if (audioTracks.length === 0) {
+                  console.error('❌ No audio tracks in remote stream!');
+                  pushToast('❌ Peer has no audio - check their mic permission', 'err');
+                  return;
+                }
                 
                 // Force play with user interaction context
                 const playPromise = remoteAudio.play();
                 if (playPromise !== undefined) {
                   playPromise
                     .then(() => {
-                      console.log('✅ Remote audio playing successfully');
+                      console.log('✅ Remote audio element playing successfully');
+                      console.log('🔊 Audio element state:', {
+                        paused: remoteAudio.paused,
+                        volume: remoteAudio.volume,
+                        muted: remoteAudio.muted,
+                        currentTime: remoteAudio.currentTime
+                      });
                       setAudioBlocked(false);
-                      pushToast('🔊 Audio enabled!', 'ok');
+                      pushToast('🔊 Audio connected!', 'ok');
                     })
                     .catch(e => {
-                      console.error('❌ Audio play failed:', e);
+                      console.error('❌ Audio play failed:', e.name, e.message);
                       setAudioBlocked(true);
                       pushToast('⚠️ Click "Enable Audio" button to hear peer', 'err');
-                      console.log('⚠️ Audio autoplay blocked - user must enable');
                     });
                 }
-                console.log('✅ Remote audio attached, volume:', remoteAudio.volume);
+                console.log('✅ Remote audio element configured');
+              } else {
+                console.error('❌ Remote audio element not found!');
               }
               
               // Attach video if video call
