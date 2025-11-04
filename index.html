@@ -22089,6 +22089,73 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         pushToast('📞 Call ended', 'info');
       };
       
+      // Auto-join call if URL has ?call= parameter
+      useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const callParam = urlParams.get('call');
+        
+        if (callParam && callState === 'idle') {
+          console.log('📞 Auto-joining call from URL:', callParam);
+          
+          // Auto-join after a short delay to ensure UI is ready
+          setTimeout(async () => {
+            try {
+              pushToast('📞 Joining call from link...', 'info');
+              setCallId(callParam);
+              setIsInitiator(false);
+              setCallType('audio');
+              
+              // Get media
+              await startMedia('audio');
+              
+              // Connect to signaling server
+              const ws = await connectSignaling(callParam);
+              
+              // Create peer connection
+              const pc = createPeerConnection();
+              
+              // Set up signaling message handler
+              ws.onmessage = async (event) => {
+                const data = JSON.parse(event.data);
+                console.log('📨 Signaling message (joiner):', data.type);
+                
+                if (data.type === 'offer') {
+                  console.log('📥 Received offer, creating answer...');
+                  
+                  await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+                  const answer = await pc.createAnswer();
+                  await pc.setLocalDescription(answer);
+                  
+                  ws.send(JSON.stringify({
+                    type: 'answer',
+                    callId: callParam,
+                    answer: answer
+                  }));
+                  
+                  console.log('📤 Sent answer');
+                  pushToast('📞 Connected! Call started.', 'ok');
+                  setCallState('active');
+                } else if (data.type === 'ice-candidate' && data.candidate) {
+                  console.log('📥 Received ICE candidate');
+                  await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+                } else if (data.type === 'peer-left') {
+                  console.log('👋 Peer left the call');
+                  pushToast('📞 Peer disconnected', 'info');
+                  endCall();
+                }
+              };
+              
+              setCallState('calling');
+              pushToast('⏳ Waiting for call initiator...', 'info');
+            } catch (error) {
+              console.error('❌ Auto-join error:', error);
+              pushToast(`❌ Failed to join call: ${error.message}`, 'err');
+              setCallState('idle');
+            }
+          }, 500);
+        }
+      }, []); // Only run on mount
+
       // Cleanup on unmount
       useEffect(() => {
         return () => {
