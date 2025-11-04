@@ -23,6 +23,9 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@capacitor/android": "^7.4.4",
+    "@capacitor/cli": "^7.4.4",
+    "@capacitor/core": "^7.4.4",
     "@netlify/blobs": "^8.1.0",
     "@solana/spl-token": "^0.4.7",
     "@solana/web3.js": "^1.95.3",

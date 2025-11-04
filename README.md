@@ -1,186 +1,91 @@
-# Whistle
+# 🎯 Whistle - Solana dApp Store Submission
 
-P2P end‑to‑end encrypted tips over WebRTC with an on‑chain Solana Memo proof of existence.
+**Status:** ✅ Submitted to Solana dApp Store (November 4, 2025)  
+**Review:** Under review by Solana Mobile team  
+**Expected Launch:** November 7-8, 2025 (3-4 business days)
 
-- No servers for file or message transfer — the encrypted bundle streams directly peer‑to‑peer
-- A tiny SHA‑256 hash is posted to Solana Memo as public timestamp proof (required in this build)
-- Works in a modern desktop browser with Phantom wallet
+---
 
-## Quick start
+## 📄 Essential Documentation
 
-Prereqs:
-- Node.js 18+ (LTS recommended)
-- A modern Chromium/Firefox/Safari browser
-- Phantom wallet extension installed
+### 🚀 Current Status
+- **[SUBMISSION-COMPLETE.md](SUBMISSION-COMPLETE.md)** - Full submission details, NFT addresses, and next steps
 
-Run locally:
-```bash
-# from repo root
-npm install
-npm start
-# open http://localhost:3000
+### 📊 Tracking & Support
+- **[HOW-TO-TRACK-SUBMISSION.md](HOW-TO-TRACK-SUBMISSION.md)** - How to track your submission status
+
+### 🔐 Security (CRITICAL)
+- **[SECURE-YOUR-WALLET-NOW.md](SECURE-YOUR-WALLET-NOW.md)** - **IMPORTANT:** Secure your compromised wallet immediately
+
+### 📣 Announcements
+- **[MAJOR-ANNOUNCEMENT.md](MAJOR-ANNOUNCEMENT.md)** - Professional announcement for the community
+- **[SOCIAL-MEDIA-POSTS.md](SOCIAL-MEDIA-POSTS.md)** - Ready-to-use posts for all platforms
+- **[PROOF-LINKS.txt](PROOF-LINKS.txt)** - All verification links
+- **[QUICK-ANNOUNCEMENT.txt](QUICK-ANNOUNCEMENT.txt)** - Short version for quick sharing
+
+---
+
+## 🔗 Quick Links
+
+### On-Chain Verification
+- **App NFT:** [7DmdYW9KUz53TiTSJX5bujMLvZu3qEhphUW2akkRb7Fx](https://explorer.solana.com/address/7DmdYW9KUz53TiTSJX5bujMLvZu3qEhphUW2akkRb7Fx?cluster=mainnet)
+- **Release NFT:** [6wUkRNzMokZB91z2R3xjzHHxtM4gWByzL4XohPU5hUgV](https://explorer.solana.com/address/6wUkRNzMokZB91z2R3xjzHHxtM4gWByzL4XohPU5hUgV?cluster=mainnet)
+
+### Permanent Storage (Arweave)
+- **APK:** https://arweave.net/xSNZ-cz6tdGUtKpM2MQD-F8CBW7A4m98qL-L0_6jjc0
+- **App Icon:** https://arweave.net/b3vQbeyrHL7qeS2uK5NV5Xrxc1868RaCsQl8ZDzz8_Q
+
+### Official Links
+- **Website:** https://whistle.ninja
+- **Privacy Policy:** https://whistle.ninja/privacy.html
+- **Terms:** https://whistle.ninja/terms.html
+
+---
+
+## 📁 Project Structure
+
+```
+.
+├── SUBMISSION-COMPLETE.md          # Main submission summary
+├── HOW-TO-TRACK-SUBMISSION.md      # Tracking guide
+├── SECURE-YOUR-WALLET-NOW.md       # Security instructions
+├── MAJOR-ANNOUNCEMENT.md           # Public announcement
+├── SOCIAL-MEDIA-POSTS.md           # Social templates
+├── PROOF-LINKS.txt                 # Quick reference
+├── config.yaml                     # CLI configuration
+├── solana-dapp-store-submission/   # All submission assets
+│   ├── assets/
+│   │   ├── app-icon-512x512.png
+│   │   └── banner-1200x600.png
+│   ├── screenshots/                # 5 app screenshots
+│   └── whistle-v1.0.0.apk         # Android package
+└── old-docs-archive/               # Archived docs (can delete)
 ```
 
-The app is a single‑page React app (no build step) served by a tiny Express server.
+---
 
-## How it works (roles)
+## ⚠️ IMPORTANT SECURITY REMINDER
 
-### Tipster
-1) Write the tip and optionally attach files (≤ 5 GB total)
-2) Step A — Generate Offer and share the Offer text with the newsroom
-3) Step B — Paste the newsroom Answer, click Connect, then Send
-4) The app posts the bundle hash to Solana Memo automatically; copy the tx link if needed
+**Your wallet is compromised!** See `SECURE-YOUR-WALLET-NOW.md` for immediate action steps.
 
-You’ll also see a short, domain‑style code for the hash, e.g. `whis.abcd.efgh...`.
+---
 
-### Newsroom
-1) Paste the Offer from the tipster
-2) Click Generate Answer and send the Answer back to the tipster
-3) As the stream arrives it decrypts locally; download any files you need
-4) The computed hash is shown for verification; you can also post a memo in Verify tab
+## 🎯 What's Next?
 
-### Verify / Memo
-- Paste either the 64‑hex hash or the short code (e.g. `whis.abcd.efgh...`)
-- Click Post Memo to anchor the hash on Solana
+1. ✅ **Submission Complete** - All done!
+2. ⏳ **Waiting for Review** - 3-4 business days
+3. 📧 **Email Notification** - Check whistleninja@virgilio.it
+4. 🚀 **Launch** - App goes live in Solana dApp Store
 
-## RPC configuration
+---
 
-- Defaults use SolanaTracker (HTTP+WS) and should work out of the box.
-- To override in your browser, set localStorage keys and refresh:
-```js
-localStorage.setItem('rpcHttpUrl', 'https://YOUR_HTTP_RPC');
-localStorage.setItem('rpcWsUrl',  'wss://YOUR_WS_RPC');
-```
+## 📧 Contact
 
-Notes:
-- Some providers require an API key and proper CORS/Referer to allow browser POSTs
-- The app uses `Connection` with `wsEndpoint` when a WS URL is present
+**Email:** whistleninja@virgilio.it  
+**Website:** https://whistle.ninja
 
-## Deployment
+---
 
-### 🚀 Production Deployment (Render + Netlify)
+**Whistle** - Privacy Tools & Node Network on Solana
 
-**Ghost Whistle** uses a split architecture:
-- **Backend**: Node.js WebSocket server on Render (free tier)
-- **Frontend**: Static site on Netlify (free tier)
 
-#### Quick Deploy Guide
-
-1. **Deploy Backend to Render**
-   ```bash
-   # The backend (signaling-server.js) handles WebSocket connections for P2P nodes
-   # render.yaml is already configured for one-click deployment
-   ```
-   - Go to [render.com](https://render.com) and connect your GitHub repo
-   - Render will auto-detect `render.yaml` and deploy
-   - Copy your Render URL (e.g., `https://ghost-whistle-xyz.onrender.com`)
-
-2. **Update Frontend URLs**
-   - Open `index.html`
-   - Replace `ws://localhost:8080` with `wss://YOUR-RENDER-URL.onrender.com`
-   - Replace `http://localhost:8080` with `https://YOUR-RENDER-URL.onrender.com`
-   - Commit changes
-
-3. **Deploy Frontend to Netlify**
-   - Connect your GitHub repo in Netlify
-   - Build command: (leave empty)
-   - Publish directory: `.`
-   - Click Deploy
-
-📚 **Detailed instructions**: See [DEPLOY-INSTRUCTIONS.md](DEPLOY-INSTRUCTIONS.md)
-
-### Local Development
-```bash
-# Terminal 1 - Frontend
-npm start
-
-# Terminal 2 - Signaling Server
-npm run signaling
-```
-
-Then open http://localhost:3000
-
-## Troubleshooting
-
-- Memo failed: 403 Access forbidden
-  - Use your own RPC provider URL (Helius/QuickNode/Alchemy/etc.)
-  - Ensure your key permits `getLatestBlockhash` and `sendRawTransaction`
-- Buffer is not defined / Buffer.from is not a function
-  - The app loads a browser Buffer polyfill before web3; ensure the network allows `https://esm.sh` and `https://unpkg.com`
-- Offer/Answer invalid or garbled
-  - Use the built‑in Copy/Share buttons; don’t reformat the code block
-- Connection stuck at Connecting…
-  - Corporate/VPN/NATs can block WebRTC; try a different network/browser
-- File too large
-  - Evidence limit is 5 GB per send
-
-## Repository layout
-
-- `index.html` — the entire app (React + UI + crypto + web3)
-- `server.js` — tiny Express server for local/prod hosting
-- `netlify.toml` — SPA redirect config for Netlify
-- `package.json` — scripts and dependencies
-- `whistel_logo_top_right_2048.png` — logo (also used as favicon)
-
-## Security & privacy
-
-- Content is encrypted client‑side with AES‑GCM; the symmetric key is encrypted to the newsroom’s RSA‑OAEP key
-- Only the SHA‑256 hash of the encrypted bundle is posted on‑chain (no plaintext content)
-- Always verify hashes and wallet prompts; never paste secrets into untrusted pages
-
-## Contributing
-
-Issues and PRs are welcome. Please avoid adding heavy dependencies; the project aims to stay lightweight and auditable.
-
-## License
-
-MIT
-
-## 📝 **Tweet-length (280 chars):**
-```
-Whistle is a P2P encrypted whistleblowing app. Send tips + files (up to 5GB) directly to journalists with zero servers. Every transmission is cryptographically proven on Solana blockchain. No accounts, no tracking, no middlemen.
-```
-
-## 🎯 **Product Hunt Style (1-2 sentences):**
-```
-Whistle lets whistleblowers send encrypted tips and evidence directly to journalists over WebRTC—no servers, no uploads. Every transmission gets a cryptographic proof posted to Solana for verification.
-```
-
-## 💼 **Investor Pitch (concise):**
-```
-Peer-to-peer encrypted communication platform for whistleblowers. 
-WebRTC ensures direct transmission with zero server-side storage. 
-Solana blockchain provides immutable proof of transmission timing and integrity.
-```
-
-## 🌐 **Website Hero (very short):**
-```
-Send encrypted tips directly to journalists. 
-No servers. No accounts. Just truth with proof.
-```
-
-## 📱 **App Store Description (detailed but scannable):**
-```
-Whistle enables secure, anonymous communication between whistleblowers and journalists.
-
-How it works:
-• Sender writes tip + attaches evidence (up to 5GB)
-• Files stream peer-to-peer via encrypted WebRTC connection
-• No servers store your data—everything is direct
-• Bundle hash posted to Solana blockchain as proof
-• Receiver decrypts locally in their browser
-
-Perfect for:
-✓ Investigative journalists receiving sensitive leaks
-✓ Whistleblowers sharing evidence safely
-✓ Anyone needing verifiable, encrypted file transfers
-
-Open source. Self-hostable. Auditable.
-```
-
-## 💎 **My Top Pick (balanced):**
-```
-Whistle is an open-source whistleblowing platform that streams encrypted tips and evidence (up to 5GB) directly between sender and receiver using peer-to-peer WebRTC. No servers touch your data. Every transmission is cryptographically timestamped on Solana blockchain for verification.
-```
-
-Which style fits your use case? 🎯

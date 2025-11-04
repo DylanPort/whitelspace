@@ -1,7 +1,7 @@
 {
   "appId": "com.ghostwhistle.app",
   "appName": "Ghost Whistle",
-  "webDir": ".",
+  "webDir": "www",
   "bundledWebRuntime": false,
   "backgroundColor": "#0b0f14",
   "android": {

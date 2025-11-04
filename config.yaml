@@ -1,0 +1,92 @@
+publisher:
+  name: Whistle
+  website: https://whistle.ninja
+  email: whistleninja@virgilio.it
+  support_email: whistleninja@virgilio.it
+app:
+  name: Whistle
+  address: 7DmdYW9KUz53TiTSJX5bujMLvZu3qEhphUW2akkRb7Fx
+  android_package: ninja.whistle.twa
+  urls:
+    license_url: https://whistle.ninja/terms.html
+    copyright_url: https://whistle.ninja/terms.html
+    privacy_policy_url: https://whistle.ninja/privacy.html
+    website: https://whistle.ninja
+  media:
+    - purpose: icon
+      uri: solana-dapp-store-submission/assets/app-icon-512x512.png
+release:
+  address: 6wUkRNzMokZB91z2R3xjzHHxtM4gWByzL4XohPU5hUgV
+  media:
+    - purpose: icon
+      uri: solana-dapp-store-submission/assets/app-icon-512x512.png
+    - purpose: banner
+      uri: solana-dapp-store-submission/assets/banner-1200x600.png
+    - purpose: screenshot
+      uri: solana-dapp-store-submission/screenshots/Whistle_UI_centered_1_1920x1080.png
+    - purpose: screenshot
+      uri: solana-dapp-store-submission/screenshots/Whistle_UI_centered_2_1920x1080.png
+    - purpose: screenshot
+      uri: solana-dapp-store-submission/screenshots/Whistle_UI_centered_3_1920x1080.png
+    - purpose: screenshot
+      uri: solana-dapp-store-submission/screenshots/Whistle_UI_centered_4_1920x1080.png
+    - purpose: screenshot
+      uri: solana-dapp-store-submission/screenshots/Whistle_UI_centered_5_1920x1080.png
+  files:
+    - purpose: install
+      uri: solana-dapp-store-submission/whistle-v1.0.0.apk
+  catalog:
+    en-US:
+      name: Whistle
+      short_description: Privacy Tools & Node Network
+      long_description: |
+        Whistle is a decentralized privacy network built on Solana that provides multiple privacy-centered tools and rewards users for running privacy nodes.
+
+        Key Features:
+        • Multi Privacy Centered Tools suite
+        • Run privacy nodes and earn rewards
+        • Anonymous transaction relay on Solana
+        • Encrypted P2P communication
+        • Stake WHISTLE tokens to participate
+        • Real-time leaderboards and stats
+        • Exclusive community chat for node operators
+
+        Built on Solana for instant rewards with minimal fees. Join the privacy revolution!
+      new_in_version: |
+        🎉 Whistle v1.0.0 - Initial Release
+
+        Features:
+        • Multi Privacy Centered Tools suite
+        • Run privacy nodes and earn rewards
+        • Anonymous transaction relay on Solana
+        • Encrypted P2P communication
+        • Stake WHISTLE tokens to participate
+        • Real-time leaderboards
+        • Exclusive community chat for node operators
+        • On-chain reward distribution
+
+        Join the decentralized privacy revolution with Whistle!
+  android_details:
+    cert_fingerprint: 50de0e26eeb75d9b961dca9762afd4a8476330db56099f070f07a4321ad629da
+    min_sdk: 23
+    version: 1.0.0.0
+    version_code: 1
+    locales:
+      - en-US
+solana_mobile_dapp_publisher_portal:
+  testing_instructions: |
+    Whistle is a privacy-focused dApp for Solana.
+
+    Testing:
+    1. Connect a Solana wallet (Phantom or Solflare recommended)
+    2. Test wallet connection functionality
+    3. Browse the privacy tools interface
+    4. Test basic navigation and UI
+
+    No special test accounts required. The app works with any Solana wallet.
+lastSubmittedVersionOnChain:
+  address: 6wUkRNzMokZB91z2R3xjzHHxtM4gWByzL4XohPU5hUgV
+  version_code: 1
+  apk_hash: kINAfW3uPrthcjb98/ynQkoUwQLynXlVjS7bV/IGCWQ=
+lastUpdatedVersionOnStore:
+  address: 6wUkRNzMokZB91z2R3xjzHHxtM4gWByzL4XohPU5hUgV

@@ -10925,6 +10925,7 @@ console.log('✅ Fingerprint spoofing active!');`;
 
       // Submenu for Ghost Whistle
       const ghostWhistleItems = [
+        { id:'ghost-calls', label:'Ghost Calls', icon:'phone', color:'emerald', isNew: true, isPremium: true },
         { id:'anonymous-relay', label:'Anonymous Relay', icon:'shuffle', color:'purple', isHot: true },
         { id:'claim-rewards', label:'Claim Rewards', icon:'gift', color:'yellow' },
         { id:'social-hub', label:'Ghost Terminal', icon:'terminal', color:'cyan' },
@@ -21727,12 +21728,342 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       );
     }
 
+    // ============ GHOST CALLS - Anonymous Voice/Video ============
+    function GhostCalls({ pushToast }) {
+      console.log('🎯 GhostCalls component loaded!', { pushToast });
+      const [callState, setCallState] = useState('idle');
+      const [callId, setCallId] = useState(null);
+      const [peerConnection, setPeerConnection] = useState(null);
+      const [localStream, setLocalStream] = useState(null);
+      const [remoteStream, setRemoteStream] = useState(null);
+      const [callType, setCallType] = useState('audio');
+      const [isMuted, setIsMuted] = useState(false);
+      const [isVideoOff, setIsVideoOff] = useState(false);
+      const [callLink, setCallLink] = useState('');
+      const [callTimer, setCallTimer] = useState(0);
+      const [showSettings, setShowSettings] = useState(false);
+      
+      // WebRTC Configuration
+      const rtcConfig = {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      };
+
+      // Format timer
+      const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+      };
+
+      // Initialize media devices
+      const startMedia = async (type = 'audio') => {
+        try {
+          const constraints = {
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            },
+            video: type === 'video' ? {
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+              facingMode: 'user'
+            } : false
+          };
+
+          const stream = await navigator.mediaDevices.getUserMedia(constraints);
+          setLocalStream(stream);
+          
+          // Attach to local video element
+          setTimeout(() => {
+            const localVideo = document.getElementById('local-video');
+            if (localVideo) localVideo.srcObject = stream;
+          }, 100);
+          
+          pushToast(`✅ ${type === 'video' ? 'Camera' : 'Microphone'} ready`, 'ok');
+          return stream;
+        } catch (error) {
+          pushToast(`❌ Media access denied: ${error.message}`, 'err');
+          throw error;
+        }
+      };
+
+      // Start a call
+      const startCall = async (type = 'audio') => {
+        try {
+          pushToast('📞 Initializing Ghost Call...', 'info');
+          setCallType(type);
+          await startMedia(type);
+          
+          const newCallId = `ghost-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          setCallId(newCallId);
+          
+          const link = `${window.location.origin}?call=${newCallId}`;
+          setCallLink(link);
+          
+          setCallState('calling');
+          pushToast('✅ Call link generated!', 'ok');
+        } catch (error) {
+          pushToast(`❌ Failed to start call: ${error.message}`, 'err');
+        }
+      };
+
+      // Mute/unmute
+      const toggleMute = () => {
+        if (localStream) {
+          localStream.getAudioTracks().forEach(track => {
+            track.enabled = !track.enabled;
+          });
+          setIsMuted(!isMuted);
+        }
+      };
+
+      // Toggle video
+      const toggleVideo = () => {
+        if (localStream) {
+          localStream.getVideoTracks().forEach(track => {
+            track.enabled = !track.enabled;
+          });
+          setIsVideoOff(!isVideoOff);
+        }
+      };
+
+      // End call
+      const endCall = () => {
+        if (localStream) {
+          localStream.getTracks().forEach(track => track.stop());
+        }
+        if (peerConnection) {
+          peerConnection.close();
+        }
+        setCallState('idle');
+        setLocalStream(null);
+        setRemoteStream(null);
+        setPeerConnection(null);
+        setCallTimer(0);
+        setCallLink('');
+        pushToast('📞 Call ended', 'info');
+      };
+
+      // Call timer
+      useEffect(() => {
+        let interval;
+        if (callState === 'active') {
+          interval = setInterval(() => {
+            setCallTimer(prev => prev + 1);
+          }, 1000);
+        }
+        return () => clearInterval(interval);
+      }, [callState]);
+
+      return (
+        <div className="min-h-screen" style={{
+          background: 'linear-gradient(135deg, #0a0e14 0%, #1a1f2e 50%, #0f1419 100%)',
+        }}>
+          {/* Terminal-style header */}
+          <div className="border-b border-emerald-500/20 bg-black/40 backdrop-blur-sm">
+            <div className="max-w-6xl mx-auto px-6 py-4">
+              <div className="flex items-center gap-3">
+                <div className="text-2xl">📞</div>
+                <div>
+                  <h1 className="text-xl font-bold text-emerald-400 font-mono tracking-tight">
+                    GHOST_CALLS://SECURE
+                  </h1>
+                  <p className="text-xs text-emerald-400/60 font-mono">
+                    [ANONYMOUS] [ENCRYPTED] [NO-TRACE]
+                  </p>
+                </div>
+                <div className="ml-auto flex gap-2">
+                  <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                  <div className="text-xs text-emerald-400/60 font-mono">ONLINE</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="max-w-6xl mx-auto p-6">
+            
+            {/* Idle State - Start Call */}
+            {callState === 'idle' && (
+              <div className="grid md:grid-cols-2 gap-6">
+                
+                {/* Start New Call */}
+                <div className="rounded-2xl border border-emerald-500/20 bg-black/60 backdrop-blur-xl p-8"
+                  style={{
+                    boxShadow: '0 0 40px rgba(16,185,129,0.1), inset 0 1px 0 rgba(255,255,255,0.05)'
+                  }}>
+                  <div className="flex items-center gap-2 mb-6">
+                    <div className="w-1 h-6 bg-emerald-500"></div>
+                    <h2 className="text-lg font-bold text-white font-mono">INITIATE_CALL</h2>
+                  </div>
+                  
+                  <div className="space-y-4 mb-6">
+                    <button
+                      onClick={() => startCall('audio')}
+                      className="w-full py-4 rounded-xl text-white font-bold font-mono text-sm transition-all relative overflow-hidden group"
+                      style={{
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        boxShadow: '0 4px 20px rgba(16,185,129,0.3)'
+                      }}
+                    >
+                      <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform"></div>
+                      <span className="relative flex items-center justify-center gap-2">
+                        <span>🎤</span>
+                        <span>AUDIO_CALL</span>
+                      </span>
+                    </button>
+                    
+                    <button
+                      onClick={() => startCall('video')}
+                      className="w-full py-4 rounded-xl text-white font-bold font-mono text-sm transition-all relative overflow-hidden group"
+                      style={{
+                        background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                        boxShadow: '0 4px 20px rgba(139,92,246,0.3)'
+                      }}
+                    >
+                      <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform"></div>
+                      <span className="relative flex items-center justify-center gap-2">
+                        <span>📹</span>
+                        <span>VIDEO_CALL</span>
+                      </span>
+                    </button>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+                    <div className="text-xs font-mono text-emerald-400/80 space-y-2">
+                      <div className="flex items-start gap-2">
+                        <span className="text-emerald-500">▸</span>
+                        <span>END_TO_END_ENCRYPTED</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-emerald-500">▸</span>
+                        <span>ZERO_KNOWLEDGE_PROTOCOL</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-emerald-500">▸</span>
+                        <span>NO_REGISTRATION_REQUIRED</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-emerald-500">▸</span>
+                        <span>AUTO_DELETE_24H</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Join Call */}
+                <div className="rounded-2xl border border-cyan-500/20 bg-black/60 backdrop-blur-xl p-8"
+                  style={{
+                    boxShadow: '0 0 40px rgba(6,182,212,0.1), inset 0 1px 0 rgba(255,255,255,0.05)'
+                  }}>
+                  <div className="flex items-center gap-2 mb-6">
+                    <div className="w-1 h-6 bg-cyan-500"></div>
+                    <h2 className="text-lg font-bold text-white font-mono">JOIN_CALL</h2>
+                  </div>
+                  
+                  <input
+                    type="text"
+                    placeholder="PASTE_CALL_LINK_OR_ID..."
+                    className="w-full px-4 py-3 bg-black/60 border border-cyan-500/30 rounded-xl text-white placeholder-white/30 mb-4 font-mono text-sm focus:border-cyan-500/60 focus:outline-none transition-colors"
+                  />
+                  
+                  <button
+                    className="w-full py-4 rounded-xl text-white font-bold font-mono text-sm transition-all relative overflow-hidden group"
+                    style={{
+                      background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+                      boxShadow: '0 4px 20px rgba(6,182,212,0.3)'
+                    }}
+                  >
+                    <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform"></div>
+                    <span className="relative flex items-center justify-center gap-2">
+                      <span>📞</span>
+                      <span>CONNECT</span>
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Calling State - Show Link */}
+            {callState === 'calling' && (
+              <div className="max-w-3xl mx-auto">
+                <div className="rounded-2xl border border-emerald-500/30 bg-black/60 backdrop-blur-xl p-8"
+                  style={{
+                    boxShadow: '0 0 60px rgba(16,185,129,0.2), inset 0 1px 0 rgba(255,255,255,0.05)'
+                  }}>
+                  <div className="text-center mb-8">
+                    <div className="text-4xl mb-4">📞</div>
+                    <h2 className="text-2xl font-bold text-emerald-400 font-mono mb-2">
+                      CALL_LINK_GENERATED
+                    </h2>
+                    <p className="text-emerald-400/60 text-sm font-mono">
+                      WAITING_FOR_PEER_CONNECTION...
+                    </p>
+                  </div>
+
+                  <div className="mb-6">
+                    <div className="text-xs text-white/60 mb-2 font-mono">SHARE_THIS_LINK:</div>
+                    <div className="bg-black/60 rounded-xl p-4 border border-emerald-500/30">
+                      <div className="text-emerald-400 font-mono text-sm break-all">
+                        {callLink}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(callLink);
+                        pushToast('✅ Link copied!', 'ok');
+                      }}
+                      className="flex-1 py-3 rounded-xl text-white font-bold font-mono text-sm transition-all"
+                      style={{
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        boxShadow: '0 4px 20px rgba(16,185,129,0.3)'
+                      }}
+                    >
+                      📋 COPY_LINK
+                    </button>
+                    <button
+                      onClick={endCall}
+                      className="px-6 py-3 rounded-xl text-white font-bold font-mono text-sm transition-all"
+                      style={{
+                        background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                        boxShadow: '0 4px 20px rgba(239,68,68,0.3)'
+                      }}
+                    >
+                      ❌ CANCEL
+                    </button>
+                  </div>
+
+                  <div className="mt-8 text-center">
+                    <div className="flex justify-center gap-2 mb-2">
+                      <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+                      <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+                      <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                    </div>
+                    <div className="text-xs text-emerald-400/60 font-mono">
+                      INITIALIZING_PEER_CONNECTION...
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+          </div>
+        </div>
+      );
+    }
+
     // Services Section - Smart Contract Features
     function Services({ setStep, pushToast }) {
       useEffect(() => {
         if (window.lucide) window.lucide.createIcons();
       }, []);
-
+      
       const services = [
         {
           id: 'staking',
@@ -26430,7 +26761,7 @@ https://whistle.ninja
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'offline-network', 'whistle-ids', 'decentralized-storage', 'breach-monitor', 'exploit-scanner', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'privacy-tools-lab', 'community-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
+      const validSteps = ['home', 'webrtc', 'offline-network', 'whistle-ids', 'decentralized-storage', 'breach-monitor', 'exploit-scanner', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'privacy-tools-lab', 'community-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana', 'ghost-calls'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -26475,6 +26806,7 @@ https://whistle.ninja
                       case 'social-hub': 
                         console.log('🎯 Switching to SocialHub component');
                         return <SocialHub pushToast={push} setStep={setStepGuarded} />;
+                      case 'ghost-calls': return <GhostCalls pushToast={push} />;
                       case 'services': return <Services setStep={setStepGuarded} pushToast={push} />;
                       case 'how-it-works': return <HowItWorks pushToast={push} setStep={setStepGuarded} />;
                       case 'anonymous-relay': return <AnonymousRelayService setStep={setStepGuarded} pushToast={push} />;
@@ -27305,7 +27637,7 @@ https://whistle.ninja
       const [hashFromFlow, setHashFromFlow] = useState("");
       
       // Ensure step is always valid, default to 'home' if not
-      const validSteps = ['home', 'webrtc', 'offline-network', 'whistle-ids', 'decentralized-storage', 'breach-monitor', 'exploit-scanner', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'privacy-tools-lab', 'community-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana'];
+      const validSteps = ['home', 'webrtc', 'offline-network', 'whistle-ids', 'decentralized-storage', 'breach-monitor', 'exploit-scanner', 'claim-rewards', 'ghost-identity', 'location-spoofer', 'social-hub', 'services', 'how-it-works', 'anonymous-relay', 'privacy-tools', 'privacy-tools-lab', 'community-tools', 'steganography', 'privacy-checkup', 'censorship-map', 'swap', 'solana-privacy', 'pump-portal', 'zolana', 'ghost-calls'];
       const currentStep = validSteps.includes(step) ? step : 'home';
       
       return (
@@ -27350,6 +27682,7 @@ https://whistle.ninja
                       case 'social-hub': 
                         console.log('🎯 Switching to SocialHub component');
                         return <SocialHub pushToast={push} setStep={setStepGuarded} />;
+                      case 'ghost-calls': return <GhostCalls pushToast={push} />;
                       case 'services': return <Services setStep={setStepGuarded} pushToast={push} />;
                       case 'how-it-works': return <HowItWorks pushToast={push} setStep={setStepGuarded} />;
                       case 'anonymous-relay': return <AnonymousRelayService setStep={setStepGuarded} pushToast={push} />;
