@@ -21749,6 +21749,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [signalingSocket, setSignalingSocket] = useState(null);
       const [isInitiator, setIsInitiator] = useState(false);
       const [audioBlocked, setAudioBlocked] = useState(false);
+      const [iceCandidateQueue, setIceCandidateQueue] = useState([]);
       
       // WebRTC Configuration
       const rtcConfig = {
@@ -22031,11 +22032,36 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             } else if (data.type === 'answer') {
               console.log('📥 Received answer');
               await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+              
+              // Process queued ICE candidates
+              if (iceCandidateQueue.length > 0) {
+                console.log(`🧊 Processing ${iceCandidateQueue.length} queued ICE candidates`);
+                for (const candidate of iceCandidateQueue) {
+                  try {
+                    await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                    console.log('✅ Added queued ICE candidate');
+                  } catch (error) {
+                    console.error('❌ Error adding queued candidate:', error);
+                  }
+                }
+                setIceCandidateQueue([]);
+              }
+              
               pushToast('✅ Call connected!', 'ok');
               setCallState('active');
             } else if (data.type === 'ice-candidate' && data.candidate) {
               console.log('📥 Received ICE candidate (initiator)');
-              await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+              try {
+                if (pc.remoteDescription) {
+                  await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+                  console.log('✅ Added ICE candidate');
+                } else {
+                  console.log('⏳ Queuing ICE candidate (no remote description yet)');
+                  setIceCandidateQueue(prev => [...prev, data.candidate]);
+                }
+              } catch (error) {
+                console.error('❌ Error adding ICE candidate:', error);
+              }
             } else if (data.type === 'peer-left') {
               console.log('👋 Peer left the call');
               pushToast('📞 Peer disconnected', 'info');
@@ -22117,6 +22143,20 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
               // Set remote description (offer)
               await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
               
+              // Process queued ICE candidates
+              if (iceCandidateQueue.length > 0) {
+                console.log(`🧊 Processing ${iceCandidateQueue.length} queued ICE candidates`);
+                for (const candidate of iceCandidateQueue) {
+                  try {
+                    await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                    console.log('✅ Added queued ICE candidate');
+                  } catch (error) {
+                    console.error('❌ Error adding queued candidate:', error);
+                  }
+                }
+                setIceCandidateQueue([]);
+              }
+              
               // Create and send answer
               const answer = await pc.createAnswer();
               await pc.setLocalDescription(answer);
@@ -22130,7 +22170,17 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
               pushToast('✅ Answer sent, connecting...', 'info');
             } else if (data.type === 'ice-candidate') {
               console.log('📥 Received ICE candidate');
-              await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+              try {
+                if (pc.remoteDescription) {
+                  await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+                  console.log('✅ Added ICE candidate');
+                } else {
+                  console.log('⏳ Queuing ICE candidate (no remote description yet)');
+                  setIceCandidateQueue(prev => [...prev, data.candidate]);
+                }
+              } catch (error) {
+                console.error('❌ Error adding ICE candidate:', error);
+              }
             }
           };
           
@@ -22214,6 +22264,21 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   console.log('📥 Received offer, creating answer...');
                   
                   await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+                  
+                  // Process queued ICE candidates
+                  if (iceCandidateQueue.length > 0) {
+                    console.log(`🧊 Processing ${iceCandidateQueue.length} queued ICE candidates`);
+                    for (const candidate of iceCandidateQueue) {
+                      try {
+                        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                        console.log('✅ Added queued ICE candidate');
+                      } catch (error) {
+                        console.error('❌ Error adding queued candidate:', error);
+                      }
+                    }
+                    setIceCandidateQueue([]);
+                  }
+                  
                   const answer = await pc.createAnswer();
                   await pc.setLocalDescription(answer);
                   
@@ -22228,7 +22293,17 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   setCallState('active');
                 } else if (data.type === 'ice-candidate' && data.candidate) {
                   console.log('📥 Received ICE candidate (joiner)');
-                  await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+                  try {
+                    if (pc.remoteDescription) {
+                      await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+                      console.log('✅ Added ICE candidate');
+                    } else {
+                      console.log('⏳ Queuing ICE candidate (no remote description yet)');
+                      setIceCandidateQueue(prev => [...prev, data.candidate]);
+                    }
+                  } catch (error) {
+                    console.error('❌ Error adding ICE candidate:', error);
+                  }
                 } else if (data.type === 'peer-left') {
                   console.log('👋 Peer left the call');
                   pushToast('📞 Peer disconnected', 'info');
