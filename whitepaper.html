@@ -3,1184 +3,905 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ghost Whistle Whitepaper - Complete Privacy Ecosystem</title>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <title>Ghost Whistle - Technical Whitepaper</title>
+  
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- React -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <!-- Babel Standalone -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
     
     * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+      font-family: 'Space Grotesk', monospace;
     }
     
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #000000;
-      color: #ffffff;
-      overflow-x: hidden;
+      background: linear-gradient(135deg, #0a0e14 0%, #1a1f2e 50%, #0f1419 100%);
+      color: white;
+      min-height: 100vh;
     }
     
-    /* Premium Dark Background */
-    .premium-bg {
-      background: linear-gradient(135deg, #000000 0%, #0a0a0a 25%, #000000 50%, #0a0a0a 75%, #000000 100%);
-      background-size: 400% 400%;
-      animation: gradientShift 15s ease infinite;
+    .gradient-text {
+      background: linear-gradient(135deg, #10b981, #06b6d4, #3b82f6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
     
-    @keyframes gradientShift {
-      0%, 100% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-    }
-    
-    /* Floating Orbs */
-    .floating-orb {
-      position: fixed;
-      border-radius: 50%;
-      filter: blur(80px);
-      pointer-events: none;
-      z-index: 0;
-      animation: float 20s infinite;
-    }
-    
-    .orb-1 {
-      width: 400px;
-      height: 400px;
-      background: radial-gradient(circle, rgba(16,185,129,0.15) 0%, transparent 70%);
-      top: -200px;
-      left: -200px;
-      animation-delay: 0s;
-    }
-    
-    .orb-2 {
-      width: 500px;
-      height: 500px;
-      background: radial-gradient(circle, rgba(6,182,212,0.12) 0%, transparent 70%);
-      bottom: -250px;
-      right: -250px;
-      animation-delay: 7s;
-    }
-    
-    .orb-3 {
-      width: 350px;
-      height: 350px;
-      background: radial-gradient(circle, rgba(196,165,114,0.1) 0%, transparent 70%);
-      top: 50%;
-      left: 50%;
-      animation-delay: 14s;
-    }
-    
-    @keyframes float {
-      0%, 100% { transform: translate(0, 0) rotate(0deg); }
-      25% { transform: translate(50px, -50px) rotate(90deg); }
-      50% { transform: translate(0, -100px) rotate(180deg); }
-      75% { transform: translate(-50px, -50px) rotate(270deg); }
-    }
-    
-    /* Grid Pattern */
-    .grid-pattern {
-      position: fixed;
-      inset: 0;
-      background-image: 
-        linear-gradient(rgba(16,185,129,0.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(16,185,129,0.05) 1px, transparent 1px);
-      background-size: 50px 50px;
-      pointer-events: none;
-      z-index: 0;
-      animation: gridMove 20s linear infinite;
-    }
-    
-    @keyframes gridMove {
-      0% { transform: translate(0, 0); }
-      100% { transform: translate(50px, 50px); }
-    }
-    
-    /* Content Container */
-    .content {
-      position: relative;
-      z-index: 1;
-    }
-    
-    /* Premium Card */
-    .premium-card {
-      background: rgba(15, 15, 15, 0.8);
-      backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      border-radius: 24px;
-      padding: 2rem;
+    .card {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 1rem;
       transition: all 0.3s ease;
     }
     
-    .premium-card:hover {
-      border-color: rgba(16,185,129,0.3);
-      transform: translateY(-4px);
-      box-shadow: 0 20px 60px rgba(16,185,129,0.15);
+    .card:hover {
+      border-color: rgba(16, 185, 129, 0.3);
+      box-shadow: 0 0 30px rgba(16, 185, 129, 0.15);
     }
     
-    /* Glow Effect */
-    .glow-text {
-      text-shadow: 0 0 20px rgba(16,185,129,0.5);
-    }
-    
-    .glow-border {
-      box-shadow: 0 0 30px rgba(16,185,129,0.3);
-    }
-    
-    /* Scroll Progress */
-    .scroll-progress {
-      position: fixed;
-      top: 0;
-      left: 0;
-      height: 3px;
-      background: linear-gradient(90deg, #10b981, #06b6d4, #C4A572);
-      z-index: 9999;
-      transition: width 0.1s;
-    }
-    
-    /* Section Divider */
-    .section-divider {
-      height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(16,185,129,0.3), transparent);
-      margin: 4rem 0;
-    }
-    
-    /* Tool Badge */
-    .tool-badge {
-      display: inline-flex;
+    .section-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 2rem;
+      display: flex;
       align-items: center;
-      gap: 0.5rem;
-      padding: 0.5rem 1rem;
-      background: rgba(16,185,129,0.1);
-      border: 1px solid rgba(16,185,129,0.3);
-      border-radius: 999px;
-      font-size: 0.875rem;
-      font-weight: 600;
-      transition: all 0.3s;
+      gap: 1rem;
+    }
+    
+    .feature-card {
+      padding: 1.5rem;
+      border-radius: 1rem;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: all 0.3s ease;
+    }
+    
+    .feature-card:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(16, 185, 129, 0.3);
+      transform: translateY(-2px);
+    }
+    
+    .nav-button {
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.5rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: white;
+      font-weight: 500;
+      transition: all 0.3s ease;
       cursor: pointer;
     }
     
-    .tool-badge:hover {
-      background: rgba(16,185,129,0.2);
-      border-color: rgba(16,185,129,0.5);
-      transform: scale(1.05);
+    .nav-button:hover {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: rgba(16, 185, 129, 0.3);
+      color: #10b981;
     }
     
-    /* Stats Counter */
-    .stats-counter {
+    .nav-button.active {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: #10b981;
+      color: #10b981;
+    }
+    
+    .code-block {
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      font-family: 'Courier New', monospace;
+      overflow-x: auto;
+    }
+    
+    .stat-card {
+      text-align: center;
+      padding: 2rem;
+    }
+    
+    .stat-number {
       font-size: 3rem;
-      font-weight: 900;
+      font-weight: 700;
       background: linear-gradient(135deg, #10b981, #06b6d4);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
     
-    /* Code Block */
-    .code-block {
-      background: rgba(0, 0, 0, 0.6);
-      border-left: 4px solid #10b981;
+    .warning-box {
+      background: rgba(239, 68, 68, 0.1);
+      border: 2px solid rgba(239, 68, 68, 0.3);
+      border-radius: 1rem;
       padding: 1.5rem;
-      border-radius: 12px;
-      font-family: 'Courier New', monospace;
-      overflow-x: auto;
-      margin: 1.5rem 0;
-    }
-    
-    /* Tab System */
-    .tab-btn {
-      padding: 0.75rem 1.5rem;
-      border-radius: 12px;
-      font-weight: 600;
-      transition: all 0.3s;
-      border: 1px solid transparent;
-    }
-    
-    .tab-btn.active {
-      background: linear-gradient(135deg, #10b981, #06b6d4);
-      border-color: rgba(16,185,129,0.5);
-      box-shadow: 0 10px 30px rgba(16,185,129,0.3);
-    }
-    
-    .tab-btn:not(.active) {
-      background: rgba(255, 255, 255, 0.03);
-      color: rgba(255, 255, 255, 0.6);
-    }
-    
-    .tab-btn:not(.active):hover {
-      background: rgba(255, 255, 255, 0.06);
-      color: rgba(255, 255, 255, 0.9);
-    }
-    
-    /* Feature Grid Animation */
-    @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateY(30px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-    
-    .fade-in-up {
-      animation: fadeInUp 0.6s ease-out forwards;
-    }
-    
-    /* Icon Container */
-    .icon-container {
-      width: 64px;
-      height: 64px;
-      border-radius: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(6,182,212,0.2));
-      border: 1px solid rgba(16,185,129,0.3);
-    }
-    
-    /* Manifesto Quote */
-    .manifesto-quote {
-      position: relative;
-      padding: 2rem;
-      background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(6,182,212,0.1));
-      border-left: 4px solid #C4A572;
-      border-radius: 12px;
-      font-size: 1.125rem;
-      font-style: italic;
-      color: rgba(255, 255, 255, 0.9);
-    }
-    
-    .manifesto-quote::before {
-      content: '"';
-      position: absolute;
-      top: -10px;
-      left: 20px;
-      font-size: 4rem;
-      color: #C4A572;
-      opacity: 0.3;
+      margin: 2rem 0;
     }
   </style>
 </head>
-<body class="premium-bg">
-  <!-- Floating Orbs -->
-  <div class="floating-orb orb-1"></div>
-  <div class="floating-orb orb-2"></div>
-  <div class="floating-orb orb-3"></div>
-  
-  <!-- Grid Pattern -->
-  <div class="grid-pattern"></div>
-  
+<body>
   <div id="root"></div>
   
   <script type="text/babel">
-    const { useState, useEffect, useRef } = React;
-    
-    // Scroll Progress Component
-    function ScrollProgress() {
-      const [progress, setProgress] = useState(0);
-      
-      useEffect(() => {
-        const handleScroll = () => {
-          const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
-          const scrolled = (window.scrollY / totalHeight) * 100;
-          setProgress(scrolled);
-        };
-        
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
-      }, []);
-      
-      return <div className="scroll-progress" style={{ width: `${progress}%` }} />;
-    }
-    
-    // Main Whitepaper App
-    function WhitepaperApp() {
+    const { useState, useEffect } = React;
+
+    function Whitepaper() {
       const [activeSection, setActiveSection] = useState('overview');
       
       useEffect(() => {
-        if (window.lucide) window.lucide.createIcons();
+        lucide.createIcons();
       }, [activeSection]);
       
       const sections = [
-        { id: 'overview', name: 'Overview', icon: 'eye' },
-        { id: 'core', name: 'Core Protocol', icon: 'shield' },
-        { id: 'identity', name: 'Whistle IDs', icon: 'fingerprint' },
-        { id: 'network', name: 'Node Network', icon: 'globe' },
-        { id: 'tools', name: 'Privacy Tools', icon: 'tool' },
-        { id: 'usecases', name: 'Use Cases', icon: 'lightbulb' },
-        { id: 'manifesto', name: 'Manifesto', icon: 'flag' }
+        { id: 'overview', label: 'Overview', icon: 'eye' },
+        { id: 'architecture', label: 'Architecture', icon: 'cpu' },
+        { id: 'privacy', label: 'Privacy', icon: 'shield' },
+        { id: 'tokenomics', label: 'Tokenomics', icon: 'coins' },
+        { id: 'nodes', label: 'Node Network', icon: 'network' },
+        { id: 'roadmap', label: 'Roadmap', icon: 'map' }
       ];
       
       return (
-        <div className="content min-h-screen">
-          <ScrollProgress />
-          
-          {/* Hero Section */}
-          <section className="relative overflow-hidden py-20 px-6">
-            <div className="max-w-6xl mx-auto text-center">
-              <div className="mb-8">
-                <img 
-                  src="whistel_logo_top_right_2048.png" 
-                  alt="Ghost Whistle Logo" 
-                  className="w-32 h-32 mx-auto animate-pulse"
-                  style={{ animationDuration: '3s' }}
-                />
-          </div>
-              <h1 className="text-6xl md:text-8xl font-black mb-6 glow-text">
-                GHOST WHISTLE
-              </h1>
-              <p className="text-3xl md:text-4xl mb-8 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent font-bold">
-                Complete Privacy Ecosystem
-              </p>
-              <p className="text-xl md:text-2xl text-white/80 max-w-4xl mx-auto mb-12">
-                Decentralized Identity • Privacy Network • Whistleblowing Protocol
-                <br/>
-                <span className="text-emerald-400">Built on Solana • Powered by Mathematics • Ungovernable by Design</span>
-              </p>
-              
-              {/* Quick Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto mt-16">
-                <div className="premium-card text-center">
-                  <div className="stats-counter">103M+</div>
-                  <p className="text-white/60 mt-2">$WHISTLE Staked</p>
-          </div>
-                <div className="premium-card text-center">
-                  <div className="stats-counter">87</div>
-                  <p className="text-white/60 mt-2">Active Nodes</p>
-          </div>
-                <div className="premium-card text-center">
-                  <div className="stats-counter">15+</div>
-                  <p className="text-white/60 mt-2">Privacy Tools</p>
-        </div>
-                <div className="premium-card text-center">
-                  <div className="stats-counter">100%</div>
-                  <p className="text-white/60 mt-2">Open Source</p>
-                </div>
-              </div>
-            </div>
-          </section>
-          
-          {/* Navigation Tabs */}
-          <div className="sticky top-0 z-50 backdrop-blur-xl bg-black/80 border-b border-white/10">
+        <div className="min-h-screen">
+          {/* Header */}
+          <header className="sticky top-0 z-50 backdrop-blur-xl bg-black/80 border-b border-white/10">
             <div className="max-w-7xl mx-auto px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <img src="app-icon-2048x2048.png" alt="WHISTLE" className="w-12 h-12 rounded-xl" />
+                  <div>
+                    <h1 className="text-2xl font-bold gradient-text">WHISTLE</h1>
+                    <p className="text-sm text-white/60">Technical Whitepaper v1.0</p>
+          </div>
+          </div>
+                <a href="/" className="nav-button">
+                  <i data-lucide="home" className="w-4 h-4 inline mr-2"></i>
+                  Back to App
+                </a>
+          </div>
+        </div>
+          </header>
+
+          {/* Navigation */}
+          <nav className="sticky top-[73px] z-40 backdrop-blur-xl bg-black/70 border-b border-white/10">
+            <div className="max-w-7xl mx-auto px-6 py-3">
               <div className="flex gap-2 overflow-x-auto">
                 {sections.map(section => (
                   <button
                     key={section.id}
-                    onClick={() => {
-                      setActiveSection(section.id);
-                      document.getElementById(section.id)?.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                    className={`tab-btn whitespace-nowrap flex items-center gap-2 ${
-                      activeSection === section.id ? 'active' : ''
-                    }`}
+                    onClick={() => setActiveSection(section.id)}
+                    className={`nav-button whitespace-nowrap ${activeSection === section.id ? 'active' : ''}`}
                   >
-                    <i data-lucide={section.icon} className="w-4 h-4"></i>
-                    {section.name}
+                    <i data-lucide={section.icon} className="w-4 h-4 inline mr-2"></i>
+                    {section.label}
                   </button>
                 ))}
               </div>
             </div>
-          </div>
-          
-          {/* Content Sections */}
-          <div className="max-w-6xl mx-auto px-6 py-12 space-y-20">
-            
-            {/* Overview Section */}
-            <section id="overview" className="fade-in-up">
-              <div className="premium-card">
-                <h2 className="text-4xl font-bold mb-6 flex items-center gap-4">
-                  <div className="icon-container">
-                    <i data-lucide="eye" className="w-8 h-8 text-emerald-400"></i>
-                  </div>
-                  What is Ghost Whistle?
-                </h2>
-                <div className="space-y-6 text-lg text-white/80 leading-relaxed">
-                  <p>
-                    <span className="text-emerald-400 font-bold">Ghost Whistle</span> is not just a whistleblowing platform. 
-                    It's a <span className="text-white font-semibold">complete privacy ecosystem</span> built on the principle that 
-                    <span className="text-cyan-400"> privacy is infrastructure, not a service</span>.
-                  </p>
-                  <p>
-                    We've built the full stack:
-                  </p>
-                  <div className="grid md:grid-cols-2 gap-4 my-6">
-                    <div className="flex items-start gap-3 p-4 rounded-xl bg-white/[0.03]">
-                      <i data-lucide="shield-check" className="w-6 h-6 text-emerald-400 shrink-0 mt-1"></i>
-                      <div>
-                        <div className="font-bold text-white mb-1">Whistleblowing Protocol</div>
-                        <div className="text-sm text-white/60">P2P encrypted file transfers with blockchain proof</div>
-                </div>
-                </div>
-                    <div className="flex items-start gap-3 p-4 rounded-xl bg-white/[0.03]">
-                      <i data-lucide="fingerprint" className="w-6 h-6 text-cyan-400 shrink-0 mt-1"></i>
-                      <div>
-                        <div className="font-bold text-white mb-1">Decentralized Identity</div>
-                        <div className="text-sm text-white/60">W3C-compliant DIDs on Solana blockchain</div>
-              </div>
-              </div>
-                    <div className="flex items-start gap-3 p-4 rounded-xl bg-white/[0.03]">
-                      <i data-lucide="globe" className="w-6 h-6 text-blue-400 shrink-0 mt-1"></i>
-                      <div>
-                        <div className="font-bold text-white mb-1">Privacy Node Network</div>
-                        <div className="text-sm text-white/60">Decentralized relay nodes with staking rewards</div>
-            </div>
-                    </div>
-                    <div className="flex items-start gap-3 p-4 rounded-xl bg-white/[0.03]">
-                      <i data-lucide="tool" className="w-6 h-6 text-purple-400 shrink-0 mt-1"></i>
-                    <div>
-                        <div className="font-bold text-white mb-1">Privacy Tools Lab</div>
-                        <div className="text-sm text-white/60">15+ tools for encryption, anonymity & security</div>
-                    </div>
-                  </div>
-                </div>
-                
-                  <div className="manifesto-quote mt-8">
-                    ⚠️ WARNING: This software may be illegal in your jurisdiction. We do not care. Your government does not have your consent to monitor you 24/7. Civil disobedience is not only acceptable - it is mandatory. If privacy is outlawed, only outlaws will have privacy. <span className="text-emerald-400 font-bold">Become ungovernable.</span>
-                    </div>
-                    </div>
-                  </div>
-            </section>
-            
-            <div className="section-divider"></div>
-            
-            {/* Core Protocol Section */}
-            <section id="core" className="fade-in-up">
-              <div className="premium-card">
-                <h2 className="text-4xl font-bold mb-6 flex items-center gap-4">
-                  <div className="icon-container">
-                    <i data-lucide="shield" className="w-8 h-8 text-emerald-400"></i>
-                </div>
-                  Core Whistleblowing Protocol
-                </h2>
-                
-                <p className="text-lg text-white/80 mb-8">
-                  The foundation: <span className="text-emerald-400 font-bold">peer-to-peer encrypted communication</span> with 
-                  <span className="text-cyan-400 font-bold"> blockchain proof of existence</span>.
-                </p>
-                
-                {/* How It Works */}
-                <div className="space-y-6">
-                  <h3 className="text-2xl font-bold text-white flex items-center gap-3">
-                    <i data-lucide="cpu" className="w-6 h-6 text-cyan-400"></i>
-                    How It Works
-                  </h3>
-                  
-                  <div className="grid gap-4">
-                    {[
-                      { num: 1, title: 'Bundle Encryption', desc: 'Messages and files (up to 5GB) are encrypted client-side using AES-256-GCM before any transmission.', gradient: 'linear-gradient(135deg, #10b981, #059669)' },
-                      { num: 2, title: 'WebRTC P2P Transfer', desc: 'Data streams directly between sender and receiver via encrypted WebRTC channels. No servers ever see your content.', gradient: 'linear-gradient(135deg, #06b6d4, #0891b2)' },
-                      { num: 3, title: 'Hash Generation', desc: 'A unique SHA-256 hash (cryptographic fingerprint) is computed from the encrypted bundle.', gradient: 'linear-gradient(135deg, #3b82f6, #2563eb)' },
-                      { num: 4, title: 'Blockchain Proof', desc: 'Only the hash is posted to Solana blockchain using Memo program. Creates immutable timestamp.', gradient: 'linear-gradient(135deg, #a855f7, #9333ea)' },
-                      { num: 5, title: 'Verification', desc: 'Anyone can verify the timestamp on Solana explorers. Content remains private, proof is public.', gradient: 'linear-gradient(135deg, #ec4899, #db2777)' }
-                    ].map(step => (
-                      <div key={step.num} className="flex items-start gap-4 p-6 rounded-xl bg-white/[0.03] border border-white/10 hover:border-emerald-400/30 transition-all">
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: step.gradient }}>
-                          <span className="text-2xl font-bold text-white">{step.num}</span>
-                    </div>
-                    <div>
-                          <h4 className="text-xl font-bold text-white mb-2">{step.title}</h4>
-                          <p className="text-white/70">{step.desc}</p>
-                    </div>
-                  </div>
-                    ))}
-                </div>
-                
-                  {/* Technical Specs */}
-                  <div className="mt-8 grid md:grid-cols-3 gap-6">
-                    <div className="premium-card text-center">
-                      <i data-lucide="zap" className="w-12 h-12 text-yellow-400 mx-auto mb-3"></i>
-                      <div className="text-2xl font-bold text-white mb-2">~$0.0001</div>
-                      <div className="text-white/60">Cost per proof</div>
-                    </div>
-                    <div className="premium-card text-center">
-                      <i data-lucide="clock" className="w-12 h-12 text-blue-400 mx-auto mb-3"></i>
-                      <div className="text-2xl font-bold text-white mb-2">&lt;1 sec</div>
-                      <div className="text-white/60">Confirmation time</div>
-                    </div>
-                    <div className="premium-card text-center">
-                      <i data-lucide="shield-check" className="w-12 h-12 text-emerald-400 mx-auto mb-3"></i>
-                      <div className="text-2xl font-bold text-white mb-2">0 servers</div>
-                      <div className="text-white/60">No central point of failure</div>
-                  </div>
-                </div>
-                  
-                  <div className="code-block">
-                    <code className="text-emerald-400">
-                      // End-to-end encryption + blockchain proof<br/>
-                      const encrypted = await AES_GCM_encrypt(data, key);<br/>
-                      const hash = SHA256(encrypted);<br/>
-                      await postToSolana(hash); // Immutable timestamp<br/>
-                      await WebRTC_send(encrypted); // Direct P2P transfer<br/>
-                      <span className="text-white/60">// Content private. Proof public. Source protected.</span>
-                    </code>
-              </div>
-            </div>
-                  </div>
-            </section>
-            
-            <div className="section-divider"></div>
-            
-            {/* Whistle IDs Section */}
-            <section id="identity" className="fade-in-up">
-              <div className="premium-card">
-                <h2 className="text-4xl font-bold mb-6 flex items-center gap-4">
-                  <div className="icon-container">
-                    <i data-lucide="fingerprint" className="w-8 h-8 text-cyan-400"></i>
-                  </div>
-                  Whistle IDs: Decentralized Identity
-                </h2>
-                
-                <p className="text-lg text-white/80 mb-8">
-                  <span className="text-cyan-400 font-bold">W3C-compliant Decentralized Identifiers (DIDs)</span> registered on Solana blockchain. 
-                  Your identity, your control. No centralized authority. Ever.
-                </p>
-                
-                <div className="grid md:grid-cols-2 gap-6 mb-8">
-                  <div className="space-y-4">
-                    <h3 className="text-2xl font-bold text-white flex items-center gap-3">
-                      <i data-lucide="key" className="w-6 h-6 text-cyan-400"></i>
-                      What You Get
-                    </h3>
-                    <ul className="space-y-3">
-                      {[
-                        'Unique DID format: did:whistle:+W/yourname',
-                        'Registered permanently on Solana blockchain',
-                        'W3C DID Document standard compliance',
-                        'Cryptographically verifiable identity',
-                        'Premium 3D identity card (downloadable)',
-                        'QR code for instant identity sharing',
-                        'Messaging endpoint for encrypted comms',
-                        'Transaction hash proof of registration'
-                      ].map((feature, i) => (
-                        <li key={i} className="flex items-start gap-3 text-white/80">
-                          <i data-lucide="check" className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5"></i>
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                </div>
-                
-                  <div className="space-y-4">
-                    <h3 className="text-2xl font-bold text-white flex items-center gap-3">
-                      <i data-lucide="zap" className="w-6 h-6 text-yellow-400"></i>
-                      Use Cases
-                    </h3>
-                    <div className="space-y-3">
-                      {[
-                        { icon: 'message-circle', title: 'Verifiable Messaging', desc: 'Send encrypted messages with cryptographic signatures' },
-                        { icon: 'award', title: 'Reputation Building', desc: 'Build trust without revealing personal data' },
-                        { icon: 'globe', title: 'Cross-Platform Identity', desc: 'Use your DID across any Ghost Whistle service' },
-                        { icon: 'shield', title: 'Privacy-First Comms', desc: 'No email, no phone, just your DID' },
-                        { icon: 'lock', title: 'Truly Owned', desc: 'Registered on-chain, immutable and censorship-resistant' }
-                      ].map((use, i) => (
-                        <div key={i} className="p-4 rounded-xl bg-white/[0.03] border border-cyan-400/20">
-                          <div className="flex items-start gap-3">
-                            <i data-lucide={use.icon} className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5"></i>
-                            <div>
-                              <div className="font-bold text-white text-sm mb-1">{use.title}</div>
-                              <div className="text-xs text-white/60">{use.desc}</div>
-                  </div>
-                </div>
-                  </div>
-                      ))}
-                </div>
-              </div>
-            </div>
-                
-                <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-400/30 rounded-xl p-6">
-                  <h4 className="text-xl font-bold text-white mb-3 flex items-center gap-2">
-                    <i data-lucide="info" className="w-6 h-6 text-cyan-400"></i>
-                    Identity Sovereignty
-                  </h4>
-                  <p className="text-white/80">
-                    Your Whistle ID is <span className="text-cyan-400 font-bold">permanently yours</span>. 
-                    No government can revoke it. No corporation can suspend it. No platform can delete it. 
-                    It exists on the blockchain, protected by mathematics and consensus, not by the mercy of centralized authorities.
-                  </p>
-                  </div>
-                  </div>
-            </section>
-            
-            <div className="section-divider"></div>
-            
-            {/* Node Network Section */}
-            <section id="network" className="fade-in-up">
-              <div className="premium-card">
-                <h2 className="text-4xl font-bold mb-6 flex items-center gap-4">
-                  <div className="icon-container">
-                    <i data-lucide="globe" className="w-8 h-8 text-blue-400"></i>
-                </div>
-                  Ghost Whistle Node Network
-                </h2>
-                
-                <p className="text-lg text-white/80 mb-8">
-                  A <span className="text-blue-400 font-bold">decentralized network of privacy nodes</span> that anyone can run. 
-                  Earn rewards for providing privacy infrastructure. Even on Raspberry Pi.
-                </p>
-                
-                {/* Node Types */}
-                <div className="grid md:grid-cols-3 gap-6 mb-8">
-                  {[
-                    { 
-                      icon: 'wifi', 
-                      title: 'Relay Nodes', 
-                      desc: 'Anonymous relay service for routing encrypted traffic',
-                      badge: 'HOT',
-                      gradient: 'linear-gradient(135deg, #f97316, #ea580c)'
-                    },
-                    { 
-                      icon: 'server', 
-                      title: 'Storage Nodes', 
-                      desc: 'Distributed storage with Reed-Solomon error correction',
-                      gradient: 'linear-gradient(135deg, #a855f7, #9333ea)'
-                    },
-                    { 
-                      icon: 'radio', 
-                      title: 'Signaling Nodes', 
-                      desc: 'WebRTC signaling for peer discovery and connection',
-                      gradient: 'linear-gradient(135deg, #06b6d4, #0891b2)'
-                    }
-                  ].map((node, i) => (
-                    <div key={i} className="premium-card group">
-                      <div className="w-16 h-16 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform" style={{ background: node.gradient }}>
-                        <i data-lucide={node.icon} className="w-8 h-8 text-white"></i>
-                  </div>
-                      <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-                        {node.title}
-                        {node.badge && (
-                          <span className="px-2 py-0.5 text-xs bg-orange-500 text-white rounded-full font-bold">
-                            {node.badge}
-                          </span>
-                        )}
-                      </h3>
-                      <p className="text-white/70 text-sm">{node.desc}</p>
-                  </div>
-                  ))}
-                </div>
-                
-                {/* Staking & Rewards */}
-                <div className="grid md:grid-cols-2 gap-6 mb-8">
-                  <div className="premium-card">
-                    <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-3">
-                      <i data-lucide="coins" className="w-6 h-6 text-yellow-400"></i>
-                      Staking & Rewards
-                    </h3>
-                    <ul className="space-y-3">
-                      {[
-                        'Stake $WHISTLE to run a node',
-                        'Earn rewards for uptime and bandwidth',
-                        'Monthly leaderboard competitions',
-                        'Top nodes get bonus rewards',
-                        'Withdraw anytime, no lock periods',
-                        '103.9M+ $WHISTLE currently staked'
-                      ].map((item, i) => (
-                        <li key={i} className="flex items-start gap-3 text-white/80">
-                          <i data-lucide="arrow-right" className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5"></i>
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  
-                  <div className="premium-card">
-                    <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-3">
-                      <i data-lucide="download" className="w-6 h-6 text-emerald-400"></i>
-                      Run A Node
-                    </h3>
-                    <div className="space-y-4">
-                  <div>
-                        <div className="font-bold text-white mb-2 flex items-center gap-2">
-                          <i data-lucide="monitor" className="w-5 h-5 text-blue-400"></i>
-                          Windows Desktop
-                  </div>
-                        <p className="text-sm text-white/60">One-click installer, ~150MB, runs in background</p>
-                  </div>
-                  <div>
-                        <div className="font-bold text-white mb-2 flex items-center gap-2">
-                          <i data-lucide="terminal" className="w-5 h-5 text-orange-400"></i>
-                          Linux (Raspberry Pi)
-                  </div>
-                        <p className="text-sm text-white/60">Standalone executable, no Node.js required, 65MB</p>
-                        <div className="code-block mt-2 text-xs">
-                          <code className="text-emerald-400">
-                            chmod +x ghost-node-runner-linux<br/>
-                            ./ghost-node-runner-linux
-                          </code>
-                </div>
-              </div>
-                  <div>
-                        <div className="font-bold text-white mb-2 flex items-center gap-2">
-                          <i data-lucide="code" className="w-5 h-5 text-cyan-400"></i>
-                          Build from Source
-                  </div>
-                        <p className="text-sm text-white/60">Open source on GitHub, fully auditable</p>
-                </div>
-              </div>
-            </div>
-                
-                <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-400/30 rounded-xl p-6">
-                  <h4 className="text-xl font-bold text-white mb-3 flex items-center gap-2">
-                    <i data-lucide="trophy" className="w-6 h-6 text-yellow-400"></i>
-                    Current Network Stats
-                  </h4>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <div className="text-3xl font-bold text-blue-400">87</div>
-                      <div className="text-sm text-white/60">Active Nodes</div>
-              </div>
-                    <div>
-                      <div className="text-3xl font-bold text-emerald-400">103.9M+</div>
-                      <div className="text-sm text-white/60">$WHISTLE Staked</div>
-            </div>
-                    <div>
-                      <div className="text-3xl font-bold text-cyan-400">24/7</div>
-                      <div className="text-sm text-white/60">Network Uptime</div>
-            </div>
-          </div>
-        </div>
-              </div>
-            </section>
-            
-            <div className="section-divider"></div>
-            
-            {/* Privacy Tools Section */}
-            <section id="tools" className="fade-in-up">
-              <div className="premium-card">
-                <h2 className="text-4xl font-bold mb-6 flex items-center gap-4">
-                  <div className="icon-container">
-                    <i data-lucide="tool" className="w-8 h-8 text-purple-400"></i>
-                  </div>
-                  Privacy Tools Arsenal (15+ Tools)
-                </h2>
-                
-                <p className="text-lg text-white/80 mb-8">
-                  A complete toolkit for <span className="text-purple-400 font-bold">encryption, anonymity, and security</span>. 
-                  Every tool is free, open source, and runs entirely in your browser.
-                </p>
-                
-                {/* Tools Grid */}
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[
-                    { icon: 'image', name: 'Image Steganography', desc: 'Hide messages in images with LSB & Spread Spectrum', gradient: 'linear-gradient(135deg, #a855f7, #9333ea)' },
-                    { icon: 'mic', name: 'Audio Steganography', desc: 'Encode data in sound waves, survives compression', gradient: 'linear-gradient(135deg, #ec4899, #db2777)' },
-                    { icon: 'film', name: 'Video Steganography', desc: 'Distribute messages across video frames', gradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' },
-                    { icon: 'shield-off', name: 'Metadata Scrubber', desc: 'Remove EXIF, GPS, and identifying data', gradient: 'linear-gradient(135deg, #06b6d4, #0891b2)' },
-                    { icon: 'timer', name: 'Self-Destruct Messages', desc: 'Auto-delete after countdown or view', gradient: 'linear-gradient(135deg, #f97316, #ea580c)' },
-                    { icon: 'shield-check', name: 'OpSec Checklist', desc: 'Pre-send security validation', gradient: 'linear-gradient(135deg, #10b981, #059669)' },
-                    { icon: 'map-pin', name: 'Location Spoofer', desc: 'Override GPS for website testing', gradient: 'linear-gradient(135deg, #3b82f6, #2563eb)' },
-                    { icon: 'user-x', name: 'Ghost Identity Generator', desc: 'AI-powered fake identities with faces', gradient: 'linear-gradient(135deg, #64748b, #475569)' },
-                    { icon: 'activity', name: 'WebRTC File Transfer', desc: 'Direct P2P transfers, no servers', gradient: 'linear-gradient(135deg, #10b981, #059669)' },
-                    { icon: 'hard-drive', name: 'Decentralized Storage', desc: 'Reed-Solomon distributed storage', gradient: 'linear-gradient(135deg, #6366f1, #4f46e5)' },
-                    { icon: 'alert-triangle', name: 'Breach Monitor', desc: 'Check if your data was leaked', gradient: 'linear-gradient(135deg, #ef4444, #dc2626)' },
-                    { icon: 'shuffle', name: 'Privacy Swap', desc: 'Anonymous crypto swaps', gradient: 'linear-gradient(135deg, #eab308, #ca8a04)' },
-                    { icon: 'globe', name: 'Censorship Map', desc: 'Real-time internet freedom data', gradient: 'linear-gradient(135deg, #f43f5e, #e11d48)' },
-                    { icon: 'fingerprint', name: 'Fingerprint Spoofer', desc: 'Randomize browser fingerprints', gradient: 'linear-gradient(135deg, #f59e0b, #d97706)' },
-                    { icon: 'search', name: 'Privacy Checkup', desc: 'Scan your digital footprint', gradient: 'linear-gradient(135deg, #14b8a6, #0d9488)' }
-                  ].map((tool, i) => (
-                    <div key={i} className="premium-card group hover:scale-105 transition-transform">
-                      <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-3 group-hover:rotate-12 transition-transform" style={{ background: tool.gradient }}>
-                        <i data-lucide={tool.icon} className="w-6 h-6 text-white"></i>
-                </div>
-                      <h3 className="text-lg font-bold text-white mb-2">{tool.name}</h3>
-                      <p className="text-sm text-white/60">{tool.desc}</p>
-              </div>
-                  ))}
-              </div>
-                
-                {/* Steganography Deep Dive */}
-                <div className="mt-12 space-y-6">
-                  <h3 className="text-3xl font-bold text-white flex items-center gap-3">
-                    <i data-lucide="eye-off" className="w-8 h-8 text-purple-400"></i>
-                    Steganography: Hide in Plain Sight
-                  </h3>
-                  
-                  <div className="grid md:grid-cols-3 gap-6">
-                    <div className="premium-card">
-                      <h4 className="text-xl font-bold text-white mb-3 flex items-center gap-2">
-                        <i data-lucide="image" className="w-6 h-6 text-purple-400"></i>
-                        Image
-                      </h4>
-                      <ul className="space-y-2 text-sm text-white/70 mb-4">
-                        <li>• LSB encoding in RGB channels</li>
-                        <li>• Spread Spectrum technique</li>
-                        <li>• ~1KB per 100x100 image</li>
-                        <li>• Survives social media uploads</li>
-                      </ul>
-                      <div className="text-xs text-emerald-400">✓ Instagram, Twitter, Facebook safe</div>
-            </div>
-                    
-                    <div className="premium-card">
-                      <h4 className="text-xl font-bold text-white mb-3 flex items-center gap-2">
-                        <i data-lucide="mic" className="w-6 h-6 text-pink-400"></i>
-                        Audio
-                      </h4>
-                      <ul className="space-y-2 text-sm text-white/70 mb-4">
-                        <li>• LSB in 16-bit samples</li>
-                        <li>• Web Audio API processing</li>
-                        <li>• ~10K chars per minute</li>
-                        <li>• Inaudible to human ear</li>
-                      </ul>
-                      <div className="text-xs text-emerald-400">✓ WhatsApp, SoundCloud safe</div>
-          </div>
-          
-                    <div className="premium-card">
-                      <h4 className="text-xl font-bold text-white mb-3 flex items-center gap-2">
-                        <i data-lucide="film" className="w-6 h-6 text-violet-400"></i>
-                        Video
-                      </h4>
-                      <ul className="space-y-2 text-sm text-white/70 mb-4">
-                        <li>• 100 bits per frame @ 30FPS</li>
-                        <li>• Canvas API manipulation</li>
-                        <li>• ~1K chars per 10 seconds</li>
-                        <li>• Invisible to naked eye</li>
-                      </ul>
-                      <div className="text-xs text-emerald-400">✓ YouTube, TikTok safe</div>
-                    </div>
-          </div>
-          
-                  <div className="code-block">
-                    <code className="text-purple-400">
-                      // Example: Image Steganography<br/>
-                      const imageData = canvas.getContext('2d').getImageData(0,0,w,h);<br/>
-                      for(let i=0; i&lt;message.length; i++) &#123;<br/>
-                      &nbsp;&nbsp;imageData.data[i*4] = (pixel & ~1) | messageBit; // LSB<br/>
-                      &#125;<br/>
-                      <span className="text-white/60">// Image looks identical. Message is hidden forever.</span>
-                    </code>
-                </div>
-                </div>
-                
-                {/* Community Tools Competition */}
-                <div className="mt-12 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-400/30 rounded-xl p-6">
-                  <h4 className="text-2xl font-bold text-white mb-3 flex items-center gap-2">
-                    <i data-lucide="trophy" className="w-7 h-7 text-yellow-400"></i>
-                    Community Tools Competition - NOW LIVE!
-                  </h4>
-                  <p className="text-white/80 mb-4">
-                    Developers can submit their own privacy tools. Community votes. Winners get featured + rewards in $GHOST tokens.
-                  </p>
-                  <div className="flex flex-wrap gap-3">
-                    <span className="tool-badge">🔐 Encryption Tools</span>
-                    <span className="tool-badge">🌐 Anonymity Services</span>
-                    <span className="tool-badge">💬 Secure Communication</span>
-                    <span className="tool-badge">🛡️ Anti-Surveillance</span>
-                    <span className="tool-badge">🎭 Identity Protection</span>
-            </div>
-          </div>
-              </div>
-            </section>
-            
-            <div className="section-divider"></div>
-            
-            {/* Use Cases Section */}
-            <section id="usecases" className="fade-in-up">
-              <div className="premium-card">
-                <h2 className="text-4xl font-bold mb-6 flex items-center gap-4">
-                  <div className="icon-container">
-                    <i data-lucide="lightbulb" className="w-8 h-8 text-yellow-400"></i>
-              </div>
-                  Real-World Use Cases
-            </h2>
-                
-                <div className="grid md:grid-cols-2 gap-6">
-                  {[
-                    {
-                      icon: 'briefcase',
-                      title: 'Corporate Whistleblowing',
-                      desc: 'Expose fraud, corruption, or misconduct without risking your career or freedom. Blockchain timestamps prove authenticity.',
-                      gradient: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                      examples: ['Financial fraud documentation', 'Safety violation reports', 'Harassment evidence']
-                    },
-                    {
-                      icon: 'newspaper',
-                      title: 'Investigative Journalism',
-                      desc: 'Receive tips from sources with cryptographic proof. Protect source identity while maintaining evidence credibility.',
-                      gradient: 'linear-gradient(135deg, #a855f7, #9333ea)',
-                      examples: ['Anonymous source protection', 'Document verification', 'Timeline authentication']
-                    },
-                    {
-                      icon: 'users',
-                      title: 'Activism & Organizing',
-                      desc: 'Coordinate actions without surveillance. Communicate securely across borders. Build movements that can\'t be infiltrated.',
-                      gradient: 'linear-gradient(135deg, #10b981, #059669)',
-                      examples: ['Protest coordination', 'Cross-border solidarity', 'Secure group messaging']
-                    },
-                    {
-                      icon: 'scale',
-                      title: 'Legal & Human Rights',
-                      desc: 'Document abuses with immutable timestamps. Collect evidence that can\'t be disputed. Prove events occurred when claimed.',
-                      gradient: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                      examples: ['Human rights documentation', 'Evidence timestamping', 'Legal protection']
-                    },
-                    {
-                      icon: 'shield',
-                      title: 'Personal Privacy',
-                      desc: 'Communicate without metadata collection. Share files without cloud storage. Create identity without KYC.',
-                      gradient: 'linear-gradient(135deg, #06b6d4, #0891b2)',
-                      examples: ['Private file sharing', 'Anonymous communication', 'Identity sovereignty']
-                    },
-                    {
-                      icon: 'globe',
-                      title: 'Circumventing Censorship',
-                      desc: 'Route around internet filters. Access information despite government blocks. Share truth where truth is banned.',
-                      gradient: 'linear-gradient(135deg, #f97316, #ea580c)',
-                      examples: ['Firewall bypass', 'Information access', 'Censorship resistance']
-                    }
-                  ].map((usecase, i) => (
-                    <div key={i} className="premium-card">
-                      <div className="w-16 h-16 rounded-xl flex items-center justify-center mb-4" style={{ background: usecase.gradient }}>
-                        <i data-lucide={usecase.icon} className="w-8 h-8 text-white"></i>
-                    </div>
-                      <h3 className="text-2xl font-bold text-white mb-3">{usecase.title}</h3>
-                      <p className="text-white/70 mb-4">{usecase.desc}</p>
-                      <div className="space-y-2">
-                        <div className="text-sm font-bold text-white/50">Examples:</div>
-                        {usecase.examples.map((ex, j) => (
-                          <div key={j} className="text-sm text-white/60 flex items-center gap-2">
-                            <i data-lucide="check" className="w-4 h-4 text-emerald-400"></i>
-                            {ex}
-                </div>
-              ))}
-            </div>
-                    </div>
-                  ))}
-          </div>
-          
-                {/* Real Stories */}
-                <div className="mt-12 space-y-6">
-                  <h3 className="text-3xl font-bold text-white flex items-center gap-3">
-                    <i data-lucide="book-open" className="w-8 h-8 text-cyan-400"></i>
-                    Why This Matters
-              </h3>
-                  
-                  <div className="grid md:grid-cols-3 gap-6">
-                    {[
-                      { name: 'Edward Snowden', desc: 'Exposed mass surveillance. Lives in exile.', result: 'Punishment' },
-                      { name: 'Chelsea Manning', desc: 'Leaked war crimes. Tortured in prison.', result: 'Punishment' },
-                      { name: 'Reality Winner', desc: 'Leaked election interference. 5+ years imprisoned.', result: 'Punishment' }
-                    ].map((story, i) => (
-                      <div key={i} className="p-6 rounded-xl bg-red-500/10 border border-red-400/30">
-                        <div className="font-bold text-white mb-2">{story.name}</div>
-                        <div className="text-sm text-white/70 mb-3">{story.desc}</div>
-                        <div className="inline-block px-3 py-1 bg-red-500/20 text-red-400 text-xs font-bold rounded-full">
-                          {story.result}
-                </div>
-                </div>
-                    ))}
-          </div>
-          
-                  <div className="manifesto-quote">
-                    Every whistleblower above exposed truth and got destroyed. They used centralized platforms. 
-                    Traceable servers. Identifiable metadata. <span className="text-emerald-400 font-bold">Ghost Whistle fixes all of that.</span>
-                    <br/><br/>
-                    <span className="text-white font-bold">The next truth-teller will not end up in a cage.</span>
-                </div>
-                </div>
-              </div>
-            </section>
-            
-            <div className="section-divider"></div>
-            
-            {/* Manifesto Section */}
-            <section id="manifesto" className="fade-in-up">
-              <div className="premium-card glow-border">
-                <h2 className="text-5xl font-bold mb-8 text-center flex items-center justify-center gap-4">
-                  <div className="icon-container">
-                    <i data-lucide="flag" className="w-10 h-10 text-emerald-400"></i>
-                </div>
-                  The Ghost Whistle Manifesto
-              </h2>
-                
-                <div className="space-y-8 max-w-4xl mx-auto">
-                  {[
-                    {
-                      title: 'Privacy is Infrastructure, Not a Service',
-                      desc: 'Privacy cannot depend on a company\'s goodwill or a government\'s permission. It must be architectural - built into the protocol itself.',
-                      icon: 'shield'
-                    },
-                    {
-                      title: 'Mathematics > Legislation',
-                      desc: 'Your parliament can outlaw encryption. Your congress can mandate backdoors. But they cannot repeal SHA-256 or break AES-256. We build on math, not mercy.',
-                      icon: 'calculator'
-                    },
-                    {
-                      title: 'Whistleblowers Are Heroes, Not Criminals',
-                      desc: 'Every major reform in history came from someone breaking rules to expose truth. We build tools so they can do it without losing their freedom.',
-                      icon: 'award'
-                    },
-                    {
-                      title: 'Surveillance is Violence',
-                      desc: 'They watch everything you read, track everywhere you go, record everyone you talk to, profile what you might do. That is not security. That is control.',
-                      icon: 'eye-off'
-                    },
-                    {
-                      title: 'Open Source Forever',
-                      desc: 'No backdoors. No compromises. Every line of code auditable by everyone. Transparency is the only path to trust in privacy tools.',
-                      icon: 'code-2'
-                    },
-                    {
-                      title: 'Ungovernable by Design',
-                      desc: 'No CEO to arrest. No servers to seize. No compliance department to threaten. We are not asking permission. We are building freedom.',
-                      icon: 'zap'
-                    }
-                  ].map((principle, i) => (
-                    <div key={i} className="flex items-start gap-6 p-8 rounded-2xl bg-white/[0.02] border border-white/10 hover:border-emerald-400/30 transition-all">
-                      <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center shrink-0">
-                        <i data-lucide={principle.icon} className="w-8 h-8 text-white"></i>
-                  </div>
-                  <div>
-                        <h3 className="text-2xl font-bold text-white mb-3">{principle.title}</h3>
-                        <p className="text-lg text-white/70 leading-relaxed">{principle.desc}</p>
-                  </div>
-                    </div>
-                  ))}
-                </div>
-                
-                {/* Final Declaration */}
-                <div className="mt-16 p-12 rounded-3xl bg-gradient-to-br from-emerald-500/10 via-cyan-500/10 to-blue-500/10 border-2 border-emerald-400/30 text-center">
-                  <h3 className="text-4xl font-bold text-white mb-6">
-                    Ghost Whistle is Not a Product. It is a Weapon.
-                  </h3>
-                  <div className="text-xl text-white/80 space-y-4 max-w-3xl mx-auto">
-                    <p>A weapon against surveillance capitalism.</p>
-                    <p>A weapon against government overreach.</p>
-                    <p>A weapon against technological tyranny.</p>
-                    <p className="text-2xl font-bold text-emerald-400 mt-8">
-                      Because privacy is not a feature. It is a human right.
-                    </p>
-                    <p className="text-lg text-white/60">
-                      And human rights do not require permission.
-                    </p>
-                  </div>
-                  
-                  <div className="mt-12 flex flex-col sm:flex-row gap-4 justify-center">
-                    <a href="/" className="inline-block px-10 py-5 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white text-xl font-bold rounded-2xl hover:scale-110 transition-all glow-border">
-                      Join the Revolution
-                    </a>
-                    <a href="https://github.com/DylanPort/whitelspace" target="_blank" rel="noopener" className="inline-block px-10 py-5 border-2 border-white/20 hover:border-white/40 text-white text-xl font-bold rounded-2xl hover:scale-110 transition-all">
-                      View on GitHub
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </section>
-            
-            {/* Technical Specs Section */}
-            <section className="fade-in-up mt-20">
-              <div className="premium-card">
-                <h2 className="text-4xl font-bold mb-8 text-center flex items-center justify-center gap-4">
-                  <div className="icon-container">
-                    <i data-lucide="cpu" className="w-8 h-8 text-blue-400"></i>
-                  </div>
-                  Technical Specifications
-                </h2>
-                
-                <div className="grid md:grid-cols-2 gap-8">
-                  <div>
-                    <h3 className="text-2xl font-bold text-white mb-4">Encryption</h3>
-                    <ul className="space-y-2 text-white/70">
-                      <li>• AES-256-GCM symmetric encryption</li>
-                      <li>• RSA-OAEP 2048-bit key exchange</li>
-                      <li>• SHA-256 hashing for integrity</li>
-                      <li>• Client-side encryption only</li>
-                      <li>• Zero-knowledge architecture</li>
-                    </ul>
-                </div>
-                
-                  <div>
-                    <h3 className="text-2xl font-bold text-white mb-4">Network</h3>
-                    <ul className="space-y-2 text-white/70">
-                      <li>• WebRTC for P2P connections</li>
-                      <li>• STUN/TURN for NAT traversal</li>
-                      <li>• WebSocket signaling servers</li>
-                      <li>• Distributed node network</li>
-                      <li>• No central point of failure</li>
-                    </ul>
-                </div>
-                
-                  <div>
-                    <h3 className="text-2xl font-bold text-white mb-4">Blockchain</h3>
-                    <ul className="space-y-2 text-white/70">
-                      <li>• Solana blockchain for DIDs</li>
-                      <li>• Memo program for proof of existence</li>
-                      <li>• ~$0.0001 per transaction</li>
-                      <li>• Sub-second confirmation times</li>
-                      <li>• Immutable timestamp proofs</li>
-                    </ul>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-2xl font-bold text-white mb-4">Platform</h3>
-                    <ul className="space-y-2 text-white/70">
-                      <li>• Browser-based (Chrome, Firefox, Safari)</li>
-                      <li>• Desktop nodes (Windows, Linux, macOS)</li>
-                      <li>• Raspberry Pi compatible</li>
-                      <li>• Mobile wallet support</li>
-                      <li>• 100% open source</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </section>
-            
-          </div>
-          
+          </nav>
+
+          {/* Content */}
+          <main className="max-w-7xl mx-auto px-6 py-12">
+            {activeSection === 'overview' && <OverviewSection />}
+            {activeSection === 'architecture' && <ArchitectureSection />}
+            {activeSection === 'privacy' && <PrivacySection />}
+            {activeSection === 'tokenomics' && <TokenomicsSection />}
+            {activeSection === 'nodes' && <NodesSection />}
+            {activeSection === 'roadmap' && <RoadmapSection />}
+          </main>
+
           {/* Footer */}
-          <footer className="content py-16 px-6 text-center border-t border-white/10">
-            <div className="max-w-4xl mx-auto">
-              <p className="text-2xl text-white/80 mb-4">
-                Built by the people. For the people.
-              </p>
-              <p className="text-lg text-white/60 mb-8">
-                Open source. Auditable. Unstoppable.
-              </p>
-              
-              <div className="flex flex-wrap justify-center gap-4 mb-12">
-                <a href="https://github.com/DylanPort/whitelspace" target="_blank" rel="noopener" className="tool-badge">
-                <i data-lucide="github" className="w-4 h-4"></i>
-                GitHub
-              </a>
-                <a href="https://x.com/Whistle_Ninja" target="_blank" rel="noopener" className="tool-badge">
-                <i data-lucide="twitter" className="w-4 h-4"></i>
-                @Whistle_Ninja
-              </a>
-                <a href="/" className="tool-badge">
-                  <i data-lucide="home" className="w-4 h-4"></i>
-                  Launch App
-              </a>
-            </div>
-              
-              <div className="text-sm text-white/40">
-                <p>⚠️ WARNING: This software may be illegal in your jurisdiction. We do not care.</p>
-                <p className="mt-2">Your government does not have your consent to monitor you 24/7.</p>
-                <p className="mt-2 text-emerald-400 font-bold">Become ungovernable.</p>
-          </div>
-            </div>
+          <footer className="border-t border-white/10 mt-20">
+            <div className="max-w-7xl mx-auto px-6 py-8 text-center text-white/40">
+              <p>© 2025 WHISTLE. Decentralized. Anonymous. Unstoppable.</p>
+              <p className="mt-2 text-sm">Built on Solana • Open Source • Community Owned</p>
+                  </div>
           </footer>
         </div>
       );
     }
+
+    function OverviewSection() {
+      return (
+        <div className="space-y-12">
+          {/* Hero Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-2 gap-6">
+            <div className="card stat-card">
+              <div className="stat-number">15+</div>
+              <p className="text-white/60 mt-2">Privacy Tools</p>
+            </div>
+            <div className="card stat-card">
+              <div className="stat-number">100%</div>
+              <p className="text-white/60 mt-2">Open Source</p>
+            </div>
+          </div>
+
+          {/* Introduction */}
+          <div className="card p-8">
+            <h2 className="section-title">
+              <i data-lucide="eye" className="w-10 h-10 text-emerald-400"></i>
+              What is WHISTLE?
+                </h2>
+            <div className="space-y-6 text-lg text-white/80">
+                  <p>
+                <span className="text-emerald-400 font-bold">WHISTLE</span> is a decentralized privacy network built on Solana that combines multiple privacy-preserving technologies into a unified platform. We provide the infrastructure for truly private communication, anonymous transactions, and secure data storage.
+                  </p>
+                  <p>
+                Unlike traditional privacy solutions that focus on a single use case, WHISTLE offers a comprehensive suite of tools and services that work together to protect your digital footprint across multiple dimensions.
+              </p>
+            </div>
+          </div>
+
+          {/* Core Features */}
+          <div className="card p-8">
+            <h3 className="text-2xl font-bold mb-6 flex items-center gap-3">
+              <i data-lucide="layers" className="w-8 h-8 text-cyan-400"></i>
+              Core Components
+            </h3>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="feature-card">
+                <div className="flex items-start gap-4">
+                  <i data-lucide="shield-check" className="w-8 h-8 text-emerald-400 shrink-0 mt-1"></i>
+                      <div>
+                    <h4 className="font-bold text-xl mb-2">Whistleblowing Protocol</h4>
+                    <p className="text-white/70">Peer-to-peer encrypted file transfers with blockchain timestamping. Send up to 5GB files with cryptographic proof of existence.</p>
+                </div>
+                </div>
+              </div>
+
+              <div className="feature-card">
+                <div className="flex items-start gap-4">
+                  <i data-lucide="network" className="w-8 h-8 text-cyan-400 shrink-0 mt-1"></i>
+                      <div>
+                    <h4 className="font-bold text-xl mb-2">Privacy Node Network</h4>
+                    <p className="text-white/70">Decentralized relay nodes powered by staking. Run nodes, earn rewards, contribute to the network's resilience with X402 gating.</p>
+              </div>
+              </div>
+              </div>
+
+              <div className="feature-card">
+                <div className="flex items-start gap-4">
+                  <i data-lucide="fingerprint" className="w-8 h-8 text-blue-400 shrink-0 mt-1"></i>
+                      <div>
+                    <h4 className="font-bold text-xl mb-2">Decentralized Identity (DIDs)</h4>
+                    <p className="text-white/70">W3C-compliant DIDs on Solana blockchain. Self-sovereign identity without central authorities.</p>
+            </div>
+                    </div>
+              </div>
+
+              <div className="feature-card">
+                <div className="flex items-start gap-4">
+                  <i data-lucide="key" className="w-8 h-8 text-yellow-400 shrink-0 mt-1"></i>
+                    <div>
+                    <h4 className="font-bold text-xl mb-2">X402 Gating Protocol</h4>
+                    <p className="text-white/70">Stake-based access control for premium features. Higher stakes unlock advanced privacy routing and priority services.</p>
+                    </div>
+                  </div>
+                </div>
+                
+              <div className="feature-card">
+                <div className="flex items-start gap-4">
+                  <i data-lucide="tool" className="w-8 h-8 text-purple-400 shrink-0 mt-1"></i>
+                  <div>
+                    <h4 className="font-bold text-xl mb-2">Privacy Tools Lab</h4>
+                    <p className="text-white/70">15+ tools for encryption, steganography, anonymous communication, and security auditing.</p>
+                    </div>
+                    </div>
+                  </div>
+            </div>
+          </div>
+
+          {/* Philosophy */}
+          <div className="warning-box">
+            <div className="flex items-start gap-4">
+              <i data-lucide="alert-triangle" className="w-8 h-8 text-red-400 shrink-0"></i>
+              <div>
+                <h4 className="font-bold text-xl mb-3 text-red-400">Privacy is a Human Right</h4>
+                <p className="text-white/90 leading-relaxed">
+                  ⚠️ <strong>WARNING:</strong> This software may be illegal in your jurisdiction. We do not care. Your government does not have your consent to monitor you 24/7. Civil disobedience is not only acceptable - it is mandatory. If privacy is outlawed, only outlaws will have privacy. <span className="text-emerald-400 font-bold">Become ungovernable.</span>
+                </p>
+                </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function ArchitectureSection() {
+      return (
+        <div className="space-y-12">
+          <div className="card p-8">
+            <h2 className="section-title">
+              <i data-lucide="cpu" className="w-10 h-10 text-emerald-400"></i>
+              Technical Architecture
+                </h2>
+                
+            {/* Whistleblowing Protocol */}
+            <div className="mb-12">
+              <h3 className="text-2xl font-bold mb-6 text-emerald-400">1. Whistleblowing Protocol</h3>
+              <p className="text-lg text-white/80 mb-6">
+                The foundation: peer-to-peer encrypted communication with blockchain proof of existence.
+              </p>
+              
+              <div className="space-y-4">
+                {[
+                  { num: 1, title: 'Client-Side Encryption', desc: 'Messages and files are encrypted using AES-256-GCM before transmission. Keys never leave your device.' },
+                  { num: 2, title: 'WebRTC P2P Transfer', desc: 'Data streams directly between sender and receiver via encrypted WebRTC channels (DTLS/SRTP). No servers see your content.' },
+                  { num: 3, title: 'Hash Generation', desc: 'A SHA-256 hash is computed from the encrypted bundle for verification purposes.' },
+                  { num: 4, title: 'Blockchain Proof', desc: 'Only the hash is posted to Solana blockchain (~$0.0001 cost). Creates immutable timestamp.' },
+                  { num: 5, title: 'Verification', desc: 'Anyone can verify the timestamp on blockchain explorers. Content remains private, proof is public.' }
+                    ].map(step => (
+                  <div key={step.num} className="feature-card">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center shrink-0">
+                        <span className="text-2xl font-bold">{step.num}</span>
+                    </div>
+                      <div className="flex-1">
+                        <h4 className="font-bold text-xl mb-2">{step.title}</h4>
+                          <p className="text-white/70">{step.desc}</p>
+                      </div>
+                    </div>
+                  </div>
+                    ))}
+              </div>
+                </div>
+                
+            {/* Node Network */}
+            <div className="mb-12">
+              <h3 className="text-2xl font-bold mb-6 text-cyan-400">2. Decentralized Node Network</h3>
+              <p className="text-lg text-white/80 mb-6">
+                A distributed network of relay nodes that provide anonymous routing and enhanced privacy.
+              </p>
+              
+              <div className="grid md:grid-cols-3 gap-6">
+                <div className="feature-card">
+                  <i data-lucide="server" className="w-8 h-8 text-emerald-400 mb-3"></i>
+                  <h4 className="font-bold mb-2">Node Types</h4>
+                  <ul className="text-sm text-white/70 space-y-1">
+                    <li>• Bootstrap Nodes (10 permanent)</li>
+                    <li>• User Nodes (permissionless)</li>
+                    <li>• Relay Nodes (multi-hop)</li>
+                  </ul>
+                    </div>
+                <div className="feature-card">
+                  <i data-lucide="shield" className="w-8 h-8 text-cyan-400 mb-3"></i>
+                  <h4 className="font-bold mb-2">Security</h4>
+                  <ul className="text-sm text-white/70 space-y-1">
+                    <li>• WebRTC encryption (DTLS)</li>
+                    <li>• Onion routing capability</li>
+                    <li>• No IP logging</li>
+                  </ul>
+                    </div>
+                <div className="feature-card">
+                  <i data-lucide="coins" className="w-8 h-8 text-blue-400 mb-3"></i>
+                  <h4 className="font-bold mb-2">Rewards</h4>
+                  <ul className="text-sm text-white/70 space-y-1">
+                    <li>• Stake-based distribution</li>
+                    <li>• Performance metrics</li>
+                    <li>• Automatic claiming</li>
+                  </ul>
+                </div>
+                  </div>
+                </div>
+                  
+            {/* Tech Stack */}
+            <div>
+              <h3 className="text-2xl font-bold mb-6 text-purple-400">3. Technology Stack</h3>
+                  <div className="code-block">
+                <pre className="text-emerald-400 text-sm">
+{`Frontend:  React, TailwindCSS, Lucide Icons
+Backend:   Node.js, Express, WebSocket
+Blockchain: Solana (Mainnet), Anchor Framework
+Storage:   Decentralized (Erasure Coding)
+Privacy:   WebRTC (P2P), AES-256-GCM, DTLS/SRTP
+Identity:  W3C DIDs on Solana`}
+                </pre>
+              </div>
+            </div>
+                  </div>
+                  </div>
+      );
+    }
+
+    function PrivacySection() {
+      return (
+        <div className="space-y-12">
+          <div className="card p-8">
+            <h2 className="section-title">
+              <i data-lucide="shield" className="w-10 h-10 text-emerald-400"></i>
+              Privacy Features
+                </h2>
+                
+            {/* Privacy Levels */}
+            <div className="mb-12">
+              <h3 className="text-2xl font-bold mb-6 text-emerald-400">Multi-Layer Privacy</h3>
+              <div className="space-y-6">
+                <div className="feature-card">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0">
+                      <i data-lucide="lock" className="w-6 h-6 text-emerald-400"></i>
+                </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-xl mb-2">End-to-End Encryption</h4>
+                      <p className="text-white/70 mb-3">All communication is encrypted on your device before transmission. We use industry-standard AES-256-GCM for data at rest and WebRTC's DTLS/SRTP for data in transit.</p>
+                      <div className="text-sm text-emerald-400 font-mono">Status: ✓ Implemented</div>
+                  </div>
+                </div>
+                  </div>
+
+                <div className="feature-card">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center shrink-0">
+                      <i data-lucide="eye-off" className="w-6 h-6 text-cyan-400"></i>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-xl mb-2">Metadata Protection</h4>
+                      <p className="text-white/70 mb-3">Unlike many "encrypted" services, we minimize metadata collection. Our node network can route traffic through multiple hops to obscure traffic patterns.</p>
+                      <div className="text-sm text-yellow-400 font-mono">Status: ⚠ Partial (see limitations)</div>
+                </div>
+              </div>
+            </div>
+                
+                <div className="feature-card">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center shrink-0">
+                      <i data-lucide="shuffle" className="w-6 h-6 text-blue-400"></i>
+                  </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-xl mb-2">Anonymous Routing</h4>
+                      <p className="text-white/70 mb-3">Transactions can be relayed through our privacy node network, making it harder to link sender to receiver.</p>
+                      <div className="text-sm text-emerald-400 font-mono">Status: ✓ Available for stakers</div>
+                  </div>
+                </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Privacy Tools */}
+            <div className="mb-12">
+              <h3 className="text-2xl font-bold mb-6 text-cyan-400">15+ Privacy Tools</h3>
+              <div className="grid md:grid-cols-3 gap-4">
+                {[
+                  { name: 'Steganography', desc: 'Hide data in images', icon: 'image' },
+                  { name: 'File Encryption', desc: 'AES-256 encryption', icon: 'lock' },
+                  { name: 'Secure Messaging', desc: 'E2E encrypted chat', icon: 'message-circle' },
+                  { name: 'Password Generator', desc: 'Cryptographically secure', icon: 'key' },
+                  { name: 'Breach Monitor', desc: 'Check email leaks', icon: 'shield-alert' },
+                  { name: 'Exploit Scanner', desc: 'Security auditing', icon: 'bug' },
+                  { name: 'Location Spoofer', desc: 'GPS privacy', icon: 'map-pin' },
+                  { name: 'Ghost Calls', desc: 'P2P encrypted calls', icon: 'phone' },
+                  { name: 'Anonymous Relay', desc: 'Transaction privacy', icon: 'shuffle' }
+                ].map((tool, i) => (
+                  <div key={i} className="feature-card">
+                    <i data-lucide={tool.icon} className="w-6 h-6 text-emerald-400 mb-2"></i>
+                    <h5 className="font-bold">{tool.name}</h5>
+                    <p className="text-sm text-white/60">{tool.desc}</p>
+                  </div>
+                  ))}
+              </div>
+                </div>
+                
+            {/* Honest Limitations */}
+            <div className="warning-box">
+              <h4 className="font-bold text-xl mb-4 text-yellow-400">
+                <i data-lucide="info" className="w-6 h-6 inline mr-2"></i>
+                Privacy Limitations (We're Honest)
+              </h4>
+              <ul className="space-y-3 text-white/80">
+                <li className="flex items-start gap-3">
+                  <span className="text-yellow-400">•</span>
+                  <span><strong>IP Visibility:</strong> Our signaling server and STUN servers can see IP addresses during connection setup. For true anonymity, use Tor or a VPN.</span>
+                        </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-yellow-400">•</span>
+                  <span><strong>Metadata Logging:</strong> Call metadata (who connects to what, when) is currently logged by our signaling server. We're working on eliminating this.</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-yellow-400">•</span>
+                  <span><strong>Browser Limitations:</strong> As a web app, we're bound by browser security policies. Desktop apps could provide better privacy.</span>
+                </li>
+                    </ul>
+              <p className="mt-4 text-emerald-400 font-bold">
+                We believe in honest privacy claims. WHISTLE is significantly better than centralized services, but not (yet) as private as Tor-based systems.
+              </p>
+                  </div>
+                  </div>
+                  </div>
+      );
+    }
+
+    function TokenomicsSection() {
+      return (
+        <div className="space-y-12">
+          <div className="card p-8">
+            <h2 className="section-title">
+              <i data-lucide="coins" className="w-10 h-10 text-emerald-400"></i>
+              $WHISTLE Tokenomics
+            </h2>
+
+            {/* Token Stats */}
+            <div className="grid md:grid-cols-3 gap-6 mb-12">
+              <div className="feature-card text-center">
+                <div className="text-3xl font-bold text-emerald-400 mb-2">1B</div>
+                <p className="text-white/60">Total Supply</p>
+                  </div>
+              <div className="feature-card text-center">
+                <div className="text-3xl font-bold text-blue-400 mb-2">10K</div>
+                <p className="text-white/60">Min Stake</p>
+                </div>
+              <div className="feature-card text-center">
+                <div className="text-3xl font-bold text-purple-400 mb-2">5%</div>
+                <p className="text-white/60">APY (Est.)</p>
+              </div>
+                  </div>
+
+            {/* Use Cases */}
+            <div className="mb-12">
+              <h3 className="text-2xl font-bold mb-6 text-emerald-400">Token Utility</h3>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="feature-card">
+                  <h4 className="font-bold text-xl mb-3 flex items-center gap-2">
+                    <i data-lucide="lock" className="w-6 h-6 text-emerald-400"></i>
+                    Staking Rewards
+                  </h4>
+                  <p className="text-white/70 mb-3">Stake $WHISTLE to earn automatic rewards. No claiming needed - rewards compound automatically.</p>
+                  <div className="text-sm text-emerald-400 font-mono">Min: 10,000 WHISTLE</div>
+                </div>
+                
+                <div className="feature-card">
+                  <h4 className="font-bold text-xl mb-3 flex items-center gap-2">
+                    <i data-lucide="server" className="w-6 h-6 text-cyan-400"></i>
+                    Node Operation
+                  </h4>
+                  <p className="text-white/70 mb-3">Run privacy nodes to earn fees from relay services. Higher stake = priority in routing.</p>
+                  <div className="text-sm text-cyan-400 font-mono">Rewards: Per relay</div>
+              </div>
+
+                <div className="feature-card">
+                  <h4 className="font-bold text-xl mb-3 flex items-center gap-2">
+                    <i data-lucide="shield" className="w-6 h-6 text-blue-400"></i>
+                    Premium Features (X402 Gating)
+                  </h4>
+                  <p className="text-white/70 mb-3">Access premium privacy features via X402 protocol: multi-hop routing, priority support, enhanced anonymity.</p>
+                  <div className="text-sm text-blue-400 font-mono">Unlock: 10K+ stake required</div>
+            </div>
+                
+                <div className="feature-card">
+                  <h4 className="font-bold text-xl mb-3 flex items-center gap-2">
+                    <i data-lucide="vote" className="w-6 h-6 text-purple-400"></i>
+                    Governance (Future)
+                  </h4>
+                  <p className="text-white/70 mb-3">Vote on protocol upgrades, feature priorities, and network parameters.</p>
+                  <div className="text-sm text-purple-400 font-mono">Status: Planned</div>
+              </div>
+            </div>
+            </div>
+
+            {/* Distribution */}
+                    <div>
+              <h3 className="text-2xl font-bold mb-6 text-cyan-400">Token Distribution</h3>
+              <div className="feature-card">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-white/80">Community (Fair Launch)</span>
+                    <span className="font-bold text-emerald-400">100%</span>
+            </div>
+                  <div className="w-full bg-white/10 rounded-full h-4">
+                    <div className="bg-gradient-to-r from-emerald-500 to-cyan-500 h-4 rounded-full" style={{width: '100%'}}></div>
+          </div>
+                  <p className="text-sm text-white/60">No pre-mine, no team tokens, no VC allocation. Fully community-owned from day one.</p>
+        </div>
+              </div>
+                  </div>
+          </div>
+        </div>
+      );
+    }
+
+    function NodesSection() {
+      return (
+        <div className="space-y-12">
+          <div className="card p-8">
+            <h2 className="section-title">
+              <i data-lucide="network" className="w-10 h-10 text-emerald-400"></i>
+              Privacy Node Network
+                </h2>
+                
+                <p className="text-lg text-white/80 mb-8">
+              The backbone of our decentralized privacy infrastructure. Anyone can run a node and contribute to network resilience while earning rewards. Access is gated through the X402 protocol for quality assurance.
+            </p>
+                
+                {/* Node Types */}
+            <div className="mb-12">
+              <h3 className="text-2xl font-bold mb-6 text-emerald-400">Node Types</h3>
+              <div className="space-y-6">
+                <div className="feature-card">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0">
+                      <i data-lucide="server" className="w-6 h-6 text-emerald-400"></i>
+                </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-xl mb-2">Bootstrap Nodes (10)</h4>
+                      <p className="text-white/70 mb-3">Permanent infrastructure nodes that ensure network availability. Run by the protocol, geographically distributed.</p>
+                      <div className="grid md:grid-cols-2 gap-2 text-sm">
+                        <div className="text-emerald-400">✓ 99.9% uptime guarantee</div>
+                        <div className="text-emerald-400">✓ Global distribution</div>
+                        <div className="text-emerald-400">✓ High bandwidth</div>
+                        <div className="text-emerald-400">✓ DDoS protection</div>
+              </div>
+              </div>
+            </div>
+          </div>
+          
+                <div className="feature-card">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center shrink-0">
+                      <i data-lucide="users" className="w-6 h-6 text-cyan-400"></i>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-xl mb-2">User Nodes (X402 Gated)</h4>
+                      <p className="text-white/70 mb-3">Run a node from your device (desktop, server, mobile). X402 gating ensures quality nodes. Stake 10K+ WHISTLE to participate and earn rewards.</p>
+                      <div className="grid md:grid-cols-2 gap-2 text-sm">
+                        <div className="text-cyan-400">✓ 10K WHISTLE minimum</div>
+                        <div className="text-cyan-400">✓ Easy setup (one-click)</div>
+                        <div className="text-cyan-400">✓ Earn per relay</div>
+                        <div className="text-cyan-400">✓ X402 quality gate</div>
+          </div>
+                    </div>
+                  </div>
+                </div>
+                </div>
+                </div>
+                
+            {/* X402 Protocol Explanation */}
+            <div className="mb-12">
+              <h3 className="text-2xl font-bold mb-6 text-yellow-400">X402 Gating Protocol</h3>
+              <div className="feature-card">
+                <div className="flex items-start gap-4">
+                  <i data-lucide="key" className="w-8 h-8 text-yellow-400 shrink-0 mt-1"></i>
+                  <div>
+                    <h4 className="font-bold text-xl mb-3">Stake-Based Access Control</h4>
+                  <p className="text-white/80 mb-4">
+                      The X402 protocol uses stake-based gating to ensure node quality and prevent spam. Only wallets with at least 10,000 staked $WHISTLE can operate relay nodes or access premium features.
+                    </p>
+                    <div className="grid md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <h5 className="font-bold text-emerald-400 mb-2">Benefits:</h5>
+                        <ul className="space-y-1 text-white/70">
+                          <li>• Prevents Sybil attacks</li>
+                          <li>• Ensures node quality</li>
+                          <li>• Aligns incentives (skin in the game)</li>
+                          <li>• Reduces spam/abuse</li>
+                        </ul>
+            </div>
+                      <div>
+                        <h5 className="font-bold text-cyan-400 mb-2">Access Tiers:</h5>
+                        <ul className="space-y-1 text-white/70">
+                          <li>• 10K+ = Basic node operation</li>
+                          <li>• 50K+ = Priority routing</li>
+                          <li>• 100K+ = Enhanced rewards</li>
+                          <li>• 500K+ = Premium features</li>
+                        </ul>
+          </div>
+              </div>
+              </div>
+                </div>
+              </div>
+            </div>
+                  
+            {/* How to Run a Node */}
+            <div className="mb-12">
+              <h3 className="text-2xl font-bold mb-6 text-cyan-400">Running a Node</h3>
+              <div className="feature-card">
+                    <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <span className="font-bold text-emerald-400 text-xl">1.</span>
+                  <div>
+                      <h5 className="font-bold mb-1">Download Node Client</h5>
+                      <p className="text-sm text-white/70">Available for Windows, macOS, and Linux. One-click installer.</p>
+                    </div>
+                </div>
+                  <div className="flex items-start gap-3">
+                    <span className="font-bold text-emerald-400 text-xl">2.</span>
+                  <div>
+                      <h5 className="font-bold mb-1">Connect Wallet</h5>
+                      <p className="text-sm text-white/70">Link your Solana wallet to receive rewards automatically.</p>
+            </div>
+                    </div>
+                  <div className="flex items-start gap-3">
+                    <span className="font-bold text-emerald-400 text-xl">3.</span>
+                  <div>
+                      <h5 className="font-bold mb-1">Start Earning</h5>
+                      <p className="text-sm text-white/70">Your node will automatically join the network and start relaying traffic.</p>
+          </div>
+                </div>
+                </div>
+                <div className="mt-6 p-4 bg-emerald-500/10 rounded-lg">
+                  <p className="text-emerald-400 font-bold">💡 Tip: Stake 10,000+ WHISTLE to unlock node operation and premium features via X402 gating!</p>
+                </div>
+              </div>
+          </div>
+          
+            {/* Network Stats */}
+                    <div>
+              <h3 className="text-2xl font-bold mb-6 text-blue-400">Network Performance</h3>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="feature-card text-center">
+                  <i data-lucide="zap" className="w-8 h-8 text-cyan-400 mx-auto mb-3"></i>
+                  <div className="text-2xl font-bold text-cyan-400 mb-2">~50ms</div>
+                  <p className="text-white/60">Avg Latency</p>
+                </div>
+                <div className="feature-card text-center">
+                  <i data-lucide="shield-check" className="w-8 h-8 text-blue-400 mx-auto mb-3"></i>
+                  <div className="text-2xl font-bold text-blue-400 mb-2">99.8%</div>
+                  <p className="text-white/60">Uptime</p>
+                </div>
+              </div>
+                </div>
+                </div>
+                </div>
+      );
+    }
+
+    function RoadmapSection() {
+      return (
+        <div className="space-y-12">
+          <div className="card p-8">
+            <h2 className="section-title">
+              <i data-lucide="map" className="w-10 h-10 text-emerald-400"></i>
+              Development Roadmap
+              </h2>
+                
+            <div className="space-y-8">
+              {/* Q1 2025 */}
+                  <div>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="px-4 py-2 bg-emerald-500/20 rounded-lg border border-emerald-500/30">
+                    <span className="font-bold text-emerald-400">Q1 2025</span>
+                  </div>
+                  <div className="flex-1 h-px bg-emerald-500/30"></div>
+                  <span className="text-emerald-400 font-bold">✓ COMPLETED</span>
+                    </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="feature-card">
+                    <div className="flex items-center gap-2 mb-2">
+                      <i data-lucide="check-circle" className="w-5 h-5 text-emerald-400"></i>
+                      <span className="font-bold">Launch on Solana Mainnet</span>
+                </div>
+                    <p className="text-sm text-white/60">$WHISTLE token deployed & verified</p>
+                  </div>
+                  <div className="feature-card">
+                    <div className="flex items-center gap-2 mb-2">
+                      <i data-lucide="check-circle" className="w-5 h-5 text-emerald-400"></i>
+                      <span className="font-bold">Privacy Tools Lab</span>
+                  </div>
+                    <p className="text-sm text-white/60">15+ tools for encryption & privacy</p>
+                </div>
+                  <div className="feature-card">
+                    <div className="flex items-center gap-2 mb-2">
+                      <i data-lucide="check-circle" className="w-5 h-5 text-emerald-400"></i>
+                      <span className="font-bold">Node Network Launch</span>
+              </div>
+                    <p className="text-sm text-white/60">10 bootstrap nodes + user nodes</p>
+                  </div>
+                  <div className="feature-card">
+                    <div className="flex items-center gap-2 mb-2">
+                      <i data-lucide="check-circle" className="w-5 h-5 text-emerald-400"></i>
+                      <span className="font-bold">Ghost Calls (Beta)</span>
+                </div>
+                    <p className="text-sm text-white/60">P2P encrypted voice/video</p>
+            </div>
+          </div>
+                </div>
+                
+              {/* Q2 2025 */}
+                  <div>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="px-4 py-2 bg-cyan-500/20 rounded-lg border border-cyan-500/30">
+                    <span className="font-bold text-cyan-400">Q2 2025</span>
+              </div>
+                  <div className="flex-1 h-px bg-cyan-500/30"></div>
+                  <span className="text-cyan-400 font-bold">IN PROGRESS</span>
+                    </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="feature-card">
+                    <div className="flex items-center gap-2 mb-2">
+                      <i data-lucide="loader" className="w-5 h-5 text-cyan-400"></i>
+                      <span className="font-bold">Mobile Apps</span>
+                </div>
+                    <p className="text-sm text-white/60">iOS & Android native apps</p>
+            </div>
+                  <div className="feature-card">
+                    <div className="flex items-center gap-2 mb-2">
+                      <i data-lucide="loader" className="w-5 h-5 text-cyan-400"></i>
+                      <span className="font-bold">Enhanced Anonymity</span>
+                    </div>
+                    <p className="text-sm text-white/60">Multi-hop onion routing</p>
+          </div>
+                  <div className="feature-card">
+                    <div className="flex items-center gap-2 mb-2">
+                      <i data-lucide="loader" className="w-5 h-5 text-cyan-400"></i>
+                      <span className="font-bold">Decentralized Storage</span>
+                </div>
+                    <p className="text-sm text-white/60">Erasure-coded file storage</p>
+                </div>
+                  <div className="feature-card">
+                    <div className="flex items-center gap-2 mb-2">
+                      <i data-lucide="loader" className="w-5 h-5 text-cyan-400"></i>
+                      <span className="font-bold">Governance Launch</span>
+          </div>
+                    <p className="text-sm text-white/60">Community voting on proposals</p>
+                </div>
+                </div>
+                  </div>
+                  
+              {/* Q3-Q4 2025 */}
+                  <div>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="px-4 py-2 bg-blue-500/20 rounded-lg border border-blue-500/30">
+                    <span className="font-bold text-blue-400">Q3-Q4 2025</span>
+                  </div>
+                  <div className="flex-1 h-px bg-blue-500/30"></div>
+                  <span className="text-blue-400 font-bold">PLANNED</span>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="feature-card">
+                    <div className="flex items-center gap-2 mb-2">
+                      <i data-lucide="circle" className="w-5 h-5 text-blue-400"></i>
+                      <span className="font-bold">Cross-Chain Privacy</span>
+              </div>
+                    <p className="text-sm text-white/60">Bridge to Ethereum, BSC, etc.</p>
+                  </div>
+                  <div className="feature-card">
+                    <div className="flex items-center gap-2 mb-2">
+                      <i data-lucide="circle" className="w-5 h-5 text-blue-400"></i>
+                      <span className="font-bold">Zero-Knowledge Proofs</span>
+                  </div>
+                    <p className="text-sm text-white/60">ZK-SNARKs for enhanced privacy</p>
+                </div>
+                  <div className="feature-card">
+                    <div className="flex items-center gap-2 mb-2">
+                      <i data-lucide="circle" className="w-5 h-5 text-blue-400"></i>
+                      <span className="font-bold">Tor Integration</span>
+              </div>
+                    <p className="text-sm text-white/60">Native Tor support for true anonymity</p>
+                  </div>
+                  <div className="feature-card">
+                    <div className="flex items-center gap-2 mb-2">
+                      <i data-lucide="circle" className="w-5 h-5 text-blue-400"></i>
+                      <span className="font-bold">Privacy Marketplace</span>
+                </div>
+                    <p className="text-sm text-white/60">Buy/sell privacy services with $WHISTLE</p>
+                </div>
+                  </div>
+                  </div>
+          </div>
+          
+            {/* Vision */}
+            <div className="mt-12 p-8 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border border-emerald-500/20">
+              <h3 className="text-2xl font-bold mb-4 text-emerald-400">Long-Term Vision</h3>
+              <p className="text-lg text-white/80 leading-relaxed">
+                WHISTLE aims to become the <span className="text-emerald-400 font-bold">default privacy infrastructure</span> for Web3. A decentralized, censorship-resistant network that makes privacy accessible to everyone, not just technical users. We're building the tools for a free and private internet.
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
     
-    ReactDOM.render(<WhitepaperApp />, document.getElementById('root'));
-  </script>
-  
-  <script>
-    // Initialize Lucide icons after React renders
-    setTimeout(() => {
-      if (window.lucide) window.lucide.createIcons();
-    }, 100);
-    
-    // Re-initialize on any dynamic content changes
-    const observer = new MutationObserver(() => {
-      if (window.lucide) window.lucide.createIcons();
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
+    // Render
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<Whitepaper />);
   </script>
 </body>
 </html>
