@@ -21750,16 +21750,34 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [isInitiator, setIsInitiator] = useState(false);
       const [audioBlocked, setAudioBlocked] = useState(false);
       const [iceCandidateQueue, setIceCandidateQueue] = useState([]);
+      const [connectionAttempts, setConnectionAttempts] = useState(0);
       
-      // WebRTC Configuration
+      // WebRTC Configuration with TURN fallback
       const rtcConfig = {
         iceServers: [
+          // Google STUN servers
           { urls: 'stun:stun.l.google.com:19302' },
           { urls: 'stun:stun1.l.google.com:19302' },
           { urls: 'stun:stun2.l.google.com:19302' },
-          { urls: 'stun:stun3.l.google.com:19302' },
-          { urls: 'stun:stun4.l.google.com:19302' }
-        ]
+          // Free TURN servers (fallback when direct connection fails)
+          {
+            urls: 'turn:openrelay.metered.ca:80',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+          },
+          {
+            urls: 'turn:openrelay.metered.ca:443',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+          },
+          {
+            urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+          }
+        ],
+        iceTransportPolicy: 'all', // Try all connection types
+        iceCandidatePoolSize: 10 // Gather more candidates
       };
 
       // Format timer
@@ -21901,13 +21919,19 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         
         // Handle ICE candidates
         pc.onicecandidate = (event) => {
-          if (event.candidate && socket) {
-            console.log('📤 Sending ICE candidate');
-            socket.send(JSON.stringify({
-              type: 'ice-candidate',
-              callId: room,
-              candidate: event.candidate
-            }));
+          if (event.candidate) {
+            console.log('📤 ICE candidate:', event.candidate.type, event.candidate.protocol);
+            if (socket && socket.readyState === WebSocket.OPEN) {
+              socket.send(JSON.stringify({
+                type: 'ice-candidate',
+                callId: room,
+                candidate: event.candidate
+              }));
+            } else {
+              console.warn('⚠️ Cannot send ICE candidate - socket not ready');
+            }
+          } else {
+            console.log('✅ All ICE candidates gathered');
           }
         };
         
@@ -21928,6 +21952,35 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         // Handle ICE connection state
         pc.oniceconnectionstatechange = () => {
           console.log('🧊 ICE state:', pc.iceConnectionState);
+          
+          switch (pc.iceConnectionState) {
+            case 'checking':
+              console.log('🔍 Checking connectivity...');
+              break;
+            case 'connected':
+              console.log('✅ ICE connected - using direct P2P');
+              pushToast('✅ Direct connection established!', 'ok');
+              break;
+            case 'completed':
+              console.log('✅ ICE completed - connection stable');
+              break;
+            case 'failed':
+              console.error('❌ ICE connection failed - trying TURN relay...');
+              pushToast('⚠️ Direct connection failed, using relay server...', 'err');
+              // ICE restart to try TURN servers
+              if (pc.restartIce) {
+                pc.restartIce();
+                console.log('🔄 Restarting ICE with TURN servers');
+              }
+              break;
+            case 'disconnected':
+              console.warn('⚠️ ICE disconnected - attempting reconnect...');
+              pushToast('⚠️ Connection lost, reconnecting...', 'err');
+              break;
+            case 'closed':
+              console.log('🔌 ICE closed');
+              break;
+          }
         };
         
         setPeerConnection(pc);
@@ -22335,6 +22388,29 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         }
         return () => clearInterval(interval);
       }, [callState]);
+
+      // Connection timeout monitor
+      useEffect(() => {
+        let timeout;
+        if (callState === 'calling') {
+          timeout = setTimeout(() => {
+            console.error('⏱️ Connection timeout - taking too long to connect');
+            pushToast('⏱️ Connection timeout. Try again or check your network.', 'err');
+            if (connectionAttempts < 2) {
+              console.log(`🔄 Retry attempt ${connectionAttempts + 1}/2`);
+              setConnectionAttempts(prev => prev + 1);
+              // Retry will be handled by re-creating peer connection
+            } else {
+              console.log('❌ Max retry attempts reached');
+              pushToast('❌ Unable to connect. Please try again later.', 'err');
+              endCall();
+            }
+          }, 30000); // 30 second timeout
+        } else {
+          setConnectionAttempts(0); // Reset on successful connection or end
+        }
+        return () => clearTimeout(timeout);
+      }, [callState, connectionAttempts]);
 
       return (
         <div className="min-h-screen" style={{
