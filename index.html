@@ -21751,6 +21751,9 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
       const [audioBlocked, setAudioBlocked] = useState(false);
       const [iceCandidateQueue, setIceCandidateQueue] = useState([]);
       const [connectionAttempts, setConnectionAttempts] = useState(0);
+      const [voiceEffect, setVoiceEffect] = useState('none');
+      const [audioContext, setAudioContext] = useState(null);
+      const [processedStream, setProcessedStream] = useState(null);
       
       // WebRTC Configuration with TURN fallback
       const rtcConfig = {
@@ -21787,6 +21790,125 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         return `${mins}:${secs.toString().padStart(2, '0')}`;
       };
 
+      // Apply voice effect to audio stream
+      const applyVoiceEffect = (stream, effect) => {
+        if (effect === 'none' || !stream) {
+          return stream;
+        }
+
+        try {
+          // Create audio context
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          setAudioContext(ctx);
+
+          // Create source from stream
+          const source = ctx.createMediaStreamSource(stream);
+          const destination = ctx.createMediaStreamDestination();
+
+          // Apply different effects based on selection
+          switch (effect) {
+            case 'deep': {
+              // Deep voice (lower pitch)
+              const pitchShift = ctx.createBiquadFilter();
+              pitchShift.type = 'lowpass';
+              pitchShift.frequency.value = 1000;
+              source.connect(pitchShift);
+              pitchShift.connect(destination);
+              break;
+            }
+            case 'high': {
+              // High voice (chipmunk)
+              const pitchShift = ctx.createBiquadFilter();
+              pitchShift.type = 'highpass';
+              pitchShift.frequency.value = 2000;
+              source.connect(pitchShift);
+              pitchShift.connect(destination);
+              break;
+            }
+            case 'robot': {
+              // Robot voice
+              const distortion = ctx.createWaveShaper();
+              const amount = 50;
+              const curve = new Float32Array(44100);
+              const deg = Math.PI / 180;
+              for (let i = 0; i < 44100; i++) {
+                const x = (i * 2) / 44100 - 1;
+                curve[i] = ((3 + amount) * x * 20 * deg) / (Math.PI + amount * Math.abs(x));
+              }
+              distortion.curve = curve;
+              distortion.oversample = '4x';
+              source.connect(distortion);
+              distortion.connect(destination);
+              break;
+            }
+            case 'echo': {
+              // Echo effect
+              const delay = ctx.createDelay();
+              delay.delayTime.value = 0.3;
+              const feedback = ctx.createGain();
+              feedback.gain.value = 0.4;
+              source.connect(delay);
+              delay.connect(feedback);
+              feedback.connect(delay);
+              delay.connect(destination);
+              source.connect(destination);
+              break;
+            }
+            case 'alien': {
+              // Alien voice (ring modulator effect)
+              const oscillator = ctx.createOscillator();
+              oscillator.frequency.value = 30;
+              const gain = ctx.createGain();
+              gain.gain.value = 0.5;
+              oscillator.connect(gain);
+              source.connect(gain);
+              gain.connect(destination);
+              oscillator.start();
+              break;
+            }
+            default:
+              source.connect(destination);
+          }
+
+          const processed = destination.stream;
+          setProcessedStream(processed);
+          console.log(`🎤 Voice effect applied: ${effect}`);
+          return processed;
+        } catch (error) {
+          console.error('❌ Error applying voice effect:', error);
+          return stream;
+        }
+      };
+
+      // Change voice effect during call
+      const changeVoiceEffect = (effect) => {
+        setVoiceEffect(effect);
+        
+        if (localStream && peerConnection && callState === 'active') {
+          // Apply new effect
+          const newStream = applyVoiceEffect(localStream, effect);
+          
+          // Replace audio tracks in peer connection
+          const audioTrack = newStream.getAudioTracks()[0];
+          const senders = peerConnection.getSenders();
+          const audioSender = senders.find(sender => sender.track && sender.track.kind === 'audio');
+          
+          if (audioSender && audioTrack) {
+            audioSender.replaceTrack(audioTrack)
+              .then(() => {
+                console.log('✅ Voice effect changed:', effect);
+                pushToast(`🎤 Voice effect: ${effect}`, 'ok');
+              })
+              .catch(err => {
+                console.error('❌ Failed to change voice effect:', err);
+                pushToast('❌ Failed to change voice effect', 'err');
+              });
+          }
+        } else {
+          pushToast(`🎤 Voice effect will apply: ${effect}`, 'info');
+        }
+      };
+
       // Initialize media devices
       const startMedia = async (type = 'audio') => {
         try {
@@ -21810,10 +21932,13 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           console.log('✅ Media stream acquired');
           console.log('📊 Stream tracks:', stream.getTracks().map(t => `${t.kind} - enabled: ${t.enabled}, readyState: ${t.readyState}`));
           
+          // Apply voice effect if selected
+          const finalStream = voiceEffect !== 'none' ? applyVoiceEffect(stream, voiceEffect) : stream;
+          
           // Video will be attached via ref in the UI component
           
           pushToast(`✅ ${type === 'video' ? 'Camera & Mic' : 'Microphone'} ready`, 'ok');
-          return stream;
+          return finalStream;
         } catch (error) {
           console.error('Media access error:', error);
           
@@ -22249,6 +22374,16 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           localStream.getTracks().forEach(track => track.stop());
         }
         
+        // Stop processed stream tracks
+        if (processedStream) {
+          processedStream.getTracks().forEach(track => track.stop());
+        }
+        
+        // Close audio context
+        if (audioContext) {
+          audioContext.close().catch(err => console.log('Audio context close error:', err));
+        }
+        
         // Close peer connection
         if (peerConnection) {
           peerConnection.close();
@@ -22273,6 +22408,9 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         setCallLink('');
         setJoinCallInput('');
         setIsInitiator(false);
+        setVoiceEffect('none');
+        setAudioContext(null);
+        setProcessedStream(null);
         
         pushToast('📞 Call ended', 'info');
       };
@@ -22814,6 +22952,58 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                           {audioBlocked ? 'BLOCKED - CLICK BUTTON' : 'ENABLED'}
                         </span>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Voice Changer */}
+                  <div className="mb-8 p-6 rounded-xl bg-purple-500/5 border border-purple-500/20">
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="text-purple-400 font-mono text-sm font-bold">🎭 VOICE_CHANGER</span>
+                      <span className="ml-auto text-purple-400/60 font-mono text-xs uppercase">{voiceEffect}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        onClick={() => changeVoiceEffect('none')}
+                        className={`p-3 rounded-lg border transition-all ${voiceEffect === 'none' ? 'bg-purple-500 border-purple-400 text-white' : 'bg-black/40 border-purple-500/30 text-purple-400 hover:border-purple-400'}`}
+                      >
+                        <div className="text-2xl mb-1">🎤</div>
+                        <div className="text-xs font-mono">Normal</div>
+                      </button>
+                      <button
+                        onClick={() => changeVoiceEffect('deep')}
+                        className={`p-3 rounded-lg border transition-all ${voiceEffect === 'deep' ? 'bg-purple-500 border-purple-400 text-white' : 'bg-black/40 border-purple-500/30 text-purple-400 hover:border-purple-400'}`}
+                      >
+                        <div className="text-2xl mb-1">🐻</div>
+                        <div className="text-xs font-mono">Deep</div>
+                      </button>
+                      <button
+                        onClick={() => changeVoiceEffect('high')}
+                        className={`p-3 rounded-lg border transition-all ${voiceEffect === 'high' ? 'bg-purple-500 border-purple-400 text-white' : 'bg-black/40 border-purple-500/30 text-purple-400 hover:border-purple-400'}`}
+                      >
+                        <div className="text-2xl mb-1">🐿️</div>
+                        <div className="text-xs font-mono">High</div>
+                      </button>
+                      <button
+                        onClick={() => changeVoiceEffect('robot')}
+                        className={`p-3 rounded-lg border transition-all ${voiceEffect === 'robot' ? 'bg-purple-500 border-purple-400 text-white' : 'bg-black/40 border-purple-500/30 text-purple-400 hover:border-purple-400'}`}
+                      >
+                        <div className="text-2xl mb-1">🤖</div>
+                        <div className="text-xs font-mono">Robot</div>
+                      </button>
+                      <button
+                        onClick={() => changeVoiceEffect('echo')}
+                        className={`p-3 rounded-lg border transition-all ${voiceEffect === 'echo' ? 'bg-purple-500 border-purple-400 text-white' : 'bg-black/40 border-purple-500/30 text-purple-400 hover:border-purple-400'}`}
+                      >
+                        <div className="text-2xl mb-1">🔊</div>
+                        <div className="text-xs font-mono">Echo</div>
+                      </button>
+                      <button
+                        onClick={() => changeVoiceEffect('alien')}
+                        className={`p-3 rounded-lg border transition-all ${voiceEffect === 'alien' ? 'bg-purple-500 border-purple-400 text-white' : 'bg-black/40 border-purple-500/30 text-purple-400 hover:border-purple-400'}`}
+                      >
+                        <div className="text-2xl mb-1">👽</div>
+                        <div className="text-xs font-mono">Alien</div>
+                      </button>
                     </div>
                   </div>
 
