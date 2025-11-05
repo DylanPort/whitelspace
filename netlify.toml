@@ -77,6 +77,6 @@
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "no-referrer"
-    Permissions-Policy = "camera=(self), microphone=(self), display-capture=(self), geolocation=()"
+    Permissions-Policy = "camera=*, microphone=*, display-capture=*, geolocation=()"
 
 
