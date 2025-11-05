@@ -22216,6 +22216,9 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
               }));
               
               pushToast('✅ Answer sent, connecting...', 'info');
+              
+              // Store peer connection for state tracking
+              setPeerConnection(pc);
             } else if (data.type === 'ice-candidate') {
               console.log('📥 Received ICE candidate');
               try {
@@ -22343,8 +22346,10 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   }));
                   
                   console.log('📤 Sent answer');
-                  pushToast('📞 Connected! Call started.', 'ok');
-                  setCallState('active');
+                  pushToast('📞 Answer sent, connecting...', 'info');
+                  
+                  // Store peer connection for state tracking
+                  setPeerConnection(pc);
                 } else if (data.type === 'ice-candidate' && data.candidate) {
                   console.log('📥 Received ICE candidate (joiner)');
                   try {
