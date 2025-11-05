@@ -22065,7 +22065,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
               ws.send(JSON.stringify({
                 type: 'offer',
                 callId: newCallId,
-                offer: offer
+                offer: offer,
+                callType: type // Include call type in offer
               }));
               
               console.log('📤 Sent offer');
@@ -22156,13 +22157,9 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           setCallId(extractedCallId);
           setIsInitiator(false);
           
-          // Always request video+audio when joining (user can toggle off if needed)
-          // This ensures video calls work properly
-          const type = 'video';
-          setCallType(type);
-          
-          // Get media with video
-          await startMedia(type);
+          // DON'T get media yet - wait for offer to know call type
+          // Media will be requested after receiving offer with callType
+          console.log('⏳ Waiting for offer to determine call type...');
           
           setCallState('calling');
           pushToast('✅ Connecting to peer...', 'info');
@@ -22170,8 +22167,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           // Connect to signaling server
           const ws = await connectSignaling(extractedCallId);
           
-          // Create peer connection
-          const pc = createPeerConnection();
+          let pc;
           
           // Set up signaling message handler
           ws.onmessage = async (event) => {
@@ -22179,7 +22175,18 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             console.log('📨 Signaling message:', data.type);
             
             if (data.type === 'offer') {
-              console.log('📥 Received offer, creating answer...');
+              console.log('📥 Received offer');
+              
+              // Extract call type from offer
+              const incomingCallType = data.callType || 'audio';
+              console.log(`📞 Call type: ${incomingCallType}`);
+              setCallType(incomingCallType);
+              
+              // Now get media with the correct type
+              const stream = await startMedia(incomingCallType);
+              
+              // Create peer connection with media
+              pc = createPeerConnection(stream, ws, extractedCallId);
               
               // Set remote description (offer)
               await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
@@ -22281,28 +22288,34 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
               pushToast('📞 Joining call from link...', 'info');
               setCallId(callParam);
               setIsInitiator(false);
-              setCallType('audio');
-              
-              // Get media first
-              const stream = await startMedia('audio');
-              console.log('✅ Media stream obtained:', stream.id);
               
               // Connect to signaling server
               const ws = await connectSignaling(callParam);
               setSignalingSocket(ws);
               console.log('✅ Signaling socket connected');
               
-              // Create peer connection with explicit stream, socket, and callId
-              const pc = createPeerConnection(stream, ws, callParam);
-              console.log('✅ Peer connection created');
+              let pc;
               
               // Set up signaling message handler
               ws.onmessage = async (event) => {
                 const data = JSON.parse(event.data);
-                console.log('📨 Signaling message (joiner):', data.type);
+                console.log('📨 Signaling message (auto-join):', data.type);
                 
                 if (data.type === 'offer') {
-                  console.log('📥 Received offer, creating answer...');
+                  console.log('📥 Received offer');
+                  
+                  // Extract call type from offer
+                  const incomingCallType = data.callType || 'audio';
+                  console.log(`📞 Auto-join detected call type: ${incomingCallType}`);
+                  setCallType(incomingCallType);
+                  
+                  // Get media with correct type
+                  const stream = await startMedia(incomingCallType);
+                  console.log('✅ Media stream obtained:', stream.id);
+                  
+                  // Create peer connection with media
+                  pc = createPeerConnection(stream, ws, callParam);
+                  console.log('✅ Peer connection created');
                   
                   await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
                   
