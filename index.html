@@ -21808,21 +21808,57 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           // Apply different effects based on selection
           switch (effect) {
             case 'deep': {
-              // Deep voice (lower pitch)
-              const pitchShift = ctx.createBiquadFilter();
-              pitchShift.type = 'lowpass';
-              pitchShift.frequency.value = 1000;
-              source.connect(pitchShift);
-              pitchShift.connect(destination);
+              // VERY Deep voice (extreme bass)
+              const lowpass1 = ctx.createBiquadFilter();
+              lowpass1.type = 'lowpass';
+              lowpass1.frequency.value = 400; // Much lower frequency
+              lowpass1.Q.value = 5; // High resonance
+              
+              const lowpass2 = ctx.createBiquadFilter();
+              lowpass2.type = 'lowpass';
+              lowpass2.frequency.value = 600;
+              lowpass2.Q.value = 3;
+              
+              const bassBoost = ctx.createBiquadFilter();
+              bassBoost.type = 'lowshelf';
+              bassBoost.frequency.value = 200;
+              bassBoost.gain.value = 15; // Heavy bass boost
+              
+              const gain = ctx.createGain();
+              gain.gain.value = 2.0; // Amplify
+              
+              source.connect(lowpass1);
+              lowpass1.connect(lowpass2);
+              lowpass2.connect(bassBoost);
+              bassBoost.connect(gain);
+              gain.connect(destination);
               break;
             }
             case 'high': {
-              // High voice (chipmunk)
-              const pitchShift = ctx.createBiquadFilter();
-              pitchShift.type = 'highpass';
-              pitchShift.frequency.value = 2000;
-              source.connect(pitchShift);
-              pitchShift.connect(destination);
+              // VERY High voice (extreme chipmunk)
+              const highpass1 = ctx.createBiquadFilter();
+              highpass1.type = 'highpass';
+              highpass1.frequency.value = 2500; // Much higher frequency
+              highpass1.Q.value = 5; // High resonance
+              
+              const highpass2 = ctx.createBiquadFilter();
+              highpass2.type = 'highpass';
+              highpass2.frequency.value = 3500;
+              highpass2.Q.value = 3;
+              
+              const trebleBoost = ctx.createBiquadFilter();
+              trebleBoost.type = 'highshelf';
+              trebleBoost.frequency.value = 4000;
+              trebleBoost.gain.value = 18; // Heavy treble boost
+              
+              const gain = ctx.createGain();
+              gain.gain.value = 2.5; // Extra amplify for high frequencies
+              
+              source.connect(highpass1);
+              highpass1.connect(highpass2);
+              highpass2.connect(trebleBoost);
+              trebleBoost.connect(gain);
+              gain.connect(destination);
               break;
             }
             case 'robot': {
