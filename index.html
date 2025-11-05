@@ -21792,13 +21792,9 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           console.log('✅ Media stream acquired');
           console.log('📊 Stream tracks:', stream.getTracks().map(t => `${t.kind} - enabled: ${t.enabled}, readyState: ${t.readyState}`));
           
-          // Attach to local video element
-          setTimeout(() => {
-            const localVideo = document.getElementById('local-video');
-            if (localVideo) localVideo.srcObject = stream;
-          }, 100);
+          // Video will be attached via ref in the UI component
           
-          pushToast(`✅ ${type === 'video' ? 'Camera' : 'Microphone'} ready`, 'ok');
+          pushToast(`✅ ${type === 'video' ? 'Camera & Mic' : 'Microphone'} ready`, 'ok');
           return stream;
         } catch (error) {
           console.error('Media access error:', error);
@@ -21850,10 +21846,9 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           });
           setRemoteStream(event.streams[0]);
           
-          // Attach to remote audio/video element
+          // Attach to remote audio element
           setTimeout(() => {
             const remoteAudio = document.getElementById('remote-audio');
-            const remoteVideo = document.getElementById('remote-video');
             
             if (event.streams[0]) {
               // Always attach audio
@@ -21902,12 +21897,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 console.error('❌ Remote audio element not found!');
               }
               
-              // Attach video if video call
-              if (remoteVideo) {
-                remoteVideo.srcObject = event.streams[0];
-                remoteVideo.play().catch(e => console.log('Video autoplay prevented:', e));
-                console.log('✅ Remote video attached');
-              }
+              // Video will be attached via ref in the UI component
             }
           }, 100);
         };
@@ -22116,11 +22106,12 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           setCallId(extractedCallId);
           setIsInitiator(false);
           
-          // Determine call type (default to audio)
-          const type = 'audio';
+          // Always request video+audio when joining (user can toggle off if needed)
+          // This ensures video calls work properly
+          const type = 'video';
           setCallType(type);
           
-          // Get media
+          // Get media with video
           await startMedia(type);
           
           setCallState('calling');
@@ -22352,24 +22343,11 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         <div className="min-h-screen" style={{
           background: 'linear-gradient(135deg, #0a0e14 0%, #1a1f2e 50%, #0f1419 100%)',
         }}>
-          {/* Hidden Audio/Video Elements - ALWAYS PRESENT */}
+          {/* Audio/Video Elements - ALWAYS PRESENT */}
           <audio 
             id="remote-audio" 
             autoPlay 
             playsInline 
-            style={{ display: 'none' }}
-          />
-          <video 
-            id="remote-video" 
-            autoPlay 
-            playsInline 
-            style={{ display: 'none' }}
-          />
-          <video 
-            id="local-video" 
-            autoPlay 
-            playsInline 
-            muted 
             style={{ display: 'none' }}
           />
           
@@ -22647,24 +22625,43 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                     <div className="grid grid-cols-2 gap-4 mb-8">
                       <div className="relative aspect-video bg-black/60 rounded-xl overflow-hidden border border-emerald-500/30">
                         <video
-                          id="local-video"
+                          ref={(el) => {
+                            if (el && localStream) {
+                              el.srcObject = localStream;
+                            }
+                          }}
                           autoPlay
                           muted
                           playsInline
                           className="w-full h-full object-cover"
+                          style={{ transform: isVideoOff ? 'none' : 'scaleX(-1)' }}
                         />
+                        {isVideoOff && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+                            <span className="text-white/60 font-mono text-sm">📹 VIDEO OFF</span>
+                          </div>
+                        )}
                         <div className="absolute bottom-2 left-2 bg-black/70 px-2 py-1 rounded text-xs text-white/80 font-mono">
-                          YOU
+                          YOU {isMuted && '🔇'}
                         </div>
                       </div>
                       
                       <div className="relative aspect-video bg-black/60 rounded-xl overflow-hidden border border-cyan-500/30">
                         <video
-                          id="remote-video"
+                          ref={(el) => {
+                            if (el && remoteStream) {
+                              el.srcObject = remoteStream;
+                            }
+                          }}
                           autoPlay
                           playsInline
                           className="w-full h-full object-cover"
                         />
+                        {remoteStream && remoteStream.getVideoTracks().length === 0 && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+                            <span className="text-white/60 font-mono text-sm">📹 PEER VIDEO OFF</span>
+                          </div>
+                        )}
                         <div className="absolute bottom-2 left-2 bg-black/70 px-2 py-1 rounded text-xs text-white/80 font-mono">
                           PEER
                         </div>
