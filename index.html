@@ -22188,6 +22188,9 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
               // Create peer connection with media
               pc = createPeerConnection(stream, ws, extractedCallId);
               
+              // Store peer connection IMMEDIATELY for state tracking
+              setPeerConnection(pc);
+              
               // Set remote description (offer)
               await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
               
@@ -22216,9 +22219,6 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
               }));
               
               pushToast('✅ Answer sent, connecting...', 'info');
-              
-              // Store peer connection for state tracking
-              setPeerConnection(pc);
             } else if (data.type === 'ice-candidate') {
               console.log('📥 Received ICE candidate');
               try {
@@ -22320,6 +22320,9 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   pc = createPeerConnection(stream, ws, callParam);
                   console.log('✅ Peer connection created');
                   
+                  // Store peer connection IMMEDIATELY for state tracking
+                  setPeerConnection(pc);
+                  
                   await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
                   
                   // Process queued ICE candidates
@@ -22347,9 +22350,6 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   
                   console.log('📤 Sent answer');
                   pushToast('📞 Answer sent, connecting...', 'info');
-                  
-                  // Store peer connection for state tracking
-                  setPeerConnection(pc);
                 } else if (data.type === 'ice-candidate' && data.candidate) {
                   console.log('📥 Received ICE candidate (joiner)');
                   try {
