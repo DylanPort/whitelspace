@@ -10972,7 +10972,7 @@ console.log('✅ Fingerprint spoofing active!');`;
                   <button onClick={()=>{
                   console.log('🎯 Sidebar clicked:', x.id);
                   if (x.id === 'cryptwhistle-ai') {
-                    window.open('http://localhost:3001/cryptwhistle', '_blank');
+                    window.open(`${window.location.origin}/cryptwhistle`, '_blank');
                   } else if (x.id === 'how-it-works') {
                     window.open('/howto', '_blank');
                     } else if (x.id === 'privacy-tools') {
