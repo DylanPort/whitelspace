@@ -636,9 +636,9 @@
     .animate-shimmer{animation:shimmer 3s infinite}
     .animate-shimmer-slide{animation:shimmer-slide 3s linear infinite}
     
-    /* Premium Lab Laser Border */
-    .premium-lab::before{content:'';position:absolute;inset:-1px;border-radius:12px;padding:1px;background:linear-gradient(90deg,rgba(6,182,212,0.4),rgba(251,191,36,0.6),rgba(6,182,212,0.4));background-size:200% 100%;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:laser-border 2s linear infinite;pointer-events:none}
-    .premium-lab-active::before{content:'';position:absolute;inset:-1px;border-radius:12px;padding:2px;background:linear-gradient(90deg,rgba(6,182,212,0.8),rgba(251,191,36,1),rgba(6,182,212,0.8));background-size:200% 100%;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:laser-border 1.5s linear infinite;pointer-events:none}
+    /* Premium Lab Dark Border */
+    .premium-lab::before{content:'';position:absolute;inset:-1px;border-radius:12px;padding:1px;background:linear-gradient(90deg,rgba(255,255,255,0.1),rgba(255,255,255,0.2),rgba(255,255,255,0.1));background-size:200% 100%;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:laser-border 2s linear infinite;pointer-events:none}
+    .premium-lab-active::before{content:'';position:absolute;inset:-1px;border-radius:12px;padding:2px;background:linear-gradient(90deg,rgba(255,255,255,0.15),rgba(255,255,255,0.3),rgba(255,255,255,0.15));background-size:200% 100%;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:laser-border 1.5s linear infinite;pointer-events:none}
     
     .pulse-glow{animation:pulse 2s ease-in-out infinite}
     
@@ -1441,7 +1441,7 @@
         return (
           <div className="flex items-center justify-center p-12">
             <div className="text-white/70">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto mb-4"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white/40 mx-auto mb-4"></div>
               <p>Loading {name}...</p>
             </div>
           </div>
@@ -10993,16 +10993,16 @@ console.log('✅ Fingerprint spoofing active!');`;
                         ? 'relative border-white/10 bg-black/50 backdrop-blur-xl text-white/90 hover:border-white/20 hover:bg-black/60 hover:shadow-2xl hover:shadow-black/50 hover:scale-[1.03]'
                       : isPremiumLab
                         ? isActive
-                          ? 'premium-lab-active relative border-transparent bg-gradient-to-r from-cyan-600/30 via-amber-600/30 to-cyan-600/30 text-white shadow-lg shadow-cyan-500/40 animate-pulse'
-                          : 'premium-lab relative border-transparent bg-gradient-to-r from-cyan-500/20 via-amber-500/20 to-cyan-500/20 text-amber-100 hover:shadow-2xl hover:shadow-amber-500/40 hover:scale-[1.05]'
+                          ? 'premium-lab-active relative border-white/30 bg-white/[0.08] text-white shadow-lg shadow-black/40 animate-pulse'
+                          : 'premium-lab relative border-white/20 bg-white/[0.04] text-white/90 hover:shadow-2xl hover:shadow-black/60 hover:scale-[1.05]'
                       : isGhostWhistle 
                         ? (isActive || isGhostWhistleItemActive)
-                          ? 'relative border-emerald-400/60 bg-gradient-to-r from-emerald-400/20 via-teal-400/20 to-cyan-400/20 text-white shadow-lg shadow-emerald-500/30 animate-pulse'
-                          : 'relative border-emerald-500/40 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-cyan-500/10 text-emerald-100 hover:border-emerald-400/60 hover:shadow-lg hover:shadow-emerald-500/20 hover:scale-[1.03] animate-shimmer'
+                          ? 'relative border-white/30 bg-white/[0.08] text-white shadow-lg shadow-black/40 animate-pulse'
+                          : 'relative border-white/15 bg-white/[0.04] text-white/85 hover:border-white/25 hover:shadow-lg hover:shadow-black/30 hover:scale-[1.03]'
                       : isPrivacyTools && (isActive || isPrivacyToolActive)
-                        ? 'border-slate-400/60 bg-slate-400/15 text-slate-100'
+                        ? 'border-white/30 bg-white/[0.08] text-white'
                         : isActive
-                          ? 'border-cyan-400/60 bg-cyan-400/15 text-cyan-100 scale-in'
+                          ? 'border-white/30 bg-white/[0.08] text-white scale-in'
                           : 'border-white/10 bg-white/[0.03] text-white/80 hover:bg-white/[0.07] hover:scale-[1.02]'
                     } stagger-${i+1}`}>
                     <span className="relative z-10 flex items-center gap-3 w-full">
@@ -11017,19 +11017,19 @@ console.log('✅ Fingerprint spoofing active!');`;
                       </span>
                       <span className={isSpecial ? 'font-bold' : ''}>{x.label}</span>
                         <div className="ml-auto flex items-center gap-2">
-                          {isPremiumLab && (
-                            <span className="text-[11px] px-2.5 py-1 rounded-md bg-gradient-to-r from-amber-500/40 to-yellow-500/40 text-amber-100 font-black tracking-tight border border-amber-400/60 shadow-lg shadow-amber-500/30 animate-pulse">
-                              $500
-                            </span>
-                          )}
-                          {x.isNew && !isPremiumLab && (
-                            <span className="text-[9px] px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-300 font-semibold uppercase tracking-wider border border-blue-400/30">
-                            NEW
+                        {isPremiumLab && (
+                          <span className="text-[11px] px-2.5 py-1 rounded-md bg-white/10 text-white font-black tracking-tight border border-white/20 shadow-lg shadow-black/30 animate-pulse">
+                            $500
                           </span>
                         )}
+                        {x.isNew && !isPremiumLab && (
+                          <span className="text-[9px] px-2 py-0.5 rounded-md bg-white/10 text-white/80 font-semibold uppercase tracking-wider border border-white/20">
+                          NEW
+                        </span>
+                      )}
                       {isGhostWhistle && (
                             <>
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 font-bold uppercase tracking-wider border border-emerald-400/40">
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/80 font-bold uppercase tracking-wider border border-white/20">
                                 Earn
                               </span>
                               <i data-lucide={ghostWhistleExpanded ? 'chevron-down' : 'chevron-right'} className="w-4 h-4"></i>
@@ -11063,31 +11063,15 @@ console.log('✅ Fingerprint spoofing active!');`;
                               setStep(item.id);
                             }}
                             className={`w-full flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-all ${
-                              isAnonymousRelayItem
-                                ? isItemActive
-                                  ? 'bg-gradient-to-r from-amber-400/20 via-orange-400/20 to-yellow-400/20 text-amber-100 border border-amber-400/40 shadow-lg shadow-amber-500/20'
-                                  : 'bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-yellow-500/10 text-amber-200 hover:bg-amber-500/15 border border-amber-500/30'
-                                : isClaimRewards
-                                ? isItemActive
-                                  ? 'bg-yellow-500/20 text-yellow-100 border border-yellow-400/40'
-                                  : 'bg-yellow-500/10 text-yellow-200 hover:bg-yellow-500/15 border border-yellow-500/20'
-                                : isGhostTerminal
-                                ? isItemActive
-                                  ? 'bg-cyan-500/20 text-cyan-100 border border-cyan-400/40'
-                                  : 'bg-cyan-500/10 text-cyan-200 hover:bg-cyan-500/15 border border-cyan-500/20'
-                                : isGhostServices
-                                ? isItemActive
-                                  ? 'bg-purple-500/20 text-purple-100 border border-purple-400/40'
-                                  : 'bg-purple-500/10 text-purple-200 hover:bg-purple-500/15 border border-purple-500/20'
-                                : isItemActive
-                                ? 'bg-white/15 text-white border border-white/20'
-                                : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                              isItemActive
+                                ? 'bg-white/15 text-white border border-white/25 shadow-lg shadow-black/30'
+                                : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10 hover:border-white/15'
                             }`}
                           >
                             <i data-lucide={item.icon} className="w-4 h-4"></i>
                             <span>{item.label}</span>
                             {item.isHot && (
-                              <span className="ml-auto text-[8px] px-1.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500/40 to-orange-500/40 text-amber-200 font-bold uppercase animate-pulse">
+                              <span className="ml-auto text-[8px] px-1.5 py-0.5 rounded-full bg-white/15 text-white/90 font-bold uppercase animate-pulse border border-white/25">
                                 HOT
                               </span>
                             )}
@@ -11113,23 +11097,15 @@ console.log('✅ Fingerprint spoofing active!');`;
                               setStep(tool.id);
                             }}
                             className={`w-full flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-all ${
-                              isBreachMonitor
-                                ? isToolActive
-                                  ? 'bg-red-500/20 text-red-100 border border-red-400/40'
-                                  : 'bg-red-500/10 text-red-200 hover:bg-red-500/15 border border-red-500/20'
-                                : isStorage
-                                ? isToolActive
-                                  ? 'bg-blue-500/20 text-blue-100 border border-blue-400/40'
-                                  : 'bg-blue-500/10 text-blue-200 hover:bg-blue-500/15 border border-blue-500/20'
-                                : isToolActive
-                                ? 'bg-white/15 text-white border border-white/20'
-                                : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                              isToolActive
+                                ? 'bg-white/15 text-white border border-white/25 shadow-lg shadow-black/30'
+                                : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10 hover:border-white/15'
                             }`}
                           >
                             <i data-lucide={tool.icon} className="w-4 h-4"></i>
                             <span>{tool.label}</span>
                             {tool.isNew && (
-                              <span className="ml-auto text-[8px] px-1.5 py-0.5 rounded bg-blue-500/30 text-blue-200 font-semibold uppercase">
+                              <span className="ml-auto text-[8px] px-1.5 py-0.5 rounded bg-white/10 text-white/80 font-semibold uppercase border border-white/20">
                           NEW
                         </span>
                       )}
