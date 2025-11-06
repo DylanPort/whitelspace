@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CryptWhistle - Real Privacy-Preserving AI Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #fff;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .header h1 {
+      font-size: 3rem;
+      margin-bottom: 10px;
+    }
+
+    .privacy-badge {
+      display: inline-block;
+      background: rgba(16, 185, 129, 0.3);
+      border: 2px solid #10b981;
+      padding: 10px 20px;
+      border-radius: 50px;
+      font-weight: 600;
+      margin: 20px 0;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 30px;
+      margin-bottom: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    h2 {
+      margin-bottom: 20px;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    textarea, input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+      font-size: 1rem;
+      font-family: inherit;
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    textarea::placeholder, input::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    button {
+      padding: 14px 28px;
+      background: #fff;
+      color: #667eea;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .result {
+      margin-top: 20px;
+      padding: 20px;
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid #10b981;
+      border-radius: 8px;
+    }
+
+    .result h3 {
+      margin-bottom: 10px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+    }
+
+    .spinner {
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top: 3px solid #fff;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .metadata {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+
+    .privacy-info {
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid #10b981;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .privacy-info ul {
+      margin: 10px 0 0 20px;
+    }
+
+    .error {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid #ef4444;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🔐 CryptWhistle</h1>
+      <p>Real Privacy-Preserving AI</p>
+      <div class="privacy-badge">
+        ✅ 100% Client-Side • Data Never Leaves Your Device
+      </div>
+    </div>
+
+    <div class="privacy-info">
+      <h3>🔒 How This Works:</h3>
+      <ul>
+        <li>AI models download to YOUR browser (one-time, ~67MB-400MB)</li>
+        <li>All processing happens IN YOUR BROWSER using WebAssembly</li>
+        <li>Your text NEVER leaves your device</li>
+        <li>No server sees your data</li>
+        <li>True privacy, mathematically guaranteed</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>😊 Sentiment Analysis</h2>
+      <p>Analyze the sentiment of text locally in your browser</p>
+      
+      <div class="input-group">
+        <label>Enter text to analyze:</label>
+        <textarea id="sentimentText" placeholder="I love using privacy-preserving AI! It's amazing!">I love using privacy-preserving AI! This is incredible technology that actually protects my data.</textarea>
+      </div>
+
+      <button id="sentimentBtn" onclick="analyzeSentiment()">
+        Analyze Sentiment (Locally)
+      </button>
+
+      <div id="sentimentResult"></div>
+    </div>
+
+    <div class="card">
+      <h2>🏷️ Zero-Shot Classification</h2>
+      <p>Classify text into custom categories without training</p>
+      
+      <div class="input-group">
+        <label>Text to classify:</label>
+        <textarea id="classifyText" placeholder="Enter text">This restaurant has amazing food and great service!</textarea>
+      </div>
+
+      <div class="input-group">
+        <label>Possible categories (comma-separated):</label>
+        <input type="text" id="classifyLabels" placeholder="positive review, negative review, neutral" value="positive review, negative review, neutral">
+      </div>
+
+      <button id="classifyBtn" onclick="classifyText()">
+        Classify (Locally)
+      </button>
+
+      <div id="classifyResult"></div>
+    </div>
+
+    <div class="card">
+      <h2>❓ Question Answering</h2>
+      <p>Answer questions based on context - all locally</p>
+      
+      <div class="input-group">
+        <label>Context:</label>
+        <textarea id="qaContext" placeholder="Enter context">CryptWhistle is a privacy-preserving AI platform that runs entirely in your browser. It uses WebAssembly and WebGPU to execute AI models locally, ensuring your data never leaves your device.</textarea>
+      </div>
+
+      <div class="input-group">
+        <label>Question:</label>
+        <input type="text" id="qaQuestion" placeholder="Enter question" value="What is CryptWhistle?">
+      </div>
+
+      <button id="qaBtn" onclick="answerQuestion()">
+        Answer Question (Locally)
+      </button>
+
+      <div id="qaResult"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.10.0';
+
+    // Configure
+    env.allowLocalModels = false;
+    env.allowRemoteModels = true;
+
+    let sentimentModel = null;
+    let classificationModel = null;
+    let qaModel = null;
+
+    window.analyzeSentiment = async function() {
+      const text = document.getElementById('sentimentText').value;
+      const btn = document.getElementById('sentimentBtn');
+      const resultDiv = document.getElementById('sentimentResult');
+
+      if (!text.trim()) {
+        resultDiv.innerHTML = '<div class="error">Please enter some text</div>';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Processing...';
+      resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading model (first time only, ~67MB)...</p></div>';
+
+      try {
+        const startTime = performance.now();
+
+        if (!sentimentModel) {
+          sentimentModel = await pipeline('sentiment-analysis');
+        }
+
+        const result = await sentimentModel(text);
+        const duration = Math.round(performance.now() - startTime);
+
+        resultDiv.innerHTML = `
+          <div class="result">
+            <h3>Result: ${result[0].label}</h3>
+            <p><strong>Score:</strong> ${(result[0].score * 100).toFixed(2)}%</p>
+            <div class="metadata">
+              <p>⚡ Processed in ${duration}ms</p>
+              <p>🔒 Privacy: Data never left your browser</p>
+              <p>📍 Execution: 100% client-side</p>
+              <p>🖥️ Model: DistilBERT (running locally)</p>
+            </div>
+          </div>
+        `;
+      } catch (error) {
+        resultDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Analyze Sentiment (Locally)';
+      }
+    };
+
+    window.classifyText = async function() {
+      const text = document.getElementById('classifyText').value;
+      const labelsInput = document.getElementById('classifyLabels').value;
+      const btn = document.getElementById('classifyBtn');
+      const resultDiv = document.getElementById('classifyResult');
+
+      if (!text.trim() || !labelsInput.trim()) {
+        resultDiv.innerHTML = '<div class="error">Please enter text and labels</div>';
+        return;
+      }
+
+      const labels = labelsInput.split(',').map(l => l.trim());
+
+      btn.disabled = true;
+      btn.textContent = 'Processing...';
+      resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading model (first time only, ~407MB)...</p></div>';
+
+      try {
+        const startTime = performance.now();
+
+        if (!classificationModel) {
+          classificationModel = await pipeline('zero-shot-classification');
+        }
+
+        const result = await classificationModel(text, labels);
+        const duration = Math.round(performance.now() - startTime);
+
+        let resultsHTML = '<h3>Classification Results:</h3>';
+        result.labels.forEach((label, i) => {
+          resultsHTML += `<p><strong>${label}:</strong> ${(result.scores[i] * 100).toFixed(2)}%</p>`;
+        });
+
+        resultDiv.innerHTML = `
+          <div class="result">
+            ${resultsHTML}
+            <div class="metadata">
+              <p>⚡ Processed in ${duration}ms</p>
+              <p>🔒 Privacy: Data never left your browser</p>
+              <p>📍 Execution: 100% client-side</p>
+              <p>🖥️ Model: BART (running locally)</p>
+            </div>
+          </div>
+        `;
+      } catch (error) {
+        resultDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Classify (Locally)';
+      }
+    };
+
+    window.answerQuestion = async function() {
+      const context = document.getElementById('qaContext').value;
+      const question = document.getElementById('qaQuestion').value;
+      const btn = document.getElementById('qaBtn');
+      const resultDiv = document.getElementById('qaResult');
+
+      if (!context.trim() || !question.trim()) {
+        resultDiv.innerHTML = '<div class="error">Please enter context and question</div>';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Processing...';
+      resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading model (first time only, ~108MB)...</p></div>';
+
+      try {
+        const startTime = performance.now();
+
+        if (!qaModel) {
+          qaModel = await pipeline('question-answering');
+        }
+
+        const result = await qaModel(question, context);
+        const duration = Math.round(performance.now() - startTime);
+
+        resultDiv.innerHTML = `
+          <div class="result">
+            <h3>Answer:</h3>
+            <p><strong>${result.answer}</strong></p>
+            <p>Confidence: ${(result.score * 100).toFixed(2)}%</p>
+            <div class="metadata">
+              <p>⚡ Processed in ${duration}ms</p>
+              <p>🔒 Privacy: Data never left your browser</p>
+              <p>📍 Execution: 100% client-side</p>
+              <p>🖥️ Model: DistilBERT QA (running locally)</p>
+            </div>
+          </div>
+        `;
+      } catch (error) {
+        resultDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Answer Question (Locally)';
+      }
+    };
+
+    console.log(`
+╔════════════════════════════════════════════════════════╗
+║                                                        ║
+║       🔐 CryptWhistle Client-Side AI Loaded 🔐        ║
+║                                                        ║
+╚════════════════════════════════════════════════════════╝
+
+✅ All AI models will run IN YOUR BROWSER
+✅ Your data NEVER leaves your device
+✅ True privacy, mathematically guaranteed
+
+Models will download on first use:
+  • Sentiment Analysis: ~67MB
+  • Zero-Shot Classification: ~407MB
+  • Question Answering: ~108MB
+
+Ready to use!
+    `);
+  </script>
+</body>
+</html>
+

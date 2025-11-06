@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Whistle AI - Basic Usage Example</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #0a0e27;
+      color: #fff;
+    }
+    h1 {
+      color: #00d4ff;
+      text-align: center;
+    }
+    .example {
+      background: #1a1e3a;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      border: 1px solid #00d4ff;
+    }
+    button {
+      background: #00d4ff;
+      color: #0a0e27;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      margin: 5px;
+    }
+    button:hover {
+      background: #00b8e6;
+    }
+    .result {
+      background: #2a2e4a;
+      padding: 15px;
+      margin-top: 10px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      white-space: pre-wrap;
+    }
+    .metadata {
+      color: #888;
+      font-size: 0.9em;
+      margin-top: 10px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      background: #2a2e4a;
+      border: 1px solid #00d4ff;
+      color: #fff;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔐 Whistle AI - Basic Usage Examples</h1>
+  
+  <div class="example">
+    <h2>1. Sentiment Analysis</h2>
+    <p>Analyze text sentiment (runs in browser, instant, free)</p>
+    <input type="text" id="sentimentInput" placeholder="Enter text to analyze..." value="I love privacy!">
+    <button onclick="analyzeSentiment()">Analyze Sentiment</button>
+    <div id="sentimentResult" class="result" style="display:none;"></div>
+  </div>
+
+  <div class="example">
+    <h2>2. Text Translation</h2>
+    <p>Translate text between languages (runs in browser)</p>
+    <input type="text" id="translationInput" placeholder="Enter text to translate..." value="Hello world">
+    <select id="targetLang">
+      <option value="spa_Latn">Spanish</option>
+      <option value="fra_Latn">French</option>
+      <option value="deu_Latn">German</option>
+      <option value="jpn_Jpan">Japanese</option>
+    </select>
+    <button onclick="translateText()">Translate</button>
+    <div id="translationResult" class="result" style="display:none;"></div>
+  </div>
+
+  <div class="example">
+    <h2>3. Privacy Analysis</h2>
+    <p>Analyze Solana wallet privacy score</p>
+    <input type="text" id="walletInput" placeholder="Enter Solana wallet address...">
+    <button onclick="analyzePrivacy()">Analyze Privacy</button>
+    <div id="privacyResult" class="result" style="display:none;"></div>
+  </div>
+
+  <div class="example">
+    <h2>4. AI Chat</h2>
+    <p>Chat with AI assistant (auto-routes to best layer)</p>
+    <textarea id="chatInput" rows="3" placeholder="Ask a question...">What is zero-knowledge proof?</textarea>
+    <button onclick="chat()">Ask AI</button>
+    <div id="chatResult" class="result" style="display:none;"></div>
+  </div>
+
+  <script type="module">
+    // Import Whistle AI SDK
+    import { WhistleAI } from 'https://unpkg.com/@whistle/ai-sdk@latest/dist/index.mjs';
+
+    // Initialize AI
+    window.ai = new WhistleAI({
+      preferClientSide: true,
+      debug: true
+    });
+
+    // Load models
+    console.log('Loading AI models...');
+    await window.ai.ready();
+    console.log('✅ Whistle AI ready!');
+
+    // Make functions global for onclick handlers
+    window.analyzeSentiment = async function() {
+      const input = document.getElementById('sentimentInput').value;
+      const resultDiv = document.getElementById('sentimentResult');
+      
+      resultDiv.style.display = 'block';
+      resultDiv.textContent = 'Analyzing...';
+      
+      try {
+        const result = await window.ai.analyzeSentiment(input);
+        
+        resultDiv.innerHTML = `
+<strong>Result:</strong> ${result.result.label} (${(result.result.score * 100).toFixed(1)}% confident)
+
+<div class="metadata">
+⚡ Layer: ${result.metadata.computeLayer}
+⏱️ Duration: ${result.metadata.duration}ms
+💰 Cost: ${result.metadata.cost === 0 ? 'Free' : result.metadata.cost + ' SOL'}
+</div>`;
+      } catch (error) {
+        resultDiv.textContent = 'Error: ' + error.message;
+      }
+    };
+
+    window.translateText = async function() {
+      const input = document.getElementById('translationInput').value;
+      const targetLang = document.getElementById('targetLang').value;
+      const resultDiv = document.getElementById('translationResult');
+      
+      resultDiv.style.display = 'block';
+      resultDiv.textContent = 'Translating...';
+      
+      try {
+        const result = await window.ai.translate(input, { to: targetLang });
+        
+        resultDiv.innerHTML = `
+<strong>Translation:</strong> ${result.result.translation}
+
+<div class="metadata">
+⚡ Layer: ${result.metadata.computeLayer}
+⏱️ Duration: ${result.metadata.duration}ms
+💰 Cost: ${result.metadata.cost === 0 ? 'Free' : result.metadata.cost + ' SOL'}
+</div>`;
+      } catch (error) {
+        resultDiv.textContent = 'Error: ' + error.message;
+      }
+    };
+
+    window.analyzePrivacy = async function() {
+      const wallet = document.getElementById('walletInput').value;
+      const resultDiv = document.getElementById('privacyResult');
+      
+      if (!wallet) {
+        alert('Please enter a wallet address');
+        return;
+      }
+      
+      resultDiv.style.display = 'block';
+      resultDiv.textContent = 'Analyzing...';
+      
+      try {
+        const result = await window.ai.analyzePrivacy(wallet);
+        
+        resultDiv.innerHTML = `
+<strong>Privacy Score:</strong> ${result.result.score}/10
+
+<strong>Analysis:</strong>
+• Total Transactions: ${result.result.totalTransactions}
+• Private: ${result.result.privateTransactions}
+• Public: ${result.result.publicTransactions}
+
+<strong>Recommendations:</strong>
+${result.result.recommendations.map(r => `• ${r}`).join('\n')}
+
+<div class="metadata">
+⚡ Layer: ${result.metadata.computeLayer}
+⏱️ Duration: ${result.metadata.duration}ms
+💰 Cost: ${result.metadata.cost === 0 ? 'Free' : result.metadata.cost + ' SOL'}
+</div>`;
+      } catch (error) {
+        resultDiv.textContent = 'Error: ' + error.message;
+      }
+    };
+
+    window.chat = async function() {
+      const input = document.getElementById('chatInput').value;
+      const resultDiv = document.getElementById('chatResult');
+      
+      resultDiv.style.display = 'block';
+      resultDiv.textContent = 'Thinking...';
+      
+      try {
+        const result = await window.ai.chat(input);
+        
+        resultDiv.innerHTML = `
+<strong>AI Response:</strong>
+${result.result.message}
+
+<div class="metadata">
+⚡ Layer: ${result.metadata.computeLayer}
+⏱️ Duration: ${result.metadata.duration}ms
+💰 Cost: ${result.metadata.cost === 0 ? 'Free' : result.metadata.cost + ' SOL'}
+🤖 Model: ${result.result.model}
+</div>`;
+      } catch (error) {
+        resultDiv.textContent = 'Error: ' + error.message;
+      }
+    };
+  </script>
+</body>
+</html>
+

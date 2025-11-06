@@ -1,0 +1,30 @@
+# Render.com Configuration for CryptWhistle Backend
+# Deploy the privacy-preserving AI backend API to Render
+
+services:
+  # CryptWhistle Backend API
+  - type: web
+    name: cryptwhistle-backend
+    env: node
+    region: oregon  # Choose: oregon, frankfurt, singapore
+    plan: starter   # $7/month - or "free" for free tier
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: NODE_ENV
+        value: production
+      - key: ALLOWED_ORIGINS
+        value: "*"  # Update with your frontend domain after deployment
+    healthCheckPath: /health
+    
+    # Auto-deploy from Git
+    autoDeploy: true
+    
+    # Disk storage for models (optional)
+    disk:
+      name: model-cache
+      mountPath: /opt/render/project/models
+      sizeGB: 1
+
