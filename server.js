@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const path = require('path');
 const crypto = require('crypto');
@@ -18,6 +20,7 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.static('.'));
+app.use(express.static('apps/web')); // Serve web app files (privacy.html, terms.html, etc.)
 app.use(express.json());
 
 // ===== x402: Config =====
@@ -52,8 +55,13 @@ getFeeCollectorTokenAccount();
 
 // Route for the howto page
 app.get('/howto', (req, res) => {
-    res.sendFile(path.join(__dirname, 'howto.html'));
+    res.sendFile(path.join(__dirname, 'apps/web/howto.html'));
 });
+
+// Serve other web app pages
+app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'apps/web/privacy.html')));
+app.get('/terms', (req, res) => res.sendFile(path.join(__dirname, 'apps/web/terms.html')));
+app.get('/whitepaper', (req, res) => res.sendFile(path.join(__dirname, 'apps/web/whitepaper.html')));
 
 // Default route
 app.get('/', (req, res) => {
@@ -204,7 +212,9 @@ app.post('/x402/validate', (req, res) => {
 });
 
 // ===== HaveIBeenPwned API Proxy (to avoid CORS) =====
-const HIBP_API_KEY = 'ccac04e904014631a35d34e8762954eb';
+// Get your API key at: https://haveibeenpwned.com/API/Key
+// Set HIBP_API_KEY in your .env file
+const HIBP_API_KEY = process.env.HIBP_API_KEY || '';
 
 // Helper function to make HIBP API requests
 function makeHibpRequest(path) {
@@ -288,8 +298,18 @@ app.get('/api/hibp/breach/:email', async (req, res) => {
   }
 });
 
+// ===== CryptWhistle Routes =====
+// Serve CryptWhistle documentation and playground
+app.use('/cryptwhistle/docs-site', express.static(path.join(__dirname, 'apps/cryptwhistle/docs-site')));
+
+// Serve the redirect index.html at /cryptwhistle
+app.get('/cryptwhistle', (req, res) => {
+  res.sendFile(path.join(__dirname, 'apps/cryptwhistle/index.html'));
+});
+
 app.listen(PORT, () => {
     console.log(`🚀 Server running at http://localhost:${PORT}`);
     console.log(`📖 How It Works page: http://localhost:${PORT}/howto`);
     console.log(`🏠 Main app: http://localhost:${PORT}`);
+    console.log(`🤖 CryptWhistle AI: http://localhost:${PORT}/cryptwhistle`);
 });
