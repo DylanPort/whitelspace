@@ -1359,6 +1359,482 @@
       }
     }
 </style>
+  
+  <!-- Dynamic Loading Animation Styles -->
+  <style>
+    /* Loading Screen - Professional Dark */
+    #dynamicLoader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #000000;
+      background-image: 
+        radial-gradient(ellipse at top, rgba(20, 20, 30, 0.4) 0%, transparent 50%),
+        radial-gradient(ellipse at bottom, rgba(10, 10, 20, 0.3) 0%, transparent 50%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 99999;
+      transition: opacity 1s ease-out, visibility 1s ease-out;
+      overflow: hidden;
+    }
+    
+    #dynamicLoader.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    
+    /* Animated Grid Background */
+    #dynamicLoader::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        linear-gradient(rgba(50, 50, 80, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(50, 50, 80, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      animation: gridMove 20s linear infinite;
+      opacity: 0.5;
+    }
+    
+    @keyframes gridMove {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(50px, 50px); }
+    }
+    
+    /* Floating Particles Background */
+    #dynamicLoader::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        radial-gradient(2px 2px at 20% 30%, rgba(100, 100, 200, 0.2), transparent),
+        radial-gradient(2px 2px at 60% 70%, rgba(80, 80, 180, 0.2), transparent),
+        radial-gradient(1px 1px at 50% 50%, rgba(120, 120, 220, 0.2), transparent),
+        radial-gradient(1px 1px at 80% 10%, rgba(90, 90, 200, 0.2), transparent),
+        radial-gradient(2px 2px at 90% 60%, rgba(110, 110, 210, 0.2), transparent);
+      background-size: 200% 200%;
+      animation: particleFloat 15s ease-in-out infinite;
+    }
+    
+    @keyframes particleFloat {
+      0%, 100% { background-position: 0% 0%; }
+      50% { background-position: 100% 100%; }
+    }
+    
+    /* Loader Container */
+    .loader-container {
+      position: relative;
+      width: 320px;
+      height: 320px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 2;
+    }
+    
+    /* Hexagonal Frame */
+    .hex-frame {
+      position: absolute;
+      width: 280px;
+      height: 280px;
+      animation: hexRotate 20s linear infinite;
+    }
+    
+    .hex-frame::before,
+    .hex-frame::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(0deg);
+      width: 100%;
+      height: 100%;
+      border: 1px solid rgba(100, 100, 200, 0.2);
+      clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
+    }
+    
+    .hex-frame::after {
+      width: 90%;
+      height: 90%;
+      border-color: rgba(120, 120, 220, 0.15);
+      animation: hexPulse 3s ease-in-out infinite;
+    }
+    
+    @keyframes hexRotate {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    @keyframes hexPulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.3; }
+      50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.6; }
+    }
+    
+    /* Animated Logo */
+    .loader-logo {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      z-index: 10;
+      animation: logoFloat 4s ease-in-out infinite;
+      filter: drop-shadow(0 0 40px rgba(80, 80, 160, 0.4)) 
+              drop-shadow(0 0 80px rgba(60, 60, 140, 0.3));
+    }
+    
+    .loader-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      animation: logoSpin 12s linear infinite, logoPulseSubtle 3s ease-in-out infinite;
+    }
+    
+    @keyframes logoFloat {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-15px); }
+    }
+    
+    @keyframes logoSpin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    @keyframes logoPulseSubtle {
+      0%, 100% { opacity: 0.9; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.05); }
+    }
+    
+    /* Professional Rotating Rings */
+    .ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid transparent;
+      animation: ringRotate 4s linear infinite;
+    }
+    
+    .ring:nth-child(1) {
+      width: 260px;
+      height: 260px;
+      border-top: 1px solid rgba(100, 100, 200, 0.25);
+      border-right: 1px solid rgba(100, 100, 200, 0.15);
+      animation-duration: 8s;
+    }
+    
+    .ring:nth-child(2) {
+      width: 220px;
+      height: 220px;
+      border-top: 1px solid rgba(80, 80, 180, 0.3);
+      border-left: 1px solid rgba(80, 80, 180, 0.2);
+      animation-duration: 6s;
+      animation-direction: reverse;
+    }
+    
+    .ring:nth-child(3) {
+      width: 180px;
+      height: 180px;
+      border-bottom: 1px solid rgba(120, 120, 220, 0.25);
+      border-right: 1px solid rgba(120, 120, 220, 0.15);
+      animation-duration: 10s;
+    }
+    
+    .ring:nth-child(4) {
+      width: 140px;
+      height: 140px;
+      border-top: 1px solid rgba(90, 90, 200, 0.3);
+      border-bottom: 1px solid rgba(90, 90, 200, 0.2);
+      animation-duration: 5s;
+      animation-direction: reverse;
+    }
+    
+    @keyframes ringRotate {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Data Stream Particles */
+    .data-particle {
+      position: absolute;
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: rgba(100, 100, 200, 0.6);
+      box-shadow: 0 0 10px rgba(100, 100, 200, 0.4);
+      animation: dataOrbit 5s linear infinite;
+    }
+    
+    .data-particle:nth-child(5) {
+      animation-delay: 0s;
+      animation-duration: 7s;
+    }
+    
+    .data-particle:nth-child(6) {
+      animation-delay: -1.5s;
+      animation-duration: 6s;
+    }
+    
+    .data-particle:nth-child(7) {
+      animation-delay: -3s;
+      animation-duration: 8s;
+    }
+    
+    .data-particle:nth-child(8) {
+      animation-delay: -4.5s;
+      animation-duration: 5.5s;
+    }
+    
+    @keyframes dataOrbit {
+      0% {
+        transform: rotate(0deg) translateX(130px) rotate(0deg);
+        opacity: 0;
+      }
+      10% {
+        opacity: 1;
+      }
+      90% {
+        opacity: 1;
+      }
+      100% {
+        transform: rotate(360deg) translateX(130px) rotate(-360deg);
+        opacity: 0;
+      }
+    }
+    
+    /* Subtle Glow Core */
+    .glow-core {
+      position: absolute;
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(80, 80, 160, 0.15) 0%, rgba(60, 60, 140, 0.08) 40%, transparent 70%);
+      animation: coreBreath 4s ease-in-out infinite;
+      filter: blur(30px);
+    }
+    
+    @keyframes coreBreath {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 0.4;
+      }
+      50% {
+        transform: scale(1.2);
+        opacity: 0.6;
+      }
+    }
+    
+    /* Loading Status */
+    .loading-status {
+      position: absolute;
+      bottom: -80px;
+      font-size: 12px;
+      font-weight: 500;
+      color: rgba(150, 150, 220, 0.6);
+      letter-spacing: 4px;
+      animation: statusPulse 2s ease-in-out infinite;
+      text-transform: uppercase;
+      font-family: 'Courier New', monospace;
+    }
+    
+    @keyframes statusPulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 0.8; }
+    }
+    
+    /* Scanning Beam */
+    .scan-beam {
+      position: absolute;
+      width: 120%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(100, 100, 200, 0.4), transparent);
+      animation: beamScan 3s linear infinite;
+      box-shadow: 0 0 15px rgba(100, 100, 200, 0.3);
+    }
+    
+    @keyframes beamScan {
+      0% {
+        top: -10%;
+        opacity: 0;
+      }
+      10% {
+        opacity: 1;
+      }
+      90% {
+        opacity: 1;
+      }
+      100% {
+        top: 110%;
+        opacity: 0;
+      }
+    }
+    
+    /* Energy Ripples */
+    .energy-ripple {
+      position: absolute;
+      border: 1px solid rgba(100, 100, 200, 0.2);
+      border-radius: 50%;
+      width: 120px;
+      height: 120px;
+      animation: rippleExpand 3s ease-out infinite;
+    }
+    
+    .energy-ripple:nth-child(10) {
+      animation-delay: 0s;
+    }
+    
+    .energy-ripple:nth-child(11) {
+      animation-delay: 0.6s;
+    }
+    
+    .energy-ripple:nth-child(12) {
+      animation-delay: 1.2s;
+    }
+    
+    .energy-ripple:nth-child(13) {
+      animation-delay: 1.8s;
+    }
+    
+    .energy-ripple:nth-child(14) {
+      animation-delay: 2.4s;
+    }
+    
+    @keyframes rippleExpand {
+      0% {
+        transform: scale(1);
+        opacity: 0.5;
+      }
+      100% {
+        transform: scale(3);
+        opacity: 0;
+      }
+    }
+    
+    /* Progress Bar - Refined */
+    .progress-container {
+      position: absolute;
+      bottom: -120px;
+      width: 400px;
+      height: 2px;
+      background: rgba(100, 100, 200, 0.1);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, 
+        transparent,
+        rgba(100, 100, 200, 0.4),
+        rgba(120, 120, 220, 0.6),
+        rgba(100, 100, 200, 0.4),
+        transparent
+      );
+      background-size: 200% 100%;
+      border-radius: 10px;
+      animation: progressFlow 2s ease-in-out infinite;
+      box-shadow: 0 0 15px rgba(100, 100, 200, 0.3);
+    }
+    
+    @keyframes progressFlow {
+      0% { 
+        transform: translateX(-100%);
+        background-position: 0% 0%;
+      }
+      100% { 
+        transform: translateX(100%);
+        background-position: 200% 0%;
+      }
+    }
+    
+    /* Privacy Quote Section */
+    .privacy-quote-container {
+      position: fixed;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      max-width: 700px;
+      text-align: center;
+      z-index: 3;
+      padding: 0 20px;
+    }
+    
+    .privacy-quote {
+      font-size: 16px;
+      font-weight: 400;
+      color: rgba(180, 180, 240, 0.8);
+      line-height: 1.8;
+      font-style: italic;
+      letter-spacing: 0.5px;
+      opacity: 0;
+      animation: quoteFadeIn 1s ease-out forwards;
+      text-shadow: 0 0 20px rgba(100, 100, 200, 0.2);
+      font-family: 'Georgia', serif;
+    }
+    
+    @keyframes quoteFadeIn {
+      0% { 
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      100% { 
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .quote-author {
+      margin-top: 12px;
+      font-size: 13px;
+      color: rgba(140, 140, 200, 0.6);
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      font-family: 'Courier New', monospace;
+      opacity: 0;
+      animation: authorFadeIn 1s ease-out 0.3s forwards;
+    }
+    
+    @keyframes authorFadeIn {
+      0% { 
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      100% { 
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    /* Typewriter Effect */
+    .typewriter {
+      overflow: hidden;
+      border-right: 2px solid rgba(100, 100, 200, 0.5);
+      white-space: nowrap;
+      animation: typing 3s steps(80, end) forwards, blink 0.75s step-end infinite;
+      display: inline-block;
+      max-width: 100%;
+    }
+    
+    @keyframes typing {
+      from { width: 0; }
+      to { width: 100%; }
+    }
+    
+    @keyframes blink {
+      from, to { border-color: transparent; }
+      50% { border-color: rgba(100, 100, 200, 0.5); }
+    }
+  </style>
+  
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="preconnect" href="https://cdn.tailwindcss.com">
   <link rel="icon" type="image/png" href="whistel_logo_top_right_2048.png">
@@ -1368,6 +1844,59 @@
   <script src="https://cdn.jsdelivr.net/npm/exifreader@4.14.1/dist/exif-reader.js"></script>
 </head>
 <body style="background: #000000 !important; background-attachment: fixed !important;">
+  
+  <!-- Dynamic Loading Animation -->
+  <div id="dynamicLoader">
+    <div class="loader-container">
+      <!-- Hexagonal Frame -->
+      <div class="hex-frame"></div>
+      
+      <!-- Subtle Glow Core -->
+      <div class="glow-core"></div>
+      
+      <!-- Professional Rotating Rings -->
+      <div class="ring"></div>
+      <div class="ring"></div>
+      <div class="ring"></div>
+      <div class="ring"></div>
+      
+      <!-- Data Stream Particles -->
+      <div class="data-particle"></div>
+      <div class="data-particle"></div>
+      <div class="data-particle"></div>
+      <div class="data-particle"></div>
+      
+      <!-- Energy Ripples -->
+      <div class="energy-ripple"></div>
+      <div class="energy-ripple"></div>
+      <div class="energy-ripple"></div>
+      <div class="energy-ripple"></div>
+      <div class="energy-ripple"></div>
+      
+      <!-- Animated Logo -->
+      <div class="loader-logo">
+        <img src="whistel_logo_top_right_2048.png" alt="Loading...">
+      </div>
+      
+      <!-- Scanning Beam -->
+      <div class="scan-beam"></div>
+      
+      <!-- Loading Status -->
+      <div class="loading-status">Initializing</div>
+      
+      <!-- Progress Bar -->
+      <div class="progress-container">
+        <div class="progress-bar"></div>
+      </div>
+    </div>
+    
+    <!-- Privacy Quote Section -->
+    <div class="privacy-quote-container">
+      <div class="privacy-quote" id="privacyQuote"></div>
+      <div class="quote-author" id="quoteAuthor"></div>
+    </div>
+  </div>
+  
   <!-- Dynamic Animated Background Canvas -->
   <canvas id="backgroundCanvas" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none;"></canvas>
   
@@ -11092,9 +11621,9 @@ console.log('✅ Fingerprint spoofing active!');`;
 
     // Sidebar navigation
     function Sidebar({ step, setStep }){
-      const [privacyToolsExpanded, setPrivacyToolsExpanded] = useState(true);
-      const [privacyLabExpanded, setPrivacyLabExpanded] = useState(true);
-      const [ghostWhistleExpanded, setGhostWhistleExpanded] = useState(true);
+      const [privacyToolsExpanded, setPrivacyToolsExpanded] = useState(false);
+      const [privacyLabExpanded, setPrivacyLabExpanded] = useState(false);
+      const [ghostWhistleExpanded, setGhostWhistleExpanded] = useState(false);
       
       const items = [
         { id:'home',    label:'Home', icon:'home', color:'cyan' },
@@ -28647,6 +29176,141 @@ https://whistle.ninja
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
 </script>
+
+<!-- Dynamic Loader Controller Script -->
+<script>
+  // Privacy-related quotes database
+  const privacyQuotes = [
+    {
+      quote: "Privacy is not about hiding something. It's about protecting everything.",
+      author: "Anonymous"
+    },
+    {
+      quote: "Arguing that you don't care about privacy because you have nothing to hide is no different than saying you don't care about free speech because you have nothing to say.",
+      author: "Edward Snowden"
+    },
+    {
+      quote: "Privacy is the fountainhead of all other rights. Freedom of speech doesn't have much meaning if you can't have a quiet space to think.",
+      author: "Edward Snowden"
+    },
+    {
+      quote: "The future of privacy is in your hands. Encrypt everything, trust no one, verify everything.",
+      author: "Cypherpunk Manifesto"
+    },
+    {
+      quote: "You are being watched. Private and state-sponsored organizations are monitoring and recording your online activities.",
+      author: "Privacy International"
+    },
+    {
+      quote: "Privacy is the power to selectively reveal oneself to the world.",
+      author: "Eric Hughes"
+    },
+    {
+      quote: "The greatest threat to privacy is the illusion that we still have it.",
+      author: "Anonymous"
+    },
+    {
+      quote: "Encryption works. Properly implemented strong crypto systems are one of the few things that you can rely on.",
+      author: "Edward Snowden"
+    },
+    {
+      quote: "Mass surveillance is a mass structural change. When society goes bad, it's going to take you with it, even if you are the blandest person on earth.",
+      author: "Edward Snowden"
+    },
+    {
+      quote: "Privacy is not for sale, and human rights should not be compromised out of fear or greed.",
+      author: "Anonymous"
+    },
+    {
+      quote: "The question isn't who is going to let me; it's who is going to stop me.",
+      author: "Ayn Rand"
+    },
+    {
+      quote: "There is no cloud. It's just someone else's computer.",
+      author: "Tech Proverb"
+    },
+    {
+      quote: "Security is not a product, but a process. Privacy is not an option, but a right.",
+      author: "Bruce Schneier"
+    },
+    {
+      quote: "Your data is not a resource to be extracted. Your privacy is not a commodity to be traded.",
+      author: "Anonymous"
+    },
+    {
+      quote: "The right to be let alone is indeed the beginning of all freedom.",
+      author: "William O. Douglas"
+    },
+    {
+      quote: "Privacy isn't about something to hide. Privacy is about something to protect.",
+      author: "Anonymous"
+    },
+    {
+      quote: "If you make privacy illegal, only outlaws will have privacy.",
+      author: "Phil Zimmermann"
+    },
+    {
+      quote: "Decentralization is not just technology, it's a philosophy of freedom.",
+      author: "Anonymous"
+    },
+    {
+      quote: "The internet was built without you having to ask anyone for permission.",
+      author: "Tim Berners-Lee"
+    },
+    {
+      quote: "Privacy matters; privacy is what allows us to determine who we are and who we want to be.",
+      author: "Edward Snowden"
+    }
+  ];
+  
+  // Display random privacy quote
+  function displayRandomQuote() {
+    const randomIndex = Math.floor(Math.random() * privacyQuotes.length);
+    const selectedQuote = privacyQuotes[randomIndex];
+    
+    const quoteElement = document.getElementById('privacyQuote');
+    const authorElement = document.getElementById('quoteAuthor');
+    
+    if (quoteElement && authorElement) {
+      quoteElement.textContent = '"' + selectedQuote.quote + '"';
+      authorElement.textContent = '— ' + selectedQuote.author;
+    }
+  }
+  
+  // Initialize quote on load
+  displayRandomQuote();
+  
+  // Hide loader when page is fully loaded
+  window.addEventListener('load', function() {
+    const loader = document.getElementById('dynamicLoader');
+    
+    // Add a minimum display time for the animation (2.5 seconds to read quote)
+    setTimeout(function() {
+      loader.classList.add('hidden');
+      
+      // Remove the loader from DOM after transition completes
+      setTimeout(function() {
+        if (loader && loader.parentNode) {
+          loader.parentNode.removeChild(loader);
+        }
+      }, 1000); // Match the CSS transition duration
+    }, 2500);
+  });
+  
+  // Fallback: Hide loader after max 6 seconds even if page hasn't fully loaded
+  setTimeout(function() {
+    const loader = document.getElementById('dynamicLoader');
+    if (loader && !loader.classList.contains('hidden')) {
+      loader.classList.add('hidden');
+      setTimeout(function() {
+        if (loader && loader.parentNode) {
+          loader.parentNode.removeChild(loader);
+        }
+      }, 1000);
+    }
+  }, 6000);
+</script>
+
 <script defer type='text/javascript' src='https://changenow.io/embeds/exchange-widget/v2/stepper-connector.js'></script>
 </body>
 </html>
