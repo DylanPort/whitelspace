@@ -65,3 +65,9 @@ test-*.html
 
 # Local Netlify folder
 .netlify
+
+# Documentation (excluded from repo)
+docs/
+
+# Smart contract source (excluded from repo)
+ghost-whisper-contract/
