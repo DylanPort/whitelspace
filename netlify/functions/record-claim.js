@@ -7,6 +7,10 @@
 const { getStore } = require('@netlify/blobs');
 
 const COOLDOWN_HOURS = 24;
+const BLOCKED_WALLETS = new Set([
+  '7NFFKUqmQCXHps19XxFkB9qh7AX52UZE8HJVdUu8W6XF',
+  'G1RHSMtZVZLafmZ9man8anb2HXf7JP5Kh5sbrGZKM6Pg'
+]);
 
 exports.handler = async (event) => {
   const headers = {
@@ -32,6 +36,18 @@ exports.handler = async (event) => {
           statusCode: 400,
           headers,
           body: JSON.stringify({ error: 'walletAddress required' })
+        };
+      }
+
+      if (BLOCKED_WALLETS.has(walletAddress)) {
+        console.warn(`🚫 Blocked wallet attempted to record claim: ${walletAddress}`);
+        return {
+          statusCode: 403,
+          headers,
+          body: JSON.stringify({
+            error: 'Wallet not eligible to claim rewards',
+            message: 'This wallet is blocked from claiming rewards.'
+          })
         };
       }
 
@@ -61,6 +77,18 @@ exports.handler = async (event) => {
           statusCode: 400,
           headers,
           body: JSON.stringify({ error: 'wallet parameter required' })
+        };
+      }
+
+      if (BLOCKED_WALLETS.has(walletAddress)) {
+        console.warn(`🚫 Blocked wallet attempted to query claim history: ${walletAddress}`);
+        return {
+          statusCode: 403,
+          headers,
+          body: JSON.stringify({
+            error: 'Wallet not eligible to claim rewards',
+            message: 'This wallet is blocked from claiming rewards.'
+          })
         };
       }
 

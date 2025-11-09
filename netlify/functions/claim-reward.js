@@ -16,7 +16,10 @@ const PROGRAM_ID = '2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq';
 const WHISTLE_MINT = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';
 const FEE_COLLECTOR_WALLET = 'G1RHSMtZVZLafmZ9man8anb2HXf7JP5Kh5sbrGZKM6Pg';
 const RPC_URL = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
-const EXCLUDED_WALLET = '7NFFKUqmQCXHps19XxFkB9qh7AX52UZE8HJVdUu8W6XF';
+const BLOCKED_WALLETS = new Set([
+  '7NFFKUqmQCXHps19XxFkB9qh7AX52UZE8HJVdUu8W6XF',
+  'G1RHSMtZVZLafmZ9man8anb2HXf7JP5Kh5sbrGZKM6Pg'
+]);
 const COOLDOWN_HOURS = 24;
 
 exports.handler = async (event) => {
@@ -49,6 +52,18 @@ exports.handler = async (event) => {
         statusCode: 400,
         headers,
         body: JSON.stringify({ error: 'walletAddress required' })
+      };
+    }
+
+    if (BLOCKED_WALLETS.has(walletAddress)) {
+      console.warn(`🚫 Blocked wallet attempted reward claim: ${walletAddress}`);
+      return {
+        statusCode: 403,
+        headers,
+        body: JSON.stringify({
+          error: 'Wallet not eligible to claim rewards',
+          message: 'This wallet is blocked from claiming rewards.'
+        })
       };
     }
 
@@ -154,7 +169,7 @@ exports.handler = async (event) => {
       const createdAt = Number(new DataView(buffer.buffer, buffer.byteOffset + 96, 8).getBigInt64(0, true));
 
       // Filter out excluded wallet and zero stakes
-      if (owner === EXCLUDED_WALLET || stakedAmount === 0) continue;
+      if (BLOCKED_WALLETS.has(owner) || stakedAmount === 0) continue;
 
       // Calculate weights (60% stake, 20% time, 20% reputation)
       const stakeWeight = stakedAmount / (totalStaked / divisor);

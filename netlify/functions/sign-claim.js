@@ -14,6 +14,10 @@ const bs58 = require('bs58');
 const WHISTLE_MINT = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';
 const FEE_COLLECTOR_WALLET = 'G1RHSMtZVZLafmZ9man8anb2HXf7JP5Kh5sbrGZKM6Pg';
 const RPC_URL = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
+const BLOCKED_WALLETS = new Set([
+  '7NFFKUqmQCXHps19XxFkB9qh7AX52UZE8HJVdUu8W6XF',
+  'G1RHSMtZVZLafmZ9man8anb2HXf7JP5Kh5sbrGZKM6Pg'
+]);
 
 exports.handler = async (event) => {
   const headers = {
@@ -43,6 +47,18 @@ exports.handler = async (event) => {
         statusCode: 400,
         headers,
         body: JSON.stringify({ error: 'userWallet and claimableAmount required' })
+      };
+    }
+
+    if (BLOCKED_WALLETS.has(userWallet)) {
+      console.warn(`🚫 Blocked wallet attempted to request claim signature: ${userWallet}`);
+      return {
+        statusCode: 403,
+        headers,
+        body: JSON.stringify({
+          error: 'Wallet not eligible to claim rewards',
+          message: 'This wallet is blocked from claiming rewards.'
+        })
       };
     }
 

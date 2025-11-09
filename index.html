@@ -8345,6 +8345,10 @@
       const PROGRAM_ID = '2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq';
       const WHISTLE_MINT = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';
       const RPC_URL = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
+      const BLOCKED_WALLETS = new Set([
+        'G1RHSMtZVZLafmZ9man8anb2HXf7JP5Kh5sbrGZKM6Pg',
+        '7NFFKUqmQCXHps19XxFkB9qh7AX52UZE8HJVdUu8W6XF'
+      ]);
       
       useEffect(() => {
         checkWallet();
@@ -8362,6 +8366,19 @@
       
       useEffect(() => {
         if (walletAddress) {
+          if (BLOCKED_WALLETS.has(walletAddress)) {
+            console.warn('🚫 Blocked wallet attempted to access rewards:', walletAddress);
+            setNodeData(null);
+            setPoolData(null);
+            setFeeRewardsClaimable({
+              claimable: 0,
+              claimableFormatted: '0',
+              message: 'This wallet is blocked from claiming rewards.',
+              blocked: true
+            });
+            setLoadingFeeRewards(false);
+            return;
+          }
           fetchNodeData();
           checkFeeRewardsEligibility(); // Check if eligible for fee rewards
           
@@ -8574,9 +8591,8 @@
               }
               
               // Filter out problematic wallet and only include nodes with staked amount
-              const EXCLUDED_WALLET = '7NFFKUqmQCXHps19XxFkB9qh7AX52UZE8HJVdUu8W6XF';
-              if (nodeDecoded.owner === EXCLUDED_WALLET) {
-                console.log('🚫 Excluded problematic wallet:', EXCLUDED_WALLET);
+              if (BLOCKED_WALLETS.has(nodeDecoded.owner)) {
+                console.log('🚫 Excluded blocked wallet:', nodeDecoded.owner);
                 continue;
               }
               if (nodeDecoded.stakedAmount > 0 && poolDecoded) {
@@ -8715,6 +8731,10 @@
       
       async function claimRewards() {
         if (!wallet || !nodeData || nodeData.pendingRewards <= 0) return;
+        if (walletAddress && BLOCKED_WALLETS.has(walletAddress)) {
+          pushToast('This wallet is blocked from claiming rewards.', 'error');
+          return;
+        }
         
         try {
           setClaiming(true);
@@ -8798,9 +8818,21 @@
       // Check if user is eligible for fee rewards
       async function checkFeeRewardsEligibility() {
         if (!walletAddress) return;
+        if (BLOCKED_WALLETS.has(walletAddress)) {
+          console.warn('🚫 Blocked wallet attempted to check fee rewards:', walletAddress);
+          setFeeRewardsClaimable({
+            claimable: 0,
+            claimableFormatted: '0',
+            message: 'This wallet is blocked from claiming rewards.',
+            blocked: true
+          });
+          setLoadingFeeRewards(false);
+          return;
+        }
+        
+        setLoadingFeeRewards(true);
         
         try {
-          setLoadingFeeRewards(true);
           console.log('🔍 Checking fee rewards eligibility for:', walletAddress);
           
           // Check localStorage cooldown as frontend backup
@@ -8875,6 +8907,11 @@
       
       // Claim fee rewards (user pays transaction fee!)
       async function claimFeeRewards() {
+        if (!walletAddress) return;
+        if (BLOCKED_WALLETS.has(walletAddress)) {
+          pushToast('This wallet is blocked from claiming rewards.', 'error');
+          return;
+        }
         if (!feeRewardsClaimable || feeRewardsClaimable.claimable === 0) return;
         
         try {
