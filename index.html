@@ -8890,7 +8890,9 @@
             setFeeRewardsClaimable({ 
               claimable: 0, 
               claimableFormatted: '0',
-              message: data.message || data.error || 'Not eligible' 
+              message: data.message || data.error || 'Not eligible',
+              claimInProgress: data.claimInProgress,
+              lockExpiresAt: data.lockExpiresAt
             });
           }
         } catch (error) {
@@ -8910,6 +8912,10 @@
         if (!walletAddress) return;
         if (BLOCKED_WALLETS.has(walletAddress)) {
           pushToast('This wallet is blocked from claiming rewards.', 'error');
+          return;
+        }
+        if (feeRewardsClaimable?.claimInProgress) {
+          pushToast('Claim already in progress. Please wait a few minutes.', 'error');
           return;
         }
         if (!feeRewardsClaimable || feeRewardsClaimable.claimable === 0) return;

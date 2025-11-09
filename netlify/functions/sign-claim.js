@@ -9,6 +9,7 @@
 
 const { Connection, PublicKey, Transaction, Keypair } = require('@solana/web3.js');
 const { getAssociatedTokenAddressSync, createTransferInstruction } = require('@solana/spl-token');
+const { getStore } = require('@netlify/blobs');
 const bs58 = require('bs58');
 
 const WHISTLE_MINT = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';
@@ -18,6 +19,9 @@ const BLOCKED_WALLETS = new Set([
   '7NFFKUqmQCXHps19XxFkB9qh7AX52UZE8HJVdUu8W6XF',
   'G1RHSMtZVZLafmZ9man8anb2HXf7JP5Kh5sbrGZKM6Pg'
 ]);
+const COOLDOWN_HOURS = 24;
+const CLAIM_LOCK_MINUTES = 5;
+const CLAIM_LOCK_MS = CLAIM_LOCK_MINUTES * 60 * 1000;
 
 exports.handler = async (event) => {
   const headers = {
@@ -60,6 +64,54 @@ exports.handler = async (event) => {
           message: 'This wallet is blocked from claiming rewards.'
         })
       };
+    }
+
+    const store = getStore('claim-timestamps');
+    let claimInfo = null;
+    const now = Date.now();
+    const cooldownMs = COOLDOWN_HOURS * 60 * 60 * 1000;
+
+    try {
+      const existing = await store.get(userWallet);
+      if (existing) {
+        claimInfo = JSON.parse(existing);
+      }
+    } catch (storeError) {
+      console.warn('⚠️ Unable to load claim state (continuing):', storeError.message);
+    }
+
+    if (claimInfo?.lastClaim) {
+      const elapsed = now - claimInfo.lastClaim;
+      if (elapsed < cooldownMs) {
+        const waitMs = cooldownMs - elapsed;
+        const hoursRemaining = Math.ceil(waitMs / (60 * 60 * 1000));
+        return {
+          statusCode: 429,
+          headers,
+          body: JSON.stringify({
+            error: 'Claim cooldown active',
+            message: `Please wait ${hoursRemaining} hour(s) before claiming again.`,
+            onCooldown: true,
+            hoursRemaining
+          })
+        };
+      }
+    }
+
+    if (claimInfo?.claimLock && claimInfo.claimLockExpires) {
+      if (now < claimInfo.claimLockExpires) {
+        const minutesRemaining = Math.ceil((claimInfo.claimLockExpires - now) / (60 * 1000));
+        return {
+          statusCode: 429,
+          headers,
+          body: JSON.stringify({
+            error: 'Claim already in progress',
+            message: `A claim is already in progress. Please wait up to ${minutesRemaining} minute(s).`,
+            claimInProgress: true,
+            minutesRemaining
+          })
+        };
+      }
     }
 
     // Load private key from environment variable
@@ -128,6 +180,19 @@ exports.handler = async (event) => {
     const base64Transaction = serialized.toString('base64');
     console.log(`✅ Partially signed transaction for ${userWallet.slice(0, 8)}... (${serialized.length} bytes)`);
 
+    try {
+      await store.set(userWallet, JSON.stringify({
+        lastClaim: claimInfo?.lastClaim || 0,
+        signature: null,
+        claimLock: now,
+        claimLockExpires: now + CLAIM_LOCK_MS,
+        status: 'pending'
+      }));
+      console.log(`🔒 Claim lock refreshed for ${userWallet.slice(0, 8)}...`);
+    } catch (lockError) {
+      console.error('⚠️ Failed to persist claim lock (continuing):', lockError);
+    }
+
     return {
       statusCode: 200,
       headers,
@@ -135,7 +200,8 @@ exports.handler = async (event) => {
         success: true,
         transaction: base64Transaction,
         amount: claimableAmount,
-        message: 'Transaction ready for your signature. You will pay the transaction fee (~0.000005 SOL)'
+        lockExpiresAt: new Date(now + CLAIM_LOCK_MS).toISOString(),
+        message: `Transaction ready for your signature. Complete within ${CLAIM_LOCK_MINUTES} minute(s). You will pay the transaction fee (~0.000005 SOL)`
       })
     };
 

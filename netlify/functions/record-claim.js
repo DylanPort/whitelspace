@@ -7,6 +7,8 @@
 const { getStore } = require('@netlify/blobs');
 
 const COOLDOWN_HOURS = 24;
+const CLAIM_LOCK_MINUTES = 5;
+const CLAIM_LOCK_MS = CLAIM_LOCK_MINUTES * 60 * 1000;
 const BLOCKED_WALLETS = new Set([
   '7NFFKUqmQCXHps19XxFkB9qh7AX52UZE8HJVdUu8W6XF',
   'G1RHSMtZVZLafmZ9man8anb2HXf7JP5Kh5sbrGZKM6Pg'
@@ -54,7 +56,10 @@ exports.handler = async (event) => {
       const timestamp = Date.now();
       await store.set(walletAddress, JSON.stringify({
         lastClaim: timestamp,
-        signature: signature || null
+        signature: signature || null,
+        claimLock: null,
+        claimLockExpires: null,
+        status: 'completed'
       }));
 
       console.log(`✅ Recorded claim for ${walletAddress.slice(0, 8)}... at ${new Date(timestamp).toISOString()}`);
@@ -123,6 +128,8 @@ exports.handler = async (event) => {
           timeUntilNextClaim,
           nextClaimAvailable: claimData.lastClaim + cooldownMs,
           hoursUntilNextClaim: Math.ceil(timeUntilNextClaim / (60 * 60 * 1000)),
+          claimLock: claimData.claimLock,
+          claimLockExpires: claimData.claimLockExpires,
           message: canClaim ? 'Ready to claim' : `Please wait ${Math.ceil(timeUntilNextClaim / (60 * 60 * 1000))} hours before claiming again`
         })
       };

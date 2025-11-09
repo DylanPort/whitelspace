@@ -21,6 +21,8 @@ const BLOCKED_WALLETS = new Set([
   'G1RHSMtZVZLafmZ9man8anb2HXf7JP5Kh5sbrGZKM6Pg'
 ]);
 const COOLDOWN_HOURS = 24;
+const CLAIM_LOCK_MINUTES = 5;
+const CLAIM_LOCK_MS = CLAIM_LOCK_MINUTES * 60 * 1000;
 
 exports.handler = async (event) => {
   // CORS headers
@@ -70,43 +72,65 @@ exports.handler = async (event) => {
     console.log('💰 Calculating claimable reward for:', walletAddress);
 
     // Check 24h cooldown
+    let claimInfo = null;
+    const store = getStore('claim-timestamps');
+
     try {
-      const store = getStore('claim-timestamps');
       const lastClaimData = await store.get(walletAddress);
-      
       if (lastClaimData) {
-        const claimInfo = JSON.parse(lastClaimData);
-        const now = Date.now();
-        const timeSinceClaim = now - claimInfo.lastClaim;
-        const cooldownMs = COOLDOWN_HOURS * 60 * 60 * 1000;
-        
-        if (timeSinceClaim < cooldownMs) {
-          const timeUntilNextClaim = cooldownMs - timeSinceClaim;
-          const hoursRemaining = Math.ceil(timeUntilNextClaim / (60 * 60 * 1000));
-          const nextClaimDate = new Date(claimInfo.lastClaim + cooldownMs);
-          
-          console.log(`⏰ Wallet ${walletAddress.slice(0, 8)}... on cooldown. ${hoursRemaining}h remaining`);
-          
-          return {
-            statusCode: 200,
-            headers,
-            body: JSON.stringify({
-              claimable: 0,
-              claimableFormatted: '0',
-              onCooldown: true,
-              lastClaim: claimInfo.lastClaim,
-              lastClaimDate: new Date(claimInfo.lastClaim).toISOString(),
-              timeUntilNextClaim,
-              hoursRemaining,
-              nextClaimAvailable: nextClaimDate.toISOString(),
-              message: `You can claim again in ${hoursRemaining} hours (${nextClaimDate.toLocaleString()})`
-            })
-          };
-        }
+        claimInfo = JSON.parse(lastClaimData);
       }
     } catch (cooldownError) {
-      console.warn('⚠️ Error checking cooldown, allowing claim:', cooldownError.message);
-      // If cooldown check fails, allow claim (fail open)
+      console.warn('⚠️ Error loading claim metadata, allowing claim:', cooldownError.message);
+    }
+
+    const now = Date.now();
+    const cooldownMs = COOLDOWN_HOURS * 60 * 60 * 1000;
+
+    if (claimInfo?.lastClaim) {
+      const timeSinceClaim = now - claimInfo.lastClaim;
+      if (timeSinceClaim < cooldownMs) {
+        const timeUntilNextClaim = cooldownMs - timeSinceClaim;
+        const hoursRemaining = Math.ceil(timeUntilNextClaim / (60 * 60 * 1000));
+        const nextClaimDate = new Date(claimInfo.lastClaim + cooldownMs);
+
+        console.log(`⏰ Wallet ${walletAddress.slice(0, 8)}... on cooldown. ${hoursRemaining}h remaining`);
+
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({
+            claimable: 0,
+            claimableFormatted: '0',
+            onCooldown: true,
+            lastClaim: claimInfo.lastClaim,
+            lastClaimDate: new Date(claimInfo.lastClaim).toISOString(),
+            timeUntilNextClaim,
+            hoursRemaining,
+            nextClaimAvailable: nextClaimDate.toISOString(),
+            message: `You can claim again in ${hoursRemaining} hours (${nextClaimDate.toLocaleString()})`
+          })
+        };
+      }
+    }
+
+    if (claimInfo?.claimLock && claimInfo.claimLockExpires) {
+      if (now < claimInfo.claimLockExpires) {
+        const minutesRemaining = Math.ceil((claimInfo.claimLockExpires - now) / (60 * 1000));
+        console.log(`🔒 Wallet ${walletAddress.slice(0, 8)}... has an active claim lock (${minutesRemaining}m remaining)`);
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({
+            claimable: 0,
+            claimableFormatted: '0',
+            onCooldown: true,
+            claimInProgress: true,
+            lockExpiresAt: new Date(claimInfo.claimLockExpires).toISOString(),
+            message: `Claim already in progress. Please wait up to ${minutesRemaining} minute(s) before trying again.`
+          })
+        };
+      }
     }
 
     const connection = new Connection(RPC_URL, 'confirmed');
@@ -236,6 +260,21 @@ exports.handler = async (event) => {
 
     console.log(`✅ User ${walletAddress.slice(0, 8)}... can claim: ${(claimableAmount / divisor).toFixed(4)} $WHISTLE`);
 
+    const claimLockPayload = {
+      lastClaim: claimInfo?.lastClaim || 0,
+      signature: claimInfo?.signature || null,
+      claimLock: now,
+      claimLockExpires: now + CLAIM_LOCK_MS,
+      status: 'pending'
+    };
+
+    try {
+      await store.set(walletAddress, JSON.stringify(claimLockPayload));
+      console.log(`🔒 Claim lock set for ${walletAddress.slice(0, 8)}... until ${new Date(claimLockPayload.claimLockExpires).toISOString()}`);
+    } catch (lockError) {
+      console.error('⚠️ Failed to set claim lock (continuing):', lockError);
+    }
+
     // Return claimable amount
     return {
       statusCode: 200,
@@ -252,7 +291,8 @@ exports.handler = async (event) => {
         stakeDays: Math.floor(userStaker.stakeDays),
         reputationScore: userStaker.reputationScore,
         feeCollectorWallet: FEE_COLLECTOR_WALLET,
-        message: 'Ready to claim! Click the claim button to receive your rewards.'
+        claimLockExpiresAt: new Date(claimLockPayload.claimLockExpires).toISOString(),
+        message: `Ready to claim! Complete within ${CLAIM_LOCK_MINUTES} minute(s) to avoid losing your slot.`
       })
     };
 
