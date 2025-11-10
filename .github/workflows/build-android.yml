@@ -22,7 +22,9 @@ jobs:
         cache: 'npm'
     
     - name: Install dependencies
-      run: npm install
+      run: |
+        npm install
+        npm list --depth=0
     
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -38,11 +40,16 @@ jobs:
         mkdir -p www
         cp index.html www/
         cp manifest.webmanifest www/
-        if [ -d "public" ]; then cp -r public/* www/; fi
-        if [ -d "assets" ]; then cp -r assets www/; fi
+        if [ -d "public" ]; then cp -r public/* www/ || true; fi
+        if [ -d "assets" ]; then cp -r assets www/ || true; fi
+        echo "Contents of www directory:"
+        ls -la www/
     
     - name: Copy Capacitor config to root
-      run: cp config/capacitor.config.json capacitor.config.json
+      run: |
+        cp config/capacitor.config.json capacitor.config.json
+        echo "Capacitor config:"
+        cat capacitor.config.json
     
     - name: Check if Android platform exists
       id: check_android
@@ -55,16 +62,27 @@ jobs:
     
     - name: Add Android platform
       if: steps.check_android.outputs.exists == 'false'
-      run: npx cap add android
+      run: |
+        echo "Adding Android platform..."
+        npx cap add android
+        echo "Android platform added successfully"
     
     - name: Sync Capacitor
-      run: npx cap sync android
+      run: |
+        echo "Syncing Capacitor..."
+        npx cap sync android
+        echo "Capacitor sync completed"
+        ls -la android/ || echo "Android directory not found!"
     
     - name: Grant execute permission for gradlew
       run: chmod +x android/gradlew
     
     - name: Build Debug APK
-      run: cd android && ./gradlew assembleDebug --no-daemon
+      run: |
+        echo "Building debug APK..."
+        cd android
+        ./gradlew assembleDebug --no-daemon --stacktrace
+        echo "Debug APK build completed"
     
     - name: Build Release APK (unsigned)
       run: cd android && ./gradlew assembleRelease --no-daemon
