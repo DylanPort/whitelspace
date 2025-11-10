@@ -1,0 +1,29 @@
+{
+  "name": "@encrypto/enat-client",
+  "version": "1.0.0",
+  "description": "Client SDK for Encrypted Network Access Token staking contract",
+  "main": "enat-client.js",
+  "type": "module",
+  "scripts": {
+    "test": "node test/test-client.js"
+  },
+  "keywords": [
+    "solana",
+    "blockchain",
+    "staking",
+    "access-token",
+    "encryption",
+    "web3"
+  ],
+  "author": "Encrypto Team",
+  "license": "MIT",
+  "dependencies": {
+    "@solana/web3.js": "^1.87.6",
+    "borsh": "^0.7.0",
+    "bn.js": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0"
+  }
+}
+

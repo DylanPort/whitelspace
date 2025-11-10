@@ -1,0 +1,34 @@
+# Rust/Cargo
+target/
+**/*.rs.bk
+Cargo.lock
+
+# Solana
+test-ledger/
+.program_id
+
+# Node
+node_modules/
+*.log
+package-lock.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.so
+*.dylib
+*.dll
+
+# Backup files
+*.backup
+*.bak
+

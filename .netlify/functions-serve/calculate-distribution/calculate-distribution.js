@@ -1,0 +1,1 @@
+module.exports = require('./netlify/functions/calculate-distribution.js')

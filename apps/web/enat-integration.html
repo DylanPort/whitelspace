@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Access Token - Staking Portal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .stat:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            color: #333;
+            font-weight: 700;
+        }
+
+        .tier-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .tier-basic {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .tier-premium {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .tier-elite {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .actions {
+            display: grid;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-danger {
+            background: #ff5252;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #ff1744;
+        }
+
+        .input-group {
+            margin: 15px 0;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .status-connected {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-disconnected {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .log {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.9rem;
+            margin-top: 20px;
+        }
+
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #667eea;
+            padding-left: 10px;
+        }
+
+        .log-error {
+            border-left-color: #ff5252;
+            color: #c62828;
+        }
+
+        .log-success {
+            border-left-color: #4caf50;
+            color: #2e7d32;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Encrypted Network Access Token</h1>
+            <p>Stake to join the decentralized encrypted data network</p>
+        </div>
+
+        <div class="status-indicator" id="connectionStatus">
+            <span class="status-dot"></span>
+            <span id="statusText">Connecting to Solana...</span>
+        </div>
+
+        <div class="dashboard">
+            <!-- Wallet Card -->
+            <div class="card">
+                <h2>💼 Your Wallet</h2>
+                <div id="walletInfo">
+                    <div class="stat">
+                        <span class="stat-label">Address</span>
+                        <span class="stat-value" id="walletAddress">Not connected</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Balance</span>
+                        <span class="stat-value" id="walletBalance">0 SOL</span>
+                    </div>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-primary" onclick="connectWallet()">
+                        Connect Wallet
+                    </button>
+                </div>
+            </div>
+
+            <!-- Staking Stats Card -->
+            <div class="card">
+                <h2>📊 Your Staking</h2>
+                <div id="stakingInfo">
+                    <div class="stat">
+                        <span class="stat-label">Staked</span>
+                        <span class="stat-value" id="stakedAmount">0 SOL</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Access Tokens</span>
+                        <span class="stat-value" id="accessTokens">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Tier</span>
+                        <span id="tierBadge">
+                            <span class="tier-badge tier-basic">Not Staked</span>
+                        </span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Voting Power</span>
+                        <span class="stat-value" id="votingPower">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Network Status Card -->
+            <div class="card">
+                <h2>🌐 Network Status</h2>
+                <div id="networkInfo">
+                    <div class="stat">
+                        <span class="stat-label">Total Staked</span>
+                        <span class="stat-value" id="totalStaked">0 SOL</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Total Participants</span>
+                        <span class="stat-value" id="totalParticipants">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Node Operator</span>
+                        <span class="stat-value" id="nodeOperator">❌ No</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Data Processed</span>
+                        <span class="stat-value" id="dataProcessed">0 MB</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Cards -->
+        <div class="dashboard">
+            <div class="card">
+                <h2>💰 Stake SOL</h2>
+                <p style="color: #666; margin-bottom: 15px;">
+                    Stake SOL to mint access tokens and join the network
+                </p>
+                <div class="input-group">
+                    <label>Amount (SOL)</label>
+                    <input type="number" id="stakeAmount" placeholder="0.1" step="0.1" min="0.1">
+                </div>
+                <div style="background: #e3f2fd; padding: 10px; border-radius: 8px; margin: 10px 0; font-size: 0.9rem;">
+                    You will receive: <strong id="estimatedTokens">0</strong> access tokens
+                </div>
+                <button class="btn btn-primary" onclick="stakeSOL()">
+                    Stake Now
+                </button>
+            </div>
+
+            <div class="card">
+                <h2>🔓 Unstake SOL</h2>
+                <p style="color: #666; margin-bottom: 15px;">
+                    Unstake SOL and burn proportional access tokens
+                </p>
+                <div class="input-group">
+                    <label>Amount (SOL)</label>
+                    <input type="number" id="unstakeAmount" placeholder="0.1" step="0.1" min="0.1">
+                </div>
+                <button class="btn btn-danger" onclick="unstakeSOL()">
+                    Unstake
+                </button>
+            </div>
+
+            <div class="card">
+                <h2>🔄 Transfer Access</h2>
+                <p style="color: #666; margin-bottom: 15px;">
+                    Delegate access tokens (not sell!)
+                </p>
+                <div class="input-group">
+                    <label>Recipient Address</label>
+                    <input type="text" id="transferAddress" placeholder="Solana address...">
+                </div>
+                <div class="input-group">
+                    <label>Tokens to Transfer</label>
+                    <input type="number" id="transferAmount" placeholder="100" step="1" min="1">
+                </div>
+                <button class="btn btn-secondary" onclick="transferAccess()">
+                    Transfer (Delegate)
+                </button>
+            </div>
+        </div>
+
+        <!-- Node Operator Card -->
+        <div class="card" style="margin-top: 20px;">
+            <h2>🖥️ Become a Node Operator</h2>
+            <p style="color: #666; margin-bottom: 15px;">
+                Run encrypted data routing nodes and earn reputation. Requires 10x minimum stake.
+            </p>
+            <div class="actions">
+                <button class="btn btn-primary" onclick="activateNodeOperator()">
+                    Activate Node Operator
+                </button>
+                <button class="btn btn-secondary" onclick="recordDataUsage()">
+                    Record Data Usage (Test)
+                </button>
+            </div>
+        </div>
+
+        <!-- Activity Log -->
+        <div class="card" style="margin-top: 20px;">
+            <h2>📝 Activity Log</h2>
+            <div class="log" id="activityLog">
+                <div class="log-entry">Waiting for connection...</div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { Connection, PublicKey, Keypair, LAMPORTS_PER_SOL } from 'https://cdn.skypack.dev/@solana/web3.js@1.87.6';
+        
+        // Global state
+        window.enatState = {
+            connection: null,
+            wallet: null,
+            client: null,
+            connected: false
+        };
+
+        // Initialize on page load
+        async function init() {
+            try {
+                logActivity('Initializing ENAT client...', 'success');
+                
+                // Connect to devnet (change for production)
+                window.enatState.connection = new Connection(
+                    'https://api.devnet.solana.com',
+                    'confirmed'
+                );
+                
+                updateStatus('Connected to Solana Devnet', true);
+                logActivity('Connected to Solana Devnet', 'success');
+                
+                // Update estimated tokens when stake amount changes
+                document.getElementById('stakeAmount').addEventListener('input', updateEstimatedTokens);
+                
+            } catch (error) {
+                logActivity(`Initialization error: ${error.message}`, 'error');
+                updateStatus('Connection failed', false);
+            }
+        }
+
+        window.connectWallet = async function() {
+            try {
+                logActivity('Connecting wallet...');
+                
+                // Check for Phantom wallet
+                if (window.solana && window.solana.isPhantom) {
+                    const resp = await window.solana.connect();
+                    window.enatState.wallet = resp.publicKey;
+                    window.enatState.connected = true;
+                    
+                    document.getElementById('walletAddress').textContent = 
+                        window.enatState.wallet.toString().substring(0, 8) + '...';
+                    
+                    logActivity('Wallet connected!', 'success');
+                    await refreshData();
+                    
+                } else {
+                    logActivity('Phantom wallet not found. Please install it.', 'error');
+                    alert('Please install Phantom wallet: https://phantom.app/');
+                }
+                
+            } catch (error) {
+                logActivity(`Wallet connection error: ${error.message}`, 'error');
+            }
+        };
+
+        window.stakeSOL = async function() {
+            if (!window.enatState.connected) {
+                alert('Please connect your wallet first');
+                return;
+            }
+
+            const amount = parseFloat(document.getElementById('stakeAmount').value);
+            if (!amount || amount < 0.1) {
+                alert('Minimum stake is 0.1 SOL');
+                return;
+            }
+
+            logActivity(`Staking ${amount} SOL...`);
+            
+            // In production, call the actual smart contract
+            // For now, simulate
+            setTimeout(() => {
+                logActivity(`Successfully staked ${amount} SOL!`, 'success');
+                document.getElementById('stakedAmount').textContent = amount + ' SOL';
+                document.getElementById('accessTokens').textContent = Math.floor(amount * 1000);
+                updateTierBadge(Math.floor(amount * 1000));
+            }, 1500);
+        };
+
+        window.unstakeSOL = async function() {
+            if (!window.enatState.connected) {
+                alert('Please connect your wallet first');
+                return;
+            }
+
+            const amount = parseFloat(document.getElementById('unstakeAmount').value);
+            if (!amount) {
+                alert('Please enter an amount');
+                return;
+            }
+
+            logActivity(`Unstaking ${amount} SOL...`);
+            setTimeout(() => {
+                logActivity(`Successfully unstaked ${amount} SOL!`, 'success');
+            }, 1500);
+        };
+
+        window.transferAccess = async function() {
+            if (!window.enatState.connected) {
+                alert('Please connect your wallet first');
+                return;
+            }
+
+            const address = document.getElementById('transferAddress').value;
+            const amount = parseInt(document.getElementById('transferAmount').value);
+            
+            if (!address || !amount) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            logActivity(`Transferring ${amount} access tokens to ${address.substring(0, 8)}...`);
+            setTimeout(() => {
+                logActivity(`Successfully transferred ${amount} tokens! ⚠️ This was delegation, not a sale.`, 'success');
+            }, 1500);
+        };
+
+        window.activateNodeOperator = async function() {
+            if (!window.enatState.connected) {
+                alert('Please connect your wallet first');
+                return;
+            }
+
+            logActivity('Activating node operator status...');
+            setTimeout(() => {
+                logActivity('Node operator activated! You can now run network nodes.', 'success');
+                document.getElementById('nodeOperator').textContent = '✅ Yes';
+            }, 1500);
+        };
+
+        window.recordDataUsage = async function() {
+            if (!window.enatState.connected) {
+                alert('Please connect your wallet first');
+                return;
+            }
+
+            logActivity('Recording data usage...');
+            setTimeout(() => {
+                const mb = Math.floor(Math.random() * 100) + 50;
+                logActivity(`Recorded ${mb} MB of encrypted data processing`, 'success');
+                document.getElementById('dataProcessed').textContent = mb + ' MB';
+            }, 1000);
+        };
+
+        function updateStatus(message, connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            const textEl = document.getElementById('statusText');
+            
+            textEl.textContent = message;
+            statusEl.className = 'status-indicator ' + (connected ? 'status-connected' : 'status-disconnected');
+        }
+
+        function logActivity(message, type = 'info') {
+            const logEl = document.getElementById('activityLog');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry' + (type !== 'info' ? ' log-' + type : '');
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logEl.insertBefore(entry, logEl.firstChild);
+        }
+
+        function updateEstimatedTokens() {
+            const amount = parseFloat(document.getElementById('stakeAmount').value) || 0;
+            const tokens = Math.floor(amount * 1000); // 1000 tokens per SOL
+            document.getElementById('estimatedTokens').textContent = tokens;
+        }
+
+        function updateTierBadge(tokens) {
+            const badge = document.getElementById('tierBadge');
+            let tier, tierClass;
+            
+            if (tokens >= 10001) {
+                tier = 'Elite';
+                tierClass = 'tier-elite';
+            } else if (tokens >= 1001) {
+                tier = 'Premium';
+                tierClass = 'tier-premium';
+            } else if (tokens >= 100) {
+                tier = 'Basic';
+                tierClass = 'tier-basic';
+            } else {
+                tier = 'Not Qualified';
+                tierClass = 'tier-basic';
+            }
+            
+            badge.innerHTML = `<span class="tier-badge ${tierClass}">${tier}</span>`;
+        }
+
+        async function refreshData() {
+            // Get wallet balance
+            if (window.enatState.wallet) {
+                try {
+                    const balance = await window.enatState.connection.getBalance(window.enatState.wallet);
+                    document.getElementById('walletBalance').textContent = 
+                        (balance / LAMPORTS_PER_SOL).toFixed(4) + ' SOL';
+                } catch (error) {
+                    logActivity(`Error fetching balance: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>
+

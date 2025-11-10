@@ -1,0 +1,44 @@
+{
+  "assets": {
+    "solana-dapp-store-submission/assets/app-icon-512x512.png": {
+      "path": "solana-dapp-store-submission/assets/app-icon-512x512.png",
+      "sha256": "DzaQ+MDEPPJPdDYgpJRg19vRN/szQsW0tu7VjkUlMqs=",
+      "uri": "https://arweave.net/b3vQbeyrHL7qeS2uK5NV5Xrxc1868RaCsQl8ZDzz8_Q"
+    },
+    "solana-dapp-store-submission/whistle-v1.0.0.apk": {
+      "path": "solana-dapp-store-submission/whistle-v1.0.0.apk",
+      "sha256": "kINAfW3uPrthcjb98/ynQkoUwQLynXlVjS7bV/IGCWQ=",
+      "uri": "https://arweave.net/xSNZ-cz6tdGUtKpM2MQD-F8CBW7A4m98qL-L0_6jjc0"
+    },
+    "solana-dapp-store-submission/assets/banner-1200x600.png": {
+      "path": "solana-dapp-store-submission/assets/banner-1200x600.png",
+      "sha256": "BXARoB/stvlCaztuY/Rm7A9x8Bi6bkwEJHuuBfr3Rho=",
+      "uri": "https://arweave.net/0dZcugpJPSoIwQYgfyElkEjFPdVd7G_K-a5211XmCQ8"
+    },
+    "solana-dapp-store-submission/screenshots/Whistle_UI_centered_1_1920x1080.png": {
+      "path": "solana-dapp-store-submission/screenshots/Whistle_UI_centered_1_1920x1080.png",
+      "sha256": "LOM1+xU1tlbOARGNMMZE9KZb6bA4JkTmc5c8esFgw0Q=",
+      "uri": "https://arweave.net/baWJvxmefuot2h4nF8BM_M5JHgjy51l4AMJm8HFXZUA"
+    },
+    "solana-dapp-store-submission/screenshots/Whistle_UI_centered_2_1920x1080.png": {
+      "path": "solana-dapp-store-submission/screenshots/Whistle_UI_centered_2_1920x1080.png",
+      "sha256": "jZQOrndTzPsP+oJikLV8ytfmJXjNK+B6VOF6R8T84e0=",
+      "uri": "https://arweave.net/bAlZL-9RDMxWjSlBY3blqNXsElGQkHRPULMUPj5qX40"
+    },
+    "solana-dapp-store-submission/screenshots/Whistle_UI_centered_3_1920x1080.png": {
+      "path": "solana-dapp-store-submission/screenshots/Whistle_UI_centered_3_1920x1080.png",
+      "sha256": "7oGKRScGyL4fAG/8MtvmvsMie0XwPp8qg0tW0Nv6yrk=",
+      "uri": "https://arweave.net/5wsRnXmLIxk-FxKgLWVX1SFe-WzDvfMY2CfT5R61sBI"
+    },
+    "solana-dapp-store-submission/screenshots/Whistle_UI_centered_4_1920x1080.png": {
+      "path": "solana-dapp-store-submission/screenshots/Whistle_UI_centered_4_1920x1080.png",
+      "sha256": "nY5U98P2Ef61ak6MXiyUOEPiZZmYpmplLNpdorOW0Gc=",
+      "uri": "https://arweave.net/NlVAPYTIx0gDAfZe5BCNIa66ZqA1HCAk6TRBpTmQwxk"
+    },
+    "solana-dapp-store-submission/screenshots/Whistle_UI_centered_5_1920x1080.png": {
+      "path": "solana-dapp-store-submission/screenshots/Whistle_UI_centered_5_1920x1080.png",
+      "sha256": "NQ/gMtR6sOT2pNg8NqK2zkHPHZYiAMcJPxGOqR/77kA=",
+      "uri": "https://arweave.net/DHZ5EMfAix75piBvJboCi6UsEH0wDBP2zLv20s_G6WA"
+    }
+  }
+}
