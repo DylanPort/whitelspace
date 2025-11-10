@@ -2,72 +2,31 @@
 node_modules/
 package-lock.json
 
-# Environment variables
-.env
-.env.local
-.env.production
-*.env
-
-# Node keys and wallets - NEVER COMMIT THESE!
-node-keys/
-*.json
-!package.json
-!ghost-whistle-idl.json
-!capacitor.config.json
-!tsconfig.json
-
-# PM2
-.pm2/
-logs/
-*.log
-
-# Storage
-node-storage/
-*.db
-*.sqlite
-
 # Build outputs
 dist/
 build/
-.cache/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
-# OS
-.DS_Store
-Thumbs.db
-Desktop.ini
+# Environment variables
+.env
+.env.local
+
+# Capacitor
+android/
+ios/
+.capacitor/
 
 # Temporary files
 *.tmp
 *.temp
-.temp/
-temp/
-
-# Backups
-*.backup
-*.bak
-*.old
-
-# Docker
-.dockerignore
-
-# Local development
-.local/
-local/
-test-*.html
-*-test.html
-
-# Local Netlify folder
-.netlify
-
-# Documentation (excluded from repo)
-docs/
-
-# Smart contract source (excluded from repo)
-ghost-whisper-contract/
+.cache/

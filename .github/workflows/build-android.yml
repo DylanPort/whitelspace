@@ -1,0 +1,91 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+    
+    - name: Create www directory and copy assets
+      run: |
+        mkdir -p www
+        cp index.html www/
+        cp manifest.webmanifest www/
+        if [ -d "public" ]; then cp -r public/* www/; fi
+        if [ -d "assets" ]; then cp -r assets www/; fi
+    
+    - name: Copy Capacitor config to root
+      run: cp config/capacitor.config.json capacitor.config.json
+    
+    - name: Add Android platform
+      run: npx cap add android || true
+    
+    - name: Sync Capacitor
+      run: npx cap sync android
+    
+    - name: Grant execute permission for gradlew
+      run: chmod +x android/gradlew
+    
+    - name: Build Debug APK
+      run: cd android && ./gradlew assembleDebug --no-daemon
+    
+    - name: Build Release APK (unsigned)
+      run: cd android && ./gradlew assembleRelease --no-daemon
+      continue-on-error: true
+    
+    - name: Upload Debug APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: ghost-whistle-debug
+        path: android/app/build/outputs/apk/debug/app-debug.apk
+        retention-days: 30
+    
+    - name: Upload Release APK
+      uses: actions/upload-artifact@v4
+      if: success()
+      with:
+        name: ghost-whistle-release-unsigned
+        path: android/app/build/outputs/apk/release/app-release-unsigned.apk
+        retention-days: 30
+      continue-on-error: true
+    
+    - name: Build summary
+      run: |
+        echo "### 📱 Android Build Complete! 🎉" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Debug APK built successfully" >> $GITHUB_STEP_SUMMARY
+        echo "📦 Download the APK from the 'Artifacts' section above" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**To install on your device:**" >> $GITHUB_STEP_SUMMARY
+        echo "1. Download the debug APK" >> $GITHUB_STEP_SUMMARY
+        echo "2. Transfer to your Android device" >> $GITHUB_STEP_SUMMARY
+        echo "3. Enable 'Install from Unknown Sources' in Settings" >> $GITHUB_STEP_SUMMARY
+        echo "4. Open the APK file and install" >> $GITHUB_STEP_SUMMARY
+

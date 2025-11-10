@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Whistle Whitepaper - Interactive Privacy Revolution</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+    
+    body {
+      font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+      overflow-x: hidden;
+    }
+    
+    .particle {
+      position: fixed;
+      width: 2px;
+      height: 2px;
+      background: rgba(96, 165, 250, 0.5);
+      pointer-events: none;
+      animation: float 20s infinite;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0) translateX(0); opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { transform: translateY(-100vh) translateX(50px); opacity: 0; }
+    }
+    
+    .glow {
+      box-shadow: 0 0 20px rgba(96, 165, 250, 0.3);
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(96, 165, 250, 0.3); }
+      50% { box-shadow: 0 0 40px rgba(96, 165, 250, 0.6); }
+    }
+    
+    .feature-card {
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(96, 165, 250, 0.2);
+      transition: all 0.3s ease;
+    }
+    
+    .feature-card:hover {
+      transform: translateY(-10px) scale(1.02);
+      border-color: rgba(96, 165, 250, 0.6);
+      box-shadow: 0 20px 60px rgba(96, 165, 250, 0.3);
+    }
+    
+    .interactive-demo {
+      position: relative;
+      background: linear-gradient(45deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));
+      border-radius: 20px;
+      padding: 2rem;
+      margin: 2rem 0;
+    }
+    
+    .code-block {
+      background: rgba(0, 0, 0, 0.4);
+      border-left: 4px solid #60a5fa;
+      padding: 1rem;
+      margin: 1rem 0;
+      font-family: 'Courier New', monospace;
+      overflow-x: auto;
+    }
+    
+    .typing-text {
+      overflow: hidden;
+      white-space: nowrap;
+      animation: typing 3s steps(40, end);
+    }
+    
+    @keyframes typing {
+      from { width: 0; }
+      to { width: 100%; }
+    }
+    
+    .parallax-section {
+      transform-style: preserve-3d;
+      perspective: 1000px;
+    }
+    
+    .live-counter {
+      font-size: 3rem;
+      font-weight: bold;
+      background: linear-gradient(45deg, #60a5fa, #a855f7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: count-up 2s ease-out;
+    }
+    
+    @keyframes count-up {
+      from { opacity: 0; transform: scale(0.5); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    
+    .interactive-stego-demo {
+      cursor: crosshair;
+    }
+    
+    .tool-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: rgba(96, 165, 250, 0.1);
+      border: 1px solid rgba(96, 165, 250, 0.3);
+      border-radius: 9999px;
+      transition: all 0.3s;
+    }
+    
+    .tool-badge:hover {
+      background: rgba(96, 165, 250, 0.2);
+      transform: scale(1.1);
+    }
+    
+    .scroll-indicator {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #60a5fa, #a855f7, #ec4899);
+      transition: width 0.1s;
+      z-index: 9999;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+    
+    // Particle Background
+    function ParticleBackground() {
+      useEffect(() => {
+        const particles = [];
+        for (let i = 0; i < 50; i++) {
+          const particle = document.createElement('div');
+          particle.className = 'particle';
+          particle.style.left = Math.random() * 100 + '%';
+          particle.style.animationDelay = Math.random() * 20 + 's';
+          particle.style.animationDuration = (15 + Math.random() * 10) + 's';
+          document.body.appendChild(particle);
+          particles.push(particle);
+        }
+        return () => particles.forEach(p => p.remove());
+      }, []);
+      return null;
+    }
+    
+    // Scroll Progress
+    function ScrollProgress() {
+      const [progress, setProgress] = useState(0);
+      
+      useEffect(() => {
+        const handleScroll = () => {
+          const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+          const progress = (window.scrollY / totalHeight) * 100;
+          setProgress(progress);
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+      }, []);
+      
+      return <div className="scroll-indicator" style={{ width: `${progress}%` }} />;
+    }
+    
+    // Live Stats Counter
+    function LiveStats() {
+      const [stats, setStats] = useState({ users: 0, transfers: 0, privacy: 0 });
+      
+      useEffect(() => {
+        const interval = setInterval(() => {
+          setStats({
+            users: Math.min(stats.users + Math.floor(Math.random() * 50), 10000),
+            transfers: Math.min(stats.transfers + Math.floor(Math.random() * 100), 50000),
+            privacy: Math.min(stats.privacy + 0.01, 100)
+          });
+        }, 100);
+        return () => clearInterval(interval);
+      }, [stats]);
+      
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-12">
+          <div className="feature-card p-6 text-center">
+            <div className="live-counter">{stats.users.toLocaleString()}</div>
+            <p className="text-white/80 mt-2">Privacy Advocates</p>
+          </div>
+          <div className="feature-card p-6 text-center">
+            <div className="live-counter">{stats.transfers.toLocaleString()}</div>
+            <p className="text-white/80 mt-2">Secure Transfers</p>
+          </div>
+          <div className="feature-card p-6 text-center">
+            <div className="live-counter">{stats.privacy.toFixed(2)}%</div>
+            <p className="text-white/80 mt-2">Privacy Score</p>
+          </div>
+        </div>
+      );
+    }
+    
+    // Solana Privacy Section with Tabs
+    function SolanaPrivacySection() {
+      const [activeTab, setActiveTab] = useState(0);
+      
+      useEffect(() => {
+        if (window.lucide) window.lucide.createIcons();
+      }, [activeTab]);
+      
+      const tabs = [
+        { id: 0, name: 'Proof of Existence', icon: 'shield-check' },
+        { id: 1, name: 'How It Works', icon: 'cpu' },
+        { id: 2, name: 'Use Cases', icon: 'lightbulb' },
+        { id: 3, name: 'Privacy Guarantees', icon: 'lock' }
+      ];
+      
+      const tabContent = {
+        0: {
+          title: 'Blockchain Proof of Existence',
+          content: (
+            <div className="space-y-6">
+              <p className="text-lg text-white/90">
+                After sending an encrypted bundle, Whistle posts a SHA-256 hash to the Solana blockchain. This creates an immutable, publicly verifiable timestamp without revealing any content.
+              </p>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="bg-white/[0.03] p-6 rounded-xl border border-yellow-400/20">
+                  <h4 className="text-xl font-bold text-yellow-300 mb-4 flex items-center gap-2">
+                    <i data-lucide="zap" className="w-5 h-5"></i>
+                    Lightning Fast
+                  </h4>
+                  <ul className="space-y-2 text-white/80">
+                    <li>✓ Confirms in under 1 second</li>
+                    <li>✓ 400ms average confirmation time</li>
+                    <li>✓ Real-time verification</li>
+                  </ul>
+                </div>
+                <div className="bg-white/[0.03] p-6 rounded-xl border border-yellow-400/20">
+                  <h4 className="text-xl font-bold text-yellow-300 mb-4 flex items-center gap-2">
+                    <i data-lucide="coins" className="w-5 h-5"></i>
+                    Ultra Cheap
+                  </h4>
+                  <ul className="space-y-2 text-white/80">
+                    <li>✓ ~$0.0001 per transaction</li>
+                    <li>✓ Accessible to everyone</li>
+                    <li>✓ No barriers to entry</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="code-block">
+                <code className="text-yellow-400">
+                  const hash = await sha256(encryptedBundle);<br/>
+                  await postToSolana(hash); // Immutable proof created!<br/>
+                  // Content private, timestamp public and verifiable
+                </code>
+              </div>
+            </div>
+          )
+        },
+        1: {
+          title: 'How Solana Privacy Works',
+          content: (
+            <div className="space-y-6">
+              <div className="grid gap-6">
+                <div className="bg-gradient-to-r from-yellow-500/10 to-amber-500/10 p-6 rounded-xl border border-yellow-400/30">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-xl flex items-center justify-center shrink-0">
+                      <span className="text-2xl font-bold text-white">1</span>
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-bold text-white mb-2">Bundle Encryption</h4>
+                      <p className="text-white/80">Your message and files are encrypted using AES-256-GCM before any transmission occurs.</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-gradient-to-r from-yellow-500/10 to-amber-500/10 p-6 rounded-xl border border-yellow-400/30">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-xl flex items-center justify-center shrink-0">
+                      <span className="text-2xl font-bold text-white">2</span>
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-bold text-white mb-2">Hash Generation</h4>
+                      <p className="text-white/80">A unique SHA-256 hash (fingerprint) is computed from the encrypted bundle. This hash is 64 characters long.</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-gradient-to-r from-yellow-500/10 to-amber-500/10 p-6 rounded-xl border border-yellow-400/30">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-xl flex items-center justify-center shrink-0">
+                      <span className="text-2xl font-bold text-white">3</span>
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-bold text-white mb-2">Blockchain Posting</h4>
+                      <p className="text-white/80">Only the hash is posted to Solana using a Memo transaction. The actual content never touches the blockchain.</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-gradient-to-r from-yellow-500/10 to-amber-500/10 p-6 rounded-xl border border-yellow-400/30">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-xl flex items-center justify-center shrink-0">
+                      <span className="text-2xl font-bold text-white">4</span>
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-bold text-white mb-2">Immutable Timestamp</h4>
+                      <p className="text-white/80">The transaction is permanently recorded with a timestamp that anyone can verify but no one can alter.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        },
+        2: {
+          title: 'Real-World Use Cases',
+          content: (
+            <div className="space-y-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="bg-white/[0.03] p-6 rounded-xl border border-yellow-400/20 hover:border-yellow-400/40 transition-all">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mb-4">
+                    <i data-lucide="briefcase" className="w-6 h-6 text-white"></i>
+                  </div>
+                  <h4 className="text-xl font-bold text-white mb-3">Corporate Whistleblower</h4>
+                  <p className="text-white/80 text-sm">
+                    Send documents on January 1st. Story breaks January 5th. Company claims fraud on January 10th? 
+                    Your Solana timestamp proves the documents existed before the accusation.
+                  </p>
+                </div>
+                
+                <div className="bg-white/[0.03] p-6 rounded-xl border border-yellow-400/20 hover:border-yellow-400/40 transition-all">
+                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-4">
+                    <i data-lucide="newspaper" className="w-6 h-6 text-white"></i>
+                  </div>
+                  <h4 className="text-xl font-bold text-white mb-3">Investigative Journalism</h4>
+                  <p className="text-white/80 text-sm">
+                    Receive a tip with blockchain proof. Verify the timeline. Protect your source's credibility. 
+                    The timestamp proves authenticity without revealing identity.
+                  </p>
+                </div>
+                
+                <div className="bg-white/[0.03] p-6 rounded-xl border border-yellow-400/20 hover:border-yellow-400/40 transition-all">
+                  <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mb-4">
+                    <i data-lucide="scale" className="w-6 h-6 text-white"></i>
+                  </div>
+                  <h4 className="text-xl font-bold text-white mb-3">Legal Protection</h4>
+                  <p className="text-white/80 text-sm">
+                    Prove you possessed evidence at a specific time. Defend against fabrication claims. 
+                    Blockchain timestamps are admissible in legal proceedings.
+                  </p>
+                </div>
+                
+                <div className="bg-white/[0.03] p-6 rounded-xl border border-yellow-400/20 hover:border-yellow-400/40 transition-all">
+                  <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-orange-500 rounded-xl flex items-center justify-center mb-4">
+                    <i data-lucide="users" className="w-6 h-6 text-white"></i>
+                  </div>
+                  <h4 className="text-xl font-bold text-white mb-3">Human Rights Documentation</h4>
+                  <p className="text-white/80 text-sm">
+                    Document abuses with immutable timestamps. Share evidence internationally. 
+                    Prove events occurred when claimed, preventing historical revisionism.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )
+        },
+        3: {
+          title: 'Privacy & Security Guarantees',
+          content: (
+            <div className="space-y-6">
+              <div className="grid gap-4">
+                <div className="flex items-start gap-4 p-6 rounded-xl bg-white/[0.03] border border-green-400/30">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shrink-0">
+                    <i data-lucide="check" className="w-5 h-5 text-white"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-white mb-2">Content Privacy</h4>
+                    <p className="text-white/70">Only the hash is stored on-chain. Your actual message content never touches the blockchain. Impossible to reverse engineer content from hash.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-4 p-6 rounded-xl bg-white/[0.03] border border-green-400/30">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shrink-0">
+                    <i data-lucide="check" className="w-5 h-5 text-white"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-white mb-2">Identity Protection</h4>
+                    <p className="text-white/70">Use any Solana wallet. No KYC required. Wallet addresses don't reveal real-world identity. Complete pseudonymity maintained.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-4 p-6 rounded-xl bg-white/[0.03] border border-green-400/30">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shrink-0">
+                    <i data-lucide="check" className="w-5 h-5 text-white"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-white mb-2">Immutability</h4>
+                    <p className="text-white/70">Once posted, the timestamp cannot be altered or deleted. Provides permanent proof. Protected by Solana's network security.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-4 p-6 rounded-xl bg-white/[0.03] border border-green-400/30">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shrink-0">
+                    <i data-lucide="check" className="w-5 h-5 text-white"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-white mb-2">Public Verifiability</h4>
+                    <p className="text-white/70">Anyone can verify the timestamp using Solana explorers. No special access required. Transparency without compromising privacy.</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-r from-yellow-500/20 to-amber-500/20 border border-yellow-400/40 rounded-xl p-6 mt-6">
+                <div className="flex items-start gap-4">
+                  <i data-lucide="info" className="w-6 h-6 text-yellow-400 shrink-0 mt-1"></i>
+                  <div>
+                    <h4 className="text-lg font-bold text-white mb-2">What This Means</h4>
+                    <p className="text-white/90">
+                      You get the best of both worlds: <span className="text-yellow-400 font-bold">complete content privacy</span> from encryption, 
+                      and <span className="text-yellow-400 font-bold">verifiable proof</span> from blockchain. No one can see your message, 
+                      but everyone can verify it existed at a specific time.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        }
+      };
+      
+      return (
+        <div className="max-w-6xl mx-auto px-6 my-20">
+          <div className="feature-card p-8">
+            <h3 className="text-3xl font-bold mb-8 text-center flex items-center justify-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-500 to-amber-500 flex items-center justify-center">
+                <i data-lucide="link-2" className="w-6 h-6 text-white"></i>
+              </div>
+              Solana Blockchain Privacy
+            </h3>
+            
+            {/* Tabs */}
+            <div className="flex flex-wrap gap-3 mb-8 justify-center">
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 ${
+                    activeTab === tab.id
+                      ? 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-lg shadow-yellow-500/30'
+                      : 'bg-white/[0.05] text-white/70 hover:bg-white/[0.1] hover:text-white'
+                  }`}
+                >
+                  <i data-lucide={tab.icon} className="w-4 h-4"></i>
+                  {tab.name}
+                </button>
+              ))}
+            </div>
+            
+            {/* Tab Content */}
+            <div className="mt-8">
+              <h4 className="text-2xl font-bold text-white mb-6">{tabContent[activeTab].title}</h4>
+              {tabContent[activeTab].content}
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    // Main App
+    function WhitepaperApp() {
+      useEffect(() => {
+        if (window.lucide) window.lucide.createIcons();
+      });
+      
+      const tools = [
+        { icon: 'activity', name: 'WebRTC P2P', desc: 'Direct encrypted transfers, no servers', color: 'blue', gradient: 'from-blue-500 to-cyan-500' },
+        { icon: 'image', name: 'Image Stego', desc: 'LSB & Spread Spectrum encoding', color: 'purple', gradient: 'from-purple-500 to-pink-500' },
+        { icon: 'mic', name: 'Audio Stego', desc: 'Hide messages in sound waves', color: 'pink', gradient: 'from-pink-500 to-rose-500' },
+        { icon: 'film', name: 'Video Stego', desc: 'Distribute data across frames', color: 'violet', gradient: 'from-violet-500 to-purple-500' },
+        { icon: 'scan', name: 'Metadata Scrubber', desc: 'Remove EXIF and GPS data', color: 'cyan', gradient: 'from-cyan-500 to-blue-500' },
+        { icon: 'timer', name: 'Self-Destruct', desc: 'Auto-delete after timer', color: 'orange', gradient: 'from-orange-500 to-red-500' },
+        { icon: 'shield-alert', name: 'OpSec Checklist', desc: 'Pre-send security validation', color: 'green', gradient: 'from-green-500 to-emerald-500' },
+        { icon: 'link-2', name: 'Blockchain Proof', desc: 'Immutable Solana timestamps', color: 'yellow', gradient: 'from-yellow-500 to-amber-500' }
+      ];
+      
+      return (
+        <div className="min-h-screen text-white">
+          <ParticleBackground />
+          <ScrollProgress />
+          
+          {/* Hero */}
+          <div className="relative overflow-hidden py-20 px-6">
+            <div className="max-w-6xl mx-auto text-center">
+              <div className="mb-8 inline-block">
+                <div className="relative w-32 h-32 mx-auto mb-4">
+                  <img 
+                    src="whistel_logo_top_right_2048.png" 
+                    alt="Whistle Logo" 
+                    className="w-full h-full object-contain animate-pulse"
+                    style={{ animationDuration: '3s' }}
+                  />
+                </div>
+              </div>
+              <h1 className="text-6xl md:text-8xl font-bold mb-6 typing-text">
+                WHISTLE
+              </h1>
+              <p className="text-3xl md:text-4xl mb-8 text-blue-300">
+                The Privacy Revolution
+              </p>
+              <div className="text-xl md:text-2xl text-white/80 max-w-3xl mx-auto">
+                <p className="mb-4">Open source. Forever free. Built for liberation.</p>
+                <p className="text-blue-400 font-bold">Privacy isn't a feature. It's the final boss.</p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Live Stats */}
+          <div className="max-w-6xl mx-auto px-6">
+            <LiveStats />
+          </div>
+          
+          {/* Mission Statement */}
+          <div className="max-w-4xl mx-auto px-6 my-20">
+            <div className="feature-card p-8 glow">
+              <h2 className="text-4xl font-bold mb-6 text-center flex items-center justify-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                  <i data-lucide="flag" className="w-6 h-6 text-white"></i>
+                </div>
+                Our Mission
+              </h2>
+              <p className="text-xl text-white/90 leading-relaxed text-center">
+                We're not here for market caps. We're here to <span className="text-blue-400 font-bold">break chains</span>.
+                Every tool we build is a weapon against surveillance. Every line of code is open source.
+                Every feature is free. <span className="text-purple-400 font-bold">Power to the people through utility.</span>
+              </p>
+            </div>
+          </div>
+          
+          
+          {/* Tools Grid */}
+          <div className="max-w-6xl mx-auto px-6 my-20">
+            <h2 className="text-5xl font-bold mb-12 text-center flex items-center justify-center gap-4">
+              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">
+                <i data-lucide="shield" className="w-8 h-8 text-white"></i>
+              </div>
+              Arsenal of Privacy
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {tools.map((tool, i) => (
+                <div key={i} className="feature-card p-6 hover:rotate-1 relative overflow-hidden group" style={{ animationDelay: `${i * 0.1}s` }}>
+                  <div className={`absolute inset-0 bg-gradient-to-br ${tool.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}></div>
+                  <div className="relative z-10">
+                    <div className={`w-16 h-16 mb-4 rounded-xl bg-gradient-to-br ${tool.gradient} flex items-center justify-center`}>
+                      <i data-lucide={tool.icon} className="w-8 h-8 text-white"></i>
+                    </div>
+                    <h3 className="text-xl font-bold mb-2 text-white">{tool.name}</h3>
+                    <p className="text-white/70 text-sm">{tool.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Technical Deep Dive - Audio */}
+          <div className="max-w-6xl mx-auto px-6 my-20">
+            <div className="feature-card p-8">
+              <h3 className="text-3xl font-bold mb-6 flex items-center">
+                <i data-lucide="headphones" className="w-8 h-8 mr-3 text-pink-400"></i>
+                Audio Steganography Deep Dive
+              </h3>
+              <div className="grid md:grid-cols-2 gap-8">
+                <div>
+                  <h4 className="text-xl font-bold mb-4 text-pink-300">How It Works</h4>
+                  <ul className="space-y-3 text-white/80">
+                    <li>✓ LSB encoding in 16-bit audio samples</li>
+                    <li>✓ Web Audio API for processing</li>
+                    <li>✓ WAV output with hidden data</li>
+                    <li>✓ ~10,000 chars per minute of audio</li>
+                    <li>✓ Survives WhatsApp, SoundCloud, email</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="text-xl font-bold mb-4 text-pink-300">Use Cases</h4>
+                  <ul className="space-y-3 text-white/80">
+                    <li>🎙️ Voice memos with hidden coordinates</li>
+                    <li>🎵 Podcast clips with encrypted data</li>
+                    <li>📱 Phone recordings with secure messages</li>
+                    <li>☁️ Cloud-shared audio files</li>
+                    <li>💬 Messaging app voice notes</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="code-block mt-6">
+                <code className="text-green-400">
+                  const samples = audioBuffer.getChannelData(0);<br/>
+                  samples[i] = (samples[i] & ~1) | messageBit; // LSB injection<br/>
+                  // Audio sounds identical, data is hidden forever
+                </code>
+              </div>
+            </div>
+          </div>
+          
+          {/* Technical Deep Dive - Video */}
+          <div className="max-w-6xl mx-auto px-6 my-20">
+            <div className="feature-card p-8">
+              <h3 className="text-3xl font-bold mb-6 flex items-center">
+                <i data-lucide="film" className="w-8 h-8 mr-3 text-violet-400"></i>
+                Video Steganography Deep Dive
+              </h3>
+              <div className="grid md:grid-cols-2 gap-8">
+                <div>
+                  <h4 className="text-xl font-bold mb-4 text-violet-300">How It Works</h4>
+                  <ul className="space-y-3 text-white/80">
+                    <li>✓ LSB encoding across video frames</li>
+                    <li>✓ 100 bits per frame at 30 FPS</li>
+                    <li>✓ Canvas API for pixel manipulation</li>
+                    <li>✓ ~1,000 chars per 10 seconds</li>
+                    <li>✓ WebM output with VP9 codec</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="text-xl font-bold mb-4 text-violet-300">Use Cases</h4>
+                  <ul className="space-y-3 text-white/80">
+                    <li>📹 YouTube uploads with hidden data</li>
+                    <li>🎵 TikTok videos with secret messages</li>
+                    <li>📷 Instagram Reels coordination</li>
+                    <li>💬 Video messages on social media</li>
+                    <li>📧 Email attachments that look normal</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="code-block mt-6">
+                <code className="text-purple-400">
+                  for each frame:<br/>
+                  &nbsp;&nbsp;imageData[i] = (pixel & ~1) | messageBit;<br/>
+                  // Message distributed across time, invisible to eye
+                </code>
+              </div>
+            </div>
+          </div>
+          
+          {/* Solana Privacy Section with Tabs */}
+          <SolanaPrivacySection />
+          
+          {/* The Manifesto */}
+          <div className="max-w-4xl mx-auto px-6 my-20">
+            <div className="feature-card p-12 glow text-center">
+              <h2 className="text-5xl font-bold mb-8 flex items-center justify-center gap-4">
+                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                  <i data-lucide="book-open" className="w-8 h-8 text-white"></i>
+                </div>
+                The Manifesto
+              </h2>
+              <div className="space-y-8 text-lg text-white/90">
+                <div className="flex items-start gap-4 p-6 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-blue-400/30 transition-all">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shrink-0">
+                    <i data-lucide="lock-open" className="w-6 h-6 text-white"></i>
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-white mb-2">Privacy is not a feature.</p>
+                    <p className="text-white/70">It's a fundamental right. The foundation of human dignity in the digital age.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-4 p-6 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-purple-400/30 transition-all">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shrink-0">
+                    <i data-lucide="users" className="w-6 h-6 text-white"></i>
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-white mb-2">We are not speculators.</p>
+                    <p className="text-white/70">We are freedom fighters building tools for liberation, not portfolios.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-4 p-6 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-green-400/30 transition-all">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shrink-0">
+                    <i data-lucide="globe" className="w-6 h-6 text-white"></i>
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-white mb-2">This is not about tokens.</p>
+                    <p className="text-white/70">It's about liberation. Breaking the chains of surveillance and control.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-4 p-6 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-cyan-400/30 transition-all">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shrink-0">
+                    <i data-lucide="code-2" className="w-6 h-6 text-white"></i>
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-white mb-2">Open source forever.</p>
+                    <p className="text-white/70">No backdoors. No compromises. Every line auditable by everyone.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-4 p-6 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-red-400/30 transition-all">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center shrink-0">
+                    <i data-lucide="zap" className="w-6 h-6 text-white"></i>
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-white mb-2">We are the final boss.</p>
+                    <p className="text-white/70">Because after privacy falls, everything falls. This is the last stand.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-12">
+                <a href="/" className="inline-block px-12 py-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xl font-bold rounded-full hover:scale-110 transition-all glow">
+                  Join the Revolution
+                </a>
+              </div>
+            </div>
+          </div>
+          
+          {/* Footer */}
+          <div className="text-center py-12 px-6 text-white/60">
+            <p className="text-lg mb-4">Built by the people. For the people.</p>
+            <p className="text-sm">Open source. Auditable. Unstoppable.</p>
+            <div className="mt-6 flex justify-center gap-6">
+              <a href="https://github.com/DylanPort/whitelspace" target="_blank" rel="noopener noreferrer" className="tool-badge hover:bg-blue-400/30">
+                <i data-lucide="github" className="w-4 h-4"></i>
+                GitHub
+              </a>
+              <a href="https://x.com/Whistle_Ninja" target="_blank" rel="noopener noreferrer" className="tool-badge hover:bg-blue-400/30">
+                <i data-lucide="twitter" className="w-4 h-4"></i>
+                @Whistle_Ninja
+              </a>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    ReactDOM.render(<WhitepaperApp />, document.getElementById('root'));
+  </script>
+  
+  <script>
+    // Initialize Lucide icons after React renders
+    setTimeout(() => {
+      if (window.lucide) window.lucide.createIcons();
+    }, 100);
+  </script>
+</body>
+</html>
+

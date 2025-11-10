@@ -1,0 +1,95 @@
+{
+  "name": "Ghost Whistle - Decentralized Privacy Network",
+  "short_name": "Ghost Whistle",
+  "description": "Stake WHISTLE, run privacy nodes, and earn rewards. Decentralized anonymous relay network.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0f14",
+  "theme_color": "#10b981",
+  "lang": "en-US",
+  "categories": ["finance", "utilities", "productivity"],
+  "icons": [
+    {
+      "src": "whistel_logo_top_right_2048.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "whistel_logo_top_right_2048.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "whistel_logo_top_right_2048.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "whistel_logo_top_right_2048.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Ghost Whistle",
+      "short_name": "Stake & Earn",
+      "description": "Stake WHISTLE and run nodes",
+      "url": "/?section=offline-network",
+      "icons": [{ "src": "whistel_logo_top_right_2048.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Ghost Terminal",
+      "short_name": "Terminal",
+      "description": "Exclusive staker chat",
+      "url": "/?section=social-hub",
+      "icons": [{ "src": "whistel_logo_top_right_2048.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Anonymous Relay",
+      "short_name": "Relay",
+      "description": "Send anonymous transactions",
+      "url": "/?section=anonymous-relay",
+      "icons": [{ "src": "whistel_logo_top_right_2048.png", "sizes": "192x192" }]
+    }
+  ],
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.ghostwhistle.app",
+      "id": "com.ghostwhistle.app"
+    }
+  ],
+  "prefer_related_applications": false,
+  "protocol_handlers": [
+    {
+      "protocol": "web+whistle",
+      "url": "/?action=%s"
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "/",
+      "accept": {
+        "text/plain": [".txt"]
+      }
+    }
+  ]
+}
