@@ -22,7 +22,7 @@ jobs:
         cache: 'npm'
     
     - name: Install dependencies
-      run: npm ci
+      run: npm install
     
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -44,8 +44,18 @@ jobs:
     - name: Copy Capacitor config to root
       run: cp config/capacitor.config.json capacitor.config.json
     
+    - name: Check if Android platform exists
+      id: check_android
+      run: |
+        if [ -d "android" ]; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+    
     - name: Add Android platform
-      run: npx cap add android || true
+      if: steps.check_android.outputs.exists == 'false'
+      run: npx cap add android
     
     - name: Sync Capacitor
       run: npx cap sync android
