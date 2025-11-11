@@ -66,18 +66,20 @@ exports.handler = async (event) => {
       };
     }
 
-    const store = getStore('claim-timestamps');
+    let store = null;
     let claimInfo = null;
     const now = Date.now();
     const cooldownMs = COOLDOWN_HOURS * 60 * 60 * 1000;
 
     try {
+      store = getStore('claim-timestamps');
       const existing = await store.get(userWallet);
       if (existing) {
         claimInfo = JSON.parse(existing);
       }
     } catch (storeError) {
       console.warn('⚠️ Unable to load claim state (continuing):', storeError.message);
+      store = null; // Ensure store is null if getStore() fails
     }
 
     if (claimInfo?.lastClaim) {
@@ -180,17 +182,21 @@ exports.handler = async (event) => {
     const base64Transaction = serialized.toString('base64');
     console.log(`✅ Partially signed transaction for ${userWallet.slice(0, 8)}... (${serialized.length} bytes)`);
 
-    try {
-      await store.set(userWallet, JSON.stringify({
-        lastClaim: claimInfo?.lastClaim || 0,
-        signature: null,
-        claimLock: now,
-        claimLockExpires: now + CLAIM_LOCK_MS,
-        status: 'pending'
-      }));
-      console.log(`🔒 Claim lock refreshed for ${userWallet.slice(0, 8)}...`);
-    } catch (lockError) {
-      console.error('⚠️ Failed to persist claim lock (continuing):', lockError);
+    if (store) {
+      try {
+        await store.set(userWallet, JSON.stringify({
+          lastClaim: claimInfo?.lastClaim || 0,
+          signature: null,
+          claimLock: now,
+          claimLockExpires: now + CLAIM_LOCK_MS,
+          status: 'pending'
+        }));
+        console.log(`🔒 Claim lock refreshed for ${userWallet.slice(0, 8)}...`);
+      } catch (lockError) {
+        console.error('⚠️ Failed to persist claim lock (continuing):', lockError);
+      }
+    } else {
+      console.warn('⚠️ Netlify Blobs not available, claim lock skipped');
     }
 
     return {
