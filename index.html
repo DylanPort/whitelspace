@@ -8392,7 +8392,19 @@
       }, [walletAddress]);
       
       async function checkWallet() {
-        // Check for mobile in-app wallet first
+        // Check for desktop extension wallet FIRST
+        if (window.solana && window.solana.isPhantom) {
+          const connected = window.solana.isConnected;
+          if (connected) {
+            const publicKey = window.solana.publicKey;
+            console.log('🖥️ Desktop wallet connected:', publicKey?.toBase58()?.slice(0, 8) + '...');
+            setWallet(window.solana);
+            setWalletAddress(publicKey?.toBase58() || null);
+            return; // Use desktop wallet if available
+          }
+        }
+        
+        // Fall back to mobile in-app wallet
         const mobileAddress = localStorage.getItem('ghost_mobile_address');
         const mobilePrivateKey = localStorage.getItem('ghost_mobile_wallet');
         
@@ -8403,23 +8415,23 @@
           setWalletAddress(mobileAddress);
           return;
         }
-        
-        // Check for desktop extension wallet
-        if (window.solana && window.solana.isPhantom) {
-          const connected = window.solana.isConnected;
-          if (connected) {
-            const publicKey = window.solana.publicKey;
-            setWallet(window.solana);
-            setWalletAddress(publicKey?.toBase58() || null);
-          }
-        }
       }
       
       async function connectWallet() {
         try {
           setConnecting(true);
           
-          // Check for mobile in-app wallet first
+          // Try desktop extension wallet FIRST
+          if (window.solana && window.solana.isPhantom) {
+            const resp = await window.solana.connect();
+            console.log('🖥️ Desktop wallet connected:', resp.publicKey.toBase58().slice(0, 8) + '...');
+            setWallet(window.solana);
+            setWalletAddress(resp.publicKey.toBase58());
+            pushToast('Wallet connected!', 'ok');
+            return; // Use desktop wallet if available
+          }
+          
+          // Fall back to mobile in-app wallet
           const mobileAddress = localStorage.getItem('ghost_mobile_address');
           const mobilePrivateKey = localStorage.getItem('ghost_mobile_wallet');
           
@@ -8432,15 +8444,8 @@
             return;
           }
           
-          // Try desktop extension wallet
-          if (!window.solana) {
-            pushToast('Please install Phantom Wallet or create a mobile wallet', 'error');
-            return;
-          }
-          const resp = await window.solana.connect();
-          setWallet(window.solana);
-          setWalletAddress(resp.publicKey.toBase58());
-          pushToast('Wallet connected!', 'ok');
+          // No wallet found
+          pushToast('Please install Phantom Wallet or create a mobile wallet', 'error');
         } catch (e) {
           pushToast('Failed to connect wallet', 'error');
         } finally {
