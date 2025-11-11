@@ -73,15 +73,17 @@ exports.handler = async (event) => {
 
     // Check 24h cooldown
     let claimInfo = null;
-    const store = getStore('claim-timestamps');
+    let store = null;
 
     try {
+      store = getStore('claim-timestamps');
       const lastClaimData = await store.get(walletAddress);
       if (lastClaimData) {
         claimInfo = JSON.parse(lastClaimData);
       }
     } catch (cooldownError) {
       console.warn('⚠️ Error loading claim metadata, allowing claim:', cooldownError.message);
+      store = null; // Ensure store is null if getStore() fails
     }
 
     const now = Date.now();
@@ -268,11 +270,15 @@ exports.handler = async (event) => {
       status: 'pending'
     };
 
-    try {
-      await store.set(walletAddress, JSON.stringify(claimLockPayload));
-      console.log(`🔒 Claim lock set for ${walletAddress.slice(0, 8)}... until ${new Date(claimLockPayload.claimLockExpires).toISOString()}`);
-    } catch (lockError) {
-      console.error('⚠️ Failed to set claim lock (continuing):', lockError);
+    if (store) {
+      try {
+        await store.set(walletAddress, JSON.stringify(claimLockPayload));
+        console.log(`🔒 Claim lock set for ${walletAddress.slice(0, 8)}... until ${new Date(claimLockPayload.claimLockExpires).toISOString()}`);
+      } catch (lockError) {
+        console.error('⚠️ Failed to set claim lock (continuing):', lockError);
+      }
+    } else {
+      console.warn('⚠️ Netlify Blobs not available, claim lock skipped (cooldown will not work)');
     }
 
     // Return claimable amount
