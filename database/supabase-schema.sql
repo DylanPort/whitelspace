@@ -5,11 +5,13 @@
 ALTER TABLE IF EXISTS node_performance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS node_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS leaderboard_snapshots ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS claim_history ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing tables if they exist
 DROP TABLE IF EXISTS leaderboard_snapshots CASCADE;
 DROP TABLE IF EXISTS node_sessions CASCADE;
 DROP TABLE IF EXISTS node_performance CASCADE;
+DROP TABLE IF EXISTS claim_history CASCADE;
 
 -- Node performance tracking (main table)
 CREATE TABLE node_performance (
@@ -55,6 +57,21 @@ CREATE TABLE leaderboard_snapshots (
   current_streak_ms BIGINT DEFAULT 0
 );
 
+-- Claim history (for 24h cooldown enforcement)
+CREATE TABLE claim_history (
+  id SERIAL PRIMARY KEY,
+  wallet_address TEXT UNIQUE NOT NULL,
+  last_claim_timestamp BIGINT NOT NULL,
+  last_claim_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  claim_amount NUMERIC(20, 9) DEFAULT 0,
+  transaction_signature TEXT,
+  claim_status TEXT DEFAULT 'completed',
+  claim_lock BOOLEAN DEFAULT false,
+  claim_lock_expires_at BIGINT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Indexes for better performance
 CREATE INDEX idx_node_performance_node_id ON node_performance(node_id);
 CREATE INDEX idx_node_performance_wallet ON node_performance(wallet_address);
@@ -67,6 +84,9 @@ CREATE INDEX idx_node_sessions_start ON node_sessions(session_start);
 CREATE INDEX idx_leaderboard_snapshots_time ON leaderboard_snapshots(snapshot_time DESC);
 CREATE INDEX idx_leaderboard_snapshots_rank ON leaderboard_snapshots(snapshot_time DESC, rank);
 
+CREATE INDEX idx_claim_history_wallet ON claim_history(wallet_address);
+CREATE INDEX idx_claim_history_timestamp ON claim_history(last_claim_timestamp DESC);
+
 -- RLS Policies (allow read access to all, write only from service role)
 CREATE POLICY "Allow read access to node_performance" ON node_performance FOR SELECT USING (true);
 CREATE POLICY "Allow service role write to node_performance" ON node_performance FOR ALL USING (auth.role() = 'service_role');
@@ -76,6 +96,9 @@ CREATE POLICY "Allow service role write to node_sessions" ON node_sessions FOR A
 
 CREATE POLICY "Allow read access to leaderboard_snapshots" ON leaderboard_snapshots FOR SELECT USING (true);
 CREATE POLICY "Allow service role write to leaderboard_snapshots" ON leaderboard_snapshots FOR ALL USING (auth.role() = 'service_role');
+
+CREATE POLICY "Allow read access to claim_history" ON claim_history FOR SELECT USING (true);
+CREATE POLICY "Allow service role write to claim_history" ON claim_history FOR ALL USING (auth.role() = 'service_role');
 
 -- Function to update the updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -89,6 +112,10 @@ $$ language 'plpgsql';
 -- Trigger to automatically update updated_at
 CREATE TRIGGER update_node_performance_updated_at 
     BEFORE UPDATE ON node_performance 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_claim_history_updated_at 
+    BEFORE UPDATE ON claim_history 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Function to create leaderboard snapshot

@@ -9,7 +9,13 @@
 
 const { Connection, PublicKey, Transaction, SystemProgram } = require('@solana/web3.js');
 const { getAssociatedTokenAddressSync, createTransferInstruction } = require('@solana/spl-token');
-const { getStore } = require('@netlify/blobs');
+const { createClient } = require('@supabase/supabase-js');
+
+// Supabase configuration
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://avhmgbkwfwlatykotxwv.supabase.co';
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2aG1nYmt3ZndsYXR5a290eHd2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTIyMzE5OSwiZXhwIjoyMDc2Nzk5MTk5fQ.fX2d1rkjgAn7ZkjJXMjbd1cU0fNEEKB7LtfeWIgKQ4g';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 // Configuration
 const PROGRAM_ID = '2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq';
@@ -71,19 +77,27 @@ exports.handler = async (event) => {
 
     console.log('💰 Calculating claimable reward for:', walletAddress);
 
-    // Check 24h cooldown
+    // Check 24h cooldown from Supabase
     let claimInfo = null;
-    let store = null;
 
     try {
-      store = getStore('claim-timestamps');
-      const lastClaimData = await store.get(walletAddress);
-      if (lastClaimData) {
-        claimInfo = JSON.parse(lastClaimData);
+      const { data, error } = await supabase
+        .from('claim_history')
+        .select('*')
+        .eq('wallet_address', walletAddress)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+        console.warn('⚠️ Error loading claim metadata:', error.message);
+      } else if (data) {
+        claimInfo = {
+          lastClaim: data.last_claim_timestamp,
+          claimLock: data.claim_lock,
+          claimLockExpires: data.claim_lock_expires_at
+        };
       }
     } catch (cooldownError) {
       console.warn('⚠️ Error loading claim metadata, allowing claim:', cooldownError.message);
-      store = null; // Ensure store is null if getStore() fails
     }
 
     const now = Date.now();

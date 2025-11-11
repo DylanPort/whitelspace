@@ -9,8 +9,14 @@
 
 const { Connection, PublicKey, Transaction, Keypair } = require('@solana/web3.js');
 const { getAssociatedTokenAddressSync, createTransferInstruction } = require('@solana/spl-token');
-const { getStore } = require('@netlify/blobs');
+const { createClient } = require('@supabase/supabase-js');
 const bs58 = require('bs58');
+
+// Supabase configuration
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://avhmgbkwfwlatykotxwv.supabase.co';
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2aG1nYmt3ZndsYXR5a290eHd2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTIyMzE5OSwiZXhwIjoyMDc2Nzk5MTk5fQ.fX2d1rkjgAn7ZkjJXMjbd1cU0fNEEKB7LtfeWIgKQ4g';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 const WHISTLE_MINT = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';
 const FEE_COLLECTOR_WALLET = 'G1RHSMtZVZLafmZ9man8anb2HXf7JP5Kh5sbrGZKM6Pg';
@@ -66,20 +72,28 @@ exports.handler = async (event) => {
       };
     }
 
-    let store = null;
     let claimInfo = null;
     const now = Date.now();
     const cooldownMs = COOLDOWN_HOURS * 60 * 60 * 1000;
 
     try {
-      store = getStore('claim-timestamps');
-      const existing = await store.get(userWallet);
-      if (existing) {
-        claimInfo = JSON.parse(existing);
+      const { data, error } = await supabase
+        .from('claim_history')
+        .select('*')
+        .eq('wallet_address', userWallet)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+        console.warn('⚠️ Unable to load claim state:', error.message);
+      } else if (data) {
+        claimInfo = {
+          lastClaim: data.last_claim_timestamp,
+          claimLock: data.claim_lock,
+          claimLockExpires: data.claim_lock_expires_at
+        };
       }
     } catch (storeError) {
       console.warn('⚠️ Unable to load claim state (continuing):', storeError.message);
-      store = null; // Ensure store is null if getStore() fails
     }
 
     if (claimInfo?.lastClaim) {
@@ -182,21 +196,23 @@ exports.handler = async (event) => {
     const base64Transaction = serialized.toString('base64');
     console.log(`✅ Partially signed transaction for ${userWallet.slice(0, 8)}... (${serialized.length} bytes)`);
 
-    if (store) {
-      try {
-        await store.set(userWallet, JSON.stringify({
-          lastClaim: claimInfo?.lastClaim || 0,
-          signature: null,
-          claimLock: now,
-          claimLockExpires: now + CLAIM_LOCK_MS,
-          status: 'pending'
-        }));
-        console.log(`🔒 Claim lock refreshed for ${userWallet.slice(0, 8)}...`);
-      } catch (lockError) {
-        console.error('⚠️ Failed to persist claim lock (continuing):', lockError);
-      }
-    } else {
-      console.warn('⚠️ Netlify Blobs not available, claim lock skipped');
+    // Set claim lock in Supabase
+    try {
+      await supabase
+        .from('claim_history')
+        .upsert({
+          wallet_address: userWallet,
+          last_claim_timestamp: claimInfo?.lastClaim || 0,
+          transaction_signature: null,
+          claim_lock: true,
+          claim_lock_expires_at: now + CLAIM_LOCK_MS,
+          claim_status: 'pending'
+        }, {
+          onConflict: 'wallet_address'
+        });
+      console.log(`🔒 Claim lock set for ${userWallet.slice(0, 8)}...`);
+    } catch (lockError) {
+      console.error('⚠️ Failed to persist claim lock (continuing):', lockError);
     }
 
     return {
