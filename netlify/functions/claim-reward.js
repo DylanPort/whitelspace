@@ -276,23 +276,22 @@ exports.handler = async (event) => {
 
     console.log(`✅ User ${walletAddress.slice(0, 8)}... can claim: ${(claimableAmount / divisor).toFixed(4)} $WHISTLE`);
 
-    const claimLockPayload = {
-      lastClaim: claimInfo?.lastClaim || 0,
-      signature: claimInfo?.signature || null,
-      claimLock: now,
-      claimLockExpires: now + CLAIM_LOCK_MS,
-      status: 'pending'
-    };
-
-    if (store) {
-      try {
-        await store.set(walletAddress, JSON.stringify(claimLockPayload));
-        console.log(`🔒 Claim lock set for ${walletAddress.slice(0, 8)}... until ${new Date(claimLockPayload.claimLockExpires).toISOString()}`);
-      } catch (lockError) {
-        console.error('⚠️ Failed to set claim lock (continuing):', lockError);
-      }
-    } else {
-      console.warn('⚠️ Netlify Blobs not available, claim lock skipped (cooldown will not work)');
+    // Set claim lock in Supabase to prevent concurrent claims
+    try {
+      await supabase
+        .from('claim_history')
+        .upsert({
+          wallet_address: walletAddress,
+          last_claim_timestamp: claimInfo?.lastClaim || 0,
+          claim_lock: true,
+          claim_lock_expires_at: now + CLAIM_LOCK_MS,
+          claim_status: 'pending'
+        }, {
+          onConflict: 'wallet_address'
+        });
+      console.log(`🔒 Claim lock set for ${walletAddress.slice(0, 8)}... until ${new Date(now + CLAIM_LOCK_MS).toISOString()}`);
+    } catch (lockError) {
+      console.error('⚠️ Failed to set claim lock (continuing):', lockError);
     }
 
     // Return claimable amount
