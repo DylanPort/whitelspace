@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ghost VPN Proxy</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      width: 320px;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .header h1 {
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+    
+    .header p {
+      font-size: 12px;
+      opacity: 0.8;
+    }
+    
+    .status {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 8px;
+    }
+    
+    .status-indicator.connected {
+      background: #10b981;
+      box-shadow: 0 0 10px #10b981;
+      animation: pulse 2s infinite;
+    }
+    
+    .status-indicator.disconnected {
+      background: #6b7280;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .server-info {
+      font-size: 12px;
+      margin-top: 8px;
+      opacity: 0.9;
+      font-family: monospace;
+    }
+    
+    .input-group {
+      margin-bottom: 12px;
+    }
+    
+    .input-group label {
+      display: block;
+      font-size: 12px;
+      margin-bottom: 6px;
+      opacity: 0.9;
+    }
+    
+    .input-group input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      font-size: 14px;
+    }
+    
+    .input-group input::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+    
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .btn-connect {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      margin-bottom: 8px;
+    }
+    
+    .btn-connect:hover {
+      transform: scale(1.02);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    }
+    
+    .btn-disconnect {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+      margin-bottom: 8px;
+    }
+    
+    .btn-disconnect:hover {
+      transform: scale(1.02);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    }
+    
+    .btn-setup {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      font-size: 12px;
+    }
+    
+    .btn-setup:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+    
+    .hidden {
+      display: none;
+    }
+    
+    .footer {
+      text-align: center;
+      font-size: 10px;
+      margin-top: 16px;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🔒 Ghost VPN</h1>
+    <p>Browser Proxy</p>
+  </div>
+  
+  <div class="status">
+    <div>
+      <span class="status-indicator disconnected" id="statusIndicator"></span>
+      <span id="statusText">Disconnected</span>
+    </div>
+    <div class="server-info hidden" id="serverInfo"></div>
+  </div>
+  
+  <div id="setupForm">
+    <div class="input-group">
+      <label>Server IP:</label>
+      <input type="text" id="proxyHost" placeholder="e.g., 45.79.93.96">
+    </div>
+    <div class="input-group">
+      <label>Port:</label>
+      <input type="number" id="proxyPort" value="1080" placeholder="1080">
+    </div>
+    <button class="btn-connect" id="connectBtn">Connect to Proxy</button>
+  </div>
+  
+  <button class="btn-disconnect hidden" id="disconnectBtn">Disconnect</button>
+  
+  <button class="btn-setup" id="openDashboard">Open Ghost Whistle Dashboard</button>
+  
+  <div class="footer">
+    Made with ❤️ by Ghost Whistle
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
+

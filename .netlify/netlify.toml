@@ -1,14 +1,12 @@
 functionsDirectory = "C:\\Users\\salva\\Downloads\\Encrypto\\netlify\\functions"
 functionsDirectoryOrigin = "config-v1"
-headersOrigin = "config"
 redirectsOrigin = "config"
 plugins = []
+headers = []
 
 [build]
 publish = "C:\\Users\\salva\\Downloads\\Encrypto"
 publishOrigin = "config"
-commandOrigin = "config"
-command = "npm install"
 functions = "C:\\Users\\salva\\Downloads\\Encrypto\\netlify\\functions"
 
 [build.environment]
@@ -25,132 +23,10 @@ functions = "C:\\Users\\salva\\Downloads\\Encrypto\\netlify\\functions"
 
 [build.services]
 
-[template]
-
-[template.environment]
-SOLANA_TRACKER_API_KEY = ""
-SOLANA_MAINNET_RPC = ""
-SOLANA_RPC_URL = "https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba"
-PERPLEXITY_API_KEY = ""
-
-[dev]
-timeout = 300.0
-
 [functions]
 
 [functions."*"]
 node_bundler = "esbuild"
-
-[[headers]]
-for = "/server.js"
-
-[headers.values]
-Cache-Control = "no-store"
-
-[[headers]]
-for = "/*"
-
-[headers.values]
-X-Frame-Options = "DENY"
-X-Content-Type-Options = "nosniff"
-Referrer-Policy = "no-referrer"
-Permissions-Policy = "camera=(), microphone=(), geolocation=()"
-
-[[redirects]]
-from = "/x402/quote"
-to = "/.netlify/functions/x402-quote"
-status = 200.0
-force = false
-
-[redirects.query]
-
-[redirects.conditions]
-
-[redirects.headers]
-
-[[redirects]]
-from = "/x402/confirm"
-to = "/.netlify/functions/x402-confirm"
-status = 200.0
-force = false
-
-[redirects.query]
-
-[redirects.conditions]
-
-[redirects.headers]
-
-[[redirects]]
-from = "/x402/validate"
-to = "/.netlify/functions/x402-validate"
-status = 200.0
-force = false
-
-[redirects.query]
-
-[redirects.conditions]
-
-[redirects.headers]
-
-[[redirects]]
-from = "/lab-pro"
-to = "/privacy-tools-lab-fullstack.html"
-status = 200.0
-force = false
-
-[redirects.query]
-
-[redirects.conditions]
-
-[redirects.headers]
-
-[[redirects]]
-from = "/api/generate-backstory"
-to = "/.netlify/functions/generate-backstory"
-status = 200.0
-force = false
-
-[redirects.query]
-
-[redirects.conditions]
-
-[redirects.headers]
-
-[[redirects]]
-from = "/whitepaper.html"
-to = "/whitepaper.html"
-status = 200.0
-force = false
-
-[redirects.query]
-
-[redirects.conditions]
-
-[redirects.headers]
-
-[[redirects]]
-from = "/init-relay-pool.html"
-to = "/init-relay-pool.html"
-status = 200.0
-force = false
-
-[redirects.query]
-
-[redirects.conditions]
-
-[redirects.headers]
-
-[[redirects]]
-from = "/create-relay-vault.html"
-to = "/create-relay-vault.html"
-status = 200.0
-force = false
-
-[redirects.query]
-
-[redirects.conditions]
-
-[redirects.headers]
 
 [[redirects]]
 from = "/*"

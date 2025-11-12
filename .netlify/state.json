@@ -1,21 +1,21 @@
 {
 	"geolocation": {
 		"data": {
-			"city": "Milan",
+			"city": "Turin",
 			"country": {
 				"code": "IT",
 				"name": "Italy"
 			},
 			"subdivision": {
-				"code": "25",
-				"name": "Lombardy"
+				"code": "21",
+				"name": "Piedmont"
 			},
 			"timezone": "Europe/Rome",
-			"latitude": 45.4722,
-			"longitude": 9.1922,
-			"postalCode": "20141"
+			"latitude": 45.0729,
+			"longitude": 7.689,
+			"postalCode": "10141"
 		},
-		"timestamp": 1761995848812
+		"timestamp": 1762956787761
 	},
 	"siteId": "055165a3-e0fb-4136-b939-78c58638a31f"
 }

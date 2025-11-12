@@ -1,92 +1,11 @@
 [build]
   publish = "."
-  command = "npm install"
   functions = "netlify/functions"
-
-[template.environment]
-  SOLANA_TRACKER_API_KEY = ""
-  SOLANA_MAINNET_RPC = ""
-  SOLANA_RPC_URL = "https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba"
-  # Set PERPLEXITY_API_KEY in Netlify UI: Site settings > Environment variables
-  # Get your API key at: https://www.perplexity.ai/settings/api
-  PERPLEXITY_API_KEY = ""
 
 [functions]
   node_bundler = "esbuild"
-
-[dev]
-  # Increase function timeout for local development (AI generation can take up to 2-3 minutes)
-  timeout = 300  # 5 minutes
-  
-[[redirects]]
-  from = "/x402/quote"
-  to = "/.netlify/functions/x402-quote"
-  status = 200
-
-[[redirects]]
-  from = "/x402/confirm"
-  to = "/.netlify/functions/x402-confirm"
-  status = 200
-
-[[redirects]]
-  from = "/x402/validate"
-  to = "/.netlify/functions/x402-validate"
-  status = 200
-
-[[redirects]]
-  from = "/lab-pro"
-  to = "/privacy-tools-lab-fullstack.html"
-  status = 200
-
-[[redirects]]
-  from = "/api/generate-backstory"
-  to = "/.netlify/functions/generate-backstory"
-  status = 200
-
-[[redirects]]
-  from = "/whitepaper.html"
-  to = "/whitepaper.html"
-  status = 200
-  force = false
-
-[[redirects]]
-  from = "/init-relay-pool.html"
-  to = "/init-relay-pool.html"
-  status = 200
-  force = false
-
-[[redirects]]
-  from = "/create-relay-vault.html"
-  to = "/create-relay-vault.html"
-  status = 200
-  force = false
-
-[[redirects]]
-  from = "/whistlenet"
-  to = "/whistlenet/index.html"
-  status = 200
-
-[[redirects]]
-  from = "/whistlenet/*"
-  to = "/whistlenet/:splat"
-  status = 200
 
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-
-[[headers]]
-  for = "/server.js"
-  [headers.values]
-    Cache-Control = "no-store"
-
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Frame-Options = "DENY"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "no-referrer"
-    Permissions-Policy = "camera=*, microphone=*, display-capture=*, geolocation=()"
-
-

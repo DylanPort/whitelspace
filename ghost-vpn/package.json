@@ -1,0 +1,46 @@
+{
+  "name": "@ghost-whistle/vpn",
+  "version": "1.0.0",
+  "description": "White-label privacy VPN solution",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "lerna run dev --parallel",
+    "build": "lerna run build",
+    "build:web": "lerna run build --scope @ghost-vpn/web",
+    "build:desktop": "lerna run build --scope @ghost-vpn/desktop",
+    "build:android": "cd packages/mobile && npm run build:android",
+    "build:ios": "cd packages/mobile && npm run build:ios",
+    "test": "lerna run test",
+    "lint": "eslint packages/**/*.{js,jsx,ts,tsx}",
+    "deploy": "npm run build && netlify deploy --prod"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.50.0",
+    "lerna": "^8.0.0",
+    "typescript": "^5.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/ghost-vpn.git"
+  },
+  "keywords": [
+    "vpn",
+    "privacy",
+    "wireguard",
+    "openvpn",
+    "self-hosted",
+    "security"
+  ],
+  "author": "Ghost Whistle Team",
+  "license": "MIT"
+}
+

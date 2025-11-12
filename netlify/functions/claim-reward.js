@@ -290,8 +290,8 @@ exports.handler = async (event) => {
           onConflict: 'wallet_address'
         });
       console.log(`🔒 Claim lock set for ${walletAddress.slice(0, 8)}... until ${new Date(now + CLAIM_LOCK_MS).toISOString()}`);
-    } catch (lockError) {
-      console.error('⚠️ Failed to set claim lock (continuing):', lockError);
+      } catch (lockError) {
+        console.error('⚠️ Failed to set claim lock (continuing):', lockError);
     }
 
     // Return claimable amount

@@ -1,0 +1,10 @@
+{
+  "name": "ghost-vpn-functions",
+  "version": "1.0.0",
+  "description": "Ghost VPN Netlify Functions",
+  "main": "index.js",
+  "dependencies": {
+    "node-fetch": "^2.6.7"
+  }
+}
+

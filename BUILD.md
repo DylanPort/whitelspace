@@ -190,3 +190,4 @@ If you encounter issues, check:
 - Android logcat: `adb logcat | grep GhostWhistle`
 - Capacitor docs: https://capacitorjs.com/docs
 
+
