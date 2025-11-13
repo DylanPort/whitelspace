@@ -11,7 +11,7 @@
     "webContentsDebuggingEnabled": true
   },
   "server": {
-    "url": "https://whitelspace.netlify.app",
+    "url": "https://whistel.space",
     "cleartext": true
   },
   "plugins": {

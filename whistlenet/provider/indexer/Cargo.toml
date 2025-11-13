@@ -1,0 +1,46 @@
+[package]
+name = "whistle-indexer"
+version = "1.0.0"
+edition = "2021"
+authors = ["WHISTLE Network"]
+description = "Solana blockchain indexer for WHISTLE Provider"
+license = "MIT"
+
+[dependencies]
+# Solana
+solana-client = "1.17"
+solana-sdk = "1.17"
+solana-transaction-status = "1.17"
+solana-account-decoder = "1.17"
+
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+futures = "0.3"
+
+# Database
+sqlx = { version = "0.7", features = ["sqlite", "runtime-tokio-native-tls", "chrono", "json"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Configuration
+dotenv = "0.15"
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+bs58 = "0.5"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+

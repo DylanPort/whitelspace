@@ -1,0 +1,52 @@
+{
+  "name": "@whistle/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for WHISTLE Network - Decentralized Solana data access",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts",
+    "prepublish": "npm run build"
+  },
+  "keywords": [
+    "solana",
+    "blockchain",
+    "rpc",
+    "whistle",
+    "decentralized",
+    "data"
+  ],
+  "author": "WHISTLE Network",
+  "license": "MIT",
+  "dependencies": {
+    "@solana/web3.js": "^1.87.6",
+    "@solana/spl-token": "^0.3.9",
+    "@project-serum/anchor": "^0.28.0",
+    "borsh": "^0.7.0",
+    "bn.js": "^5.2.1",
+    "axios": "^1.6.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@types/bn.js": "^5.1.5",
+    "typescript": "^5.3.3",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.11",
+    "ts-jest": "^29.1.1",
+    "eslint": "^8.56.0",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DylanPort/whitelspace"
+  },
+  "bugs": {
+    "url": "https://github.com/DylanPort/whitelspace/issues"
+  },
+  "homepage": "https://whistle.network"
+}
+

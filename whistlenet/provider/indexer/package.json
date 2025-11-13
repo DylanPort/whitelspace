@@ -1,0 +1,18 @@
+{
+  "name": "whistle-indexer-simple",
+  "version": "1.0.0",
+  "description": "Simple blockchain indexer for WHISTLE",
+  "main": "simple-indexer.js",
+  "scripts": {
+    "start": "node simple-indexer.js",
+    "index": "node simple-indexer.js"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.87.6",
+    "better-sqlite3": "^9.2.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
+

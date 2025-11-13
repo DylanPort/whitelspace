@@ -1,0 +1,39 @@
+{
+  "name": "encrypted-network-access-token",
+  "version": "1.0.0",
+  "description": "Staking-based non-tradable access token smart contract for encrypted data networks",
+  "main": "client/enat-client.js",
+  "type": "module",
+  "scripts": {
+    "build": "cargo build-bpf",
+    "test": "cargo test-bpf",
+    "deploy:localnet": "solana config set --url http://localhost:8899 && solana program deploy target/deploy/encrypted_network_access_token.so",
+    "deploy:devnet": "solana config set --url devnet && solana program deploy target/deploy/encrypted_network_access_token.so",
+    "example": "node examples/usage-example.js",
+    "install-client": "cd client && npm install"
+  },
+  "keywords": [
+    "solana",
+    "blockchain",
+    "staking",
+    "access-token",
+    "encryption",
+    "privacy",
+    "web3",
+    "non-tradable",
+    "soulbound"
+  ],
+  "author": "Encrypto Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-repo/encrypto"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
+
