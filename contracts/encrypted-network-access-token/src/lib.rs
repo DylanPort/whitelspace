@@ -6,6 +6,7 @@ use solana_program::{
     msg,
     program::{invoke, invoke_signed},
     program_error::ProgramError,
+    program_pack::Pack,
     pubkey::Pubkey,
     rent::Rent,
     system_instruction,
@@ -14,8 +15,8 @@ use solana_program::{
 };
 use spl_token::instruction as token_instruction;
 
-// Program ID (to be replaced when deployed)
-solana_program::declare_id!("ENATkxyz123456789ABCDEFGHJKLMNPQRSTUVWXYZabc");
+// Program ID (Mainnet)
+solana_program::declare_id!("5cmaPy5i8efSWSwRVVuWr9VUx8sAMv6qMVSE1o82TRgc");
 
 entrypoint!(process_instruction);
 
@@ -561,7 +562,7 @@ fn initialize_pool(
             authority.key,
             token_vault.key,
             token_account_lamports,
-            token_account_space,
+            token_account_space as u64,
             token_program.key,
         ),
         &[authority.clone(), token_vault.clone(), system_program.clone()],
@@ -714,7 +715,7 @@ fn stake(program_id: &Pubkey, accounts: &[AccountInfo], amount: u64) -> ProgramR
     // Use checked arithmetic to prevent overflow - 1:1 ratio for WHISTLE
     let access_tokens = amount
         .checked_mul(pool.tokens_per_whistle)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
 
     // SECURITY FIX: Ensure user gets at least some tokens
     if access_tokens == 0 {
@@ -798,7 +799,7 @@ fn stake(program_id: &Pubkey, accounts: &[AccountInfo], amount: u64) -> ProgramR
         // Check max stake limit
         let new_total = staker_data.staked_amount
             .checked_add(amount)
-            .ok_or(ProgramError::ArithmeticOverflow)?;
+            .ok_or(ProgramError::InvalidInstructionData)?;
             
         if new_total > pool.max_stake_per_user {
             msg!("Total stake would exceed maximum per user");
@@ -808,11 +809,11 @@ fn stake(program_id: &Pubkey, accounts: &[AccountInfo], amount: u64) -> ProgramR
         staker_data.staked_amount = new_total;
         staker_data.access_tokens = staker_data.access_tokens
             .checked_add(access_tokens)
-            .ok_or(ProgramError::ArithmeticOverflow)?;
+            .ok_or(ProgramError::InvalidInstructionData)?;
         staker_data.last_stake_time = clock.unix_timestamp;
         staker_data.voting_power = staker_data.voting_power
             .checked_add(access_tokens)
-            .ok_or(ProgramError::ArithmeticOverflow)?;
+            .ok_or(ProgramError::InvalidInstructionData)?;
         
         staker_data.serialize(&mut &mut staker_account.data.borrow_mut()[..])?;
     }
@@ -820,10 +821,10 @@ fn stake(program_id: &Pubkey, accounts: &[AccountInfo], amount: u64) -> ProgramR
     // Use checked arithmetic for pool updates
     pool.total_staked = pool.total_staked
         .checked_add(amount)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
     pool.total_access_tokens = pool.total_access_tokens
         .checked_add(access_tokens)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
     pool.serialize(&mut &mut pool_account.data.borrow_mut()[..])?;
 
     msg!("Staked {} lamports", amount);
@@ -956,9 +957,9 @@ fn unstake(program_id: &Pubkey, accounts: &[AccountInfo], amount: u64) -> Progra
         // Partial unstake - burn proportionally
         staker_data.access_tokens
             .checked_mul(amount)
-            .ok_or(ProgramError::ArithmeticOverflow)?
+            .ok_or(ProgramError::InvalidInstructionData)?
             .checked_div(staker_data.staked_amount)
-            .ok_or(ProgramError::ArithmeticOverflow)?
+            .ok_or(ProgramError::InvalidInstructionData)?
     };
 
     if staker_data.access_tokens < tokens_to_burn {
@@ -990,19 +991,19 @@ fn unstake(program_id: &Pubkey, accounts: &[AccountInfo], amount: u64) -> Progra
     // Update staker
     staker_data.staked_amount = staker_data.staked_amount
         .checked_sub(amount)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
     staker_data.access_tokens = staker_data.access_tokens
         .checked_sub(tokens_to_burn)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
     staker_data.voting_power = staker_data.voting_power
         .checked_sub(tokens_to_burn)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
 
     // SECURITY FIX: Revoke node operator status if stake falls below minimum
     if staker_data.node_operator {
         let min_node_stake = pool.min_stake_amount
             .checked_mul(10)
-            .ok_or(ProgramError::ArithmeticOverflow)?;
+            .ok_or(ProgramError::InvalidInstructionData)?;
         
         if staker_data.staked_amount < min_node_stake {
             staker_data.node_operator = false;
@@ -1015,10 +1016,10 @@ fn unstake(program_id: &Pubkey, accounts: &[AccountInfo], amount: u64) -> Progra
     // Update pool
     pool.total_staked = pool.total_staked
         .checked_sub(amount)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
     pool.total_access_tokens = pool.total_access_tokens
         .checked_sub(tokens_to_burn)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
     pool.serialize(&mut &mut pool_account.data.borrow_mut()[..])?;
 
     msg!("Unstaked {} lamports", amount);
@@ -1132,17 +1133,17 @@ fn transfer_access(
     // Transfer tokens (note: this is NOT a sale, just delegation)
     from_data.access_tokens = from_data.access_tokens
         .checked_sub(access_tokens)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
     from_data.voting_power = from_data.voting_power
         .checked_sub(access_tokens)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
     
     to_data.access_tokens = to_data.access_tokens
         .checked_add(access_tokens)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
     to_data.voting_power = to_data.voting_power
         .checked_add(access_tokens)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
 
     from_data.serialize(&mut &mut from_account.data.borrow_mut()[..])?;
     to_data.serialize(&mut &mut to_account.data.borrow_mut()[..])?;
@@ -1206,7 +1207,7 @@ fn activate_node_operator(program_id: &Pubkey, accounts: &[AccountInfo]) -> Prog
     // This prevents node operator status through delegation alone
     let min_node_stake = pool.min_stake_amount
         .checked_mul(10)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
         
     if staker_data.staked_amount < min_node_stake {
         msg!("Insufficient STAKE to become node operator");
@@ -1281,7 +1282,7 @@ fn record_data_usage(
     // Record encrypted data handled
     staker_data.data_encrypted = staker_data.data_encrypted
         .checked_add(data_size)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
     staker_data.serialize(&mut &mut staker_account.data.borrow_mut()[..])?;
 
     msg!("Recorded {} bytes of encrypted data", data_size);
@@ -1377,7 +1378,7 @@ fn lock_rate(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
     pool.rate_locked = true;
     pool.serialize(&mut &mut pool_account.data.borrow_mut()[..])?;
 
-    msg!("Token rate permanently locked at: {} tokens per SOL", pool.tokens_per_sol);
+    msg!("Token rate permanently locked at: {} tokens per WHISTLE", pool.tokens_per_whistle);
     msg!("Rate can no longer be changed - protects against manipulation");
 
     Ok(())
@@ -1615,7 +1616,7 @@ fn deregister_provider(program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
     // Return bond minus any slashed amount
     let bond_to_return = provider_data.stake_bond
         .checked_sub(provider_data.slashed_amount)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
 
     if bond_to_return > 0 {
         // CRITICAL SECURITY FIX: Use pool authority for vault PDA (shared vault for all)
@@ -1784,19 +1785,19 @@ fn update_reputation_metrics(
 
     // Calculate reputation: (uptime × 0.4) + (speed × 0.3) + (accuracy × 0.3)
     // All values are in basis points (0-10000)
-    let uptime_score = uptime.checked_mul(40).ok_or(ProgramError::ArithmeticOverflow)? / 100;
+    let uptime_score = uptime.checked_mul(40).ok_or(ProgramError::InvalidInstructionData)? / 100;
     let speed_score = if latency > 0 {
         // Lower latency = higher score (inverted, capped at 10000)
         let speed = 10000u64.saturating_sub(latency.min(10000));
-        speed.checked_mul(30).ok_or(ProgramError::ArithmeticOverflow)? / 100
+        speed.checked_mul(30).ok_or(ProgramError::InvalidInstructionData)? / 100
     } else {
         3000 // Perfect score
     };
-    let accuracy_score = accuracy.checked_mul(30).ok_or(ProgramError::ArithmeticOverflow)? / 100;
+    let accuracy_score = accuracy.checked_mul(30).ok_or(ProgramError::InvalidInstructionData)? / 100;
 
     provider_data.reputation_score = uptime_score
-        .checked_add(speed_score).ok_or(ProgramError::ArithmeticOverflow)?
-        .checked_add(accuracy_score).ok_or(ProgramError::ArithmeticOverflow)?;
+        .checked_add(speed_score).ok_or(ProgramError::InvalidInstructionData)?
+        .checked_add(accuracy_score).ok_or(ProgramError::InvalidInstructionData)?;
 
     provider_data.serialize(&mut &mut provider_account.data.borrow_mut()[..])?;
 
@@ -1840,15 +1841,15 @@ fn slash_provider(
 
     provider_data.slashed_amount = provider_data.slashed_amount
         .checked_add(penalty)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
     provider_data.penalty_count = provider_data.penalty_count
         .checked_add(1)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
 
     // Add slashed amount to bonus pool
     vault_data.bonus_pool = vault_data.bonus_pool
         .checked_add(penalty)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
 
     // Deactivate if bond depleted
     if provider_data.slashed_amount >= provider_data.stake_bond {
@@ -1934,44 +1935,44 @@ fn process_query_payment(
     )?;
 
     // Split payment: 70/20/5/5
-    let provider_share = query_cost.checked_mul(70).ok_or(ProgramError::ArithmeticOverflow)? / 100;
-    let bonus_share = query_cost.checked_mul(20).ok_or(ProgramError::ArithmeticOverflow)? / 100;
-    let treasury_share = query_cost.checked_mul(5).ok_or(ProgramError::ArithmeticOverflow)? / 100;
+    let provider_share = query_cost.checked_mul(70).ok_or(ProgramError::InvalidInstructionData)? / 100;
+    let bonus_share = query_cost.checked_mul(20).ok_or(ProgramError::InvalidInstructionData)? / 100;
+    let treasury_share = query_cost.checked_mul(5).ok_or(ProgramError::InvalidInstructionData)? / 100;
     let staker_share = query_cost
         .checked_sub(provider_share)
-        .ok_or(ProgramError::ArithmeticOverflow)?
+        .ok_or(ProgramError::InvalidInstructionData)?
         .checked_sub(bonus_share)
-        .ok_or(ProgramError::ArithmeticOverflow)?
+        .ok_or(ProgramError::InvalidInstructionData)?
         .checked_sub(treasury_share)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
 
     // Update vault pools
     vault_data.total_collected = vault_data.total_collected
         .checked_add(query_cost)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
     vault_data.provider_pool = vault_data.provider_pool
         .checked_add(provider_share)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
     vault_data.bonus_pool = vault_data.bonus_pool
         .checked_add(bonus_share)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
     vault_data.treasury = vault_data.treasury
         .checked_add(treasury_share)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
     vault_data.staker_rewards_pool = vault_data.staker_rewards_pool
         .checked_add(staker_share)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
 
     // Credit provider
     provider_data.pending_earnings = provider_data.pending_earnings
         .checked_add(provider_share)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
     provider_data.total_earned = provider_data.total_earned
         .checked_add(provider_share)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
     provider_data.queries_served = provider_data.queries_served
         .checked_add(1)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
 
     vault_data.serialize(&mut &mut payment_vault.data.borrow_mut()[..])?;
     provider_data.serialize(&mut &mut provider_account.data.borrow_mut()[..])?;
@@ -2034,7 +2035,7 @@ fn claim_provider_earnings(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
     provider_data.pending_earnings = 0;
     vault_data.provider_pool = vault_data.provider_pool
         .checked_sub(amount)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
 
     provider_data.serialize(&mut &mut provider_account.data.borrow_mut()[..])?;
     vault_data.serialize(&mut &mut payment_vault.data.borrow_mut()[..])?;
@@ -2106,7 +2107,7 @@ fn distribute_bonus_pool(
         let provider_data = ProviderAccount::try_from_slice(&provider_account.data.borrow())?;
         total_reputation = total_reputation
             .checked_add(provider_data.reputation_score)
-            .ok_or(ProgramError::ArithmeticOverflow)?;
+            .ok_or(ProgramError::InvalidInstructionData)?;
         provider_accounts.push((provider_account, provider_data));
     }
 
@@ -2131,17 +2132,17 @@ fn distribute_bonus_pool(
 
         let share = bonus_pool
             .checked_mul(provider_data.reputation_score)
-            .ok_or(ProgramError::ArithmeticOverflow)?
+            .ok_or(ProgramError::InvalidInstructionData)?
             .checked_div(total_reputation)
-            .ok_or(ProgramError::ArithmeticOverflow)?;
+            .ok_or(ProgramError::InvalidInstructionData)?;
 
         provider_data.pending_earnings = provider_data.pending_earnings
             .checked_add(share)
-            .ok_or(ProgramError::ArithmeticOverflow)?;
+            .ok_or(ProgramError::InvalidInstructionData)?;
 
         total_distributed = total_distributed
             .checked_add(share)
-            .ok_or(ProgramError::ArithmeticOverflow)?;
+            .ok_or(ProgramError::InvalidInstructionData)?;
 
         provider_data.serialize(&mut &mut provider_account.data.borrow_mut()[..])?;
     }
@@ -2149,7 +2150,7 @@ fn distribute_bonus_pool(
     // HIGH SECURITY FIX: Ensure bonus pool is properly decremented
     vault_data.bonus_pool = vault_data.bonus_pool
         .checked_sub(total_distributed)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
     let clock = Clock::get()?;
     vault_data.last_distribution = clock.unix_timestamp;
     vault_data.serialize(&mut &mut payment_vault.data.borrow_mut()[..])?;
@@ -2246,11 +2247,11 @@ fn claim_staker_rewards(program_id: &Pubkey, accounts: &[AccountInfo]) -> Progra
         // Calculate proportional share: (staker_amount / total_staked) * staker_rewards_pool
         let share = (staker_data.staked_amount as u128)
             .checked_mul(vault_data.staker_rewards_pool as u128)
-            .ok_or(ProgramError::ArithmeticOverflow)?
+            .ok_or(ProgramError::InvalidInstructionData)?
             .checked_div(pool.total_staked as u128)
-            .ok_or(ProgramError::ArithmeticOverflow)?;
+            .ok_or(ProgramError::InvalidInstructionData)?;
         
-        u64::try_from(share).map_err(|_| ProgramError::ArithmeticOverflow)?
+        u64::try_from(share).map_err(|_| ProgramError::InvalidInstructionData)?
     } else {
         msg!("No rewards to claim");
         return Ok(());
@@ -2268,7 +2269,7 @@ fn claim_staker_rewards(program_id: &Pubkey, accounts: &[AccountInfo]) -> Progra
     staker_data.pending_rewards = 0;
     vault_data.staker_rewards_pool = vault_data.staker_rewards_pool
         .checked_sub(amount)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
 
     staker_data.serialize(&mut &mut staker_account.data.borrow_mut()[..])?;
     vault_data.serialize(&mut &mut payment_vault.data.borrow_mut()[..])?;
@@ -2394,7 +2395,7 @@ fn record_query(program_id: &Pubkey, accounts: &[AccountInfo], _user: Pubkey) ->
 
     provider_data.queries_served = provider_data.queries_served
         .checked_add(1)
-        .ok_or(ProgramError::ArithmeticOverflow)?;
+        .ok_or(ProgramError::InvalidInstructionData)?;
 
     provider_data.serialize(&mut &mut provider_account.data.borrow_mut()[..])?;
 
