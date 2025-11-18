@@ -36,7 +36,7 @@ export const TOKEN_VAULT_ADDRESS = new PublicKey('F4BPRL7wJS67bKVT8d8UvGFdVouEZ1
 export const PAYMENT_VAULT_ADDRESS = new PublicKey('Ey5yKxziYHTUzAGKuBhFJdCokzqUqPKcfVo2TMSyvSeP');
 export const AUTHORITY_ADDRESS = new PublicKey('6BNdVMgx2JZJPvkRCLyV2LLxft4S1cwuqoX2BS9eFyvh');
 
-// RPC connection
+// RPC connection - Helius Premium
 const RPC_ENDPOINT = process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
 export const connection = new Connection(RPC_ENDPOINT, 'confirmed');
 
