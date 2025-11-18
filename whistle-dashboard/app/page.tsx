@@ -81,15 +81,12 @@ export default function Home() {
       <header className="relative z-10 flex items-center justify-between px-16 py-8 border-b border-white/5">
         {/* WHISTLE Logo - Non-clickable */}
         <div
-          className="relative text-3xl font-bold tracking-[0.35em] px-8 py-3 backdrop-blur-sm bg-white/5 border-2 border-white/10"
+          className="text-3xl font-bold tracking-[0.35em] text-white"
           style={{
             textShadow: '0 0 20px rgba(255, 255, 255, 0.3), 0 2px 4px rgba(0, 0, 0, 0.9)',
-            clipPath: 'polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px)',
           }}
         >
-          <span className="text-white">
-            WHISTLE
-          </span>
+          WHISTLE
         </div>
         
         <div className="flex items-center gap-4">
