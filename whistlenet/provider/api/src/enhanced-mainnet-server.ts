@@ -53,6 +53,34 @@ app.use(express.json());
 // Mount token API router
 app.use('/api', tokenRouter);
 
+// Health check endpoint (both paths for compatibility)
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', network: 'mainnet-beta', timestamp: Date.now() });
+});
+
+// Provider stats endpoint (for dashboard)
+app.get('/providers/stats', (req, res) => {
+  // Mock data for now - will be populated by indexer
+  res.json({
+    totalProviders: 0,
+    activeProviders: 0,
+    totalStaked: '0',
+    averageUptime: 0,
+    providers: []
+  });
+});
+
+// Query logs endpoint (for dashboard)
+app.get('/queries/logs', (req, res) => {
+  const limit = parseInt(req.query.limit as string) || 100;
+  // Mock data for now - will be populated by indexer
+  res.json({
+    queries: [],
+    total: 0,
+    limit: limit
+  });
+});
+
 // Enhanced transaction parser
 interface EnhancedTransaction {
   signature: string;
