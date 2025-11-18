@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { createStakeTransaction, createUnstakeTransaction, fetchStakerAccount, connection } from '@/lib/contract';
+import toast from 'react-hot-toast';
 
 export default function StakingPanel() {
   const { publicKey, connected, sendTransaction } = useWallet();
@@ -15,13 +16,31 @@ export default function StakingPanel() {
 
   const handleStake = async () => {
     if (!publicKey || !connected) {
-      alert('❌ Please connect your wallet first');
+      toast.error('Wallet connection required', {
+        duration: 4000,
+        style: {
+          background: '#1a1a1a',
+          color: '#fff',
+          border: '1px solid rgba(239, 68, 68, 0.3)',
+          padding: '16px',
+          fontSize: '14px',
+        },
+      });
       return;
     }
 
     const stakeAmount = parseFloat(amount);
     if (isNaN(stakeAmount) || stakeAmount < 100) {
-      alert('⚠️ Minimum stake is 100 WHISTLE');
+      toast.error('Minimum stake amount is 100 WHISTLE', {
+        duration: 4000,
+        style: {
+          background: '#1a1a1a',
+          color: '#fff',
+          border: '1px solid rgba(251, 191, 36, 0.3)',
+          padding: '16px',
+          fontSize: '14px',
+        },
+      });
       return;
     }
 
@@ -69,7 +88,32 @@ export default function StakingPanel() {
       console.log('Signature:', signature);
       console.log('View on Solscan:', `https://solscan.io/tx/${signature}`);
       
-      alert(`✅ Staking successful!\n\nStaked: ${stakeAmount} WHISTLE\n\nView on Solscan:\nhttps://solscan.io/tx/${signature}`);
+      toast.success((t) => (
+        <div className="flex flex-col gap-2">
+          <div className="font-semibold">Staking Successful</div>
+          <div className="text-sm text-gray-300">
+            Staked {stakeAmount} WHISTLE
+          </div>
+          <a 
+            href={`https://solscan.io/tx/${signature}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-emerald-400 hover:text-emerald-300 underline"
+            onClick={() => toast.dismiss(t.id)}
+          >
+            View Transaction →
+          </a>
+        </div>
+      ), {
+        duration: 6000,
+        style: {
+          background: '#1a1a1a',
+          color: '#fff',
+          border: '1px solid rgba(16, 185, 129, 0.3)',
+          padding: '16px',
+          minWidth: '300px',
+        },
+      });
       setAmount('100'); // Reset to minimum
     } catch (err: any) {
       console.error('Staking failed:', err);
@@ -95,7 +139,26 @@ export default function StakingPanel() {
         }
       }
       
-      alert(`❌ Staking failed: ${errorMsg}\n\nCheck console (F12) for details`);
+      toast.error((t) => (
+        <div className="flex flex-col gap-2">
+          <div className="font-semibold">Staking Failed</div>
+          <div className="text-sm text-gray-300 max-w-sm break-words">
+            {errorMsg}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            Check console (F12) for details
+          </div>
+        </div>
+      ), {
+        duration: 6000,
+        style: {
+          background: '#1a1a1a',
+          color: '#fff',
+          border: '1px solid rgba(239, 68, 68, 0.3)',
+          padding: '16px',
+          minWidth: '300px',
+        },
+      });
     } finally {
       setStaking(false);
     }
@@ -103,18 +166,52 @@ export default function StakingPanel() {
 
   const handleUnstake = async () => {
     if (!publicKey || !connected) {
-      alert('❌ Please connect your wallet first');
+      toast.error('Wallet connection required', {
+        duration: 4000,
+        style: {
+          background: '#1a1a1a',
+          color: '#fff',
+          border: '1px solid rgba(239, 68, 68, 0.3)',
+          padding: '16px',
+          fontSize: '14px',
+        },
+      });
       return;
     }
 
     const unstakeAmount = parseFloat(amount);
     if (isNaN(unstakeAmount) || unstakeAmount <= 0) {
-      alert('⚠️ Invalid unstake amount');
+      toast.error('Invalid unstake amount', {
+        duration: 4000,
+        style: {
+          background: '#1a1a1a',
+          color: '#fff',
+          border: '1px solid rgba(239, 68, 68, 0.3)',
+          padding: '16px',
+          fontSize: '14px',
+        },
+      });
       return;
     }
 
     if (cooldownRemaining && cooldownRemaining > 0) {
-      alert(`⏳ Cooldown active!\n\nYou can unstake in: ${formatTime(cooldownRemaining)}`);
+      toast.error((t) => (
+        <div className="flex flex-col gap-2">
+          <div className="font-semibold">Cooldown Period Active</div>
+          <div className="text-sm text-gray-300">
+            You can unstake in: {formatTime(cooldownRemaining)}
+          </div>
+        </div>
+      ), {
+        duration: 5000,
+        style: {
+          background: '#1a1a1a',
+          color: '#fff',
+          border: '1px solid rgba(251, 191, 36, 0.3)',
+          padding: '16px',
+          minWidth: '280px',
+        },
+      });
       return;
     }
 
@@ -142,7 +239,32 @@ export default function StakingPanel() {
       }
       
       console.log('✅ Unstake confirmed!');
-      alert(`✅ Unstake successful!\n\nUnstaked: ${unstakeAmount} WHISTLE\n\nView on Solscan:\nhttps://solscan.io/tx/${signature}`);
+      toast.success((t) => (
+        <div className="flex flex-col gap-2">
+          <div className="font-semibold">Unstaking Successful</div>
+          <div className="text-sm text-gray-300">
+            Unstaked {unstakeAmount} WHISTLE
+          </div>
+          <a 
+            href={`https://solscan.io/tx/${signature}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-emerald-400 hover:text-emerald-300 underline"
+            onClick={() => toast.dismiss(t.id)}
+          >
+            View Transaction →
+          </a>
+        </div>
+      ), {
+        duration: 6000,
+        style: {
+          background: '#1a1a1a',
+          color: '#fff',
+          border: '1px solid rgba(16, 185, 129, 0.3)',
+          padding: '16px',
+          minWidth: '300px',
+        },
+      });
       setAmount('100');
       
       // Refresh cooldown
@@ -151,7 +273,23 @@ export default function StakingPanel() {
       }
     } catch (err: any) {
       console.error('Unstaking failed:', err);
-      alert(`❌ Unstaking failed: ${err?.message || 'Unknown error'}`);
+      toast.error((t) => (
+        <div className="flex flex-col gap-2">
+          <div className="font-semibold">Unstaking Failed</div>
+          <div className="text-sm text-gray-300 max-w-sm break-words">
+            {err?.message || 'Unknown error'}
+          </div>
+        </div>
+      ), {
+        duration: 5000,
+        style: {
+          background: '#1a1a1a',
+          color: '#fff',
+          border: '1px solid rgba(239, 68, 68, 0.3)',
+          padding: '16px',
+          minWidth: '300px',
+        },
+      });
     } finally {
       setUnstaking(false);
     }

@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { fetchAllProviders, createProcessQueryPaymentTransaction, connection, QUERY_COST } from '@/lib/contract';
+import toast from 'react-hot-toast';
 
 const RPC_METHODS = [
   'getAccountInfo',
@@ -54,12 +55,37 @@ export default function QueryInterfacePanel() {
 
   const handleSendQuery = async () => {
     if (!connected || !publicKey || !params.trim()) {
-      alert('Please connect wallet and enter parameters');
+      toast.error('Please connect wallet and enter query parameters', {
+        duration: 4000,
+        style: {
+          background: '#1a1a1a',
+          color: '#fff',
+          border: '1px solid rgba(239, 68, 68, 0.3)',
+          padding: '16px',
+          fontSize: '14px',
+        },
+      });
       return;
     }
 
     if (providers.length === 0) {
-      alert('⚠️ No providers registered yet!\n\nProviders need to register before queries can be processed.');
+      toast.error((t) => (
+        <div className="flex flex-col gap-2">
+          <div className="font-semibold">No Providers Available</div>
+          <div className="text-sm text-gray-300">
+            RPC providers need to register before queries can be processed
+          </div>
+        </div>
+      ), {
+        duration: 5000,
+        style: {
+          background: '#1a1a1a',
+          color: '#fff',
+          border: '1px solid rgba(251, 191, 36, 0.3)',
+          padding: '16px',
+          minWidth: '300px',
+        },
+      });
       return;
     }
 
