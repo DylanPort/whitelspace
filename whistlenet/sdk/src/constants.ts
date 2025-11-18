@@ -13,9 +13,10 @@ export const WHISTLE_MINT = new PublicKey('6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwi
 
 /**
  * Smart Contract Program ID
- * Deployed on Mainnet: WhStMSgDJz3dYtaLKt4855DDypB64Dz3PpAFMbuicbt
+ * Deployed on Mainnet: whttByewzTQzAz3VMxnyJHdKsd7AyNRdG2tDHXVTksr (REINITIALIZED - 155-byte pool!)
+ * Authority: 6BNdVMgx2JZJPvkRCLyV2LLxft4S1cwuqoX2BS9eFyvh
  */
-export const PROGRAM_ID = new PublicKey('WhStMSgDJz3dYtaLKt4855DDypB64Dz3PpAFMbuicbt');
+export const PROGRAM_ID = new PublicKey('whttByewzTQzAz3VMxnyJHdKsd7AyNRdG2tDHXVTksr');
 
 /**
  * Network constants from smart contract

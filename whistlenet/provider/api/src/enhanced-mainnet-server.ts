@@ -30,8 +30,8 @@ const connection = new Connection(MAINNET_RPC, 'confirmed');
 
 // Known program IDs
 const PROGRAMS = {
-  // Whistlenet
-  WHISTLE: 'WhStMSgDJz3dYtaLKt4855DDypB64Dz3PpAFMbuicbt',
+  // Whistlenet (155-byte pool reinitialized)
+  WHISTLE: 'whttByewzTQzAz3VMxnyJHdKsd7AyNRdG2tDHXVTksr',
   
   // Solana core
   TOKEN_PROGRAM: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',

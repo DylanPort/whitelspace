@@ -1,0 +1,28 @@
+# Render Configuration for Whistlenet Backend API
+
+services:
+  # Backend API Service
+  - type: web
+    name: whistlenet-api
+    env: node
+    region: oregon
+    plan: starter
+    branch: main
+    buildCommand: npm install
+    startCommand: npm run mainnet
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 8080
+      - key: SOLANA_RPC_URL
+        sync: false  # Set in Render dashboard
+      - key: HELIUS_API_KEY
+        sync: false  # Set in Render dashboard
+
+# Environment variables to set in Render Dashboard:
+# - SOLANA_RPC_URL: https://mainnet.helius-rpc.com/?api-key=YOUR_KEY
+# - HELIUS_API_KEY: your_helius_api_key
+# - Any other API keys or secrets
+

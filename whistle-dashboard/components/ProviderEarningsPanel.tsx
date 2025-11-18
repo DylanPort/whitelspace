@@ -70,7 +70,7 @@ export default function ProviderEarningsPanel() {
       initial={{ opacity: 0, x: 50 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.6, delay: 0.1 }}
-      className="panel-base p-6 rounded-[16px] clip-angled-border"
+      className="panel-base p-6 rounded-[16px] clip-angled-border min-h-[240px] flex flex-col"
     >
       <h3 className="text-[11px] font-semibold mb-6 tracking-[0.15em]">
         PROVIDER EARNINGS

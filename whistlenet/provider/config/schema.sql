@@ -304,3 +304,4 @@ COMMENT ON TABLE query_logs IS 'API query analytics (auto-cleaned after 7 days)'
 COMMIT;
 
 
+

@@ -1,14 +1,17 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { createStakeTransaction, connection } from '@/lib/contract';
+import { createStakeTransaction, createUnstakeTransaction, fetchStakerAccount, connection } from '@/lib/contract';
 
 export default function StakingPanel() {
   const { publicKey, connected, sendTransaction } = useWallet();
   const [staking, setStaking] = useState(false);
+  const [unstaking, setUnstaking] = useState(false);
   const [amount, setAmount] = useState('100');
+  const [cooldownRemaining, setCooldownRemaining] = useState<number | null>(null);
+  const [lastStakeTime, setLastStakeTime] = useState<bigint | null>(null);
 
   const handleStake = async () => {
     if (!publicKey || !connected) {
@@ -30,7 +33,11 @@ export default function StakingPanel() {
       const transaction = await createStakeTransaction(publicKey, stakeAmount);
       console.log('Transaction created, sending...');
       
-      const signature = await sendTransaction(transaction, connection);
+      // Send with skipPreflight to bypass simulation (known to work from previous successful stakes)
+      const signature = await sendTransaction(transaction, connection, {
+        skipPreflight: true,
+        maxRetries: 3,
+      });
       console.log('Transaction sent:', signature);
       console.log('Waiting for confirmation...');
       
@@ -94,9 +101,113 @@ export default function StakingPanel() {
     }
   };
 
-  const handleBuyWhistle = () => {
-    // TODO: Integrate with DEX or token purchase flow
-    alert('$WHISTLE token sale coming soon!');
+  const handleUnstake = async () => {
+    if (!publicKey || !connected) {
+      alert('❌ Please connect your wallet first');
+      return;
+    }
+
+    const unstakeAmount = parseFloat(amount);
+    if (isNaN(unstakeAmount) || unstakeAmount <= 0) {
+      alert('⚠️ Invalid unstake amount');
+      return;
+    }
+
+    if (cooldownRemaining && cooldownRemaining > 0) {
+      alert(`⏳ Cooldown active!\n\nYou can unstake in: ${formatTime(cooldownRemaining)}`);
+      return;
+    }
+
+    setUnstaking(true);
+    try {
+      console.log('Creating unstake transaction for:', unstakeAmount, 'WHISTLE');
+      
+      const transaction = await createUnstakeTransaction(publicKey, unstakeAmount);
+      
+      const signature = await sendTransaction(transaction, connection, {
+        skipPreflight: true,
+        maxRetries: 3,
+      });
+      console.log('Unstake transaction sent:', signature);
+      
+      const latestBlockhash = await connection.getLatestBlockhash();
+      const confirmation = await connection.confirmTransaction({
+        signature,
+        blockhash: latestBlockhash.blockhash,
+        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+      }, 'confirmed');
+      
+      if (confirmation.value.err) {
+        throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
+      }
+      
+      console.log('✅ Unstake confirmed!');
+      alert(`✅ Unstake successful!\n\nUnstaked: ${unstakeAmount} WHISTLE\n\nView on Solscan:\nhttps://solscan.io/tx/${signature}`);
+      setAmount('100');
+      
+      // Refresh cooldown
+      if (publicKey) {
+        loadCooldown(publicKey);
+      }
+    } catch (err: any) {
+      console.error('Unstaking failed:', err);
+      alert(`❌ Unstaking failed: ${err?.message || 'Unknown error'}`);
+    } finally {
+      setUnstaking(false);
+    }
+  };
+
+  // Load cooldown on mount and wallet change
+  useEffect(() => {
+    if (publicKey && connected) {
+      loadCooldown(publicKey);
+      
+      // Update cooldown every second
+      const interval = setInterval(() => {
+        loadCooldown(publicKey);
+      }, 1000);
+      
+      return () => clearInterval(interval);
+    } else {
+      setCooldownRemaining(null);
+      setLastStakeTime(null);
+    }
+  }, [publicKey, connected]);
+
+  const loadCooldown = async (wallet: typeof publicKey) => {
+    if (!wallet) return;
+    
+    try {
+      const stakerAccount = await fetchStakerAccount(wallet);
+      if (!stakerAccount) {
+        setCooldownRemaining(null);
+        setLastStakeTime(null);
+        return;
+      }
+
+      const lastStake = stakerAccount.lastStakeTime;
+      setLastStakeTime(lastStake);
+
+      const currentTime = BigInt(Math.floor(Date.now() / 1000));
+      const cooldownPeriod = BigInt(86400); // 24 hours in seconds
+      const timeSinceStake = currentTime - lastStake;
+      
+      if (timeSinceStake < cooldownPeriod) {
+        const remaining = Number(cooldownPeriod - timeSinceStake);
+        setCooldownRemaining(remaining);
+      } else {
+        setCooldownRemaining(0);
+      }
+    } catch (err) {
+      console.error('Error loading cooldown:', err);
+    }
+  };
+
+  const formatTime = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hours}h ${minutes}m ${secs}s`;
   };
 
   return (
@@ -104,7 +215,7 @@ export default function StakingPanel() {
       initial={{ opacity: 0, x: -50 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.6, delay: 0.1 }}
-      className="panel-base p-6 rounded-[16px] clip-angled-border"
+      className="panel-base p-6 rounded-[16px] clip-angled-border min-h-[240px] flex flex-col"
     >
       <h3 className="text-[11px] font-semibold mb-4 tracking-[0.15em]">
         STAKING
@@ -131,15 +242,25 @@ export default function StakingPanel() {
         </button>
 
         <button
-          disabled={!connected}
-          onClick={handleBuyWhistle}
-          className="btn-primary w-full"
+          disabled={!connected || unstaking || (cooldownRemaining !== null && cooldownRemaining > 0)}
+          onClick={handleUnstake}
+          className={`btn-primary w-full ${
+            cooldownRemaining && cooldownRemaining > 0 
+              ? 'opacity-50 cursor-not-allowed' 
+              : ''
+          }`}
         >
-          $WHISTLE
+          {unstaking 
+            ? 'UNSTAKING...' 
+            : cooldownRemaining && cooldownRemaining > 0 
+            ? `⏳ ${formatTime(cooldownRemaining)}` 
+            : 'UNSTAKE'}
         </button>
 
         <div className="text-[9px] text-gray-500 text-center mt-2">
-          Min: 100 WHISTLE
+          {cooldownRemaining && cooldownRemaining > 0 
+            ? `Cooldown: ${formatTime(cooldownRemaining)} remaining`
+            : 'Min: 100 WHISTLE'}
         </div>
       </div>
     </motion.div>

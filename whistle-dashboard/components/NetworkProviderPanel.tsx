@@ -1,0 +1,71 @@
+'use client';
+
+import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { fetchAllProviders } from '@/lib/contract';
+
+export default function NetworkProviderPanel() {
+  const [providers, setProviders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const providerList = await fetchAllProviders();
+        setProviders(providerList);
+      } catch (error) {
+        console.error('Error fetching providers:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const activeProviders = providers.filter(p => p.active).length;
+  const totalBonded = providers.reduce((sum, p) => sum + (p.bonded || 0), 0);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, delay: 0.3 }}
+      className="panel-base p-4 rounded-[12px] clip-angled-border"
+    >
+      <h3 className="text-[10px] font-semibold mb-3 tracking-[0.15em]">
+        NETWORK PROVIDERS
+      </h3>
+
+      {loading ? (
+        <div className="text-center py-6 text-gray-500 text-xs">
+          Loading...
+        </div>
+      ) : (
+        <div className="space-y-2 text-xs">
+          <div className="flex justify-between">
+            <span className="text-gray-500">Active Providers</span>
+            <span className="font-semibold text-green-400">
+              {activeProviders}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500">Total Providers</span>
+            <span className="font-semibold">
+              {providers.length}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500">Total Bonded</span>
+            <span className="font-semibold">
+              {(totalBonded / 1e6).toFixed(0)}K WHISTLE
+            </span>
+          </div>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+

@@ -1,10 +1,10 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { api } from '@/lib/api';
-import { PublicKey } from '@solana/web3.js';
+import { PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { fetchAllProviders, createProcessQueryPaymentTransaction, connection, QUERY_COST } from '@/lib/contract';
 
 const RPC_METHODS = [
   'getAccountInfo',
@@ -12,74 +12,206 @@ const RPC_METHODS = [
   'getTokenAccountBalance',
   'getTransaction',
   'getBlockHeight',
+  'getBlock',
+  'getSignaturesForAddress',
+  'getTokenAccountsByOwner',
+  'getMultipleAccounts',
+  'getRecentBlockhash',
+  'getEpochInfo',
+  'getSlot',
+  'getVersion',
+  'getProgramAccounts',
+  'simulateTransaction',
 ];
 
 export default function QueryInterfacePanel() {
-  const { connected } = useWallet();
+  const { publicKey, connected, sendTransaction } = useWallet();
   const [method, setMethod] = useState('getAccountInfo');
   const [params, setParams] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [providers, setProviders] = useState<Array<{ pubkey: PublicKey; isActive: boolean; endpoint: string }>>([]);
+  const [loadingProviders, setLoadingProviders] = useState(true);
+
+  // Load providers on mount
+  useEffect(() => {
+    async function loadProviders() {
+      try {
+        const allProviders = await fetchAllProviders();
+        setProviders(allProviders.filter(p => p.isActive));
+      } catch (err) {
+        console.error('Failed to load providers:', err);
+      } finally {
+        setLoadingProviders(false);
+      }
+    }
+
+    loadProviders();
+    const interval = setInterval(loadProviders, 30000); // Refresh every 30s
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSendQuery = async () => {
-    if (!connected || !params.trim()) return;
+    if (!connected || !publicKey || !params.trim()) {
+      alert('Please connect wallet and enter parameters');
+      return;
+    }
+
+    if (providers.length === 0) {
+      alert('⚠️ No providers registered yet!\n\nProviders need to register before queries can be processed.');
+      return;
+    }
 
     setLoading(true);
     setError(null);
     setResult(null);
 
     try {
-      let queryParams: any[] = [];
+      // Select a random active provider
+      const provider = providers[Math.floor(Math.random() * providers.length)];
+      
+      console.log(`💰 Paying 0.00001 SOL to provider: ${provider.pubkey.toBase58()}`);
+      
+      // Step 1: Create and send payment transaction
+      const paymentTx = await createProcessQueryPaymentTransaction(
+        publicKey,
+        provider.pubkey,
+        QUERY_COST
+      );
+      
+      const signature = await sendTransaction(paymentTx, connection, {
+        skipPreflight: true,
+        maxRetries: 3,
+      });
+      
+      console.log('✅ Payment transaction sent:', signature);
+      
+      // Wait for confirmation
+      const latestBlockhash = await connection.getLatestBlockhash();
+      const confirmation = await connection.confirmTransaction({
+        signature,
+        blockhash: latestBlockhash.blockhash,
+        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+      }, 'confirmed');
 
-      // Parse params based on method
-      if (method === 'getAccountInfo' || method === 'getBalance') {
-        queryParams = [params.trim()];
-      } else if (method === 'getTokenAccountBalance') {
-        queryParams = [params.trim()];
-      } else if (method === 'getTransaction') {
-        queryParams = [params.trim()];
-      } else if (method === 'getBlockHeight') {
-        queryParams = [];
+      if (confirmation.value.err) {
+        throw new Error(`Payment failed: ${JSON.stringify(confirmation.value.err)}`);
       }
 
-      const response = await api.rpcQuery(method, queryParams);
-      setResult(JSON.stringify(response, null, 2));
+      console.log('✅ Payment confirmed!');
+      console.log(`📡 Routing query to provider: ${provider.endpoint}`);
+
+      // Step 2: Make the actual RPC call to the provider's endpoint
+      let queryParams: any[] = [];
+      
+      // Methods that don't require parameters
+      if (['getBlockHeight', 'getEpochInfo', 'getSlot', 'getVersion', 'getRecentBlockhash'].includes(method)) {
+        queryParams = [];
+      }
+      // Methods that need a single address/signature/id parameter
+      else if ([
+        'getAccountInfo',
+        'getBalance',
+        'getTokenAccountBalance',
+        'getTransaction',
+        'getSignaturesForAddress',
+        'getTokenAccountsByOwner',
+        'getProgramAccounts'
+      ].includes(method)) {
+        queryParams = [params.trim()];
+      }
+      // Methods that might need a number (slot)
+      else if (method === 'getBlock') {
+        queryParams = [parseInt(params.trim())];
+      }
+      // Default
+      else {
+        queryParams = params.trim() ? [params.trim()] : [];
+      }
+
+      // Make RPC call to provider's endpoint
+      const rpcResponse = await fetch(provider.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method,
+          params: queryParams,
+        }),
+      });
+
+      const rpcData = await rpcResponse.json();
+      
+      if (rpcData.error) {
+        throw new Error(rpcData.error.message || 'RPC query failed');
+      }
+
+      setResult(JSON.stringify(rpcData.result, null, 2));
+      
+      console.log('✅ Query completed successfully!');
+      console.log(`💸 Cost: ${QUERY_COST / LAMPORTS_PER_SOL} SOL`);
+      console.log(`📊 Split: 70% provider, 20% bonus, 5% stakers, 5% treasury`);
+      
     } catch (err: any) {
+      console.error('Query failed:', err);
       setError(err.message || 'Query failed');
     } finally {
       setLoading(false);
     }
   };
 
+  const queryCostSOL = (QUERY_COST / LAMPORTS_PER_SOL).toFixed(5);
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 50 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.6 }}
-      className="panel-base p-6 rounded-[16px] clip-angled-border"
+      className="panel-base p-6 rounded-[16px] clip-angled-border min-h-[280px] flex flex-col"
     >
-      <h3 className="text-[11px] font-semibold mb-4 tracking-[0.15em]">
-        QUERY
-      </h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-[11px] font-semibold tracking-[0.15em]">
+          QUERY
+        </h3>
+        <div className="text-[9px] text-gray-500 tracking-wider">
+          {queryCostSOL} SOL/query
+        </div>
+      </div>
 
-      <div className="space-y-3">
-        {/* Query method dropdown */}
-        <select
-          value={method}
-          onChange={(e) => setMethod(e.target.value)}
-          className="w-full px-4 py-3 bg-black/60 border-2 border-white/20 text-sm"
-          style={{ appearance: 'none' }}
-        >
-          {RPC_METHODS.map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </select>
+      {loadingProviders ? (
+        <div className="flex-1 flex items-center justify-center text-[10px] text-gray-500">
+          Loading providers...
+        </div>
+      ) : providers.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center text-center space-y-2">
+          <div className="text-2xl">⚠️</div>
+          <div className="text-[10px] text-gray-400">No providers registered</div>
+          <div className="text-[9px] text-gray-600">
+            Providers need to register before queries can be processed
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {/* Query method dropdown */}
+          <select
+            value={method}
+            onChange={(e) => setMethod(e.target.value)}
+            className="w-full px-4 py-3 bg-black/60 border-2 border-white/20 text-sm"
+            style={{ appearance: 'none' }}
+          >
+            {RPC_METHODS.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
 
         {/* Params input */}
-        {method !== 'getBlockHeight' && (
+        {!['getBlockHeight', 'getEpochInfo', 'getSlot', 'getVersion', 'getRecentBlockhash'].includes(method) && (
           <input
             type="text"
             value={params}
@@ -89,32 +221,49 @@ export default function QueryInterfacePanel() {
                 ? 'Enter address...'
                 : method === 'getTransaction'
                 ? 'Enter signature...'
-                : 'Enter token account...'
+                : method === 'getSignaturesForAddress'
+                ? 'Enter address...'
+                : method === 'getBlock'
+                ? 'Enter slot number...'
+                : method === 'getTokenAccountsByOwner'
+                ? 'Enter owner address...'
+                : method === 'getProgramAccounts'
+                ? 'Enter program ID...'
+                : 'Enter parameter...'
             }
             className="w-full px-4 py-3 bg-black/60 border-2 border-white/20 text-sm"
           />
         )}
 
-        {/* Send button */}
-        <button
-          disabled={!connected || loading}
-          onClick={handleSendQuery}
-          className="btn-primary w-full mt-4"
-        >
-          {loading ? 'QUERYING...' : 'SEND'}
-        </button>
-
-        {/* Result/Error display */}
-        {(result || error) && (
-          <div className="mt-4 p-3 bg-black/60 border border-white/10 text-xs font-mono max-h-32 overflow-auto">
-            {error ? (
-              <div className="text-gray-400">{error}</div>
-            ) : (
-              <div className="text-white">{result}</div>
-            )}
+          {/* Provider count */}
+          <div className="text-[9px] text-gray-500 tracking-wider">
+            {providers.length} active provider{providers.length !== 1 ? 's' : ''} available
           </div>
-        )}
-      </div>
+
+          {/* Send button */}
+          <button
+            disabled={!connected || loading || providers.length === 0}
+            onClick={handleSendQuery}
+            className={`btn-primary w-full mt-4 ${loading ? 'opacity-50' : ''}`}
+          >
+            {loading ? 'PROCESSING...' : `SEND (${queryCostSOL} SOL)`}
+          </button>
+
+          {/* Result/Error display */}
+          {(result || error) && (
+            <div className="mt-4 p-3 bg-black/60 border border-white/10 text-xs font-mono max-h-32 overflow-auto">
+              {error ? (
+                <div className="text-red-400">❌ {error}</div>
+              ) : (
+                <div className="text-green-300">
+                  <div className="text-gray-400 mb-2">✅ Query successful!</div>
+                  <div className="text-white">{result}</div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </motion.div>
   );
 }

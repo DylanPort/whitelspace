@@ -12,17 +12,18 @@ import {
   LAMPORTS_PER_SOL,
   SYSVAR_CLOCK_PUBKEY,
   SYSVAR_RENT_PUBKEY,
+  ComputeBudgetProgram,
 } from '@solana/web3.js';
 import {
   TOKEN_PROGRAM_ID,
   getAssociatedTokenAddressSync,
   createAssociatedTokenAccountInstruction,
 } from '@solana/spl-token';
-import * as borsh from 'borsh';
 
 // ============= CONSTANTS =============
 
-export const WHISTLE_PROGRAM_ID = new PublicKey('WhStMSgDJz3dYtaLKt4855DDypB64Dz3PpAFMbuicbt');
+// 🎉 WHISTLENET MAINNET - REINITIALIZED WITH 155-BYTE FIX!
+export const WHISTLE_PROGRAM_ID = new PublicKey('whttByewzTQzAz3VMxnyJHdKsd7AyNRdG2tDHXVTksr');
 export const WHISTLE_MINT = new PublicKey('6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump');
 
 // From contract - MAINNET DEPLOYMENT
@@ -30,11 +31,11 @@ export const MIN_PROVIDER_BOND = 1_000_000_000; // 1000 WHISTLE (6 decimals)
 export const QUERY_COST = 10_000; // 0.00001 SOL
 export const WHISTLE_DECIMALS = 6;
 
-// Deployed Account Addresses
-export const STAKING_POOL_ADDRESS = new PublicKey('F7BtDzqpATy6dQ8gaxoLJzHWVVEuaopJBhUkGNuFzdmh');
-export const TOKEN_VAULT_ADDRESS = new PublicKey('F4BPRL7wJS67bKVT8d8UvGFdVouEZ1ae1EoDrKeL3hkZ');
-export const PAYMENT_VAULT_ADDRESS = new PublicKey('Ey5yKxziYHTUzAGKuBhFJdCokzqUqPKcfVo2TMSyvSeP');
+// Deployed Account Addresses (REINITIALIZED - 155-byte pool!)
 export const AUTHORITY_ADDRESS = new PublicKey('6BNdVMgx2JZJPvkRCLyV2LLxft4S1cwuqoX2BS9eFyvh');
+export const STAKING_POOL_ADDRESS = new PublicKey('jVaoYCKUFjHkYw975R7tVvRgns5VdfnnquSp2gzwPXB');
+export const TOKEN_VAULT_ADDRESS = new PublicKey('6AP8c7sCQsm2FMvNJw6fQN5PnMdkySH75h7EPE2kD3Yq');
+export const PAYMENT_VAULT_ADDRESS = new PublicKey('CU1ZcHccCbQT8iA6pcb3ZyTjog8ckmDHH8gaAmKfC73G'); // ✅ Initialized!
 
 // RPC connection - Helius Premium
 const RPC_ENDPOINT = process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
@@ -277,15 +278,86 @@ export async function fetchStakingPool(): Promise<StakingPool | null> {
       return null;
     }
 
-    const pool = borsh.deserialize(
-      StakingPool.schema as any,
-      StakingPool,
-      accountInfo.data
-    ) as unknown as StakingPool;
+    // Manual deserialization to avoid borsh library issues
+    const data = accountInfo.data;
+    let offset = 0;
+
+    // Parse StakingPool struct: 32+32+32+8+8+8+8+1+8+8+8+1+1 = 155 bytes
+    const pool = new StakingPool({
+      authority: new Uint8Array(data.slice(offset, offset + 32)),
+      whistleMint: new Uint8Array(data.slice(offset + 32, offset + 64)),
+      tokenVault: new Uint8Array(data.slice(offset + 64, offset + 96)),
+      totalStaked: data.readBigUInt64LE(offset + 96),
+      totalAccessTokens: data.readBigUInt64LE(offset + 104),
+      minStakeAmount: data.readBigUInt64LE(offset + 112),
+      tokensPerWhistle: data.readBigUInt64LE(offset + 120),
+      isActive: data.readUInt8(offset + 128),
+      createdAt: data.readBigInt64LE(offset + 129),
+      cooldownPeriod: data.readBigInt64LE(offset + 137),
+      maxStakePerUser: data.readBigUInt64LE(offset + 145),
+      rateLocked: data.readUInt8(offset + 153),
+      bump: data.readUInt8(offset + 154),
+    });
+
     return pool;
   } catch (error) {
     console.error('Error fetching staking pool:', error);
     return null;
+  }
+}
+
+// Fetch REAL staker count from blockchain (no estimation!)
+export async function fetchStakerCount(): Promise<number> {
+  try {
+    const accounts = await connection.getProgramAccounts(WHISTLE_PROGRAM_ID, {
+      filters: [
+        {
+          dataSize: 82, // StakerAccount size
+        }
+      ]
+    });
+    return accounts.length;
+  } catch (error) {
+    console.error('Error fetching staker count:', error);
+    return 0;
+  }
+}
+
+// Fetch all registered providers
+export async function fetchAllProviders(): Promise<Array<{ pubkey: PublicKey; isActive: boolean; endpoint: string }>> {
+  try {
+    const accounts = await connection.getProgramAccounts(WHISTLE_PROGRAM_ID, {
+      filters: [
+        {
+          dataSize: 256, // ProviderAccount size (approximate)
+        }
+      ]
+    });
+    
+    return accounts.map(({ pubkey, account }) => {
+      try {
+        // Manual deserialization (simplified)
+        const data = account.data;
+        const provider = new PublicKey(data.slice(0, 32));
+        // endpoint starts at byte 32, is a string (4 bytes length + string data)
+        const endpointLenView = new DataView(data.buffer, data.byteOffset + 32, 4);
+        const endpointLen = endpointLenView.getUint32(0, true);
+        const endpoint = new TextDecoder().decode(data.slice(36, 36 + endpointLen));
+        // is_active is at a known offset (after endpoint and timestamps)
+        const isActive = data[36 + endpointLen + 8] === 1; // +8 for registered_at i64
+        
+        return {
+          pubkey: provider,
+          isActive,
+          endpoint
+        };
+      } catch (err) {
+        return null;
+      }
+    }).filter((p): p is { pubkey: PublicKey; isActive: boolean; endpoint: string } => p !== null);
+  } catch (error) {
+    console.error('Error fetching providers:', error);
+    return [];
   }
 }
 
@@ -298,11 +370,23 @@ export async function fetchStakerAccount(staker: PublicKey): Promise<StakerAccou
       return null;
     }
 
-    const account = borsh.deserialize(
-      StakerAccount.schema as any,
-      StakerAccount,
-      accountInfo.data
-    ) as unknown as StakerAccount;
+    // Manual deserialization to avoid borsh library issues
+    const data = accountInfo.data;
+    let offset = 0;
+
+    // Parse StakerAccount struct: 32+8+8+8+1+8+8+8+1 = 82 bytes
+    const account = new StakerAccount({
+      staker: new Uint8Array(data.slice(offset, offset + 32)),
+      stakedAmount: data.readBigUInt64LE(offset + 32),
+      accessTokens: data.readBigUInt64LE(offset + 40),
+      lastStakeTime: data.readBigInt64LE(offset + 48),
+      nodeOperator: data.readUInt8(offset + 56),
+      votingPower: data.readBigUInt64LE(offset + 57),
+      dataEncrypted: data.readBigUInt64LE(offset + 65),
+      pendingRewards: data.readBigUInt64LE(offset + 73),
+      bump: data.readUInt8(offset + 81),
+    });
+
     return account;
   } catch (error) {
     console.error('Error fetching staker account:', error);
@@ -360,6 +444,11 @@ export async function createStakeTransaction(
 ): Promise<Transaction> {
   const transaction = new Transaction();
 
+  // Add compute budget to prevent simulation errors
+  transaction.add(
+    ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 })
+  );
+
   const [stakingPoolPDA] = getStakingPoolPDA();
   const [stakerAccountPDA] = getStakerAccountPDA(staker);
   const [tokenVaultPDA] = getTokenVaultPDA();
@@ -367,9 +456,18 @@ export async function createStakeTransaction(
   // Get staker's WHISTLE token account
   const stakerTokenAccount = getAssociatedTokenAddressSync(WHISTLE_MINT, staker);
 
-  // Check if staker account exists, if not, create it
-  const stakerAccountInfo = await connection.getAccountInfo(stakerAccountPDA);
-  const needsInit = !stakerAccountInfo;
+  // Check if staker's token account exists, create if needed
+  const stakerTokenAccountInfo = await connection.getAccountInfo(stakerTokenAccount);
+  if (!stakerTokenAccountInfo) {
+    console.log('Creating associated token account for staker...');
+    const createATAIx = createAssociatedTokenAccountInstruction(
+      staker, // payer
+      stakerTokenAccount, // ata
+      staker, // owner
+      WHISTLE_MINT // mint
+    );
+    transaction.add(createATAIx);
+  }
 
   // Convert amount to token units (6 decimals)
   const amountLamports = BigInt(Math.floor(amountWhistle * 10 ** WHISTLE_DECIMALS));
@@ -406,6 +504,11 @@ export async function createUnstakeTransaction(
   amountWhistle: number
 ): Promise<Transaction> {
   const transaction = new Transaction();
+
+  // Add compute budget to prevent simulation errors
+  transaction.add(
+    ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 })
+  );
 
   const [stakingPoolPDA] = getStakingPoolPDA();
   const [stakerAccountPDA] = getStakerAccountPDA(staker);
@@ -517,6 +620,44 @@ export async function createClaimProviderEarningsTransaction(
   });
 
   transaction.add(claimIx);
+  return transaction;
+}
+
+export async function createProcessQueryPaymentTransaction(
+  user: PublicKey,
+  provider: PublicKey,
+  queryCost: number = QUERY_COST
+): Promise<Transaction> {
+  const transaction = new Transaction();
+
+  const [paymentVaultPDA] = getPaymentVaultPDA();
+  const [providerAccountPDA] = getProviderAccountPDA(provider);
+  const [stakingPoolPDA] = getStakingPoolPDA();
+
+  // Instruction data: [discriminator(1), provider(32), query_cost(8)]
+  const instructionData = new Uint8Array(1 + 32 + 8);
+  instructionData[0] = StakingInstruction.ProcessQueryPayment;
+  
+  // Provider pubkey
+  instructionData.set(provider.toBytes(), 1);
+  
+  // Query cost as u64 little endian
+  const costView = new DataView(instructionData.buffer, 33, 8);
+  costView.setBigUint64(0, BigInt(queryCost), true);
+
+  const processQueryIx = new TransactionInstruction({
+    programId: WHISTLE_PROGRAM_ID,
+    keys: [
+      { pubkey: user, isSigner: true, isWritable: true },
+      { pubkey: paymentVaultPDA, isSigner: false, isWritable: true },
+      { pubkey: providerAccountPDA, isSigner: false, isWritable: true },
+      { pubkey: stakingPoolPDA, isSigner: false, isWritable: true },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    ],
+    data: instructionData,
+  });
+
+  transaction.add(processQueryIx);
   return transaction;
 }
 

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CryptWhistle - Documentation</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Sidebar Navigation -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo-container">
+        <img src="cryptwhistle-logo.png" alt="CryptWhistle Logo" class="logo-animated">
+      </div>
+      <h1>CryptWhistle</h1>
+      <p class="version">v1.0.0</p>
+    </div>
+
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Search documentation..." />
+    </div>
+
+    <div class="nav-sections">
+      <!-- HOME -->
+      <div class="nav-section">
+        <h3 class="nav-title">HOME</h3>
+        <ul>
+          <li><a href="playground.html" target="_blank" style="background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); padding: 8px 12px; border-radius: 8px; display: block; text-align: center; font-weight: 600; margin-bottom: 10px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); transition: all 0.3s ease; color: rgba(255, 255, 255, 0.9);" onmouseover="this.style.background='rgba(0, 0, 0, 0.7)'; this.style.borderColor='rgba(255, 255, 255, 0.2)'; this.style.boxShadow='0 12px 32px rgba(0, 0, 0, 0.6)'; this.style.transform='scale(1.02)';" onmouseout="this.style.background='rgba(0, 0, 0, 0.5)'; this.style.borderColor='rgba(255, 255, 255, 0.1)'; this.style.boxShadow='0 8px 24px rgba(0, 0, 0, 0.4)'; this.style.transform='scale(1)';">Try API Playground</a></li>
+          <li><a href="#overview" data-page="overview">Overview</a></li>
+          <li><a href="#why-whistle" data-page="why-whistle">Why CryptWhistle?</a></li>
+          <li><a href="#platform-status" data-page="platform-status">Platform Status & Updates</a></li>
+        </ul>
+      </div>
+
+      <!-- GETTING STARTED -->
+      <div class="nav-section">
+        <h3 class="nav-title">GETTING STARTED</h3>
+        <ul>
+          <li><a href="#introduction" data-page="introduction">Introduction</a></li>
+          <li><a href="#what-is-whistle" data-page="what-is-whistle">What is CryptWhistle?</a></li>
+          <li><a href="#core-problems" data-page="core-problems">Core Problems We Solve</a></li>
+          <li><a href="#installation" data-page="installation">Installation (SDK & CLI)</a></li>
+          <li><a href="#wallet-setup" data-page="wallet-setup">Wallet Setup (Solana)</a></li>
+          <li><a href="#quickstart-query" data-page="quickstart-query">Quickstart: Your First AI Query</a></li>
+          <li><a href="#quickstart-payment" data-page="quickstart-payment">Quickstart: Your First x402 Payment</a></li>
+        </ul>
+      </div>
+
+      <!-- CORE CONCEPTS -->
+      <div class="nav-section">
+        <h3 class="nav-title">CORE CONCEPTS</h3>
+        <ul>
+          <li><a href="#stack-diagram" data-page="stack-diagram">The Whistle AI Stack</a></li>
+          <li><a href="#client-side-ai" data-page="client-side-ai">Pillar 1: Client-Side AI</a></li>
+          <li><a href="#tee-compute" data-page="tee-compute">Pillar 2: TEE Compute</a></li>
+          <li><a href="#zk-proofs" data-page="zk-proofs">Pillar 3: Zero-Knowledge Proofs</a></li>
+          <li><a href="#x402" data-page="x402">Pillar 4: x402 Micropayments</a></li>
+          <li><a href="#hybrid-privacy" data-page="hybrid-privacy">Hybrid Privacy Rails</a></li>
+          <li><a href="#smart-routing" data-page="smart-routing">Smart Routing System</a></li>
+        </ul>
+      </div>
+
+      <!-- PRODUCTS & FEATURES -->
+      <div class="nav-section">
+        <h3 class="nav-title">PRODUCTS & FEATURES</h3>
+        <ul>
+          <li><a href="#client-ai-models" data-page="client-ai-models">Client-Side AI Models</a></li>
+          <li><a href="#tee-ai-oracles" data-page="tee-ai-oracles">TEE AI Oracles</a></li>
+          <li><a href="#privacy-mixer" data-page="privacy-mixer">Privacy Mixer</a></li>
+          <li><a href="#ghost-integration" data-page="ghost-integration">Ghost Calls Integration</a></li>
+          <li><a href="#model-marketplace" data-page="model-marketplace">AI Model Marketplace</a></li>
+        </ul>
+      </div>
+
+      <!-- SDK & CLIENTS -->
+      <div class="nav-section">
+        <h3 class="nav-title">SDK & CLIENTS</h3>
+        <ul>
+          <li><a href="#sdk-typescript" data-page="sdk-typescript">SDK Reference (TypeScript)</a></li>
+          <li><a href="#sdk-python" data-page="sdk-python">SDK Reference (Python)</a></li>
+          <li><a href="#cli" data-page="cli">CLI Reference</a></li>
+          <li><a href="#authentication" data-page="authentication">Authentication</a></li>
+          <li><a href="#environments" data-page="environments">Managing Environments</a></li>
+        </ul>
+      </div>
+
+      <!-- GUIDES -->
+      <div class="nav-section">
+        <h3 class="nav-title">GUIDES: FUNCTIONALITY</h3>
+        <ul>
+          <li><a href="#guide-sentiment" data-page="guide-sentiment">Sentiment Analysis</a></li>
+          <li><a href="#guide-transcription" data-page="guide-transcription">Audio Transcription</a></li>
+          <li><a href="#guide-translation" data-page="guide-translation">Translation</a></li>
+          <li><a href="#guide-privacy" data-page="guide-privacy">Privacy Analysis</a></li>
+          <li><a href="#guide-payments" data-page="guide-payments">Payments & x402</a></li>
+        </ul>
+      </div>
+
+      <!-- TUTORIALS & EXAMPLES -->
+      <div class="nav-section">
+        <h3 class="nav-title">TUTORIALS & EXAMPLES</h3>
+        <ul>
+          <li><a href="#tutorial-basic" data-page="tutorial-basic">Full App: Basic Usage</a></li>
+          <li><a href="#tutorial-ghost" data-page="tutorial-ghost">Full App: Ghost Terminal AI</a></li>
+          <li><a href="#tutorial-transcription" data-page="tutorial-transcription">Full App: Real-time Transcription</a></li>
+          <li><a href="#example-privacy" data-page="example-privacy">Example: Privacy Analyzer</a></li>
+          <li><a href="#code-snippets" data-page="code-snippets">Code Snippets</a></li>
+        </ul>
+      </div>
+
+      <!-- ARCHITECTURE -->
+      <div class="nav-section">
+        <h3 class="nav-title">ARCHITECTURE</h3>
+        <ul>
+          <li><a href="#system-overview" data-page="system-overview">System Overview</a></li>
+          <li><a href="#client-architecture" data-page="client-architecture">Client Architecture</a></li>
+          <li><a href="#server-architecture" data-page="server-architecture">Server Architecture</a></li>
+          <li><a href="#security" data-page="security">Security & Audits</a></li>
+          <li><a href="#performance" data-page="performance">Performance & Scalability</a></li>
+        </ul>
+      </div>
+
+      <!-- API REFERENCE -->
+      <div class="nav-section">
+        <h3 class="nav-title">API REFERENCE</h3>
+        <ul>
+          <li><a href="#api-overview" data-page="api-overview">API Overview</a></li>
+          <li><a href="#api-auth" data-page="api-auth">Authentication & Signing</a></li>
+          <li><a href="#api-endpoints" data-page="api-endpoints">Endpoints</a></li>
+          <li><a href="#api-contracts" data-page="api-contracts">Contract Addresses (Solana)</a></li>
+          <li><a href="#api-errors" data-page="api-errors">Error Codes & Responses</a></li>
+        </ul>
+      </div>
+
+      <!-- DEPLOYMENT -->
+      <div class="nav-section">
+        <h3 class="nav-title">DEPLOYMENT</h3>
+        <ul>
+          <li><a href="#deploy-netlify" data-page="deploy-netlify">Deploy to Netlify</a></li>
+          <li><a href="#deploy-aws" data-page="deploy-aws">Deploy to AWS</a></li>
+          <li><a href="#deploy-docker" data-page="deploy-docker">Deploy with Docker</a></li>
+          <li><a href="#deploy-production" data-page="deploy-production">Production Checklist</a></li>
+        </ul>
+      </div>
+
+      <!-- COMMUNITY -->
+      <div class="nav-section">
+        <h3 class="nav-title">COMMUNITY & ECOSYSTEM</h3>
+        <ul>
+          <li><a href="https://x.com/Whistle_Ninja" target="_blank">X - @Whistle_Ninja</a></li>
+          <li><a href="https://t.me/whistleninja" target="_blank">Telegram - @whistleninja</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <p>Powered by CryptWhistle</p>
+      <p class="last-updated">Last updated: <span id="lastUpdated"></span></p>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <button class="menu-toggle" id="menuToggle">☰</button>
+    
+    <div class="content-wrapper" id="contentWrapper">
+      <!-- Content will be loaded here dynamically -->
+    </div>
+
+    <footer class="content-footer">
+      <div class="footer-nav">
+        <button id="prevPage" class="nav-button">← Previous</button>
+        <button id="nextPage" class="nav-button">Next →</button>
+      </div>
+    </footer>
+  </main>
+
+  <script src="content.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
+

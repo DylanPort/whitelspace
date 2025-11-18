@@ -23,6 +23,16 @@ app.use(express.static('.'));
 app.use(express.static('apps/web')); // Serve web app files (privacy.html, terms.html, etc.)
 app.use(express.json());
 
+// Redirect root to Whistlenet Dashboard (main homepage)
+app.get('/', (req, res) => {
+  res.redirect('http://localhost:3000');
+});
+
+// Main website still accessible at /main.html
+app.get('/main', (req, res) => {
+  res.sendFile(path.join(__dirname, 'main.html'));
+});
+
 // ===== x402: Config =====
 const FEE_COLLECTOR_WALLET = 'G1RHSMtZVZLafmZ9man8anb2HXf7JP5Kh5sbrGZKM6Pg'; // Collects all x402 fees
 const WHISTLE_MINT = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';

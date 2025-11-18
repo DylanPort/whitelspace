@@ -1,0 +1,35 @@
+# Netlify Configuration for Whistlenet Dashboard
+# Deploy this as the MAIN HOMEPAGE
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+# Next.js specific settings
+[build.environment]
+  NODE_VERSION = "18"
+  NPM_FLAGS = "--legacy-peer-deps"
+
+# Enable Next.js on Netlify plugin
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Redirect rules
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Headers for security
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Environment variables (set these in Netlify dashboard)
+# NEXT_PUBLIC_RPC_ENDPOINT = "https://mainnet.helius-rpc.com/?api-key=YOUR_KEY"
+# NEXT_PUBLIC_API_URL = "https://your-backend.onrender.com"
+

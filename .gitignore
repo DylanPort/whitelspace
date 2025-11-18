@@ -17,9 +17,14 @@ Thumbs.db
 *.swp
 *.swo
 
-# Environment variables
+# Environment variables - NEVER COMMIT THESE!
 .env
-.env.local
+.env.*
+!.env.example
+!.env.template
+*.env
+.env.production
+.env.development
 
 # Capacitor
 android/
@@ -33,3 +38,21 @@ ios/
 
 # Local Netlify folder
 .netlify
+
+# Sensitive data - NEVER COMMIT!
+*.key
+*.pem
+*secret*
+*private*
+*keypair*.json
+infrastructure/node-keys/*.json
+!infrastructure/node-keys/.gitkeep
+
+# AI session logs (cleanup)
+*_FIX.md
+*_COMPLETE.md
+*_SUCCESS.md
+*_DEPLOYMENT.md
+*_INTEGRATION.md
+*_CONFIGURED.md
+*_UPDATED.md

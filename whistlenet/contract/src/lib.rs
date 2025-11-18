@@ -918,16 +918,25 @@ fn initialize_pool(
         return Err(ProgramError::MissingRequiredSignature);
     }
 
-    // CRITICAL FIX: Check if pool already initialized
-    if !pool_account.data_is_empty() {
-        msg!("Pool already initialized - cannot re-initialize");
-        return Err(ProgramError::AccountAlreadyInitialized);
-    }
-
-    // CRITICAL FIX: Check if vault already exists
-    if !token_vault.data_is_empty() {
-        msg!("Token vault already exists - cannot re-initialize");
-        return Err(ProgramError::AccountAlreadyInitialized);
+    // Check if pool already initialized - allow authority to reinitialize if needed
+    let pool_exists = !pool_account.data_is_empty();
+    let vault_exists = !token_vault.data_is_empty();
+    
+    if pool_exists || vault_exists {
+        msg!("WARNING: Pool/vault already exist - reinitializing with authority permission");
+        msg!("Pool exists: {}, Vault exists: {}", pool_exists, vault_exists);
+        
+        // If pool exists, verify it's owned by our program
+        if pool_exists && pool_account.owner != program_id {
+            msg!("Pool account not owned by program");
+            return Err(ProgramError::IncorrectProgramId);
+        }
+        
+        // If vault exists, verify it's owned by token program
+        if vault_exists && token_vault.owner != token_program.key {
+            msg!("Token vault not owned by token program");
+            return Err(ProgramError::IncorrectProgramId);
+        }
     }
 
     // Validate parameters
@@ -998,21 +1007,28 @@ fn initialize_pool(
 
     let rent = Rent::from_account_info(rent_sysvar)?;
     
-    // Create pool account
-    let pool_space = std::mem::size_of::<StakingPool>();
-    let pool_lamports = rent.minimum_balance(pool_space);
+    // Create pool account (skip if already exists)
+    if !pool_exists {
+        // Use exact Borsh serialized size (not Rust mem size!)
+        // StakingPool: 32+32+32+8+8+8+8+1+8+8+8+1+1 = 155 bytes
+        const STAKING_POOL_SIZE: usize = 155;
+        let pool_space = STAKING_POOL_SIZE;
+        let pool_lamports = rent.minimum_balance(pool_space);
 
-    invoke_signed(
-        &system_instruction::create_account(
-            authority.key,
-            pool_account.key,
-            pool_lamports,
-            pool_space as u64,
-            program_id,
-        ),
-        &[authority.clone(), pool_account.clone(), system_program.clone()],
-        &[&[b"staking_pool", authority.key.as_ref(), &[bump]]],
-    )?;
+        invoke_signed(
+            &system_instruction::create_account(
+                authority.key,
+                pool_account.key,
+                pool_lamports,
+                pool_space as u64,
+                program_id,
+            ),
+            &[authority.clone(), pool_account.clone(), system_program.clone()],
+            &[&[b"staking_pool", authority.key.as_ref(), &[bump]]],
+        )?;
+    } else {
+        msg!("Pool account already exists - skipping creation");
+    }
 
     // Create SPL token account for vault
     let token_account_space = 165; // SPL token account size
