@@ -1,5 +1,4 @@
 # Netlify Configuration for Original Whistle Website
-# NOTE: Main homepage is now Whistlenet Dashboard (deployed separately)
 
 [build]
   publish = "."
@@ -8,21 +7,8 @@
 [functions]
   node_bundler = "esbuild"
 
-# Redirect root to Whistlenet Dashboard (MAIN HOMEPAGE)
-[[redirects]]
-  from = "/"
-  to = "https://whistlenet.netlify.app"
-  status = 301
-  force = true
-
-# Keep main.html accessible
-[[redirects]]
-  from = "/main"
-  to = "/main.html"
-  status = 200
-
-# All other routes serve normally
+# Serve main.html by default
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to = "/main.html"
   status = 200
