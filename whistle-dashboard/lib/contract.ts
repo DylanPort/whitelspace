@@ -44,14 +44,14 @@ export const connection = new Connection(RPC_ENDPOINT, 'confirmed');
 
 export function getStakingPoolPDA(): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
-    [Buffer.from('staking_pool')],
+    [Buffer.from('staking_pool'), AUTHORITY_ADDRESS.toBuffer()],
     WHISTLE_PROGRAM_ID
   );
 }
 
 export function getTokenVaultPDA(): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
-    [Buffer.from('token_vault')],
+    [Buffer.from('token_vault'), AUTHORITY_ADDRESS.toBuffer()],
     WHISTLE_PROGRAM_ID
   );
 }
@@ -72,7 +72,7 @@ export function getProviderAccountPDA(provider: PublicKey): [PublicKey, number] 
 
 export function getPaymentVaultPDA(): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
-    [Buffer.from('payment_vault')],
+    [Buffer.from('payment_vault'), AUTHORITY_ADDRESS.toBuffer()],
     WHISTLE_PROGRAM_ID
   );
 }
