@@ -43,7 +43,19 @@ export default function StakingPanel() {
       }, 'confirmed');
       
       if (confirmation.value.err) {
-        throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
+        const error = confirmation.value.err;
+        console.error('Transaction failed on-chain:', error);
+        
+        // Decode InstructionError
+        let errorMsg = 'Transaction failed';
+        if (typeof error === 'object' && 'InstructionError' in error) {
+          const [index, errCode] = (error as any).InstructionError;
+          errorMsg = `Instruction ${index} failed with error: ${JSON.stringify(errCode)}`;
+        } else {
+          errorMsg = `Transaction failed: ${JSON.stringify(error)}`;
+        }
+        
+        throw new Error(errorMsg);
       }
       
       console.log('✅ Transaction confirmed successfully!');
@@ -65,11 +77,18 @@ export default function StakingPanel() {
       let errorMsg = 'Unknown error';
       if (err?.message) {
         errorMsg = err.message;
-      } else if (err?.toString) {
-        errorMsg = err.toString();
+      } else if (typeof err === 'object' && 'InstructionError' in err) {
+        const [index, errCode] = (err as any).InstructionError;
+        errorMsg = `Instruction ${index} error: ${JSON.stringify(errCode)}`;
+      } else if (err?.toString && typeof err.toString === 'function') {
+        try {
+          errorMsg = err.toString();
+        } catch {
+          errorMsg = 'Error converting error to string';
+        }
       }
       
-      alert(`❌ Staking failed: ${errorMsg}`);
+      alert(`❌ Staking failed: ${errorMsg}\n\nCheck console (F12) for details`);
     } finally {
       setStaking(false);
     }
