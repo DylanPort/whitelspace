@@ -89,30 +89,18 @@ export default function Home() {
           WHISTLE
         </div>
         
-        <div className="flex items-center gap-4">
-          {/* Network Status */}
-          <div className="flex items-center gap-3 text-sm backdrop-blur-sm bg-black/20 px-4 py-2 rounded border border-white/5">
-            <span className="text-gray-400">{rpcSource}</span>
-            <span className="text-gray-600">~</span>
-            <span className={backendStatus === 'online' ? 'text-white' : 'text-gray-400'}>
-              {backendStatus === 'checking' ? 'Checking...' : 
-               backendStatus === 'online' ? 'Active' : 'Syncing'}
-            </span>
-          </div>
-
-          {/* How It Works Button */}
-          <button
-            onClick={() => setShowHowItWorks(true)}
-            className="group relative text-xs font-semibold tracking-wider uppercase px-5 py-2.5 backdrop-blur-sm bg-emerald-600/90 hover:bg-emerald-500/90 border border-emerald-500/50 hover:border-emerald-400/70 transition-all duration-300"
-            style={{
-              clipPath: 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)',
-            }}
-          >
-            <span className="text-white group-hover:text-white transition-colors">
-              How It Works
-            </span>
-          </button>
-        </div>
+        {/* How It Works Button */}
+        <button
+          onClick={() => setShowHowItWorks(true)}
+          className="group relative text-xs font-semibold tracking-wider uppercase px-5 py-2.5 backdrop-blur-sm bg-emerald-600/90 hover:bg-emerald-500/90 border border-emerald-500/50 hover:border-emerald-400/70 transition-all duration-300"
+          style={{
+            clipPath: 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)',
+          }}
+        >
+          <span className="text-white group-hover:text-white transition-colors">
+            How It Works
+          </span>
+        </button>
       </header>
 
       {/* Main content - 5 column layout */}
