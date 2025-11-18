@@ -3,15 +3,22 @@
 
 [build]
   command = "npm run build"
-  # DON'T set publish directory - Next.js plugin handles it automatically
+  publish = ".next"
 
 # Next.js specific settings
 [build.environment]
   NODE_VERSION = "18"
+  NPM_FLAGS = "--legacy-peer-deps"
 
-# Enable Next.js on Netlify plugin (required for Next.js 13+ App Router)
+# Enable Next.js on Netlify plugin
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+# Redirect rules
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
 
 # Headers for security
 [[headers]]
@@ -22,17 +29,7 @@
     X-XSS-Protection = "1; mode=block"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
-# Environment variables (set these in Netlify dashboard under Site settings > Environment variables)
-# Required environment variables:
-# NEXT_PUBLIC_HELIUS_RPC_URL
-# NEXT_PUBLIC_BACKEND_API_URL
-# NEXT_PUBLIC_WHISTLE_PROGRAM_ID
-# NEXT_PUBLIC_WHISTLE_MINT
-# NEXT_PUBLIC_AUTHORITY_ADDRESS
-# NEXT_PUBLIC_STAKING_POOL_ADDRESS
-# NEXT_PUBLIC_TOKEN_VAULT_ADDRESS
-# NEXT_PUBLIC_PAYMENT_VAULT_ADDRESS
-# NEXT_PUBLIC_MIN_PROVIDER_BOND
-# NEXT_PUBLIC_QUERY_COST
-# NEXT_PUBLIC_WHISTLE_DECIMALS
+# Environment variables (set these in Netlify dashboard)
+# NEXT_PUBLIC_RPC_ENDPOINT = "https://mainnet.helius-rpc.com/?api-key=YOUR_KEY"
+# NEXT_PUBLIC_API_URL = "https://your-backend.onrender.com"
 
