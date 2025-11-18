@@ -377,7 +377,11 @@ export async function createStakeTransaction(
   // Build instruction data: [instruction_discriminator (1 byte), amount (8 bytes)]
   const instructionData = Buffer.alloc(9);
   instructionData.writeUInt8(StakingInstruction.Stake, 0);
-  instructionData.writeBigUInt64LE(amountLamports, 1);
+  
+  // Write amount as BigInt (8 bytes, little-endian)
+  const amountBuffer = Buffer.alloc(8);
+  amountBuffer.writeBigUInt64LE(amountLamports);
+  amountBuffer.copy(instructionData, 1);
 
   const stakeIx = new TransactionInstruction({
     programId: WHISTLE_PROGRAM_ID,
@@ -414,7 +418,11 @@ export async function createUnstakeTransaction(
 
   const instructionData = Buffer.alloc(9);
   instructionData.writeUInt8(StakingInstruction.Unstake, 0);
-  instructionData.writeBigUInt64LE(amountLamports, 1);
+  
+  // Write amount as BigInt (8 bytes, little-endian)
+  const amountBuffer = Buffer.alloc(8);
+  amountBuffer.writeBigUInt64LE(amountLamports);
+  amountBuffer.copy(instructionData, 1);
 
   const unstakeIx = new TransactionInstruction({
     programId: WHISTLE_PROGRAM_ID,
@@ -463,7 +471,10 @@ export async function createRegisterProviderTransaction(
   endpointBuffer.copy(instructionData, offset);
   offset += endpointBuffer.length;
 
-  instructionData.writeBigUInt64LE(bondAmount, offset);
+  // Write bond amount as BigInt (8 bytes, little-endian)
+  const bondBuffer = Buffer.alloc(8);
+  bondBuffer.writeBigUInt64LE(bondAmount);
+  bondBuffer.copy(instructionData, offset);
 
   const registerIx = new TransactionInstruction({
     programId: WHISTLE_PROGRAM_ID,
