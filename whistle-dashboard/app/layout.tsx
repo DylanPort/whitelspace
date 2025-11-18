@@ -10,6 +10,10 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "WHISTLE - Decentralized RPC Provider Network",
   description: "Self-sovereign blockchain data access powered by WHISTLE Network",
+  icons: {
+    icon: '/whistel_logo_top_right_2048.png',
+    apple: '/whistel_logo_top_right_2048.png',
+  },
 };
 
 export default function RootLayout({
