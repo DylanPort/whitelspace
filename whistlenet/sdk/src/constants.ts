@@ -13,9 +13,9 @@ export const WHISTLE_MINT = new PublicKey('6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwi
 
 /**
  * Smart Contract Program ID
- * TODO: Update this with deployed program ID
+ * Deployed on Mainnet: WhStMSgDJz3dYtaLKt4855DDypB64Dz3PpAFMbuicbt
  */
-export const PROGRAM_ID = new PublicKey('ENATkxyz123456789ABCDEFGHJKLMNPQRSTUVWXYZabc');
+export const PROGRAM_ID = new PublicKey('WhStMSgDJz3dYtaLKt4855DDypB64Dz3PpAFMbuicbt');
 
 /**
  * Network constants from smart contract
@@ -28,10 +28,10 @@ export const NETWORK_CONSTANTS = {
   MIN_PROVIDER_BOND: 1_000_000_000, // 1000 WHISTLE
   
   /** Cost per query in lamports (SOL) */
-  QUERY_COST: 1_000_000, // 0.001 SOL
+  QUERY_COST: 10_000, // 0.00001 SOL
   
   /** Cooldown period for unstaking (seconds) */
-  COOLDOWN_PERIOD: 86400, // 24 hours
+  COOLDOWN_PERIOD: 604800, // 7 days
   
   /** Heartbeat timeout (seconds) */
   HEARTBEAT_TIMEOUT: 300, // 5 minutes
@@ -83,4 +83,5 @@ export const WHISTLE_DECIMALS = 6;
  * Maximum providers for bonus distribution
  */
 export const MAX_BONUS_PROVIDERS = 100;
+
 

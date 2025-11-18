@@ -34,7 +34,17 @@ const mockTransactions = [
   }
 ];
 
-// Health check
+// Health check (both /health and /api/health for compatibility)
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    mode: 'mock-data-testing',
+    database: 'disabled',
+  });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'healthy',
@@ -137,6 +147,48 @@ app.get('/api/nfts/:owner', (req, res) => {
   });
 });
 
+// Provider stats
+app.get('/providers/stats', (req, res) => {
+  res.json({
+    providers: [
+      {
+        provider_address: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
+        total_queries: 12458,
+        total_earned: 2.5,
+        uptime_percentage: 99.8,
+        avg_response_time: 45,
+        last_heartbeat: new Date().toISOString(),
+      },
+      {
+        provider_address: '9yKP5hR6N23j89TXRBpkD7mChZtEqA91RZVuJpsgPcD',
+        total_queries: 8234,
+        total_earned: 1.7,
+        uptime_percentage: 98.5,
+        avg_response_time: 52,
+        last_heartbeat: new Date(Date.now() - 60000).toISOString(),
+      }
+    ]
+  });
+});
+
+// Query logs
+app.get('/queries/logs', (req, res) => {
+  const { limit = '100' } = req.query;
+  const limitNum = parseInt(limit as string);
+  
+  const mockLogs = Array.from({ length: Math.min(limitNum, 20) }, (_, i) => ({
+    endpoint: '/api/transactions',
+    method: 'GET',
+    response_time: Math.floor(Math.random() * 100) + 20,
+    status: Math.random() > 0.1 ? 'success' : 'error',
+    created_at: new Date(Date.now() - i * 60000).toISOString(),
+  }));
+  
+  res.json({
+    logs: mockLogs
+  });
+});
+
 // Metrics (Prometheus format)
 app.get('/metrics', (req, res) => {
   res.type('text/plain').send(`
@@ -167,13 +219,16 @@ app.listen(PORT, () => {
   console.log(`   Mode: Mock Data Testing`);
   console.log(`   Database: Disabled\n`);
   console.log('📋 Available Endpoints:\n');
+  console.log(`   GET /health`);
   console.log(`   GET /api/health`);
   console.log(`   GET /api/stats`);
+  console.log(`   GET /providers/stats`);
+  console.log(`   GET /queries/logs?limit=100`);
   console.log(`   GET /api/transactions?wallet=ADDRESS&limit=10`);
   console.log(`   GET /api/transaction/:signature`);
   console.log(`   GET /api/balance/:address`);
   console.log(`   GET /api/nfts/:owner`);
   console.log(`   GET /metrics\n`);
-  console.log('🧪 Test with: curl http://localhost:8080/api/health\n');
+  console.log('🧪 Test with: curl http://localhost:8080/health\n');
 });
 

@@ -3,19 +3,20 @@ name = "encrypted-network-access-token"
 version = "0.1.0"
 description = "Staking-based access token for encrypted data network"
 edition = "2021"
+resolver = "2"
 
 [lib]
 crate-type = ["cdylib", "lib"]
 
 [dependencies]
-solana-program = "1.17"
+solana-program = "1.18"
 spl-token = "4.0"
 borsh = "0.10"
 borsh-derive = "0.10"
 
 [dev-dependencies]
-solana-program-test = "1.17"
-solana-sdk = "1.17"
+solana-program-test = "1.18"
+solana-sdk = "1.18"
 
 [features]
 no-entrypoint = []

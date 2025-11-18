@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  x402-distributor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: whistle-x402-distributor
+    restart: unless-stopped
+    environment:
+      - SOLANA_RPC=${SOLANA_RPC}
+      - AUTHORITY_KEYPAIR=/app/keys/authority.json
+      - MIN_THRESHOLD=${MIN_THRESHOLD:-0.01}
+      - CHECK_INTERVAL=${CHECK_INTERVAL:-3600000}
+      - RESERVE_BALANCE=${RESERVE_BALANCE:-0.001}
+      - ALERT_WEBHOOK=${ALERT_WEBHOOK:-}
+    volumes:
+      - ./keys:/app/keys:ro
+      - ./logs:/app/logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "node", "healthcheck.js"]
+      interval: 5m
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+
+
+

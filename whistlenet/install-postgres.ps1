@@ -27,3 +27,4 @@ Write-Host "  Port: 5432" -ForegroundColor White
 Write-Host ""
 Write-Host "After installation completes, run setup-database.ps1" -ForegroundColor Yellow
 
+

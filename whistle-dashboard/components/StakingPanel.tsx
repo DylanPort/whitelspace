@@ -1,0 +1,89 @@
+'use client';
+
+import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { createStakeTransaction, connection } from '@/lib/contract';
+
+export default function StakingPanel() {
+  const { publicKey, connected, sendTransaction } = useWallet();
+  const [staking, setStaking] = useState(false);
+  const [amount, setAmount] = useState('100');
+
+  const handleStake = async () => {
+    if (!publicKey || !connected) return;
+
+    const stakeAmount = parseFloat(amount);
+    if (isNaN(stakeAmount) || stakeAmount < 100) {
+      alert('Minimum stake is 100 WHISTLE');
+      return;
+    }
+
+    setStaking(true);
+    try {
+      const transaction = await createStakeTransaction(publicKey, stakeAmount);
+      const signature = await sendTransaction(transaction, connection);
+      await connection.confirmTransaction(signature, 'confirmed');
+      
+      console.log('Stake transaction:', signature);
+      alert(`✅ Staking successful!\n\nStaked: ${stakeAmount} WHISTLE\nSignature: ${signature}`);
+      setAmount('100'); // Reset to minimum
+    } catch (err: any) {
+      console.error('Staking failed:', err);
+      alert(`❌ Staking failed: ${err.message || 'Unknown error'}`);
+    } finally {
+      setStaking(false);
+    }
+  };
+
+  const handleBuyWhistle = () => {
+    // TODO: Integrate with DEX or token purchase flow
+    alert('$WHISTLE token sale coming soon!');
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -50 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.6, delay: 0.1 }}
+      className="panel-base p-6 rounded-[16px] clip-angled-border"
+    >
+      <h3 className="text-[11px] font-semibold mb-4 tracking-[0.15em]">
+        STAKING
+      </h3>
+
+      <div className="space-y-3">
+        {/* Amount input */}
+        <input
+          type="number"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder="Amount (WHISTLE)"
+          min="100"
+          step="100"
+          className="w-full px-4 py-3 bg-black/60 border-2 border-white/20 text-sm text-center"
+        />
+
+        <button
+          disabled={!connected || staking}
+          onClick={handleStake}
+          className="btn-primary w-full"
+        >
+          {staking ? 'STAKING...' : 'STAKE'}
+        </button>
+
+        <button
+          disabled={!connected}
+          onClick={handleBuyWhistle}
+          className="btn-primary w-full"
+        >
+          $WHISTLE
+        </button>
+
+        <div className="text-[9px] text-gray-500 text-center mt-2">
+          Min: 100 WHISTLE
+        </div>
+      </div>
+    </motion.div>
+  );
+}

@@ -30,11 +30,16 @@ const connection = new Connection(MAINNET_RPC, 'confirmed');
 
 // Known program IDs
 const PROGRAMS = {
+  // Whistlenet
+  WHISTLE: 'WhStMSgDJz3dYtaLKt4855DDypB64Dz3PpAFMbuicbt',
+  
+  // Solana core
   TOKEN_PROGRAM: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
   SYSTEM_PROGRAM: '11111111111111111111111111111111',
   ASSOCIATED_TOKEN: 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL',
   COMPUTE_BUDGET: 'ComputeBudget111111111111111111111111111111',
   MEMO_PROGRAM: 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr',
+  
   // DeFi programs
   RAYDIUM_V4: '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8',
   JUPITER_V6: 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4',

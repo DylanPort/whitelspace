@@ -99,8 +99,37 @@ pub struct PaymentVault {
     pub bonus_pool: u64,              // 20% for top performers
     pub treasury: u64,                // 5% for development
     pub staker_rewards_pool: u64,     // 5% for all stakers
+    pub developer_rebate_pool: u64,   // Pool for developer rebates
     pub last_distribution: i64,       // Last bonus distribution
     pub bump: u8,                     // PDA bump seed
+}
+
+#[derive(BorshSerialize, BorshDeserialize, Debug, Clone)]
+pub struct DeveloperAccount {
+    pub developer: Pubkey,            // Developer wallet
+    pub whistle_staked: u64,          // WHISTLE tokens staked
+    pub tier: DeveloperTier,          // Current tier based on stake
+    pub total_queries: u64,           // Lifetime queries made
+    pub free_queries_used_month: u64, // Free queries used this month
+    pub last_month_reset: i64,        // Last time monthly counter reset
+    pub rebate_percentage: u64,       // Rebate % (0-10000 = 0-100%)
+    pub bonus_rewards: u64,           // Accumulated bonus WHISTLE
+    pub referrals_made: u32,          // Number of referrals
+    pub referred_by: Option<Pubkey>,  // Who referred this dev (if any)
+    pub referral_earnings: u64,       // SOL earned from referrals (2%)
+    pub registered_at: i64,           // Registration timestamp
+    pub last_stake_time: i64,         // Last staking action
+    pub is_active: bool,              // Account status
+    pub bump: u8,                     // PDA bump seed
+}
+
+#[derive(BorshSerialize, BorshDeserialize, Debug, Clone, PartialEq)]
+pub enum DeveloperTier {
+    Hobbyist,    // 100 WHISTLE - 10% rebate, 1k queries/day
+    Builder,     // 1,000 WHISTLE - 25% rebate, 10k queries/day
+    Pro,         // 5,000 WHISTLE - 50% rebate, 50k queries/day
+    Enterprise,  // 25,000 WHISTLE - 75% rebate, 250k queries/day
+    Whale,       // 100,000 WHISTLE - 100% rebate, unlimited queries
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Debug, Clone, PartialEq)]
@@ -350,6 +379,95 @@ pub enum StakingInstruction {
     RecordQuery {
         user: Pubkey,
     },
+
+    // ========== DEVELOPER STAKING INSTRUCTIONS ==========
+
+    /// Register as a developer and stake WHISTLE for rebates
+    /// Accounts:
+    /// 0. `[writable, signer]` Developer
+    /// 1. `[writable]` Developer account (PDA)
+    /// 2. `[writable]` Developer's WHISTLE token account
+    /// 3. `[writable]` Token vault
+    /// 4. `[]` Token program
+    /// 5. `[]` System program
+    /// 6. `[]` Clock sysvar
+    RegisterDeveloper {
+        stake_amount: u64,
+        referrer: Option<Pubkey>,
+    },
+
+    /// Stake additional WHISTLE to upgrade tier
+    /// Accounts:
+    /// 0. `[writable, signer]` Developer
+    /// 1. `[writable]` Developer account (PDA)
+    /// 2. `[writable]` Developer's WHISTLE token account
+    /// 3. `[writable]` Token vault
+    /// 4. `[]` Token program
+    StakeDeveloper {
+        amount: u64,
+    },
+
+    /// Unstake WHISTLE from developer account
+    /// Accounts:
+    /// 0. `[writable, signer]` Developer
+    /// 1. `[writable]` Developer account (PDA)
+    /// 2. `[writable]` Token vault
+    /// 3. `[writable]` Developer's WHISTLE token account
+    /// 4. `[]` Token program
+    UnstakeDeveloper {
+        amount: u64,
+    },
+
+    /// Process developer query with rebate
+    /// Accounts:
+    /// 0. `[writable, signer]` Developer (payer)
+    /// 1. `[writable]` Developer account (PDA)
+    /// 2. `[writable]` Payment vault (PDA)
+    /// 3. `[writable]` Provider account (PDA)
+    /// 4. `[]` Staking pool
+    /// 5. `[]` System program
+    /// 6. `[]` Clock sysvar
+    ProcessDeveloperQuery {
+        provider: Pubkey,
+        query_cost: u64,
+    },
+
+    /// Claim developer bonus rewards
+    /// Accounts:
+    /// 0. `[writable, signer]` Developer
+    /// 1. `[writable]` Developer account (PDA)
+    /// 2. `[writable]` Payment vault (PDA)
+    /// 3. `[]` Token vault
+    /// 4. `[writable]` Developer's WHISTLE token account
+    /// 5. `[]` Token program
+    ClaimDeveloperRewards,
+
+    /// Claim referral earnings (SOL)
+    /// Accounts:
+    /// 0. `[writable, signer]` Developer
+    /// 1. `[writable]` Developer account (PDA)
+    /// 2. `[writable]` Payment vault (PDA)
+    /// 3. `[]` System program
+    ClaimReferralEarnings,
+
+    // ========== X402 PAYMENT INSTRUCTIONS ==========
+
+    /// Initialize X402 payment collection wallet (one-time setup)
+    /// Accounts:
+    /// 0. `[writable, signer]` Authority
+    /// 1. `[writable]` X402 wallet (PDA)
+    /// 2. `[]` System program
+    InitializeX402Wallet,
+
+    /// Process X402 payment and distribute to stakers (90%) and treasury (10%)
+    /// Accounts:
+    /// 0. `[writable, signer]` Authority/Cron
+    /// 1. `[writable]` X402 wallet (PDA)
+    /// 2. `[writable]` Payment vault (PDA)
+    /// 3. `[]` Staking pool (for validation)
+    ProcessX402Payment {
+        amount: u64,
+    },
 }
 
 // ============= ENTRYPOINT =============
@@ -453,6 +571,15 @@ pub fn process_instruction(
 
         StakingInstruction::RecordQuery { user } => {
             record_query(program_id, accounts, user)
+        }
+
+        // X402 payment instructions
+        StakingInstruction::InitializeX402Wallet => {
+            initialize_x402_wallet(program_id, accounts)
+        }
+
+        StakingInstruction::ProcessX402Payment { amount } => {
+            process_x402_payment(program_id, accounts, amount)
         }
     }
 }
@@ -1527,13 +1654,13 @@ fn register_provider(
     // Create provider account
     let rent = Rent::get()?;
     // CRITICAL SECURITY FIX: Correct space calculation for ProviderAccount with dynamic String
-    // ProviderAccount fields: provider(32) + registered_at(8) + is_active(1) + stake_bond(8) +
-    // total_earned(8) + pending_earnings(8) + queries_served(8) + reputation_score(8) +
-    // uptime_percentage(8) + response_time_avg(8) + accuracy_score(8) + last_heartbeat(8) +
-    // slashed_amount(8) + penalty_count(4) + bump(1)
-    // = 32 + 8 + 1 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 4 + 1 = 122 bytes
-    // String in Borsh: 4 bytes (length) + actual string bytes
-    let base_size = 122;
+    // ProviderAccount fields: provider(32) + endpoint(String) + registered_at(8) + is_active(1) + 
+    // stake_bond(8) + total_earned(8) + pending_earnings(8) + queries_served(8) + 
+    // reputation_score(8) + uptime_percentage(8) + response_time_avg(8) + accuracy_score(8) + 
+    // last_heartbeat(8) + slashed_amount(8) + penalty_count(4) + bump(1)
+    // = 32 + 8 + 1 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 4 + 1 = 130 bytes (base)
+    // String in Borsh: 4 bytes (length prefix) + actual string bytes
+    let base_size = 130;
     let space = base_size + 4 + endpoint.len(); // +4 for Borsh String length prefix
     let lamports = rent.minimum_balance(space);
 
@@ -1602,6 +1729,16 @@ fn deregister_provider(program_id: &Pubkey, accounts: &[AccountInfo]) -> Program
 
     let provider_data = ProviderAccount::try_from_slice(&provider_account.data.borrow())?;
     let pool = StakingPool::try_from_slice(&pool_account.data.borrow())?;
+
+    // CRITICAL FIX: Verify pool PDA matches expected derivation (prevents fake pool attack)
+    let (expected_pool_pda, _) = Pubkey::find_program_address(
+        &[b"staking_pool", pool.authority.as_ref()],
+        program_id,
+    );
+    if expected_pool_pda != *pool_account.key {
+        msg!("Invalid pool account PDA - potential attack detected");
+        return Err(ProgramError::InvalidAccountData);
+    }
 
     if provider_data.provider != *provider.key {
         msg!("Not the provider owner");
@@ -1832,6 +1969,12 @@ fn slash_provider(
 
     let mut provider_data = ProviderAccount::try_from_slice(&provider_account.data.borrow())?;
     let mut vault_data = PaymentVault::try_from_slice(&payment_vault.data.borrow())?;
+
+    // CRITICAL FIX: Verify authority matches vault authority
+    if *authority.key != vault_data.authority {
+        msg!("Unauthorized: only vault authority can slash providers");
+        return Err(ProgramError::InvalidAccountData);
+    }
 
     // Check if provider has enough bond
     if provider_data.stake_bond < provider_data.slashed_amount + penalty {
@@ -2086,12 +2229,13 @@ fn distribute_bonus_pool(
         return Err(ProgramError::InvalidInstructionData);
     }
 
-    // HIGH SECURITY FIX: Check for duplicate providers in the list
-    let mut unique_providers = std::collections::HashSet::new();
-    for provider in &top_providers {
-        if !unique_providers.insert(provider) {
-            msg!("Duplicate provider in distribution list");
-            return Err(ProgramError::InvalidInstructionData);
+    // HIGH SECURITY FIX: Check for duplicate providers using O(n²) loop (HashSet not available in BPF)
+    for i in 0..top_providers.len() {
+        for j in (i + 1)..top_providers.len() {
+            if top_providers[i] == top_providers[j] {
+                msg!("Duplicate provider in distribution list");
+                return Err(ProgramError::InvalidInstructionData);
+            }
         }
     }
 
@@ -2398,6 +2542,186 @@ fn record_query(program_id: &Pubkey, accounts: &[AccountInfo], _user: Pubkey) ->
         .ok_or(ProgramError::InvalidInstructionData)?;
 
     provider_data.serialize(&mut &mut provider_account.data.borrow_mut()[..])?;
+
+    Ok(())
+}
+
+// ============= X402 PAYMENT FUNCTIONS =============
+
+/// Derive X402 payment collection wallet PDA
+pub fn get_x402_payment_wallet_pda(program_id: &Pubkey) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[b"x402_payment_wallet"],
+        program_id,
+    )
+}
+
+/// Initialize X402 payment collection wallet (one-time setup)
+fn initialize_x402_wallet(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+) -> ProgramResult {
+    let account_info_iter = &mut accounts.iter();
+    let authority = next_account_info(account_info_iter)?;
+    let x402_wallet = next_account_info(account_info_iter)?;
+    let system_program = next_account_info(account_info_iter)?;
+
+    // Verify authority
+    if !authority.is_signer {
+        msg!("Authority must be signer");
+        return Err(ProgramError::MissingRequiredSignature);
+    }
+
+    // Derive and verify PDA
+    let (wallet_pda, bump) = get_x402_payment_wallet_pda(program_id);
+    if wallet_pda != *x402_wallet.key {
+        msg!("Invalid X402 wallet PDA");
+        return Err(ProgramError::InvalidSeeds);
+    }
+
+    // Check if already initialized
+    if !x402_wallet.data_is_empty() {
+        msg!("X402 wallet already initialized");
+        return Err(ProgramError::AccountAlreadyInitialized);
+    }
+
+    // Create the PDA account (minimal space needed for SOL storage)
+    let rent = Rent::get()?;
+    let lamports = rent.minimum_balance(0); // Empty account for SOL storage
+
+    invoke_signed(
+        &system_instruction::create_account(
+            authority.key,
+            x402_wallet.key,
+            lamports,
+            0, // No data space needed
+            program_id,
+        ),
+        &[authority.clone(), x402_wallet.clone(), system_program.clone()],
+        &[&[b"x402_payment_wallet", &[bump]]],
+    )?;
+
+    msg!("X402 payment wallet initialized: {}", wallet_pda);
+    msg!("Configure your X402 system to send payments to this address");
+    Ok(())
+}
+
+/// Process X402 payment from collection wallet and distribute
+/// 90% -> Staker Rewards Pool
+/// 10% -> Treasury
+fn process_x402_payment(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    amount: u64,
+) -> ProgramResult {
+    let account_info_iter = &mut accounts.iter();
+    let authority = next_account_info(account_info_iter)?;
+    let x402_wallet = next_account_info(account_info_iter)?;
+    let payment_vault = next_account_info(account_info_iter)?;
+    let staking_pool = next_account_info(account_info_iter)?;
+
+    // Verify authority (only authorized cron job or admin can trigger)
+    if !authority.is_signer {
+        msg!("Authority must be signer");
+        return Err(ProgramError::MissingRequiredSignature);
+    }
+
+    // Verify X402 wallet PDA
+    let (wallet_pda, _bump) = get_x402_payment_wallet_pda(program_id);
+    if wallet_pda != *x402_wallet.key {
+        msg!("Invalid X402 wallet PDA");
+        return Err(ProgramError::InvalidSeeds);
+    }
+
+    // Verify payment vault ownership
+    if payment_vault.owner != program_id {
+        msg!("Invalid payment vault owner");
+        return Err(ProgramError::IncorrectProgramId);
+    }
+
+    // Verify staking pool ownership
+    if staking_pool.owner != program_id {
+        msg!("Invalid staking pool owner");
+        return Err(ProgramError::IncorrectProgramId);
+    }
+
+    // Verify payment vault PDA
+    let pool_data = StakingPool::try_from_slice(&staking_pool.data.borrow())?;
+    let (vault_pda, _) = Pubkey::find_program_address(
+        &[b"payment_vault", pool_data.authority.as_ref()],
+        program_id,
+    );
+    if vault_pda != *payment_vault.key {
+        msg!("Invalid payment vault PDA");
+        return Err(ProgramError::InvalidSeeds);
+    }
+
+    let mut vault_data = PaymentVault::try_from_slice(&payment_vault.data.borrow())?;
+
+    // Validate amount
+    if amount == 0 {
+        msg!("Amount must be greater than 0");
+        return Err(ProgramError::InvalidInstructionData);
+    }
+
+    // Check X402 wallet has sufficient balance
+    let wallet_balance = x402_wallet.lamports();
+    if wallet_balance < amount {
+        msg!("Insufficient X402 wallet balance: {} < {}", wallet_balance, amount);
+        return Err(ProgramError::InsufficientFunds);
+    }
+
+    // Calculate 90/10 split
+    let staker_share = amount
+        .checked_mul(90)
+        .ok_or(ProgramError::InvalidInstructionData)?
+        .checked_div(100)
+        .ok_or(ProgramError::InvalidInstructionData)?;
+
+    let treasury_share = amount
+        .checked_sub(staker_share)
+        .ok_or(ProgramError::InvalidInstructionData)?;
+
+    // Ensure rent-exempt minimum remains in X402 wallet
+    let rent = Rent::get()?;
+    let min_balance = rent.minimum_balance(0);
+    let remaining_balance = wallet_balance.checked_sub(amount).ok_or(ProgramError::InsufficientFunds)?;
+    
+    if remaining_balance < min_balance {
+        msg!("Cannot withdraw: would leave X402 wallet below rent-exempt minimum");
+        msg!("Current: {}, Withdrawing: {}, Remaining: {}, Min required: {}", 
+             wallet_balance, amount, remaining_balance, min_balance);
+        return Err(ProgramError::InsufficientFunds);
+    }
+
+    // Transfer SOL from X402 wallet to payment vault
+    **x402_wallet.try_borrow_mut_lamports()? = wallet_balance
+        .checked_sub(amount)
+        .ok_or(ProgramError::InsufficientFunds)?;
+    
+    **payment_vault.try_borrow_mut_lamports()? = payment_vault.lamports()
+        .checked_add(amount)
+        .ok_or(ProgramError::InvalidInstructionData)?;
+
+    // Update vault accounting
+    vault_data.staker_rewards_pool = vault_data.staker_rewards_pool
+        .checked_add(staker_share)
+        .ok_or(ProgramError::InvalidInstructionData)?;
+
+    vault_data.treasury = vault_data.treasury
+        .checked_add(treasury_share)
+        .ok_or(ProgramError::InvalidInstructionData)?;
+
+    vault_data.total_collected = vault_data.total_collected
+        .checked_add(amount)
+        .ok_or(ProgramError::InvalidInstructionData)?;
+
+    vault_data.serialize(&mut &mut payment_vault.data.borrow_mut()[..])?;
+
+    msg!("✅ X402 payment processed: {} lamports ({:.3} SOL)", amount, amount as f64 / 1_000_000_000.0);
+    msg!("├─ 90% to stakers: {} lamports ({:.3} SOL)", staker_share, staker_share as f64 / 1_000_000_000.0);
+    msg!("└─ 10% to treasury: {} lamports ({:.3} SOL)", treasury_share, treasury_share as f64 / 1_000_000_000.0);
+    msg!("Stakers can now claim their rewards via claim_staker_rewards()");
 
     Ok(())
 }

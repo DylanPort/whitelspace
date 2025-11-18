@@ -2639,7 +2639,7 @@ fn process_query_payment(
     let user = next_account_info(account_info_iter)?;
     let payment_vault = next_account_info(account_info_iter)?;
     let provider_account = next_account_info(account_info_iter)?;
-    let staking_pool = next_account_info(account_info_iter)?;
+    let _staking_pool = next_account_info(account_info_iter)?;
     let system_program = next_account_info(account_info_iter)?;
 
     if !user.is_signer {
@@ -3380,7 +3380,6 @@ fn register_developer(
     }
 
     // If referrer provided, validate it exists (optional validation)
-    let mut referrer_account_opt: Option<DeveloperAccount> = None;
     if let Some(ref referrer_pubkey) = referrer {
         // We could validate the referrer exists, but skipping for simplicity
         msg!("Referred by: {}", referrer_pubkey);
@@ -3828,7 +3827,7 @@ fn process_developer_query(
         
         // Try to get referrer account (7th account, optional but recommended)
         match account_info_iter.next() {
-            Ok(referrer_account) => {
+            Some(referrer_account) => {
                 // Validate referrer account is not the program ID placeholder
                 if referrer_account.key == program_id {
                     msg!("Warning: Referrer account not provided");
@@ -3906,7 +3905,7 @@ fn process_developer_query(
                     }
                 }
             }
-            Err(_) => {
+            None => {
                 // Referrer account not provided - return to pool
                 msg!("Warning: Referrer account not provided in transaction");
                 msg!("Referrer {} will not receive {} lamports", referrer_pubkey, referral_earning);

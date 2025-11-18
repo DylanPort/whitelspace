@@ -13,3 +13,4 @@ echo Close this window once Docker is running.
 echo.
 pause
 
+

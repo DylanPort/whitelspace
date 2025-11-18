@@ -1,39 +1,35 @@
 {
-  "name": "encrypted-network-access-token",
+  "name": "whistle-x402-distributor",
   "version": "1.0.0",
-  "description": "Staking-based non-tradable access token smart contract for encrypted data networks",
-  "main": "client/enat-client.js",
+  "description": "Automated X402 payment distributor for WHISTLE Network",
+  "main": "x402-distributor-cron.js",
   "type": "module",
   "scripts": {
-    "build": "cargo build-bpf",
-    "test": "cargo test-bpf",
-    "deploy:localnet": "solana config set --url http://localhost:8899 && solana program deploy target/deploy/encrypted_network_access_token.so",
-    "deploy:devnet": "solana config set --url devnet && solana program deploy target/deploy/encrypted_network_access_token.so",
-    "example": "node examples/usage-example.js",
-    "install-client": "cd client && npm install"
+    "start": "node x402-distributor-cron.js",
+    "dev": "nodemon x402-distributor-cron.js",
+    "test": "node --test",
+    "lint": "eslint *.js",
+    "init-wallet": "node scripts/initialize-x402-wallet.js"
   },
   "keywords": [
     "solana",
-    "blockchain",
-    "staking",
-    "access-token",
-    "encryption",
-    "privacy",
-    "web3",
-    "non-tradable",
-    "soulbound"
+    "whistle",
+    "x402",
+    "payments",
+    "cron"
   ],
-  "author": "Encrypto Team",
+  "author": "WHISTLE Network",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/your-repo/encrypto"
+  "dependencies": {
+    "@solana/web3.js": "^1.95.0",
+    "borsh": "^0.7.0",
+    "dotenv": "^16.4.5"
   },
-  "dependencies": {},
-  "devDependencies": {},
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "eslint": "^8.56.0"
+  },
   "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
+    "node": ">=18.0.0"
   }
 }
-
