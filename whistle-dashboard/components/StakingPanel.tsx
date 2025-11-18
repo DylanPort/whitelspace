@@ -11,18 +11,29 @@ export default function StakingPanel() {
   const [amount, setAmount] = useState('100');
 
   const handleStake = async () => {
-    if (!publicKey || !connected) return;
+    if (!publicKey || !connected) {
+      alert('❌ Please connect your wallet first');
+      return;
+    }
 
     const stakeAmount = parseFloat(amount);
     if (isNaN(stakeAmount) || stakeAmount < 100) {
-      alert('Minimum stake is 100 WHISTLE');
+      alert('⚠️ Minimum stake is 100 WHISTLE');
       return;
     }
 
     setStaking(true);
     try {
+      console.log('Creating stake transaction for:', stakeAmount, 'WHISTLE');
+      console.log('Wallet:', publicKey.toBase58());
+      
       const transaction = await createStakeTransaction(publicKey, stakeAmount);
+      console.log('Transaction created, sending...');
+      
       const signature = await sendTransaction(transaction, connection);
+      console.log('Transaction sent:', signature);
+      console.log('Waiting for confirmation...');
+      
       await connection.confirmTransaction(signature, 'confirmed');
       
       console.log('Stake transaction:', signature);
@@ -30,7 +41,22 @@ export default function StakingPanel() {
       setAmount('100'); // Reset to minimum
     } catch (err: any) {
       console.error('Staking failed:', err);
-      alert(`❌ Staking failed: ${err.message || 'Unknown error'}`);
+      console.error('Error details:', {
+        message: err?.message,
+        name: err?.name,
+        stack: err?.stack,
+        logs: err?.logs,
+        toString: err?.toString()
+      });
+      
+      let errorMsg = 'Unknown error';
+      if (err?.message) {
+        errorMsg = err.message;
+      } else if (err?.toString) {
+        errorMsg = err.toString();
+      }
+      
+      alert(`❌ Staking failed: ${errorMsg}`);
     } finally {
       setStaking(false);
     }
