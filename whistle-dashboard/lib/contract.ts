@@ -375,13 +375,12 @@ export async function createStakeTransaction(
   const amountLamports = BigInt(Math.floor(amountWhistle * 10 ** WHISTLE_DECIMALS));
 
   // Build instruction data: [instruction_discriminator (1 byte), amount (8 bytes)]
-  const instructionData = Buffer.alloc(9);
-  instructionData.writeUInt8(StakingInstruction.Stake, 0);
+  const instructionData = new Uint8Array(9);
+  instructionData[0] = StakingInstruction.Stake;
   
-  // Write amount as BigInt (8 bytes, little-endian)
-  const amountBuffer = Buffer.alloc(8);
-  amountBuffer.writeBigUInt64LE(amountLamports);
-  amountBuffer.copy(instructionData, 1);
+  // Write amount as BigInt (8 bytes, little-endian) - browser compatible
+  const view = new DataView(instructionData.buffer);
+  view.setBigUint64(1, amountLamports, true); // true = little-endian
 
   const stakeIx = new TransactionInstruction({
     programId: WHISTLE_PROGRAM_ID,
@@ -416,13 +415,12 @@ export async function createUnstakeTransaction(
 
   const amountLamports = BigInt(Math.floor(amountWhistle * 10 ** WHISTLE_DECIMALS));
 
-  const instructionData = Buffer.alloc(9);
-  instructionData.writeUInt8(StakingInstruction.Unstake, 0);
+  const instructionData = new Uint8Array(9);
+  instructionData[0] = StakingInstruction.Unstake;
   
-  // Write amount as BigInt (8 bytes, little-endian)
-  const amountBuffer = Buffer.alloc(8);
-  amountBuffer.writeBigUInt64LE(amountLamports);
-  amountBuffer.copy(instructionData, 1);
+  // Write amount as BigInt (8 bytes, little-endian) - browser compatible
+  const view = new DataView(instructionData.buffer);
+  view.setBigUint64(1, amountLamports, true); // true = little-endian
 
   const unstakeIx = new TransactionInstruction({
     programId: WHISTLE_PROGRAM_ID,
@@ -458,23 +456,26 @@ export async function createRegisterProviderTransaction(
   const bondAmount = BigInt(Math.floor(bondAmountWhistle * 10 ** WHISTLE_DECIMALS));
 
   // Serialize: instruction (1) + endpoint length (4) + endpoint + bond amount (8)
-  const endpointBuffer = Buffer.from(endpoint, 'utf8');
-  const instructionData = Buffer.alloc(1 + 4 + endpointBuffer.length + 8);
+  const endpointBytes = new TextEncoder().encode(endpoint);
+  const instructionData = new Uint8Array(1 + 4 + endpointBytes.length + 8);
+  const view = new DataView(instructionData.buffer);
+  
   let offset = 0;
-
-  instructionData.writeUInt8(StakingInstruction.RegisterProvider, offset);
+  
+  // Instruction type
+  instructionData[offset] = StakingInstruction.RegisterProvider;
   offset += 1;
 
-  instructionData.writeUInt32LE(endpointBuffer.length, offset);
+  // Endpoint length (4 bytes, little-endian)
+  view.setUint32(offset, endpointBytes.length, true);
   offset += 4;
 
-  endpointBuffer.copy(instructionData, offset);
-  offset += endpointBuffer.length;
+  // Endpoint string
+  instructionData.set(endpointBytes, offset);
+  offset += endpointBytes.length;
 
-  // Write bond amount as BigInt (8 bytes, little-endian)
-  const bondBuffer = Buffer.alloc(8);
-  bondBuffer.writeBigUInt64LE(bondAmount);
-  bondBuffer.copy(instructionData, offset);
+  // Bond amount (8 bytes, little-endian)
+  view.setBigUint64(offset, bondAmount, true);
 
   const registerIx = new TransactionInstruction({
     programId: WHISTLE_PROGRAM_ID,
@@ -502,7 +503,7 @@ export async function createClaimProviderEarningsTransaction(
   const [providerAccountPDA] = getProviderAccountPDA(provider);
   const [paymentVaultPDA] = getPaymentVaultPDA();
 
-  const instructionData = Buffer.from([StakingInstruction.ClaimProviderEarnings]);
+  const instructionData = new Uint8Array([StakingInstruction.ClaimProviderEarnings]);
 
   const claimIx = new TransactionInstruction({
     programId: WHISTLE_PROGRAM_ID,
@@ -528,7 +529,7 @@ export async function createClaimStakerRewardsTransaction(
   const [stakingPoolPDA] = getStakingPoolPDA();
   const [paymentVaultPDA] = getPaymentVaultPDA();
 
-  const instructionData = Buffer.from([StakingInstruction.ClaimStakerRewards]);
+  const instructionData = new Uint8Array([StakingInstruction.ClaimStakerRewards]);
 
   const claimIx = new TransactionInstruction({
     programId: WHISTLE_PROGRAM_ID,
@@ -554,17 +555,22 @@ export async function createUpdateEndpointTransaction(
 
   const [providerAccountPDA] = getProviderAccountPDA(provider);
 
-  const endpointBuffer = Buffer.from(newEndpoint, 'utf8');
-  const instructionData = Buffer.alloc(1 + 4 + endpointBuffer.length);
+  const endpointBytes = new TextEncoder().encode(newEndpoint);
+  const instructionData = new Uint8Array(1 + 4 + endpointBytes.length);
+  const view = new DataView(instructionData.buffer);
+  
   let offset = 0;
 
-  instructionData.writeUInt8(StakingInstruction.UpdateEndpoint, offset);
+  // Instruction type
+  instructionData[offset] = StakingInstruction.UpdateEndpoint;
   offset += 1;
 
-  instructionData.writeUInt32LE(endpointBuffer.length, offset);
+  // Endpoint length (4 bytes, little-endian)
+  view.setUint32(offset, endpointBytes.length, true);
   offset += 4;
 
-  endpointBuffer.copy(instructionData, offset);
+  // Endpoint string
+  instructionData.set(endpointBytes, offset);
 
   const updateIx = new TransactionInstruction({
     programId: WHISTLE_PROGRAM_ID,
