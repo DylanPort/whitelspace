@@ -1,14 +1,14 @@
-# Netlify Configuration for Original Whistle Website
+# Netlify Configuration - Whistlenet Dashboard
+# This deploys the Next.js dashboard from whistle-dashboard directory
 
 [build]
-  publish = "."
-  functions = "netlify/functions"
+  base = "whistle-dashboard"
+  command = "npm run build"
+  publish = ".next"
 
-[functions]
-  node_bundler = "esbuild"
+[build.environment]
+  NODE_VERSION = "20"
 
-# Serve main.html by default
-[[redirects]]
-  from = "/*"
-  to = "/main.html"
-  status = 200
+# Enable Next.js on Netlify
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
