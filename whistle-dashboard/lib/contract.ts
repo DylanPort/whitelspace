@@ -19,6 +19,7 @@ import {
   getAssociatedTokenAddressSync,
   createAssociatedTokenAccountInstruction,
 } from '@solana/spl-token';
+import * as borsh from 'borsh';
 
 // ============= CONSTANTS =============
 
