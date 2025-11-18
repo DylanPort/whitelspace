@@ -34,10 +34,23 @@ export default function StakingPanel() {
       console.log('Transaction sent:', signature);
       console.log('Waiting for confirmation...');
       
-      await connection.confirmTransaction(signature, 'confirmed');
+      // Wait for confirmation and check status
+      const latestBlockhash = await connection.getLatestBlockhash();
+      const confirmation = await connection.confirmTransaction({
+        signature,
+        blockhash: latestBlockhash.blockhash,
+        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+      }, 'confirmed');
       
-      console.log('Stake transaction:', signature);
-      alert(`✅ Staking successful!\n\nStaked: ${stakeAmount} WHISTLE\nSignature: ${signature}`);
+      if (confirmation.value.err) {
+        throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
+      }
+      
+      console.log('✅ Transaction confirmed successfully!');
+      console.log('Signature:', signature);
+      console.log('View on Solscan:', `https://solscan.io/tx/${signature}`);
+      
+      alert(`✅ Staking successful!\n\nStaked: ${stakeAmount} WHISTLE\n\nView on Solscan:\nhttps://solscan.io/tx/${signature}`);
       setAmount('100'); // Reset to minimum
     } catch (err: any) {
       console.error('Staking failed:', err);
