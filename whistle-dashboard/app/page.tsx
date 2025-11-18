@@ -12,7 +12,6 @@ import RecentActivityPanel from '@/components/RecentActivityPanel';
 import ApiMethodsPanel from '@/components/ApiMethodsPanel';
 import ProviderRegistrationPanel from '@/components/ProviderRegistrationPanel';
 import HowItWorksModal from '@/components/HowItWorksModal';
-import ProviderContactModal from '@/components/ProviderContactModal';
 import PoolInfoPanel from '@/components/PoolInfoPanel';
 import PersonalStatsPanel from '@/components/PersonalStatsPanel';
 import NetworkProviderPanel from '@/components/NetworkProviderPanel';
@@ -29,7 +28,6 @@ export default function Home() {
   const [backendStatus, setBackendStatus] = useState<'online' | 'offline' | 'checking'>('checking');
   const [rpcSource, setRpcSource] = useState('Checking...');
   const [showHowItWorks, setShowHowItWorks] = useState(false);
-  const [showProviderContact, setShowProviderContact] = useState(false);
 
   useEffect(() => {
     async function checkBackend() {
@@ -81,19 +79,18 @@ export default function Home() {
 
       {/* Header with enhanced styling */}
       <header className="relative z-10 flex items-center justify-between px-16 py-8 border-b border-white/5">
-        {/* WHISTLE Button - Provider Contact */}
-        <button
-          onClick={() => setShowProviderContact(true)}
-          className="group relative text-3xl font-bold tracking-[0.35em] px-8 py-3 backdrop-blur-sm bg-white/5 hover:bg-white/10 border-2 border-white/10 hover:border-white/30 transition-all duration-300"
+        {/* WHISTLE Logo - Non-clickable */}
+        <div
+          className="relative text-3xl font-bold tracking-[0.35em] px-8 py-3 backdrop-blur-sm bg-white/5 border-2 border-white/10"
           style={{
             textShadow: '0 0 20px rgba(255, 255, 255, 0.3), 0 2px 4px rgba(0, 0, 0, 0.9)',
             clipPath: 'polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px)',
           }}
         >
-          <span className="text-white group-hover:text-gray-200 transition-colors">
+          <span className="text-white">
             WHISTLE
           </span>
-        </button>
+        </div>
         
         <div className="flex items-center gap-4">
           {/* Network Status */}
@@ -194,12 +191,6 @@ export default function Home() {
         isOpen={showHowItWorks} 
         onClose={() => setShowHowItWorks(false)} 
       />
-
-      {/* Provider Contact Modal */}
-      <ProviderContactModal 
-        isOpen={showProviderContact} 
-        onClose={() => setShowProviderContact(false)} 
-      />
-      </main>
+    </main>
   );
 }
