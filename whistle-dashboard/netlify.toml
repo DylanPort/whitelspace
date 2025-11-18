@@ -7,8 +7,7 @@
 
 # Next.js specific settings
 [build.environment]
-  NODE_VERSION = "18"
-  NPM_FLAGS = "--legacy-peer-deps"
+  NODE_VERSION = "20"
 
 # Enable Next.js on Netlify plugin
 [[plugins]]
