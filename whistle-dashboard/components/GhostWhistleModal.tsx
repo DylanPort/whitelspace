@@ -61,7 +61,7 @@ export default function GhostWhistleModal({ isOpen, onClose }: GhostWhistleModal
               {/* Iframe Content */}
               <div className="flex-1 relative overflow-hidden">
                 <iframe
-                  src="/index.html"
+                  src="/ghost-whistle.html"
                   className="w-full h-full border-0"
                   title="Ghost Whistle - Full Platform"
                   sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"
