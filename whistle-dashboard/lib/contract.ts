@@ -493,7 +493,7 @@ export async function createStakeTransaction(
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
     ],
-    data: instructionData,
+    data: Buffer.from(instructionData),
   });
 
   transaction.add(stakeIx);
@@ -538,7 +538,7 @@ export async function createUnstakeTransaction(
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
     ],
-    data: instructionData,
+    data: Buffer.from(instructionData),
   });
 
   transaction.add(unstakeIx);
@@ -592,7 +592,7 @@ export async function createRegisterProviderTransaction(
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
     ],
-    data: instructionData,
+    data: Buffer.from(instructionData),
   });
 
   transaction.add(registerIx);
@@ -617,7 +617,7 @@ export async function createClaimProviderEarningsTransaction(
       { pubkey: paymentVaultPDA, isSigner: false, isWritable: true },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     ],
-    data: instructionData,
+    data: Buffer.from(instructionData),
   });
 
   transaction.add(claimIx);
@@ -655,7 +655,7 @@ export async function createProcessQueryPaymentTransaction(
       { pubkey: stakingPoolPDA, isSigner: false, isWritable: true },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     ],
-    data: instructionData,
+    data: Buffer.from(instructionData),
   });
 
   transaction.add(processQueryIx);
@@ -682,7 +682,7 @@ export async function createClaimStakerRewardsTransaction(
       { pubkey: paymentVaultPDA, isSigner: false, isWritable: true },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     ],
-    data: instructionData,
+    data: Buffer.from(instructionData),
   });
 
   transaction.add(claimIx);
@@ -720,7 +720,7 @@ export async function createUpdateEndpointTransaction(
       { pubkey: provider, isSigner: true, isWritable: false },
       { pubkey: providerAccountPDA, isSigner: false, isWritable: true },
     ],
-    data: instructionData,
+    data: Buffer.from(instructionData),
   });
 
   transaction.add(updateIx);
