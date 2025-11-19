@@ -10,20 +10,7 @@ const { getAssociatedTokenAddressSync } = require('@solana/spl-token');
 const app = express();
 const PORT = 3001;
 
-// Serve static files with cache control for x402-client.js
-app.use((req, res, next) => {
-  if (req.url.includes('x402-client.js')) {
-    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.set('Pragma', 'no-cache');
-    res.set('Expires', '0');
-  }
-  next();
-});
-app.use(express.static('.'));
-app.use(express.static('apps/web')); // Serve web app files (privacy.html, terms.html, etc.)
-app.use(express.json());
-
-// CORS middleware for cross-origin requests (dashboard on 3000, API on 3001)
+// CORS middleware MUST be first (before any other middleware)
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -36,6 +23,19 @@ app.use((req, res, next) => {
   
   next();
 });
+
+// Serve static files with cache control for x402-client.js
+app.use((req, res, next) => {
+  if (req.url.includes('x402-client.js')) {
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+  }
+  next();
+});
+app.use(express.static('.'));
+app.use(express.static('apps/web')); // Serve web app files (privacy.html, terms.html, etc.)
+app.use(express.json());
 
 // Redirect root to Whistlenet Dashboard (main homepage)
 app.get('/', (req, res) => {
