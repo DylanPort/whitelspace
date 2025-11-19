@@ -60,7 +60,7 @@ export default function PersonalStatsPanel() {
           <div className="flex justify-between">
             <span className="text-gray-500">Voting Power</span>
             <span className="font-semibold">
-              {stakerData.votingPower?.toLocaleString() || '0'}
+              {(Number(stakerData.votingPower) / 1_000_000).toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </span>
           </div>
           <div className="flex justify-between">

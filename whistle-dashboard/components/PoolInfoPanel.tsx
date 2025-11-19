@@ -44,9 +44,13 @@ export default function PoolInfoPanel() {
       <div className="space-y-2 text-xs">
         <div className="flex justify-between">
           <span className="text-gray-500">Contract</span>
-          <span className="font-mono text-[10px]">
+          <button
+            onClick={() => window.open(`https://solscan.io/account/${STAKING_POOL_ADDRESS.toBase58()}`, '_blank')}
+            className="font-mono text-[10px] hover:text-blue-400 transition-colors cursor-pointer"
+            title="View on Solscan"
+          >
             {STAKING_POOL_ADDRESS.toBase58().slice(0, 8)}...
-          </span>
+          </button>
         </div>
         <div className="flex justify-between">
           <span className="text-gray-500">SOL Balance</span>

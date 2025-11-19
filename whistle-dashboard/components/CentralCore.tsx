@@ -99,9 +99,9 @@ export default function CentralCore() {
 
   return (
     <>
-    <div className="relative flex flex-col items-center" style={{ width: '340px' }}>
-      {/* Concentric rings behind core with depth - reduced to 2 */}
-      <div className="absolute" style={{ width: '500px', height: '500px', top: '-120px', left: '50%', transform: 'translateX(-50%)' }}>
+    <div className="relative flex flex-col items-center w-full max-w-[340px] mx-auto">
+      {/* Concentric rings behind core with depth - reduced to 2 - Hidden on mobile */}
+      <div className="absolute hidden md:block" style={{ width: '500px', height: '500px', top: '-120px', left: '50%', transform: 'translateX(-50%)' }}>
         {[0, 1].map((i) => (
           <div
             key={i}
@@ -123,37 +123,33 @@ export default function CentralCore() {
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.7, ease: 'easeOut' }}
-        className="core-circle relative z-10 flex flex-col items-center justify-center rounded-full"
-        style={{
-          width: '260px',
-          height: '260px',
-        }}
+        className="core-circle relative z-10 flex flex-col items-center justify-center rounded-full w-[220px] h-[220px] md:w-[260px] md:h-[260px]"
       >
         {!connected ? (
-          <div className="text-center px-8">
-            <div className="mb-4 text-gray-500 text-[10px] tracking-[0.2em]">CONNECT WALLET</div>
+          <div className="text-center px-4 md:px-8">
+            <div className="mb-3 md:mb-4 text-gray-500 text-[9px] md:text-[10px] tracking-[0.2em]">CONNECT WALLET</div>
             <WalletMultiButton />
           </div>
         ) : (
-          <div className="text-center space-y-3 px-6">
+          <div className="text-center space-y-2 md:space-y-3 px-4 md:px-6">
               {/* Wallet Address - Clickable to Disconnect */}
             <div>
-              <div className="text-[9px] text-gray-500 tracking-[0.2em] mb-1">WALLET</div>
+              <div className="text-[8px] md:text-[9px] text-gray-500 tracking-[0.2em] mb-1">WALLET</div>
                 <button
                   onClick={handleWalletClick}
-                  className="text-sm font-mono tracking-[0.1em] hover:text-red-400 transition-colors cursor-pointer group relative"
+                  className="text-xs md:text-sm font-mono tracking-[0.1em] hover:text-red-400 transition-colors cursor-pointer group relative"
                   title="Click to disconnect"
                 >
                   {maskedAddress}
-                  <span className="absolute -right-4 top-0 text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="absolute -right-3 md:-right-4 top-0 text-[9px] md:text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">
                     ⨯
                   </span>
                 </button>
             </div>
 
-            <div className="py-2">
+            <div className="py-1 md:py-2">
               {loading ? (
-                <div className="text-[36px] font-bold leading-none tracking-tight text-gray-600">
+                <div className="text-[28px] md:text-[36px] font-bold leading-none tracking-tight text-gray-600">
                   Loading...
                 </div>
               ) : (
@@ -162,25 +158,25 @@ export default function CentralCore() {
                     <button
                       onClick={handleStakedClick}
                       disabled={stakedAmount === 0}
-                      className={`text-[44px] font-bold leading-none tracking-tight ${
+                      className={`text-[36px] md:text-[44px] font-bold leading-none tracking-tight ${
                         stakedAmount > 0 ? 'hover:text-blue-400 cursor-pointer transition-colors' : ''
                       }`}
                       title={stakedAmount > 0 ? "Click to view pool on Solscan" : ""}
                     >
                     {stakedAmount.toLocaleString()}
                     </button>
-                  <div className="text-[9px] text-gray-500 tracking-[0.2em] mt-1">WHISTLE STAKED</div>
+                  <div className="text-[8px] md:text-[9px] text-gray-500 tracking-[0.2em] mt-1">WHISTLE STAKED</div>
                     
                     {/* Access Tokens - Clickable to show use cases */}
                     <button
                       onClick={() => setShowAccessTokenModal(true)}
-                      className="text-[18px] font-semibold leading-none tracking-tight mt-2 hover:text-green-400 cursor-pointer transition-colors"
+                      className="text-[16px] md:text-[18px] font-semibold leading-none tracking-tight mt-2 hover:text-green-400 cursor-pointer transition-colors"
                       title="Click to learn about access tokens"
                     >
                     {accessTokens.toLocaleString()}
                     </button>
-                    <div className="text-[8px] text-gray-500 tracking-[0.2em] mt-1">
-                      ACCESS TOKENS <span className="text-[7px]">ⓘ</span>
+                    <div className="text-[7px] md:text-[8px] text-gray-500 tracking-[0.2em] mt-1">
+                      ACCESS TOKENS <span className="text-[6px] md:text-[7px]">ⓘ</span>
                   </div>
                 </>
               )}
@@ -194,35 +190,35 @@ export default function CentralCore() {
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.15, ease: 'easeOut' }}
-        className="relative mt-8 flex items-center justify-center"
+        className="relative mt-6 md:mt-8 flex items-center justify-center w-full"
         >
-          <div className="relative z-10 text-center p-4 rounded-lg bg-black/40 border border-white/10">
-            <div className="flex gap-6 items-center">
+          <div className="relative z-10 text-center p-3 md:p-4 rounded-lg bg-black/40 border border-white/10">
+            <div className="flex gap-4 md:gap-6 items-center">
               {/* Total Staked */}
               <div className="text-center">
-                <div className="text-[9px] text-gray-500 tracking-[0.2em] mb-1">
+                <div className="text-[8px] md:text-[9px] text-gray-500 tracking-[0.2em] mb-1">
                   TOTAL STAKED
                 </div>
-                <div className="text-[28px] font-bold leading-none tracking-tight">
+                <div className="text-[22px] md:text-[28px] font-bold leading-none tracking-tight">
                   {totalStaked.toLocaleString()}
                 </div>
-                <div className="text-[10px] text-gray-400 mt-1">
+                <div className="text-[9px] md:text-[10px] text-gray-400 mt-1">
                   WHISTLE
                 </div>
               </div>
 
               {/* Divider */}
-              <div className="w-px h-12 bg-white/10" />
+              <div className="w-px h-10 md:h-12 bg-white/10" />
 
               {/* Total Stakers */}
               <div className="text-center">
-                <div className="text-[9px] text-gray-500 tracking-[0.2em] mb-1">
+                <div className="text-[8px] md:text-[9px] text-gray-500 tracking-[0.2em] mb-1">
                   STAKERS
                 </div>
-                <div className="text-[28px] font-bold leading-none tracking-tight">
+                <div className="text-[22px] md:text-[28px] font-bold leading-none tracking-tight">
                   {totalStakers}
                 </div>
-                <div className="text-[10px] text-gray-400 mt-1">
+                <div className="text-[9px] md:text-[10px] text-gray-400 mt-1">
                   ACTIVE
                 </div>
               </div>
@@ -254,10 +250,10 @@ export default function CentralCore() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+              className="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-4 pointer-events-none"
             >
               <div 
-                className="relative w-full max-w-2xl pointer-events-auto"
+                className="relative w-full max-w-2xl pointer-events-auto max-h-[95vh] overflow-y-auto"
                 style={{
                   background: 'linear-gradient(135deg, rgba(22, 22, 22, 0.98) 0%, rgba(12, 12, 12, 0.98) 100%)',
                   border: '1px solid rgba(255, 255, 255, 0.15)',
@@ -269,7 +265,7 @@ export default function CentralCore() {
                     inset 0 1px 0 rgba(255, 255, 255, 0.2),
                     inset 0 -1px 0 rgba(0, 0, 0, 0.9)
                   `,
-                  clipPath: 'polygon(20px 0, calc(100% - 20px) 0, 100% 20px, 100% calc(100% - 20px), calc(100% - 20px) 100%, 20px 100%, 0 calc(100% - 20px), 0 20px)',
+                  clipPath: 'polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px)',
                 }}
               >
                 {/* Gradient overlay */}
@@ -282,15 +278,15 @@ export default function CentralCore() {
                 />
 
                 {/* Content */}
-                <div className="relative p-8">
+                <div className="relative p-4 md:p-6 lg:p-8">
                   {/* Header */}
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold tracking-[0.2em] uppercase">
+                  <div className="flex items-center justify-between mb-4 md:mb-6">
+                    <h2 className="text-lg md:text-2xl font-bold tracking-[0.15em] md:tracking-[0.2em] uppercase">
                       ACCESS TOKENS
                     </h2>
                     <button
                       onClick={() => setShowAccessTokenModal(false)}
-                      className="text-2xl text-gray-400 hover:text-white transition-colors"
+                      className="text-xl md:text-2xl text-gray-400 hover:text-white transition-colors"
                       style={{
                         textShadow: '0 2px 4px rgba(0, 0, 0, 0.8)',
                       }}
@@ -300,16 +296,16 @@ export default function CentralCore() {
                   </div>
 
                   {/* Your Current Balance */}
-                  <div className="mb-6 p-4 bg-gradient-to-br from-green-900/20 to-green-800/10 border border-green-600/30">
+                  <div className="mb-4 md:mb-6 p-3 md:p-4 bg-gradient-to-br from-green-900/20 to-green-800/10 border border-green-600/30">
                     <div className="text-center">
-                      <div className="text-[10px] text-green-400 tracking-wider mb-1">YOUR BALANCE</div>
-                      <div className="text-3xl font-bold text-green-300">{accessTokens.toLocaleString()}</div>
-                      <div className="text-[10px] text-green-500 mt-1">Access Tokens</div>
+                      <div className="text-[9px] md:text-[10px] text-green-400 tracking-wider mb-1">YOUR BALANCE</div>
+                      <div className="text-2xl md:text-3xl font-bold text-green-300">{accessTokens.toLocaleString()}</div>
+                      <div className="text-[9px] md:text-[10px] text-green-500 mt-1">Access Tokens</div>
                     </div>
                   </div>
 
                   {/* Use Cases */}
-                  <div className="space-y-4 text-sm">
+                  <div className="space-y-3 md:space-y-4 text-xs md:text-sm">
                     <div className="p-4 bg-black/40 border border-white/10">
                       <h3 className="text-xs font-semibold tracking-wider uppercase text-white mb-3 flex items-center gap-2">
                         <span>🗳️</span> GOVERNANCE VOTING

@@ -34,33 +34,33 @@ export default function HowItWorksModal({ isOpen, onClose }: HowItWorksModalProp
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-4"
             style={{ pointerEvents: 'none' }}
           >
             <div 
               className="relative w-full max-w-5xl bg-black border border-white/15 flex flex-col"
               style={{
-                maxHeight: '90vh',
-                height: '90vh',
+                maxHeight: '95vh',
+                height: '95vh',
                 pointerEvents: 'auto',
-                clipPath: 'polygon(20px 0, calc(100% - 20px) 0, 100% 20px, 100% calc(100% - 20px), calc(100% - 20px) 100%, 20px 100%, 0 calc(100% - 20px), 0 20px)',
+                clipPath: 'polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px)',
               }}
             >
                 {/* Header */}
-              <div className="flex items-center justify-between p-8 pb-4 border-b border-white/10 flex-shrink-0">
-                <h2 className="text-3xl font-bold tracking-[0.2em] uppercase">
-                  WHISTLENET DOCUMENTATION
+              <div className="flex items-center justify-between p-4 md:p-6 lg:p-8 pb-3 md:pb-4 border-b border-white/10 flex-shrink-0">
+                <h2 className="text-lg md:text-2xl lg:text-3xl font-bold tracking-[0.15em] md:tracking-[0.2em] uppercase">
+                  WHISTLENET DOCS
                   </h2>
                   <button
                     onClick={onClose}
-                  className="text-3xl text-gray-400 hover:text-white transition-colors"
+                  className="text-2xl md:text-3xl text-gray-400 hover:text-white transition-colors"
                   >
                     ×
                   </button>
                 </div>
 
               {/* Tab Navigation */}
-              <div className="flex gap-2 px-8 pt-4 border-b border-white/10 flex-shrink-0">
+              <div className="flex gap-1 md:gap-2 px-4 md:px-6 lg:px-8 pt-3 md:pt-4 border-b border-white/10 flex-shrink-0 overflow-x-auto">
                 {[
                   { id: 'overview', label: 'OVERVIEW' },
                   { id: 'staking', label: 'STAKING' },
@@ -71,7 +71,7 @@ export default function HowItWorksModal({ isOpen, onClose }: HowItWorksModalProp
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}
-                    className={`px-4 py-2 text-[10px] font-semibold tracking-wider uppercase transition-all ${
+                    className={`px-2 md:px-3 lg:px-4 py-1.5 md:py-2 text-[9px] md:text-[10px] font-semibold tracking-wider uppercase transition-all whitespace-nowrap flex-shrink-0 ${
                       activeTab === tab.id
                         ? 'bg-white/10 text-white border-t-2 border-white'
                         : 'text-gray-500 hover:text-white hover:bg-white/5'
@@ -83,7 +83,7 @@ export default function HowItWorksModal({ isOpen, onClose }: HowItWorksModalProp
               </div>
 
               {/* Scrollable Content */}
-              <div className="flex-1 overflow-y-auto p-8" style={{ minHeight: 0 }}>
+              <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8" style={{ minHeight: 0 }}>
                 
                 {/* OVERVIEW TAB */}
                 {activeTab === 'overview' && (

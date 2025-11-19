@@ -70,9 +70,13 @@ export default function TreasuryPanel() {
           </div>
           <div className="flex justify-between">
             <span className="text-gray-500">Address</span>
-            <span className="font-mono text-[10px]">
+            <button
+              onClick={() => window.open(`https://solscan.io/account/${PAYMENT_VAULT_ADDRESS.toBase58()}`, '_blank')}
+              className="font-mono text-[10px] hover:text-blue-400 transition-colors cursor-pointer"
+              title="View on Solscan"
+            >
               {PAYMENT_VAULT_ADDRESS.toBase58().slice(0, 8)}...
-            </span>
+            </button>
           </div>
         </div>
       )}

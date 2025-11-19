@@ -28,6 +28,7 @@ export default function Home() {
   const [backendStatus, setBackendStatus] = useState<'online' | 'offline' | 'checking'>('checking');
   const [rpcSource, setRpcSource] = useState('Checking...');
   const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(true);
 
   useEffect(() => {
     async function checkBackend() {
@@ -45,6 +46,16 @@ export default function Home() {
     checkBackend();
     const interval = setInterval(checkBackend, 30000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   return (
@@ -77,11 +88,11 @@ export default function Home() {
         }}
       />
 
-      {/* Header with enhanced styling */}
-      <header className="relative z-10 flex items-center justify-between px-16 py-8 border-b border-white/5">
+      {/* Header with enhanced styling - Mobile Responsive */}
+      <header className="relative z-10 flex items-center justify-between px-4 md:px-8 lg:px-16 py-4 md:py-6 lg:py-8 border-b border-white/5">
         {/* WHISTLE Logo - Non-clickable */}
         <div
-          className="text-3xl font-bold tracking-[0.35em] text-white"
+          className="text-xl md:text-2xl lg:text-3xl font-bold tracking-[0.25em] md:tracking-[0.35em] text-white"
           style={{
             textShadow: '0 0 20px rgba(255, 255, 255, 0.3), 0 2px 4px rgba(0, 0, 0, 0.9)',
           }}
@@ -92,45 +103,48 @@ export default function Home() {
         {/* How It Works Button */}
         <button
           onClick={() => setShowHowItWorks(true)}
-          className="group relative text-xs font-semibold tracking-wider uppercase px-5 py-2.5 backdrop-blur-sm bg-emerald-600/90 hover:bg-emerald-500/90 border border-emerald-500/50 hover:border-emerald-400/70 transition-all duration-300"
+          className="group relative text-[10px] md:text-xs font-semibold tracking-wider uppercase px-3 md:px-5 py-2 md:py-2.5 border border-emerald-600/20 hover:border-emerald-500/30 transition-all duration-300"
           style={{
-            clipPath: 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)',
+            clipPath: 'polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px)',
+            background: 'rgba(16, 185, 129, 0.08)',
+            backdropFilter: 'blur(12px)',
+            boxShadow: '0 0 20px rgba(16, 185, 129, 0.15), inset 0 0 20px rgba(16, 185, 129, 0.05)',
           }}
         >
-          <span className="text-white group-hover:text-white transition-colors">
+          <span className="text-emerald-200 group-hover:text-emerald-100 transition-colors">
             How It Works
           </span>
         </button>
       </header>
 
-      {/* Main content - 5 column layout */}
-      <div className="relative z-10 flex-1 px-6 flex flex-col pb-8" style={{ zoom: 0.85 }}>
+      {/* Main content - Responsive layout */}
+      <div className="relative z-10 flex-1 px-3 md:px-6 lg:px-0 flex flex-col pb-8" style={{ zoom: isDesktop ? 0.85 : 1 }}>
         {/* Top section - panels and core */}
-        <div className="max-w-[1400px] mx-auto flex items-start justify-center gap-4 mb-6 pt-6">
+        <div className="w-full flex flex-col lg:flex-row items-start lg:items-center lg:justify-center gap-3 md:gap-4 lg:gap-3 mb-4 md:mb-6 pt-4 md:pt-6">
           
           {/* FAR LEFT COLUMN - User Info */}
-          <div className="w-[200px] space-y-4 flex-shrink-0">
+          <div className="w-full lg:w-[200px] space-y-3 md:space-y-4 flex-shrink-0 lg:mr-0">
             <RpcEndpointPanel />
             <ApiMethodsPanel />
           </div>
 
           {/* LEFT COLUMN - User Actions */}
-          <div className="w-[250px] space-y-5 flex-shrink-0">
+          <div className="w-full lg:w-[250px] space-y-3 md:space-y-5 flex-shrink-0 lg:mr-0">
             <QueryInterfacePanel />
             <NetworkStatsPanel />
             <WhyStakePanel />
           </div>
 
           {/* CENTER - Core (Wallet + Credits) + Info Buttons */}
-          <div className="flex-shrink-0 -mt-4 flex flex-col gap-3">
+          <div className="w-full lg:w-auto lg:flex-shrink-0 lg:-mt-4 flex flex-col gap-3 items-center lg:mx-0">
             <CentralCore />
             
             {/* Ghost Whistle & Resources Buttons Row */}
-            <div className="flex gap-2">
-              <div style={{ width: '169px' }}>
+            <div className="flex gap-2 lg:gap-1.5 w-full lg:w-auto">
+              <div className="flex-1 lg:flex-none lg:w-[180px]">
                 <GhostWhistlePanel />
               </div>
-              <div style={{ width: '169px' }}>
+              <div className="flex-1 lg:flex-none lg:w-[140px]">
                 <ResourcesPanel />
               </div>
             </div>
@@ -143,22 +157,22 @@ export default function Home() {
           </div>
 
           {/* RIGHT COLUMN - Provider Actions */}
-          <div className="w-[250px] space-y-5 flex-shrink-0">
+          <div className="w-full lg:w-[250px] space-y-3 md:space-y-5 flex-shrink-0 lg:ml-0">
             <StakingPanel />
             <ProviderEarningsPanel />
             <OurPlansPanel />
           </div>
 
           {/* FAR RIGHT COLUMN - Provider Info */}
-          <div className="w-[200px] space-y-4 flex-shrink-0">
+          <div className="w-full lg:w-[200px] space-y-3 md:space-y-4 flex-shrink-0 lg:ml-0">
             <RpcProvidersPanel />
             <ProviderRegistrationPanel />
           </div>
 
         </div>
 
-        {/* System Info Section - 4 Column Grid */}
-        <div className="max-w-[1400px] mx-auto w-full grid grid-cols-4 gap-4 mb-6">
+        {/* System Info Section - Responsive Grid */}
+        <div className="max-w-[1400px] mx-auto w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
           <PoolInfoPanel />
           <PersonalStatsPanel />
           <NetworkProviderPanel />

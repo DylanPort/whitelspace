@@ -14,6 +14,12 @@ export const metadata: Metadata = {
     icon: '/whistel_logo_top_right_2048.png',
     apple: '/whistel_logo_top_right_2048.png',
   },
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 5,
+    userScalable: true,
+  },
 };
 
 export default function RootLayout({
