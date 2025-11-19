@@ -9,6 +9,10 @@
 [build.environment]
   NODE_VERSION = "20"
 
+# Functions directory (IMPORTANT: relative to repo root, not base!)
+[functions]
+  directory = "netlify/functions"
+
 # Enable Next.js on Netlify
 [[plugins]]
   package = "@netlify/plugin-nextjs"
