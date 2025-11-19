@@ -1,83 +1,71 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { fetchStakerAccount } from '@/lib/contract';
+import { fetchStakerAccount, lamportsToSol, connection } from '@/lib/contract';
+import PanelFrame from './PanelFrame';
 
 export default function PersonalStatsPanel() {
-  const { publicKey, connected } = useWallet();
-  const [stakerData, setStakerData] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+  const { publicKey } = useWallet();
+  const [stats, setStats] = useState({
+    votingPower: 0,
+    pendingRewards: 0,
+    isOperator: false
+  });
 
   useEffect(() => {
-    async function fetchData() {
-      if (!publicKey || !connected) {
-        setStakerData(null);
+    async function loadStats() {
+      if (!publicKey) {
+        setStats({ votingPower: 0, pendingRewards: 0, isOperator: false });
         return;
       }
 
-      setLoading(true);
       try {
-        const data = await fetchStakerAccount(publicKey);
-        setStakerData(data);
-      } catch (error) {
-        console.error('Error fetching staker data:', error);
-        setStakerData(null);
-      } finally {
-        setLoading(false);
+        const staker = await fetchStakerAccount(publicKey);
+        if (staker) {
+          setStats({
+            votingPower: Number(staker.votingPower), // Raw units for now
+            pendingRewards: 0, // Would need logic to calc
+            isOperator: false // Would check provider account
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load personal stats:', err);
       }
     }
 
-    fetchData();
-  }, [publicKey, connected]);
+    loadStats();
+  }, [publicKey]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: 0.2 }}
-      className="panel-base p-4 rounded-[12px] clip-angled-border"
+    <PanelFrame
+      cornerType="none"
+      variant="darker"
+      className="p-4 rounded-[12px]"
+      motionProps={{
+        initial: { opacity: 0, y: 20 },
+        animate: { opacity: 1, y: 0 },
+        transition: { duration: 0.6, delay: 0.2 }
+      }}
     >
       <h3 className="text-[10px] font-semibold mb-3 tracking-[0.15em]">
         PERSONAL STATS
       </h3>
 
-      {!connected ? (
-        <div className="text-center py-6 text-gray-500 text-xs">
-          Connect wallet to view stats
+      <div className="space-y-2 text-xs">
+        <div className="flex justify-between">
+          <span className="text-gray-500">Voting Power</span>
+          <span className="font-semibold">{stats.votingPower.toLocaleString()}</span>
         </div>
-      ) : loading ? (
-        <div className="text-center py-6 text-gray-500 text-xs">
-          Loading...
+        <div className="flex justify-between">
+          <span className="text-gray-500">Pending Rewards</span>
+          <span className="font-semibold">{stats.pendingRewards.toFixed(6)} SOL</span>
         </div>
-      ) : !stakerData ? (
-        <div className="text-center py-6 text-gray-500 text-xs">
-          No staking data found
+        <div className="flex justify-between">
+          <span className="text-gray-500">Node Operator</span>
+          <span className="font-semibold">{stats.isOperator ? 'Yes' : 'No'}</span>
         </div>
-      ) : (
-        <div className="space-y-2 text-xs">
-          <div className="flex justify-between">
-            <span className="text-gray-500">Voting Power</span>
-            <span className="font-semibold">
-              {(Number(stakerData.votingPower) / 1_000_000).toLocaleString(undefined, { maximumFractionDigits: 2 })}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-500">Pending Rewards</span>
-            <span className="font-semibold">
-              {(Number(stakerData.pendingRewards) / 1e9).toFixed(6)} SOL
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-500">Node Operator</span>
-            <span className="font-semibold">
-              {stakerData.nodeOperator ? 'Yes' : 'No'}
-            </span>
-          </div>
-        </div>
-      )}
-    </motion.div>
+      </div>
+    </PanelFrame>
   );
 }
-

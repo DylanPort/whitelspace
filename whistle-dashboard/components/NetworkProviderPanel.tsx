@@ -1,8 +1,8 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { fetchAllProviders } from '@/lib/contract';
+import PanelFrame from './PanelFrame';
 
 export default function NetworkProviderPanel() {
   const [providers, setProviders] = useState<any[]>([]);
@@ -29,11 +29,15 @@ export default function NetworkProviderPanel() {
   const totalBonded = providers.reduce((sum, p) => sum + (p.bonded || 0), 0);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: 0.3 }}
-      className="panel-base p-4 rounded-[12px] clip-angled-border"
+    <PanelFrame
+      cornerType="none"
+      variant="darker"
+      className="p-4 rounded-[12px]"
+      motionProps={{
+        initial: { opacity: 0, y: 20 },
+        animate: { opacity: 1, y: 0 },
+        transition: { duration: 0.6, delay: 0.3 }
+      }}
     >
       <h3 className="text-[10px] font-semibold mb-3 tracking-[0.15em]">
         NETWORK PROVIDERS
@@ -65,7 +69,6 @@ export default function NetworkProviderPanel() {
           </div>
         </div>
       )}
-    </motion.div>
+    </PanelFrame>
   );
 }
-

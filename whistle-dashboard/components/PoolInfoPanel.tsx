@@ -1,8 +1,8 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { connection, STAKING_POOL_ADDRESS } from '@/lib/contract';
+import PanelFrame from './PanelFrame';
 
 export default function PoolInfoPanel() {
   const [poolData, setPoolData] = useState<any>(null);
@@ -31,11 +31,15 @@ export default function PoolInfoPanel() {
   }, []);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: 0.1 }}
-      className="panel-base p-4 rounded-[12px] clip-angled-border"
+    <PanelFrame
+      cornerType="none"
+      variant="darker"
+      className="p-4 rounded-[12px]"
+      motionProps={{
+        initial: { opacity: 0, y: 20 },
+        animate: { opacity: 1, y: 0 },
+        transition: { duration: 0.6, delay: 0.1 }
+      }}
     >
       <h3 className="text-[10px] font-semibold mb-3 tracking-[0.15em]">
         POOL INFO
@@ -65,6 +69,6 @@ export default function PoolInfoPanel() {
           </span>
         </div>
       </div>
-    </motion.div>
+    </PanelFrame>
   );
 }

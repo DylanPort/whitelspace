@@ -1,8 +1,8 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { fetchAllProviders, fetchStakingPool } from '@/lib/contract';
+import PanelFrame from './PanelFrame';
 
 export default function NetworkStatsPanel() {
   const [stats, setStats] = useState({
@@ -38,11 +38,14 @@ export default function NetworkStatsPanel() {
   }, []);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 50 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.6, delay: 0.3 }}
-      className="panel-base p-6 rounded-[16px] clip-angled-border min-h-[240px] flex flex-col"
+    <PanelFrame
+      cornerType="silver"
+      className="min-h-[240px] flex flex-col"
+      motionProps={{
+        initial: { opacity: 0, x: 50 },
+        animate: { opacity: 1, x: 0 },
+        transition: { duration: 0.6, delay: 0.3 }
+      }}
     >
       <h3 className="text-[11px] font-semibold mb-4 tracking-[0.15em]">
         NETWORK STATS
@@ -61,7 +64,7 @@ export default function NetworkStatsPanel() {
       ) : (
         <div className="space-y-4 flex-1">
           <div>
-            <div className="text-2xl font-bold">{stats.totalStaked.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{Math.floor(stats.totalStaked).toLocaleString()}</div>
             <div className="text-[9px] text-gray-500 tracking-widest mt-1">WHISTLE STAKED</div>
           </div>
 
@@ -86,7 +89,6 @@ export default function NetworkStatsPanel() {
           </div>
         </div>
       )}
-    </motion.div>
+    </PanelFrame>
   );
 }
-

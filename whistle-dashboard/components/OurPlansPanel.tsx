@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 import OurPlansModal from './OurPlansModal';
+import ShinyButton from './ShinyButton';
 
 export default function OurPlansPanel() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -16,15 +17,11 @@ export default function OurPlansPanel() {
         className="w-full"
         style={{ maxWidth: '300px', margin: '0 auto' }}
       >
-        <button
+        <ShinyButton 
           onClick={() => setIsModalOpen(true)}
-          className="w-full px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40 transition-all text-[10px] font-semibold tracking-wider"
-          style={{
-            clipPath: 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)',
-          }}
         >
           OUR PLANS
-        </button>
+        </ShinyButton>
       </motion.div>
 
       <OurPlansModal 
@@ -34,4 +31,3 @@ export default function OurPlansPanel() {
     </>
   );
 }
-

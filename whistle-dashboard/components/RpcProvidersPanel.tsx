@@ -1,8 +1,8 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { api, type ProviderStats } from '@/lib/api';
+import PanelFrame from './PanelFrame';
 
 interface ProviderDisplay {
   name: string;
@@ -45,11 +45,13 @@ export default function RpcProvidersPanel() {
   }, []);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -50 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.6 }}
-      className="panel-base p-6 rounded-[16px] clip-angled-border"
+    <PanelFrame
+      cornerType="silver"
+      motionProps={{
+        initial: { opacity: 0, x: -50 },
+        animate: { opacity: 1, x: 0 },
+        transition: { duration: 0.6 }
+      }}
     >
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[11px] font-semibold tracking-[0.15em]">
@@ -90,6 +92,6 @@ export default function RpcProvidersPanel() {
           </>
         )}
       </div>
-    </motion.div>
+    </PanelFrame>
   );
 }

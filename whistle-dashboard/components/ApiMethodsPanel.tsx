@@ -1,8 +1,8 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { useState } from 'react';
 import ApiDocumentationModal from './ApiDocumentationModal';
+import PanelFrame from './PanelFrame';
 
 const API_METHODS = [
   // Account Methods
@@ -67,11 +67,13 @@ export default function ApiMethodsPanel() {
 
   return (
     <>
-    <motion.div
-      initial={{ opacity: 0, x: -50 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.6, delay: 0.5 }}
-      className="panel-base p-6 rounded-[16px] clip-angled-border"
+    <PanelFrame
+      cornerType="silver"
+      motionProps={{
+        initial: { opacity: 0, x: -50 },
+        animate: { opacity: 1, x: 0 },
+        transition: { duration: 0.6, delay: 0.5 }
+      }}
     >
       <h3 className="text-[11px] font-semibold mb-4 tracking-[0.15em]">
         API METHODS
@@ -146,7 +148,7 @@ export default function ApiMethodsPanel() {
           Full Documentation →
         </button>
       </div>
-    </motion.div>
+    </PanelFrame>
 
     {/* Documentation Modal */}
     <ApiDocumentationModal 
@@ -156,4 +158,3 @@ export default function ApiMethodsPanel() {
     </>
   );
 }
-

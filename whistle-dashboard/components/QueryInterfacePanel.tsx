@@ -1,11 +1,11 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { fetchAllProviders, createProcessQueryPaymentTransaction, connection, QUERY_COST } from '@/lib/contract';
 import toast from 'react-hot-toast';
+import PanelFrame from './PanelFrame';
 
 const RPC_METHODS = [
   'getAccountInfo',
@@ -193,11 +193,14 @@ export default function QueryInterfacePanel() {
   const queryCostSOL = (QUERY_COST / LAMPORTS_PER_SOL).toFixed(5);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 50 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.6 }}
-      className="panel-base p-6 rounded-[16px] clip-angled-border min-h-[280px] flex flex-col"
+    <PanelFrame
+      cornerType="silver"
+      className="min-h-[280px] flex flex-col"
+      motionProps={{
+        initial: { opacity: 0, x: 50 },
+        animate: { opacity: 1, x: 0 },
+        transition: { duration: 0.6 }
+      }}
     >
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[11px] font-semibold tracking-[0.15em]">
@@ -290,6 +293,6 @@ export default function QueryInterfacePanel() {
           )}
         </div>
       )}
-    </motion.div>
+    </PanelFrame>
   );
 }

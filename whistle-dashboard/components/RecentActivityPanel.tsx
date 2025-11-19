@@ -1,8 +1,8 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { api, type QueryLog } from '@/lib/api';
+import PanelFrame from './PanelFrame';
 
 export default function RecentActivityPanel() {
   const [queries, setQueries] = useState<QueryLog[]>([]);
@@ -25,14 +25,18 @@ export default function RecentActivityPanel() {
   }, []);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 50 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.7, delay: 0.3 }}
-      className="panel-base p-6 rounded-[16px] clip-angled-border"
-      style={{ 
-        width: '800px',
-        maxHeight: '180px',
+    <PanelFrame
+      cornerType="none"
+      variant="darker"
+      className="p-6 rounded-[16px]"
+      motionProps={{
+        initial: { opacity: 0, y: 50 },
+        animate: { opacity: 1, y: 0 },
+        transition: { duration: 0.7, delay: 0.3 },
+        style: { 
+          width: '800px',
+          maxHeight: '180px',
+        }
       }}
     >
       <h3 className="text-[11px] font-semibold mb-4 tracking-[0.15em] text-center">
@@ -65,6 +69,6 @@ export default function RecentActivityPanel() {
           ))
         )}
       </div>
-    </motion.div>
+    </PanelFrame>
   );
 }

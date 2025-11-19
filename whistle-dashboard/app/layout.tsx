@@ -4,6 +4,7 @@ import "./globals.css";
 import WalletProvider from "@/components/WalletProvider";
 import { Providers } from "@/lib/providers";
 import Navigation from "@/components/Navigation";
+import AmbientVideo from "@/components/AmbientVideo";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -30,6 +31,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className} suppressHydrationWarning>
+        <AmbientVideo />
         <Providers>
           <WalletProvider>
             <Navigation />

@@ -12,6 +12,7 @@ import RecentActivityPanel from '@/components/RecentActivityPanel';
 import ApiMethodsPanel from '@/components/ApiMethodsPanel';
 import ProviderRegistrationPanel from '@/components/ProviderRegistrationPanel';
 import HowItWorksModal from '@/components/HowItWorksModal';
+import HowItWorksButton from '@/components/HowItWorksButton';
 import PoolInfoPanel from '@/components/PoolInfoPanel';
 import PersonalStatsPanel from '@/components/PersonalStatsPanel';
 import NetworkProviderPanel from '@/components/NetworkProviderPanel';
@@ -111,20 +112,7 @@ export default function Home() {
         </div>
         
         {/* How It Works Button */}
-        <button
-          onClick={() => setShowHowItWorks(true)}
-          className="group relative text-[10px] md:text-xs font-semibold tracking-wider uppercase px-3 md:px-5 py-2 md:py-2.5 border border-emerald-600/20 hover:border-emerald-500/30 transition-all duration-300"
-          style={{
-            clipPath: 'polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px)',
-            background: 'rgba(16, 185, 129, 0.08)',
-            backdropFilter: 'blur(12px)',
-            boxShadow: '0 0 20px rgba(16, 185, 129, 0.15), inset 0 0 20px rgba(16, 185, 129, 0.05)',
-          }}
-        >
-          <span className="text-emerald-200 group-hover:text-emerald-100 transition-colors">
-            How It Works
-          </span>
-        </button>
+        <HowItWorksButton onClick={() => setShowHowItWorks(true)} />
       </header>
 
       {/* Main content - Responsive layout */}

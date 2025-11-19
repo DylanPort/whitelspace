@@ -1,9 +1,9 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { fetchProviderAccount, createClaimProviderEarningsTransaction, lamportsToSol, connection } from '@/lib/contract';
+import PanelFrame from './PanelFrame';
 
 export default function ProviderEarningsPanel() {
   const { publicKey, connected, sendTransaction } = useWallet();
@@ -66,11 +66,14 @@ export default function ProviderEarningsPanel() {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 50 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.6, delay: 0.1 }}
-      className="panel-base p-6 rounded-[16px] clip-angled-border min-h-[240px] flex flex-col"
+    <PanelFrame
+      cornerType="gold"
+      className="min-h-[240px] flex flex-col"
+      motionProps={{
+        initial: { opacity: 0, x: 50 },
+        animate: { opacity: 1, x: 0 },
+        transition: { duration: 0.6, delay: 0.1 }
+      }}
     >
       <h3 className="text-[11px] font-semibold mb-6 tracking-[0.15em]">
         PROVIDER EARNINGS
@@ -98,6 +101,6 @@ export default function ProviderEarningsPanel() {
           {withdrawing ? 'CLAIMING...' : 'CLAIM EARNINGS'}
         </button>
       </div>
-    </motion.div>
+    </PanelFrame>
   );
 }

@@ -163,7 +163,7 @@ export default function CentralCore() {
                       }`}
                       title={stakedAmount > 0 ? "Click to view pool on Solscan" : ""}
                     >
-                    {stakedAmount.toLocaleString()}
+                    {Math.floor(stakedAmount).toLocaleString()}
                     </button>
                   <div className="text-[8px] md:text-[9px] text-gray-500 tracking-[0.2em] mt-1">WHISTLE STAKED</div>
                     
@@ -173,7 +173,7 @@ export default function CentralCore() {
                       className="text-[16px] md:text-[18px] font-semibold leading-none tracking-tight mt-2 hover:text-green-400 cursor-pointer transition-colors"
                       title="Click to learn about access tokens"
                     >
-                    {accessTokens.toLocaleString()}
+                    {Math.floor(accessTokens).toLocaleString()}
                     </button>
                     <div className="text-[7px] md:text-[8px] text-gray-500 tracking-[0.2em] mt-1">
                       ACCESS TOKENS <span className="text-[6px] md:text-[7px]">ⓘ</span>
@@ -200,7 +200,7 @@ export default function CentralCore() {
                   TOTAL STAKED
                 </div>
                 <div className="text-[22px] md:text-[28px] font-bold leading-none tracking-tight">
-                  {totalStaked.toLocaleString()}
+                  {Math.floor(totalStaked).toLocaleString()}
                 </div>
                 <div className="text-[9px] md:text-[10px] text-gray-400 mt-1">
                   WHISTLE

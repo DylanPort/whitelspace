@@ -254,18 +254,41 @@ export class PaymentVault {
 }
 
 // ============= INSTRUCTION ENUM =============
+// CRITICAL: MUST match the order in the Rust contract exactly!
+// Any mismatch will cause InvalidInstructionData errors
 
 enum StakingInstruction {
   InitializePool = 0,
   Stake = 1,
   Unstake = 2,
-  InitializePaymentVault = 3,
-  RegisterProvider = 4,
-  ProcessQueryPayment = 5,
-  ClaimProviderEarnings = 6,
-  ClaimStakerRewards = 7,
-  RecordHeartbeat = 8,
-  UpdateEndpoint = 9,
+  TransferAccess = 3,
+  ActivateNodeOperator = 4,
+  RecordDataUsage = 5,
+  SetPoolStatus = 6,
+  LockRate = 7,
+  InitializePaymentVault = 8,
+  RegisterProvider = 9,
+  DeregisterProvider = 10,
+  UpdateEndpoint = 11,
+  RecordHeartbeat = 12,
+  RecordQueryMetrics = 13,
+  UpdateReputationMetrics = 14,
+  SlashProvider = 15,
+  ProcessQueryPayment = 16,
+  ClaimProviderEarnings = 17,
+  DistributeBonusPool = 18,
+  DistributeStakerRewards = 19,
+  ClaimStakerRewards = 20,
+  AuthorizeQuery = 21,
+  RecordQuery = 22,
+  RegisterDeveloper = 23,
+  StakeDeveloper = 24,
+  UnstakeDeveloper = 25,
+  ProcessDeveloperQuery = 26,
+  ClaimDeveloperRewards = 27,
+  ClaimReferralEarnings = 28,
+  InitializeX402Wallet = 29,
+  ProcessX402Payment = 30,
 }
 
 // ============= ACCOUNT FETCHING =============

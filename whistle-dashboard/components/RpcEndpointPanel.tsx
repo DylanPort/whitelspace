@@ -1,14 +1,16 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import PanelFrame from './PanelFrame';
 
 export default function RpcEndpointPanel() {
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -50 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.6, delay: 0.3 }}
-      className="panel-base p-6 rounded-[16px] clip-angled-border"
+    <PanelFrame
+      cornerType="gold"
+      motionProps={{
+        initial: { opacity: 0, x: -50 },
+        animate: { opacity: 1, x: 0 },
+        transition: { duration: 0.6, delay: 0.3 }
+      }}
     >
       <h3 className="text-[11px] font-semibold mb-4 tracking-[0.15em]">
         RPC ENDPOINT
@@ -38,7 +40,6 @@ export default function RpcEndpointPanel() {
           </div>
         </div>
       </div>
-    </motion.div>
+    </PanelFrame>
   );
 }
-
