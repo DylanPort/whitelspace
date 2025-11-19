@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { ConnectionProvider, WalletProvider as SolanaWalletProvider } from '@solana/wallet-adapter-react';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
 import { clusterApiUrl } from '@solana/web3.js';
+import { MobileWalletAdapter, isMobileDevice, getMobileWalletInfo } from '@/lib/mobile-wallet-bridge';
 
 // Import wallet adapter CSS
 import '@solana/wallet-adapter-react-ui/styles.css';
@@ -13,13 +14,37 @@ import '@solana/wallet-adapter-react-ui/styles.css';
 export default function WalletProvider({ children }: { children: React.ReactNode }) {
   const network = WalletAdapterNetwork.Mainnet;
   const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+  const [hasMobileWallet, setHasMobileWallet] = useState(false);
+
+  useEffect(() => {
+    // Check if user has a mobile wallet from main.html
+    if (typeof window !== 'undefined') {
+      const isMobile = isMobileDevice();
+      const mobileWallet = getMobileWalletInfo();
+      setHasMobileWallet(isMobile && mobileWallet !== null && mobileWallet.hasWallet);
+    }
+  }, []);
 
   const wallets = useMemo(
-    () => [
-      new PhantomWalletAdapter(),
-      new SolflareWalletAdapter(),
-    ],
-    []
+    () => {
+      const baseWallets = [
+        new PhantomWalletAdapter(),
+        new SolflareWalletAdapter(),
+      ];
+
+      // Add mobile wallet adapter if detected
+      if (hasMobileWallet) {
+        const mobileAdapter = new MobileWalletAdapter() as any;
+        mobileAdapter.name = 'Ghost Wallet';
+        mobileAdapter.icon = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI4IiBmaWxsPSIjMTBiOTgxIi8+CiAgPHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IiNmZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiPjxHPC90ZXh0Pgo8L3N2Zz4=';
+        mobileAdapter.url = 'https://whistle.ninja';
+        mobileAdapter.readyState = 'Installed';
+        return [mobileAdapter, ...baseWallets];
+      }
+
+      return baseWallets;
+    },
+    [hasMobileWallet]
   );
 
   // Clean up localStorage on mount to prevent quota errors
