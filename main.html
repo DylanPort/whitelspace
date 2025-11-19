@@ -2242,8 +2242,8 @@
     }
 
     // RPC defaults (hidden in UI; configurable via localStorage keys rpcHttpUrl / rpcWsUrl)
-    const DEFAULT_RPC_HTTP = 'https://api.mainnet-beta.solana.com';
-    const DEFAULT_RPC_WS   = 'wss://api.mainnet-beta.solana.com';
+    const DEFAULT_RPC_HTTP = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
+    const DEFAULT_RPC_WS   = 'wss://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
     function getRpcUrls(){
       try{
         const http = (localStorage.getItem('rpcHttpUrl') || DEFAULT_RPC_HTTP).trim();
@@ -5145,7 +5145,7 @@
       };
 
       // Solana RPC connection
-      const SOLANA_RPC = 'https://api.mainnet-beta.solana.com';
+      const SOLANA_RPC = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
       const solanaConnection = selectedChain === 'solana' ? new solanaWeb3.Connection(SOLANA_RPC, 'confirmed') : null;
 
       // Major DeFi protocols to scan
