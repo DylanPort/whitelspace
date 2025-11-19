@@ -10,10 +10,9 @@
   // Direct transfer mode: send fees to this fee collector wallet (not a program)
   const FEE_COLLECTOR_WALLET = 'G1RHSMtZVZLafmZ9man8anb2HXf7JP5Kh5sbrGZKM6Pg';
   const RPC_URL = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
+  // Only use Helius RPC - public RPCs are rate-limited
   const RPC_ENDPOINTS = [
     RPC_URL,
-    'https://rpc.ankr.com/solana',
-    'https://api.mainnet-beta.solana.com'
   ];
 
   async function getOrCreateTokenAccount(connection, ownerPubkey, mintPubkey) {
