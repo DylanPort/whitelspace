@@ -12,3 +12,15 @@
 # Enable Next.js on Netlify
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+# Serve static files from root (for x402-client.js, images, etc.)
+[[redirects]]
+  from = "/x402-client.js"
+  to = "/x402-client.js"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/main"
+  to = "/main.html"
+  status = 200
