@@ -8,8 +8,8 @@ services:
     region: oregon
     plan: starter
     branch: main
-    buildCommand: npm install
-    startCommand: npm run mainnet
+    buildCommand: cd whistlenet/provider/api && npm install && npm run build
+    startCommand: cd whistlenet/provider/api && npm start
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV

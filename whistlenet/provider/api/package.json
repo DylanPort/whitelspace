@@ -5,7 +5,8 @@
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node dist/enhanced-mainnet-server.js",
+    "start:basic": "node dist/server.js",
     "dev": "ts-node-dev --respawn src/server.ts",
     "mainnet": "ts-node-dev --respawn src/enhanced-mainnet-server.ts",
     "dev:mock": "ts-node-dev --respawn src/test-server-no-db.ts",
