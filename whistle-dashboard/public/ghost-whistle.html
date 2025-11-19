@@ -10455,7 +10455,7 @@ console.log('✅ Fingerprint spoofing active!');`;
       const libAvailable = typeof solanaWeb3 !== 'undefined';
       
       // Always call hooks in the same order
-      const [rpc, setRpc] = useState('https://api.mainnet-beta.solana.com');
+      const [rpc, setRpc] = useState('https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba');
       const [showRpcInput, setShowRpcInput] = useState(false);
       const [tool, setTool] = useState('deadman');
       
@@ -10957,7 +10957,7 @@ console.log('✅ Fingerprint spoofing active!');`;
                   />
                 </div>
                 <div className="flex flex-wrap gap-2 text-xs">
-                  <button onClick={()=>{setRpc('https://api.mainnet-beta.solana.com'); pushToast?.('Switched to Public Mainnet', 'ok');}} className="px-3 py-1 bg-white/5 border border-white/10 rounded text-white/70 hover:bg-white/10 transition-all">Public Mainnet</button>
+                  <button onClick={()=>{setRpc('https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba'); pushToast?.('Switched to Helius Mainnet', 'ok');}} className="px-3 py-1 bg-white/5 border border-white/10 rounded text-white/70 hover:bg-white/10 transition-all">Helius Mainnet</button>
                   <button onClick={()=>{setRpc('https://api.devnet.solana.com'); pushToast?.('Switched to Devnet', 'ok');}} className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded text-emerald-400 hover:bg-emerald-500/20 transition-all">Devnet (Test)</button>
                 </div>
                 <p className="text-xs text-white/40">💡 Using SolanaTracker RPC (no rate limits). Can also use <a href="https://helius.dev" target="_blank" className="text-emerald-400 hover:underline">Helius</a> or <a href="https://quicknode.com" target="_blank" className="text-emerald-400 hover:underline">QuickNode</a></p>
@@ -17752,9 +17752,6 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
     // RPC endpoints with fallback
     const RPC_ENDPOINTS = [
       'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba',
-      'https://rpc.ankr.com/solana',
-      'https://solana-api.projectserum.com',
-      'https://api.mainnet-beta.solana.com'
     ];
     const MAINNET_RPC = RPC_ENDPOINTS[0];
     
