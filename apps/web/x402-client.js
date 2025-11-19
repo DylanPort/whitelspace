@@ -77,7 +77,13 @@
 
     // 1) Request quote
     const gateway = (window.X402_GATEWAY || window.location.origin);
-    const quoteResp = await fetch(`${gateway.replace(/\/$/, '')}/x402/quote`, {
+    // Use Netlify functions path in production, regular path in dev
+    const isNetlify = gateway.includes('netlify.app') || gateway.includes('whistle.ninja');
+    const quotePath = isNetlify ? '/.netlify/functions/x402-quote' : '/x402/quote';
+    const quoteUrl = `${gateway.replace(/\/$/, '')}${quotePath}`;
+    
+    console.log('📡 Requesting x402 quote from:', quoteUrl);
+    const quoteResp = await fetch(quoteUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ hops })
@@ -215,7 +221,11 @@
     console.log('✅ Payment confirmed!');
 
     // 3) Confirm with server for access token
-    const confirm = await fetch(`${gateway.replace(/\/$/, '')}/x402/confirm`, {
+    const confirmPath = isNetlify ? '/.netlify/functions/x402-confirm' : '/x402/confirm';
+    const confirmUrl = `${gateway.replace(/\/$/, '')}${confirmPath}`;
+    
+    console.log('📡 Confirming payment at:', confirmUrl);
+    const confirm = await fetch(confirmUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
