@@ -1,9 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { isMobileDevice, getMobileWalletInfo } from '@/lib/mobile-wallet-bridge';
-import toast from 'react-hot-toast';
 import CentralCore from '@/components/CentralCore';
 import RpcProvidersPanel from '@/components/RpcProvidersPanel';
 import QueryInterfacePanel from '@/components/QueryInterfacePanel';
@@ -32,9 +29,16 @@ export default function Home() {
   const [rpcSource, setRpcSource] = useState('Checking...');
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [isDesktop, setIsDesktop] = useState(true);
-  const { connected, publicKey } = useWallet();
+  const [mounted, setMounted] = useState(false);
+
+  // Handle mounting to prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
+    if (!mounted) return;
+    
     async function checkBackend() {
       try {
         const health = await api.checkHealth();
@@ -50,9 +54,11 @@ export default function Home() {
     checkBackend();
     const interval = setInterval(checkBackend, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [mounted]);
 
   useEffect(() => {
+    if (!mounted) return;
+    
     const handleResize = () => {
       setIsDesktop(window.innerWidth >= 1024);
     };
@@ -60,48 +66,7 @@ export default function Home() {
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Check for existing mobile wallet from main.html
-  useEffect(() => {
-    // Only check if not already connected and on mobile
-    if (connected || !isMobileDevice()) return;
-
-    const checkMobileWallet = () => {
-      const mobileWallet = getMobileWalletInfo();
-      
-      if (mobileWallet && mobileWallet.hasWallet) {
-        const shortAddress = `${mobileWallet.publicKey.slice(0, 4)}...${mobileWallet.publicKey.slice(-4)}`;
-        
-        toast((t) => (
-          <div className="flex flex-col gap-2">
-            <div className="font-semibold text-sm">Mobile Wallet Detected</div>
-            <div className="text-xs text-gray-300">
-              Found wallet: {shortAddress}
-            </div>
-            <div className="text-xs text-gray-400">
-              Tap "Connect" above to use your existing wallet
-            </div>
-          </div>
-        ), {
-          duration: 8000,
-          position: 'bottom-center',
-          style: {
-            background: '#1a1a1a',
-            color: '#fff',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
-            padding: '16px',
-            minWidth: '280px',
-            maxWidth: '90vw',
-          },
-        });
-      }
-    };
-
-    // Check after a small delay to let the wallet adapter initialize
-    const timer = setTimeout(checkMobileWallet, 1000);
-    return () => clearTimeout(timer);
-  }, [connected]);
+  }, [mounted]);
 
   return (
     <main className="relative min-h-screen overflow-x-hidden overflow-y-auto flex flex-col">
@@ -163,7 +128,7 @@ export default function Home() {
       </header>
 
       {/* Main content - Responsive layout */}
-      <div className="relative z-10 flex-1 px-3 md:px-6 lg:px-0 flex flex-col pb-8" style={{ zoom: isDesktop ? 0.85 : 1 }}>
+      <div className="relative z-10 flex-1 px-3 md:px-6 lg:px-0 flex flex-col pb-8" style={mounted ? { zoom: isDesktop ? 0.85 : 1 } : {}}>
         {/* Top section - panels and core */}
         <div className="w-full flex flex-col lg:flex-row items-start lg:items-center lg:justify-center gap-3 md:gap-4 lg:gap-3 mb-4 md:mb-6 pt-4 md:pt-6">
           
