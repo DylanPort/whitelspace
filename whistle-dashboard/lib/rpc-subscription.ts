@@ -76,7 +76,9 @@ export async function createRPCPaymentTransaction(
   }
 
   // Get X402 wallet PDA (receives SOL)
-  const [x402WalletPDA, _bump] = getX402WalletPDA();
+  const [x402WalletPDA] = getX402WalletPDA();
+  // Ensure it's a PublicKey for TypeScript
+  const walletAddress = x402WalletPDA as PublicKey;
 
   // Amount in lamports
   const amountLamports = pkg.priceSol * LAMPORTS_PER_SOL;
@@ -86,7 +88,7 @@ export async function createRPCPaymentTransaction(
     amountSol: pkg.priceSol,
     amountLamports,
     from: payer.toBase58(),
-    to: x402WalletPDA.toBase58()
+    to: walletAddress.toBase58()
   });
 
   // Create transaction
@@ -96,7 +98,7 @@ export async function createRPCPaymentTransaction(
   transaction.add(
     SystemProgram.transfer({
       fromPubkey: payer,
-      toPubkey: x402WalletPDA,
+      toPubkey: walletAddress,
       lamports: amountLamports
     })
   );
