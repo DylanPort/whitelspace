@@ -76,7 +76,7 @@ export async function createRPCPaymentTransaction(
   }
 
   // Get X402 wallet PDA (receives SOL)
-  const [x402WalletPDA] = getX402WalletPDA();
+  const [x402WalletPDA, _bump] = getX402WalletPDA();
 
   // Amount in lamports
   const amountLamports = pkg.priceSol * LAMPORTS_PER_SOL;
