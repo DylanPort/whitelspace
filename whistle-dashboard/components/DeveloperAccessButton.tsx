@@ -2,10 +2,10 @@
 
 import { motion } from 'framer-motion';
 import { useState } from 'react';
-import GhostWhistleModal from './GhostWhistleModal';
+import DeveloperAccessModal from './DeveloperAccessModal';
 import ShinyButton from './ShinyButton';
 
-export default function GhostWhistlePanel() {
+export default function DeveloperAccessButton() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
@@ -19,15 +19,16 @@ export default function GhostWhistlePanel() {
         <ShinyButton 
           onClick={() => setIsModalOpen(true)}
         >
-            GHOST WHISTLE & PRIVACY TOOLS
+          GET RPC ACCESS
         </ShinyButton>
       </motion.div>
 
-      {/* Ghost Whistle Modal */}
-      <GhostWhistleModal 
+      {/* Developer Access Modal */}
+      <DeveloperAccessModal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       />
     </>
   );
 }
+

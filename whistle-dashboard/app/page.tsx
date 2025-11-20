@@ -23,6 +23,8 @@ import GhostWhistlePanel from '@/components/GhostWhistlePanel';
 import ResourcesPanel from '@/components/ResourcesPanel';
 import DecentralizationProgress from '@/components/DecentralizationProgress';
 import GovernancePanel from '@/components/GovernancePanel';
+// Removed DeveloperAccessButton - RPC is now public
+import SubscriptionStatusPanel from '@/components/SubscriptionStatusPanel';
 import { api } from '@/lib/api';
 
 export default function Home() {
@@ -137,12 +139,12 @@ export default function Home() {
           <div className="w-full lg:w-auto lg:flex-shrink-0 lg:-mt-4 flex flex-col gap-3 items-center lg:mx-0">
             <CentralCore />
             
-            {/* Ghost Whistle & Resources Buttons Row */}
+            {/* Action Buttons Row */}
             <div className="flex gap-2 lg:gap-1.5 w-full lg:w-auto">
               <div className="flex-1 lg:flex-none lg:w-[180px]">
                 <GhostWhistlePanel />
               </div>
-              <div className="flex-1 lg:flex-none lg:w-[140px]">
+              <div className="flex-1 lg:flex-none lg:w-[180px]">
                 <ResourcesPanel />
               </div>
             </div>
@@ -167,6 +169,11 @@ export default function Home() {
             <ProviderRegistrationPanel />
           </div>
 
+        </div>
+
+        {/* RPC Subscription Status - Single Panel */}
+        <div id="developer-access-section" className="max-w-[600px] mx-auto w-full mb-4 md:mb-6">
+          <SubscriptionStatusPanel />
         </div>
 
         {/* System Info Section - Responsive Grid */}

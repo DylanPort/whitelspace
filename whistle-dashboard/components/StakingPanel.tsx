@@ -428,9 +428,9 @@ export default function StakingPanel() {
             ⏳ Cooldown: {formatTime(cooldownRemaining)}
           </div>
         ) : (
-          <div className="text-[9px] text-gray-500 text-center mt-2">
+        <div className="text-[9px] text-gray-500 text-center mt-2">
             Min: 100 WHISTLE • 24h cooldown after stake
-          </div>
+        </div>
         )}
       </div>
     </PanelFrame>

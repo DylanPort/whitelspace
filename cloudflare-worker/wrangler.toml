@@ -1,0 +1,71 @@
+# Wrangler configuration for WhistleNet RPC Proxy Worker
+
+name = "whistlenet-rpc-proxy"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+# Account ID
+account_id = "934be4a13e58acf691b5fe64b0507312"
+
+# Workers configuration
+workers_dev = true
+
+# Production route
+routes = [
+  { pattern = "rpc.whistle.ninja/*", zone_name = "whistle.ninja" }
+]
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "whistlenet-rpc-subscriptions"
+database_id = "4a468bd0-310c-4fa8-bd4a-1e75719ea41b"
+
+# KV namespace for rate limiting
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "53d7e5a7e45f46c5a73eb9a1c4fa8937"
+
+# Analytics Engine binding (optional - disabled for now)
+# [[analytics_engine_datasets]]
+# binding = "ANALYTICS"
+
+# Environment variables
+[vars]
+HELIUS_RPC_URL = "https://mainnet.helius-rpc.com/?api-key=YOUR_HELIUS_KEY"
+
+# Development environment
+[env.dev]
+name = "whistlenet-rpc-proxy-dev"
+workers_dev = true
+
+[[env.dev.d1_databases]]
+binding = "DB"
+database_name = "whistlenet-rpc-subscriptions-dev"
+database_id = "YOUR_DEV_D1_DATABASE_ID"
+
+[[env.dev.kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "YOUR_DEV_KV_NAMESPACE_ID"
+
+# Production environment
+[env.production]
+name = "whistlenet-rpc-proxy"
+workers_dev = false
+
+routes = [
+  { pattern = "rpc.whistlenet.io/*", zone_name = "whistlenet.io" }
+]
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "whistlenet-rpc-subscriptions"
+database_id = "YOUR_PROD_D1_DATABASE_ID"
+
+[[env.production.kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "YOUR_PROD_KV_NAMESPACE_ID"
+
+# [[env.production.analytics_engine_datasets]]
+# binding = "ANALYTICS"
+

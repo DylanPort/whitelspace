@@ -1,0 +1,21 @@
+{
+  "name": "whistle-rpc-proxy",
+  "version": "2.0.0",
+  "description": "WHISTLE Network RPC Proxy - Production Ready",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "keywords": [
+    "whistle",
+    "rpc",
+    "solana",
+    "cloudflare",
+    "workers"
+  ],
+  "author": "WHISTLE Network",
+  "license": "MIT"
+}
+

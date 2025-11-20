@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WHISTLE RPC Tester</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+      color: #fff;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding: 30px 0;
+      border-bottom: 2px solid rgba(16, 185, 129, 0.3);
+    }
+    
+    h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .endpoint {
+      font-family: 'Courier New', monospace;
+      background: rgba(16, 185, 129, 0.1);
+      padding: 10px 20px;
+      border-radius: 8px;
+      display: inline-block;
+      margin-top: 10px;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    
+    .test-section {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 25px;
+      margin-bottom: 20px;
+      backdrop-filter: blur(10px);
+    }
+    
+    .test-section h3 {
+      margin-bottom: 15px;
+      color: #10b981;
+      font-size: 1.3em;
+    }
+    
+    .test-section p {
+      margin-bottom: 15px;
+      color: #aaa;
+      line-height: 1.6;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 8px;
+      font-size: 1em;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .result {
+      background: #0a0a0a;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    
+    .result:empty {
+      display: none;
+    }
+    
+    .success {
+      color: #10b981;
+    }
+    
+    .error {
+      color: #ef4444;
+    }
+    
+    .loading {
+      color: #fbbf24;
+    }
+    
+    .stats {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 20px;
+      padding: 20px;
+      background: rgba(16, 185, 129, 0.05);
+      border-radius: 8px;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    
+    .stat {
+      text-align: center;
+    }
+    
+    .stat-value {
+      font-size: 2em;
+      font-weight: bold;
+      color: #10b981;
+    }
+    
+    .stat-label {
+      font-size: 0.9em;
+      color: #888;
+      margin-top: 5px;
+    }
+    
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: #1a1a1a;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: #10b981;
+      border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: #059669;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🚀 WHISTLE RPC TESTER</h1>
+      <div class="endpoint">https://rpc.whistle.ninja</div>
+    </header>
+
+    <div class="test-section">
+      <h3>1. Health Check</h3>
+      <p>Test if the RPC endpoint is online and responding.</p>
+      <button onclick="testHealth()">Run Health Check</button>
+      <div id="result-health" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>2. Get Latest Blockhash</h3>
+      <p>Fetch the latest blockhash from Solana mainnet.</p>
+      <button onclick="testBlockhash()">Get Latest Blockhash</button>
+      <div id="result-blockhash" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>3. Get Account Balance</h3>
+      <p>Check SOL balance for a Solana validator account.</p>
+      <button onclick="testBalance()">Get Balance</button>
+      <div id="result-balance" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>4. Get USDC Token Supply</h3>
+      <p>Query the total supply of USDC on Solana.</p>
+      <button onclick="testTokenSupply()">Get Token Supply</button>
+      <div id="result-token" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>5. Get Slot</h3>
+      <p>Get the current slot number on Solana mainnet.</p>
+      <button onclick="testSlot()">Get Current Slot</button>
+      <div id="result-slot" class="result"></div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-value" id="total-tests">0</div>
+        <div class="stat-label">Total Tests</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="successful-tests">0</div>
+        <div class="stat-label">Successful</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="avg-time">0ms</div>
+        <div class="stat-label">Avg Response Time</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const RPC_ENDPOINT = 'https://rpc.whistle.ninja';
+    let totalTests = 0;
+    let successfulTests = 0;
+    let totalTime = 0;
+
+    function updateStats(success, time) {
+      totalTests++;
+      if (success) successfulTests++;
+      totalTime += time;
+
+      document.getElementById('total-tests').textContent = totalTests;
+      document.getElementById('successful-tests').textContent = successfulTests;
+      document.getElementById('avg-time').textContent = Math.round(totalTime / totalTests) + 'ms';
+    }
+
+    async function makeRPCCall(method, params = [], resultId) {
+      const resultDiv = document.getElementById(resultId);
+      resultDiv.className = 'result loading';
+      resultDiv.textContent = '⏳ Loading...';
+
+      const startTime = Date.now();
+
+      try {
+        const response = await fetch(RPC_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 1,
+            method: method,
+            params: params
+          })
+        });
+
+        const data = await response.json();
+        const endTime = Date.now();
+        const responseTime = endTime - startTime;
+
+        resultDiv.className = 'result success';
+        resultDiv.textContent = `✅ Success! (${responseTime}ms)\n\n` + JSON.stringify(data, null, 2);
+
+        updateStats(true, responseTime);
+      } catch (error) {
+        const endTime = Date.now();
+        const responseTime = endTime - startTime;
+
+        resultDiv.className = 'result error';
+        resultDiv.textContent = `❌ Error!\n\n${error.message}`;
+
+        updateStats(false, responseTime);
+      }
+    }
+
+    function testHealth() {
+      makeRPCCall('getHealth', [], 'result-health');
+    }
+
+    function testBlockhash() {
+      makeRPCCall('getLatestBlockhash', [], 'result-blockhash');
+    }
+
+    function testBalance() {
+      makeRPCCall('getBalance', ['vines1vzrYbzLMRdu58ou5XTby4qAqVRLmqo36NKPTg'], 'result-balance');
+    }
+
+    function testTokenSupply() {
+      makeRPCCall('getTokenSupply', ['EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'], 'result-token');
+    }
+
+    function testSlot() {
+      makeRPCCall('getSlot', [], 'result-slot');
+    }
+
+    // Auto-run health check on load
+    window.addEventListener('load', () => {
+      setTimeout(testHealth, 500);
+    });
+  </script>
+</body>
+</html>
+

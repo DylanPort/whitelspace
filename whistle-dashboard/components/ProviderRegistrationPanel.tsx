@@ -71,11 +71,11 @@ export default function ProviderRegistrationPanel() {
       </div>
     </PanelFrame>
 
-    {/* Registration Modal - Rendered outside panel */}
-    <ProviderRegistrationModal 
-      isOpen={isModalOpen}
-      onClose={() => setIsModalOpen(false)}
-    />
+      {/* Registration Modal - Rendered outside panel */}
+      <ProviderRegistrationModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </>
   );
 }

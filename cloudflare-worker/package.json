@@ -1,0 +1,31 @@
+{
+  "name": "whistlenet-rpc-proxy",
+  "version": "1.0.0",
+  "description": "WhistleNet RPC Proxy Worker with API key validation and rate limiting",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "deploy:production": "wrangler deploy --env production",
+    "tail": "wrangler tail",
+    "db:create": "wrangler d1 create whistlenet-rpc-subscriptions",
+    "db:init": "wrangler d1 execute whistlenet-rpc-subscriptions --file=./schema.sql",
+    "db:query": "wrangler d1 execute whistlenet-rpc-subscriptions --command",
+    "kv:create": "wrangler kv:namespace create RATE_LIMIT",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "rpc",
+    "solana",
+    "proxy",
+    "whistlenet"
+  ],
+  "author": "WhistleNet",
+  "license": "MIT",
+  "devDependencies": {
+    "wrangler": "^3.22.0"
+  }
+}
+

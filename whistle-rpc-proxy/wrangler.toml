@@ -1,0 +1,24 @@
+name = "whistle-rpc-proxy"
+main = "src/index.js"
+compatibility_date = "2024-11-20"
+
+# KV Namespaces for subscription and rate limit storage
+[[kv_namespaces]]
+binding = "SUBSCRIPTIONS"
+id = "SUBSCRIPTIONS_NAMESPACE_ID" # Replace with actual KV namespace ID after creation
+
+[[kv_namespaces]]
+binding = "RATE_LIMITS"
+id = "RATE_LIMITS_NAMESPACE_ID" # Replace with actual KV namespace ID after creation
+
+# Environment variables (set via wrangler secret)
+[vars]
+
+# Secrets (set via: wrangler secret put HELIUS_API_KEY)
+# HELIUS_API_KEY = "your-helius-key-here"
+
+# Custom domain configuration (optional)
+# routes = [
+#   { pattern = "rpc.whistlenet.io", zone_name = "whistlenet.io" }
+# ]
+
