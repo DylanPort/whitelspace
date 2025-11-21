@@ -84,11 +84,6 @@ export default function RpcProvidersPanel() {
             </div>
           </div>
         </div>
-
-        {/* Info */}
-        <div className="text-[9px] text-gray-500 text-center pt-2 border-t border-white/10">
-          Powered by Cloudflare Workers + Helius
-        </div>
       </div>
     </PanelFrame>
   );
