@@ -32,7 +32,7 @@ id = "53d7e5a7e45f46c5a73eb9a1c4fa8937"
 
 # Environment variables
 [vars]
-HELIUS_RPC_URL = "https://mainnet.helius-rpc.com/?api-key=YOUR_HELIUS_KEY"
+HELIUS_RPC_URL = "https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba"
 
 # Development environment
 [env.dev]

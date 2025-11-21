@@ -11,35 +11,27 @@ export default function NetworkStatsPanel() {
     uptime: 100,
   });
 
-  // Fetch REAL RPC stats from Cloudflare Worker analytics
+  // Measure real-time RPC latency
   useEffect(() => {
     async function fetchRPCStats() {
       try {
-        // Get real stats from backend
-        const response = await fetch('/.netlify/functions/rpc-stats');
+        // Measure latency by pinging health endpoint
+        const start = Date.now();
+        const response = await fetch('https://rpc.whistle.ninja/health');
+        const latency = Date.now() - start;
         
         if (response.ok) {
-          const data = await response.json();
-          setStats({
-            requests: data.requests || 0,
-            latency: data.latency || 0,
-            uptime: data.uptime || 100,
-          });
-        } else {
-          // Fallback: measure latency directly
-          const start = Date.now();
-          await fetch('https://rpc.whistle.ninja/health');
-          const latency = Date.now() - start;
-          
           setStats(prev => ({
             ...prev,
             latency,
             uptime: 100,
           }));
+        } else {
+          setStats(prev => ({ ...prev, uptime: 50 }));
         }
       } catch (err) {
         console.error('Failed to fetch RPC stats:', err);
-        setStats(prev => ({ ...prev, uptime: 0 }));
+        setStats(prev => ({ ...prev, uptime: 0, latency: 0 }));
       }
     }
 

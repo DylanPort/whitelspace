@@ -5,12 +5,9 @@
  * - API key validation
  * - Rate limiting
  * - Subscription expiry checks
- * - Request forwarding to Whistle RPC
+ * - Request forwarding to backend RPC (Helius)
  * - Usage tracking
  */
-
-// Whistle RPC endpoint (backend)
-const WHISTLE_RPC_URL = 'https://rpc.whistle.ninja';
 
 // Rate limit windows (in seconds)
 const RATE_LIMIT_WINDOW = 60; // 1 minute
@@ -113,32 +110,51 @@ async function handleRpcRequest(request, env, corsHeaders) {
       }, 405, corsHeaders);
     }
 
+    // Check if request is from our own dashboard - exempt from rate limiting
+    const origin = request.headers.get('Origin') || '';
+    const referer = request.headers.get('Referer') || '';
+    const isOwnDashboard = origin.includes('whistle.ninja') || referer.includes('whistle.ninja');
+
     // Public RPC - no API key required
     // Use IP address for rate limiting
     const apiKey = request.headers.get('CF-Connecting-IP') || 'anonymous';
     const globalRateLimit = 100; // 100 requests per minute for everyone
 
-    // Check rate limit
-    const rateLimit = await checkRateLimit(env.RATE_LIMIT, apiKey, globalRateLimit);
-    
-    if (!rateLimit.allowed) {
-      return jsonResponse({
-        error: 'rate_limit_exceeded',
-        message: `Rate limit exceeded. Public limit is ${globalRateLimit} requests per minute.`,
-        rateLimit: globalRateLimit,
-        current: rateLimit.current,
-        resetIn: rateLimit.resetIn
-      }, 429, {
-        ...corsHeaders,
-        'X-RateLimit-Limit': String(globalRateLimit),
-        'X-RateLimit-Remaining': '0',
-        'X-RateLimit-Reset': String(rateLimit.resetAt),
-        'Retry-After': String(rateLimit.resetIn)
-      });
+    // Skip rate limiting for our own dashboard
+    let rateLimit;
+    if (!isOwnDashboard) {
+      // Check rate limit
+      rateLimit = await checkRateLimit(env.RATE_LIMIT, apiKey, globalRateLimit);
+      
+      if (!rateLimit.allowed) {
+        return jsonResponse({
+          error: 'rate_limit_exceeded',
+          message: `Rate limit exceeded. Public limit is ${globalRateLimit} requests per minute.`,
+          rateLimit: globalRateLimit,
+          current: rateLimit.current,
+          resetIn: rateLimit.resetIn
+        }, 429, {
+          ...corsHeaders,
+          'X-RateLimit-Limit': String(globalRateLimit),
+          'X-RateLimit-Remaining': '0',
+          'X-RateLimit-Reset': String(rateLimit.resetAt),
+          'Retry-After': String(rateLimit.resetIn)
+        });
+      }
+    } else {
+      // For our own dashboard, create a mock rate limit response
+      const now = Math.floor(Date.now() / 1000);
+      const windowStart = now - (now % RATE_LIMIT_WINDOW);
+      rateLimit = {
+        allowed: true,
+        current: 0,
+        resetAt: windowStart + RATE_LIMIT_WINDOW,
+        resetIn: RATE_LIMIT_WINDOW
+      };
     }
 
-    // Forward request to Whistle RPC
-    const rpcResponse = await fetch(WHISTLE_RPC_URL, {
+    // Forward request to backend RPC (Helius)
+    const rpcResponse = await fetch(env.HELIUS_RPC_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
