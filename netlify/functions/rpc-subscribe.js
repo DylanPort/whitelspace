@@ -4,7 +4,7 @@ const { Connection, PublicKey } = require('@solana/web3.js');
 
 // Configuration
 const STAKING_PROGRAM_ID = process.env.STAKING_PROGRAM_ID || 'whttByewzTQzAz3VMxnyJHdKsd7AyNRdG2tDHXVTksr'; // Mainnet (ACTUAL)
-const RPC_URL = process.env.SOLANA_RPC_URL || 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
+const RPC_URL = process.env.SOLANA_RPC_URL || 'https://rpc.whistle.ninja';
 const LAMPORTS_PER_SOL = 1_000_000_000;
 
 // Get X402 wallet PDA - using actual deployed payment vault

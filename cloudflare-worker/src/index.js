@@ -5,12 +5,12 @@
  * - API key validation
  * - Rate limiting
  * - Subscription expiry checks
- * - Request forwarding to Helius
+ * - Request forwarding to Whistle RPC
  * - Usage tracking
  */
 
-// Helius RPC endpoint (backend)
-const HELIUS_RPC_URL = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
+// Whistle RPC endpoint (backend)
+const WHISTLE_RPC_URL = 'https://rpc.whistle.ninja';
 
 // Rate limit windows (in seconds)
 const RATE_LIMIT_WINDOW = 60; // 1 minute
@@ -30,7 +30,7 @@ export default {
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, X-API-Key, Authorization',
+      'Access-Control-Allow-Headers': 'Content-Type, X-API-Key, Authorization, solana-client',
       'Access-Control-Max-Age': '86400',
     };
 
@@ -137,8 +137,8 @@ async function handleRpcRequest(request, env, corsHeaders) {
       });
     }
 
-    // Forward request to Helius
-    const rpcResponse = await fetch(HELIUS_RPC_URL, {
+    // Forward request to Whistle RPC
+    const rpcResponse = await fetch(WHISTLE_RPC_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -270,6 +270,7 @@ function jsonResponse(data, status = 200, additionalHeaders = {}) {
     status,
     headers: {
       'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
       ...additionalHeaders
     }
   });

@@ -9,8 +9,8 @@
   const SYSTEM_PROGRAM = '11111111111111111111111111111111';
   // Direct transfer mode: send fees to this fee collector wallet (not a program)
   const FEE_COLLECTOR_WALLET = 'G1RHSMtZVZLafmZ9man8anb2HXf7JP5Kh5sbrGZKM6Pg';
-  const RPC_URL = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
-  // Only use Helius RPC - public RPCs are rate-limited
+  const RPC_URL = 'https://rpc.whistle.ninja';
+  // Only use Whistle RPC - optimized for network
   const RPC_ENDPOINTS = [
     RPC_URL,
   ];

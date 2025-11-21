@@ -16,7 +16,7 @@ const fs = require('fs');
 
 // Configuration
 const STAKING_PROGRAM_ID = '5cmaPy5i8efSWSwRVVuWr9VUx8sAMv6qMVSE1o82TRgc';
-const RPC_URL = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
+const RPC_URL = 'https://rpc.whistle.ninja';
 
 // Instruction discriminator for InitializeX402Wallet (instruction index 29)
 const INITIALIZE_X402_INSTRUCTION = 29;

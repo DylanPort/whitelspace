@@ -5,7 +5,7 @@
  * - API key verification (wallet-based)
  * - Time-based subscription validation
  * - Rate limiting (per-minute)
- * - Request forwarding to Helius
+ * - Request forwarding to Whistle RPC
  * - WHISTLE branding
  */
 
@@ -22,7 +22,7 @@ export default {
         headers: {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, X-API-Key'
+          'Access-Control-Allow-Headers': 'Content-Type, X-API-Key, solana-client'
         }
       });
     }
@@ -94,12 +94,12 @@ async function handleRPC(request, env) {
       });
     }
 
-    // Forward to Helius
-    const HELIUS_RPC = `https://mainnet.helius-rpc.com/?api-key=${env.HELIUS_API_KEY}`;
+    // Forward to Whistle RPC
+    const WHISTLE_RPC = `https://rpc.whistle.ninja`;
     
     const body = await request.text();
     
-    const heliusResponse = await fetch(HELIUS_RPC, {
+    const whistleResponse = await fetch(WHISTLE_RPC, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -109,9 +109,9 @@ async function handleRPC(request, env) {
     });
     
     // Parse response
-    let data = await heliusResponse.json();
+    let data = await whistleResponse.json();
     
-    // Remove Helius metadata
+    // Remove external metadata
     if (data._metadata) delete data._metadata;
     
     // Rewrite error messages to WHISTLE branding
@@ -137,7 +137,7 @@ async function handleRPC(request, env) {
     await new Promise(resolve => setTimeout(resolve, delay));
     
     // Return with WHISTLE branding
-    return jsonResponse(data, heliusResponse.status, {
+    return jsonResponse(data, whistleResponse.status, {
       'X-RPC-Provider': 'WHISTLE Network',
       'X-Node-ID': data.whistle.node_id,
       'X-Response-Time': `${delay}ms`,
