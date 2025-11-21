@@ -1,139 +1,255 @@
-# 🔒 Whistle - Privacy-First Decentralized Communication Platform
+# 🛰️ Whistle Network — Community-Owned Private RPC Stack
 
-> **"Privacy is a right, not a privilege"**
+> **"Build the private infrastructure first, then everything else becomes possible."**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Solana](https://img.shields.io/badge/Solana-Mainnet-green)](https://solana.com)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18.16-brightgreen)](https://nodejs.org/)
+[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-orange)](https://workers.cloudflare.com)
 
-## 📖 Overview
+---
 
-Whistle is a revolutionary **privacy-first communication and security platform** that empowers users to take control of their digital privacy in an era of mass surveillance and data exploitation. Built on the Solana blockchain, Whistle combines cutting-edge technologies—including client-side AI, end-to-end encryption, decentralized P2P networking, and privacy-preserving tools—into a comprehensive ecosystem where privacy is the default, not an afterthought.
+## 📌 TL;DR
 
-### 🎯 The Problem We're Solving
+- **Custom RPC endpoint** (`https://rpc.whistle.ninja`) with Cloudflare Worker + provider proxy
+- **x402 → SOL 90/10 split** (stakers 90%, treasury 10%) enforced on-chain
+- **Provider + staker smart contract** running on Solana Mainnet (`contracts/encrypted-network-access-token`)
+- **Dashboard** (`whistle-dashboard/`) to monitor pool stats, providers, treasury
+- **40+ privacy tools** (x402 gated) migrating to NLx402 routing
+- **Community-first economics**: every paid query flows back to the people who fund/run the network
 
-In today's digital world:
-- **Centralized platforms** harvest and monetize your personal data
-- **Big Tech** tracks your every move, message, and transaction
-- **AI companies** train models on your private conversations
-- **Governments** conduct mass surveillance without oversight
-- **Data breaches** expose millions of users daily
-- **Your privacy** is treated as a product to be sold
+---
 
-### 💡 The Whistle Solution
+## 🔭 Current Focus
 
-Whistle provides a **complete privacy ecosystem** where:
+| Track | Status | Details |
+|-------|--------|---------|
+| RPC branding layer | ✅ | Cloudflare Worker + `whistle-rpc-proxy` forward to Helius while shielding metadata |
+| RPC ownership | 🚧 | Preparing multi-provider backend + integration nodes |
+| x402 distributor | ✅ | `x402-distributor-cron.js` automates payouts (90/10) |
+| Staker UX | ✅ | `claim-my-rewards.js` + dashboard cards |
+| NLx402 integration | 🧪 | Spec drafted, waiting for NLx402 public API |
+| Provider onboarding | 📋 | Contract-ready (register, heartbeat, slash) — UI/backend WIP |
 
-1. **Your Data Never Leaves Your Device**
-   - Client-side AI processing using Transformers.js and WebGPU
-   - No cloud servers analyzing your conversations
-   - AI inference happens locally in your browser
-   - Zero data collection, zero tracking, zero compromises
+---
 
-2. **True Peer-to-Peer Communication**
-   - Decentralized node network with no central servers
-   - End-to-end encrypted messaging, voice, and video calls
-   - WebRTC-based connections that bypass traditional infrastructure
-   - Offline mesh networking capability for communication without internet
+## 🧱 Architecture Snapshot
 
-3. **Privacy-Preserving Security Tools**
-   - Breach monitoring without exposing your email to third parties
-   - Steganography to hide messages in plain sight
-   - Location spoofing for GPS privacy
-   - Anonymous identity generation for pseudonymous interactions
-   - Exploit scanning to protect your applications
+```
+┌──────────────────────────────────────────────┐
+│  Apps / Dashboards                           │
+│  • whistle-dashboard/                        │
+│  • main.html demos (x402 gated tools)        │
+└────────────────┬─────────────────────────────┘
+                 │
+┌────────────────▼─────────────────────────────┐
+│  RPC Edge                                     │
+│  • cloudflare-worker/                         │
+│       - CORS policy, domain whitelist         │
+│       - Branding + rate limits                │
+│  • whistle-rpc-proxy/                         │
+│       - Request inspection, logging           │
+└────────────────┬─────────────────────────────┘
+                 │
+┌────────────────▼─────────────────────────────┐
+│  Upstream Providers                           │
+│  • Helius today (env.HELIUS_RPC_URL)          │
+│  • Future: community nodes via staking pool   │
+└────────────────┬─────────────────────────────┘
+                 │
+┌────────────────▼─────────────────────────────┐
+│  On-Chain Loyalty Layer                       │
+│  • contracts/encrypted-network-access-token   │
+│       - StakingPool / ProviderAccount         │
+│       - PaymentVault (70/20/5/5 split)        │
+│       - X402 wallet + ProcessX402Payment      │
+└────────────────┬─────────────────────────────┘
+                 │
+┌────────────────▼─────────────────────────────┐
+│  Automation + Tooling                         │
+│  • x402-distributor-cron.js                   │
+│  • claim-my-rewards.js                        │
+│  • NLx402 spec (docs)                         │
+└──────────────────────────────────────────────┘
+```
 
-4. **Web3 Integration with Privacy**
-   - Built on Solana for fast, low-cost transactions
-   - Non-custodial wallet (you control your keys)
-   - Privacy Swap for anonymous token exchanges
-   - Staking and node operation rewards
-   - x402 micropayments for privacy services
+---
 
-5. **Open Source and Auditable**
-   - Fully transparent codebase
-   - Community-driven development
-   - No hidden backdoors or tracking
-   - Verifiable privacy guarantees
+## 🧠 Key Components
 
-### 🌟 What Makes Whistle Different
+### 1. Whistle RPC Edge
+- `cloudflare-worker/`: Auth, rate limits, domain allow-list, abuse guard
+- `whistle-rpc-proxy/`: Node.js proxy for environments outside Workers
+- `wrangler.toml`: single source for upstream endpoint (`HELIUS_RPC_URL`)
 
-**CryptWhistle AI** - The world's first truly privacy-preserving AI platform:
-- Runs entirely in your browser using WebAssembly and WebGPU
-- Sentiment analysis, classification, and Q&A without cloud processing
-- Based on open-source Transformers.js and DistilBERT models
-- Execution proofs verify that data never touches a server
+### 2. Solana Smart Contract (ENAT)
+- Location: `contracts/encrypted-network-access-token/src/lib.rs`
+- **Core accounts:** `StakingPool`, `StakerAccount`, `ProviderAccount`, `PaymentVault`
+- **Instructions:** staking, provider lifecycle, slashing, x402 payments, NLx402 hooks
+- **Payment math:** Query flow = 70% providers / 20% bonus / 5% treasury / 5% stakers; X402 flow = 90% stakers / 10% treasury
 
-**Ghost Whistle Network** - Decentralized communication infrastructure:
-- Community-run bootstrap nodes (10+ nodes and growing)
-- P2P connections using WebRTC with STUN/TURN fallback
-- Encrypted file sharing and group chats
-- Voice and video calls with military-grade encryption
-- Works offline through mesh networking
+### 3. x402 Economic Layer
+- `x402-helpers.ts`: PDA helpers + instruction builders
+- `x402-distributor-cron.js`: daemon that sweeps X402 wallet → vault
+- `claim-my-rewards.js`: CLI tool to withdraw staker rewards
+- `X402-SETUP-GUIDE.md` & `STAKER-CLAIM-GUIDE.md`: operational docs
 
-**Privacy Tools Lab** - Professional-grade security tools for everyone:
-- Real-time breach monitoring (powered by HaveIBeenPwned)
-- Steganography for hiding encrypted messages in images
-- GPS location spoofing to protect your real-time location
-- Anonymous identity generation for privacy-focused personas
-- Exploit scanner to detect vulnerabilities before attackers do
+### 4. Dashboards + Clients
+- `whistle-dashboard/`: Next.js dashboard for pools, treasury, providers
+- `apps/web/` & `public/` HTML demos: x402-gated privacy tools
+- All client RPC calls now point to `https://rpc.whistle.ninja`
 
-**$WHISTLE Token Economy** - Privacy-aligned incentives:
-- Earn rewards by running decentralized nodes
-- Pay for premium privacy services with micropayments (x402)
-- Privacy Swap for anonymous token exchanges
-- Staking mechanisms to support network security
-- No KYC, no personal data required
+---
 
-### 🔐 Privacy Philosophy
+## 🚀 Quick Start
 
-We believe that **privacy is a fundamental human right**, not a luxury feature. Whistle is built on core principles:
+### Prerequisites
+```bash
+node >= 18.16
+npm >= 9
+rust + cargo (for Solana program)
+solana-cli (configured for mainnet or localnet)
+```
 
-- **Privacy by Design** - Every feature is architected with privacy as the foundation
-- **Data Minimization** - We don't collect what we don't absolutely need (which is nothing)
-- **User Sovereignty** - You own your data, your keys, and your identity
-- **Transparency** - Open-source code means auditable privacy guarantees
-- **No Backdoors** - We can't access your data even if we wanted to
-- **Decentralization** - No single point of failure or control
+### Clone & Install
+```bash
+git clone https://github.com/DylanPort/whitelspace.git
+cd whitelspace
+npm install
+```
 
-### 🚀 Use Cases
+### Run the Dashboard (dev)
+```bash
+cd whistle-dashboard
+npm install
+npm run dev
+# http://localhost:3000
+```
 
-**For Individuals:**
-- Communicate privately without corporate surveillance
-- Protect your digital identity and location
-- Check if your data has been breached without exposure
-- Use AI tools without sending data to cloud providers
-- Send anonymous messages and conduct private transactions
+### Deploy / Test the Cloudflare Worker
+```bash
+cd cloudflare-worker
+npm install
+wrangler dev
+wrangler publish
+```
 
-**For Activists & Journalists:**
-- Secure communication in high-risk environments
-- Anonymous publishing and whistleblowing
-- Offline communication during internet shutdowns
-- Location privacy to protect sources and movements
-- Encrypted file sharing for sensitive documents
+Set `HELIUS_RPC_URL` when publishing (or use Secrets UI).
 
-**For Developers:**
-- Privacy-preserving AI inference for applications
-- Decentralized storage and communication infrastructure
-- x402 micropayment integration for privacy services
-- Open-source privacy tools to integrate into projects
-- Community-run node network for resilient applications
+### X402 Distributor
+```bash
+cd contracts/encrypted-network-access-token
+npm install
 
-**For Privacy Advocates:**
-- Support decentralized infrastructure by running nodes
-- Contribute to open-source privacy tools
-- Earn rewards while supporting the privacy movement
-- Build on a platform that respects user rights
-- Join a community fighting for digital freedom
+# One-time PDA init
+node initialize-x402-wallet.js
 
-### 📊 Current Status
+# Start cron (docker-compose example)
+docker-compose up -d x402-distributor
+```
 
-- **Platform:** Public Beta (Web + Mobile)
-- **Blockchain:** Solana Mainnet
-- **Token:** $WHISTLE (Launched)
-- **Network:** 10+ active bootstrap nodes
-- **Open Source:** MIT License
-- **Community:** Growing globally on X and Telegram
+### Claim Staker Rewards
+```bash
+cd contracts/encrypted-network-access-token
+export STAKER_KEYPAIR=./staker.json
+node claim-my-rewards.js
+```
+
+---
+
+## ⚙️ Repository Guide
+
+| Path | Description |
+|------|-------------|
+| `whistle-dashboard/` | Next.js dashboard (pool stats, providers, treasury) |
+| `cloudflare-worker/` | Edge worker that fronts the branded RPC |
+| `whistle-rpc-proxy/` | Node proxy fallback for non-Worker deployments |
+| `contracts/encrypted-network-access-token/` | Solana program + tooling |
+| `apps/web/`, `public/` | Legacy/front-of-house privacy tools (x402 gated) |
+| `docs/` | Architecture notes, diagrams, Ghost Whistle docs |
+
+---
+
+## 🪙 Economics & Distribution
+
+| Source | Flow | Notes |
+|--------|------|-------|
+| RPC queries | 70% provider pool, 20% bonus pool, 5% treasury, 5% stakers | Managed via `PaymentVault` |
+| x402 payments | 90% stakers, 10% treasury | `ProcessX402Payment` instruction |
+| NLx402 routing | Pending | Stakers opt-in once API stable |
+
+### Highlighted Files
+- `contracts/encrypted-network-access-token/src/lib.rs` — On-chain math
+- `contracts/.../x402-distributor-cron.js` — Off-chain automation
+- `contracts/.../claim-my-rewards.js` — Staker UX
+
+---
+
+## 📡 Provider & Integration Nodes (WIP)
+
+What’s live in code:
+- `RegisterProvider`, `UpdateEndpoint`, `RecordHeartbeat`, `SlashProvider`
+- Reputation metrics: uptime, response time, accuracy, heartbeats
+- Payment vault accounting to reward providers & stakers
+
+What’s missing (help wanted):
+- Provider onboarding UI/API
+- Health-check scheduler + NL routing
+- Automatic failover + geo balancing
+
+---
+
+## 🧭 Roadmap (public items)
+
+- [x] Replace every client-side Helius reference with `rpc.whistle.ninja`
+- [x] Remove Cloudflare “powered by Helius” copy
+- [x] Fix CORS + rate limits for own domains
+- [x] Automate x402 payouts + staker claims
+- [ ] Ship provider control panel (registration, uptime graph)
+- [ ] Integrate NLx402 + trustless 5% fee routing to @PerkinsFund
+- [ ] Launch multi-provider load balancer + Falco-style healthchecks
+- [ ] Add zk-proof-of-privacy for RPC queries (R&D)
+
+---
+
+## 🛠️ Contributing
+
+1. Fork the repo
+2. Create a branch: `git checkout -b feat/my-idea`
+3. Make changes + add tests
+4. Run lint/tests where applicable
+5. Open a PR with context (which subsystem, which env vars, etc.)
+
+Areas needing help:
+- Provider onboarding backend
+- NLx402 client integration
+- Dashboard graphs + analytics
+- Documentation / tutorials
+
+---
+
+## 🔐 Security & Privacy Notes
+
+- No telemetry, no analytics, no hidden requests
+- Worker + proxy strip identifying headers before reaching upstream
+- Secret keys (Helius, authority keypairs) are never committed — use `.env` or Cloudflare KV
+- Staker/provider PDAs verified on-chain to prevent spoofing
+- Rate limiting exempt for `*.whistle.ninja` to avoid self-DDoS
+
+---
+
+## 📡 Links
+
+- **Website:** [whistle.ninja](https://whistle.ninja)
+- **RPC Endpoint:** `https://rpc.whistle.ninja`
+- **Twitter / X:** [@Whistle_Ninja](https://x.com/Whistle_Ninja)
+- **Telegram:** [@whistleninja](https://t.me/whistleninja)
+- **Smart Contract:** [`5cmaPy5i8efSWSwRVVuWr9VUx8sAMv6qMVSE1o82TRgc`](https://solscan.io/account/5cmaPy5i8efSWSwRVVuWr9VUx8sAMv6qMVSE1o82TRgc)
+
+---
+
+**Built for Solana builders tired of centralized chokepoints.**  
+If you want to run a provider, integrate NLx402, or help harden the infra — DM us. Privacy infrastructure only exists if we build it ourselves. 🛡️
 
 ## 🌟 Key Features
 
