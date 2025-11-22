@@ -467,7 +467,7 @@ export async function fetchTokenVault() {
 
 export async function fetchPaymentVault(): Promise<PaymentVault | null> {
   try {
-    const [vaultPDA] = getPaymentVaultPDA();
+    const [vaultPDA, bump] = getPaymentVaultPDA();
     const accountInfo = await connection.getAccountInfo(vaultPDA);
 
     if (!accountInfo || !accountInfo.data) {
@@ -503,6 +503,7 @@ export async function fetchPaymentVault(): Promise<PaymentVault | null> {
       totalCollected,
       providerPool: BigInt(0),
       lastDistribution: BigInt(0),
+      bump, // PDA bump from derivation
     };
   } catch (error) {
     console.error('Error fetching payment vault:', error);
