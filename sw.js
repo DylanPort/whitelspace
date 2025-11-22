@@ -1,5 +1,5 @@
 // Ghost Whistle Service Worker
-const CACHE_NAME = 'ghost-whistle-v1.5';
+const CACHE_NAME = 'ghost-whistle-v2.0-x402-sol';
 
 // Core assets to cache (only files we control)
 const CORE_ASSETS = [
