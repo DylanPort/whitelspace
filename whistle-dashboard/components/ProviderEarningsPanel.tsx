@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { fetchStakerAccount, createClaimStakerRewardsTransaction, lamportsToSol, connection, fetchPaymentVault } from '@/lib/contract';
+import { fetchStakerAccount, fetchStakingPool, fetchTokenVault, createClaimStakerRewardsTransaction, lamportsToSol, connection, fetchPaymentVault } from '@/lib/contract';
 import PanelFrame from './PanelFrame';
 import toast from 'react-hot-toast';
 
@@ -25,12 +25,57 @@ export default function ProviderEarningsPanel() {
 
       setLoading(true);
       try {
+        console.log('='.repeat(60));
+        console.log('🔍 LOADING STAKER REWARDS FOR:', publicKey.toBase58());
+        console.log('='.repeat(60));
+        
         // Fetch staker account
         const stakerAccount = await fetchStakerAccount(publicKey);
+        console.log('==== PROVIDER EARNINGS PANEL DEBUG ====');
+        console.log('Wallet:', publicKey.toBase58());
+        console.log('Staker Account:', stakerAccount);
         
         if (stakerAccount) {
+          console.log('Raw staked amount:', stakerAccount.stakedAmount);
+          console.log('Raw pending rewards:', stakerAccount.pendingRewards);
           setStakedAmount(Number(stakerAccount.stakedAmount) / 1e6); // WHISTLE tokens (6 decimals)
-          setEarnings(lamportsToSol(stakerAccount.pendingRewards)); // SOL rewards
+          let calculatedEarnings = lamportsToSol(stakerAccount.pendingRewards); // SOL rewards
+          
+          // If no pending rewards set, calculate from pool
+          if (calculatedEarnings === 0) {
+            console.log('🔍 Calculating rewards from pool...');
+            
+            // Get REAL total staked from token vault (not pool.totalStaked which is corrupted)
+            const vault = await fetchPaymentVault();
+            const tokenVault = await fetchTokenVault(); // Get actual token balance
+            
+            console.log('Token Vault:', tokenVault);
+            console.log('Payment Vault:', vault);
+            
+            if (tokenVault && vault && vault.stakerRewardsPool > 0) {
+              // Use token vault balance as the REAL total staked
+              const realTotalStaked = Number(tokenVault.amount);
+              
+              console.log('Real Total Staked:', realTotalStaked);
+              console.log('Your Staked Amount:', stakerAccount.stakedAmount);
+              console.log('Staker Rewards Pool:', vault.stakerRewardsPool);
+              
+              if (realTotalStaked > 0) {
+                // Calculate proportional share using REAL total
+                const stakerShare = (Number(stakerAccount.stakedAmount) / realTotalStaked) * Number(vault.stakerRewardsPool);
+                calculatedEarnings = lamportsToSol(stakerShare);
+                
+                console.log('Calculated Share:', stakerShare, 'lamports');
+                console.log('Calculated Earnings:', calculatedEarnings, 'SOL');
+              }
+            } else {
+              console.log('❌ Missing data:', { tokenVault: !!tokenVault, vault: !!vault, pool: vault?.stakerRewardsPool });
+            }
+          } else {
+            console.log('✅ Using pending rewards:', calculatedEarnings, 'SOL');
+          }
+          
+          setEarnings(calculatedEarnings);
         } else {
           // Not a staker yet
           setStakedAmount(0);
@@ -44,7 +89,8 @@ export default function ProviderEarningsPanel() {
         }
         
       } catch (err) {
-        console.error('Failed to load staker rewards:', err);
+        console.error('💥 Failed to load staker rewards:', err);
+        console.error('Error details:', err);
         setEarnings(0);
         setStakedAmount(0);
         setTotalStakerRewards(0);
@@ -178,12 +224,32 @@ export default function ProviderEarningsPanel() {
               --
             </div>
           ) : (
-            <div className="text-[56px] font-bold leading-none tracking-tight">
-              {earnings.toFixed(2)}
-            </div>
+            <>
+              {/* Main display - shows 0.00 for tiny amounts */}
+              <div className="text-[56px] font-bold leading-none tracking-tight">
+                {earnings >= 0.01 ? earnings.toFixed(2) : '0.00'}
+              </div>
+              
+              {/* Micro-rewards indicator */}
+              {earnings > 0 && earnings < 0.01 && (
+                <div className="mt-2 bg-emerald-900/30 border border-emerald-500/30 rounded px-2 py-1">
+                  <div className="text-[11px] text-emerald-400 font-mono animate-pulse">
+                    💎 {earnings.toFixed(8)} SOL
+                  </div>
+                  <div className="text-[9px] text-emerald-300/80">
+                    ≈ ${(earnings * 200).toFixed(4)} USD
+                  </div>
+                </div>
+              )}
+            </>
           )}
+          
           <div className="text-xs text-gray-400 tracking-widest mt-2">SOL</div>
-          <div className="text-[9px] text-gray-600 mt-1">Your Share (90% X402)</div>
+          <div className="text-[9px] text-gray-600 mt-1">
+            {earnings > 0 && earnings < 0.01 
+              ? '⚡ Micro-rewards detected!' 
+              : 'Your Share from X402 Pool'}
+          </div>
         </div>
 
         {/* Claim Button */}
@@ -202,10 +268,21 @@ export default function ProviderEarningsPanel() {
               <span>Your Stake:</span>
               <span className="text-white">{stakedAmount.toLocaleString()} WHISTLE</span>
             </div>
+            <div className="flex justify-between">
+              <span>Your Share:</span>
+              <span className="text-yellow-400">
+                {((stakedAmount / 89257444) * 100).toFixed(4)}%
+              </span>
+            </div>
             {totalStakerRewards > 0 && (
               <div className="flex justify-between">
                 <span>Total Pool:</span>
                 <span className="text-emerald-400">{totalStakerRewards.toFixed(4)} SOL</span>
+              </div>
+            )}
+            {earnings > 0 && earnings < 0.0001 && (
+              <div className="mt-2 text-[8px] text-yellow-500 text-center">
+                ⚠️ Rewards below minimum display threshold
               </div>
             )}
           </div>

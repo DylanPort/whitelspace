@@ -205,8 +205,8 @@ use spl_token::instruction as token_instruction;
 //
 // ============= END STRUCTURED EVENT LOGGING =============
 
-// Program ID (Mainnet)
-solana_program::declare_id!("5cmaPy5i8efSWSwRVVuWr9VUx8sAMv6qMVSE1o82TRgc");
+// Program ID (Mainnet - Vanity)
+solana_program::declare_id!("whttByewzTQzAz3VMxnyJHdKsd7AyNRdG2tDHXVTksr");
 
 entrypoint!(process_instruction);
 
@@ -382,7 +382,6 @@ pub struct DeveloperAccount {
     pub developer: Pubkey,            // Developer wallet
     pub whistle_staked: u64,          // WHISTLE tokens staked
     pub tier: DeveloperTier,          // Current tier based on stake
-    pub sol_balance: u64,             // Prepaid SOL balance in lamports (for paid queries)
     pub total_queries: u64,           // Lifetime queries made
     pub free_queries_used_month: u64, // Free queries used this month
     pub last_month_reset: i64,        // Last time monthly counter reset
@@ -431,7 +430,6 @@ pub enum StakingInstruction {
     /// 3. `[]` WHISTLE mint
     /// 4. `[]` Token program
     /// 5. `[]` System program
-    /// 6. `[]` Rent sysvar
     InitializePool {
         min_stake_amount: u64,
         tokens_per_whistle: u64,
@@ -515,7 +513,6 @@ pub enum StakingInstruction {
     /// 0. `[writable, signer]` Authority
     /// 1. `[writable]` Payment vault (PDA)
     /// 2. `[]` System program
-    /// 3. `[]` Rent sysvar
     InitializePaymentVault,
 
     /// Register as a data provider
@@ -728,26 +725,6 @@ pub enum StakingInstruction {
     /// 3. `[]` System program
     ClaimReferralEarnings,
 
-    /// Deposit SOL to prepaid balance for paid queries
-    /// Accounts:
-    /// 0. `[writable, signer]` Developer
-    /// 1. `[writable]` Developer account (PDA)
-    /// 2. `[writable]` Payment vault (PDA)
-    /// 3. `[]` System program
-    DepositSol {
-        amount: u64,  // SOL amount in lamports
-    },
-
-    /// Withdraw SOL from prepaid balance
-    /// Accounts:
-    /// 0. `[writable, signer]` Developer
-    /// 1. `[writable]` Developer account (PDA)
-    /// 2. `[writable]` Payment vault (PDA)
-    /// 3. `[]` System program
-    WithdrawSol {
-        amount: u64,  // SOL amount in lamports
-    },
-
     // ========== X402 PAYMENT INSTRUCTIONS ==========
 
     /// Initialize X402 payment collection wallet (one-time setup)
@@ -896,14 +873,6 @@ pub fn process_instruction(
             claim_referral_earnings(program_id, accounts)
         }
 
-        StakingInstruction::DepositSol { amount } => {
-            deposit_sol(program_id, accounts, amount)
-        }
-
-        StakingInstruction::WithdrawSol { amount } => {
-            withdraw_sol(program_id, accounts, amount)
-        }
-
         // X402 payment instructions
         StakingInstruction::InitializeX402Wallet => {
             initialize_x402_wallet(program_id, accounts)
@@ -931,7 +900,6 @@ fn initialize_pool(
     let whistle_mint = next_account_info(account_info_iter)?;
     let token_program = next_account_info(account_info_iter)?;
     let system_program = next_account_info(account_info_iter)?;
-    let rent_sysvar = next_account_info(account_info_iter)?;
 
     // LOW SECURITY FIX: Validate program IDs
     if *token_program.key != spl_token::id() {
@@ -947,25 +915,16 @@ fn initialize_pool(
         return Err(ProgramError::MissingRequiredSignature);
     }
 
-    // Check if pool already initialized - allow authority to reinitialize if needed
-    let pool_exists = !pool_account.data_is_empty();
-    let vault_exists = !token_vault.data_is_empty();
-    
-    if pool_exists || vault_exists {
-        msg!("WARNING: Pool/vault already exist - reinitializing with authority permission");
-        msg!("Pool exists: {}, Vault exists: {}", pool_exists, vault_exists);
-        
-        // If pool exists, verify it's owned by our program
-        if pool_exists && pool_account.owner != program_id {
-            msg!("Pool account not owned by program");
-            return Err(ProgramError::IncorrectProgramId);
-        }
-        
-        // If vault exists, verify it's owned by token program
-        if vault_exists && token_vault.owner != token_program.key {
-            msg!("Token vault not owned by token program");
-            return Err(ProgramError::IncorrectProgramId);
-        }
+    // CRITICAL FIX: Check if pool already initialized
+    if !pool_account.data_is_empty() {
+        msg!("Pool already initialized - cannot re-initialize");
+        return Err(ProgramError::AccountAlreadyInitialized);
+    }
+
+    // CRITICAL FIX: Check if vault already exists
+    if !token_vault.data_is_empty() {
+        msg!("Token vault already exists - cannot re-initialize");
+        return Err(ProgramError::AccountAlreadyInitialized);
     }
 
     // Validate parameters
@@ -1034,30 +993,27 @@ fn initialize_pool(
         return Err(ProgramError::InvalidSeeds);
     }
 
-    let rent = Rent::from_account_info(rent_sysvar)?;
+    let rent = Rent::get()?;
     
-    // Create pool account (skip if already exists)
-    if !pool_exists {
-        // Use exact Borsh serialized size (not Rust mem size!)
-        // StakingPool: 32+32+32+8+8+8+8+1+8+8+8+1+1 = 155 bytes
-        const STAKING_POOL_SIZE: usize = 155;
-        let pool_space = STAKING_POOL_SIZE;
-        let pool_lamports = rent.minimum_balance(pool_space);
+    // Create pool account
+    // Use Borsh serialized size (not Rust in-memory size!)
+    // StakingPool: 32+32+32+8+8+8+8+1+8+8+8+1+1 = 155 bytes
+    // But we need extra space for alignment/future fields
+    const STAKING_POOL_SIZE: usize = 155;  // Exact Borsh serialized size
+    let pool_space = STAKING_POOL_SIZE;
+    let pool_lamports = rent.minimum_balance(pool_space);
 
-        invoke_signed(
-            &system_instruction::create_account(
-                authority.key,
-                pool_account.key,
-                pool_lamports,
-                pool_space as u64,
-                program_id,
-            ),
-            &[authority.clone(), pool_account.clone(), system_program.clone()],
-            &[&[b"staking_pool", authority.key.as_ref(), &[bump]]],
-        )?;
-    } else {
-        msg!("Pool account already exists - skipping creation");
-    }
+    invoke_signed(
+        &system_instruction::create_account(
+            authority.key,
+            pool_account.key,
+            pool_lamports,
+            pool_space as u64,
+            program_id,
+        ),
+        &[authority.clone(), pool_account.clone(), system_program.clone()],
+        &[&[b"staking_pool", authority.key.as_ref(), &[bump]]],
+    )?;
 
     // Create SPL token account for vault
     let token_account_space = 165; // SPL token account size
@@ -1075,9 +1031,9 @@ fn initialize_pool(
         &[&[b"token_vault", authority.key.as_ref(), &[vault_bump]]],
     )?;
 
-    // Initialize token account
+    // Initialize token account (using initialize_account3 which doesn't require Rent sysvar)
     invoke(
-        &token_instruction::initialize_account(
+        &token_instruction::initialize_account3(
             token_program.key,
             token_vault.key,
             whistle_mint.key,
@@ -1268,7 +1224,9 @@ fn stake(program_id: &Pubkey, accounts: &[AccountInfo], amount: u64) -> ProgramR
 
         // Initialize new staker account
         let rent = Rent::get()?;
-        let space = std::mem::size_of::<StakerAccount>();
+        // Use Borsh serialized size: 32+8+8+8+1+8+8+8+1 = 82 bytes
+        const STAKER_ACCOUNT_SIZE: usize = 82;
+        let space = STAKER_ACCOUNT_SIZE;
         let lamports = rent.minimum_balance(space);
 
         invoke_signed(
@@ -1988,7 +1946,6 @@ fn initialize_payment_vault(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pr
     let authority = next_account_info(account_info_iter)?;
     let payment_vault_account = next_account_info(account_info_iter)?;
     let system_program = next_account_info(account_info_iter)?;
-    let rent_sysvar = next_account_info(account_info_iter)?;
 
     // LOW SECURITY FIX: Validate system program ID
     if *system_program.key != solana_program::system_program::id() {
@@ -2015,8 +1972,10 @@ fn initialize_payment_vault(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pr
         return Err(ProgramError::InvalidSeeds);
     }
 
-    let rent = Rent::from_account_info(rent_sysvar)?;
-    let space = std::mem::size_of::<PaymentVault>();
+    let rent = Rent::get()?;
+    // Use Borsh serialized size: 32+8+8+8+8+8+8+8+1 = 89 bytes
+    const PAYMENT_VAULT_SIZE: usize = 89;
+    let space = PAYMENT_VAULT_SIZE;
     let lamports = rent.minimum_balance(space);
 
     invoke_signed(
@@ -3453,7 +3412,9 @@ fn register_developer(
 
     // Create developer account
     let rent = Rent::get()?;
-    let space = std::mem::size_of::<DeveloperAccount>();
+    // Use Borsh serialized size: 32+8+1+8+8+8+8+8+4+33+8+8+8+1+1 = 144 bytes
+    const DEVELOPER_ACCOUNT_SIZE: usize = 144;
+    let space = DEVELOPER_ACCOUNT_SIZE;
     let lamports = rent.minimum_balance(space);
 
     invoke_signed(
@@ -3473,7 +3434,6 @@ fn register_developer(
         developer: *developer.key,
         whistle_staked: stake_amount,
         tier: tier.clone(),
-        sol_balance: 0,  // Initialize prepaid SOL balance to 0
         total_queries: 0,
         free_queries_used_month: 0,
         last_month_reset: clock.unix_timestamp,
@@ -3667,57 +3627,6 @@ fn unstake_developer(
         return Err(ProgramError::InvalidSeeds);
     }
 
-    // OVERAGE PROTECTION: Check if unstaking would cause query overage
-    // Calculate new tier BEFORE unstaking
-    let remaining_stake = developer_data.whistle_staked
-        .checked_sub(amount)
-        .ok_or(ProgramError::InvalidInstructionData)?;
-    
-    let (new_tier, _) = calculate_developer_tier(remaining_stake);
-    
-    // Get new tier's free query limit
-    let new_free_limit = match new_tier {
-        DeveloperTier::Hobbyist => 1000,
-        DeveloperTier::Builder => 10000,
-        DeveloperTier::Pro => 50000,
-        DeveloperTier::Enterprise => 250000,
-        DeveloperTier::Whale => 999999999,
-    };
-    
-    // Check if already used more than new tier allows this month
-    if developer_data.free_queries_used_month > new_free_limit {
-        let overage = developer_data.free_queries_used_month - new_free_limit;
-        let query_cost = 100000; // 0.0001 SOL per query
-        let overage_cost = overage
-            .checked_mul(query_cost)
-            .ok_or(ProgramError::InvalidInstructionData)?;
-        
-        // Apply rebate
-        let rebate = overage_cost
-            .checked_mul(developer_data.rebate_percentage)
-            .ok_or(ProgramError::InvalidInstructionData)?
-            .checked_div(10000)
-            .ok_or(ProgramError::InvalidInstructionData)?;
-        let net_cost = overage_cost
-            .checked_sub(rebate)
-            .ok_or(ProgramError::InvalidInstructionData)?;
-        
-        // Check prepaid balance sufficient
-        if developer_data.sol_balance < net_cost {
-            msg!("Cannot unstake: {} queries over new tier limit ({} > {})", overage, developer_data.free_queries_used_month, new_free_limit);
-            msg!("Required {} SOL to cover overage, but only have {} SOL", net_cost as f64 / 1e9, developer_data.sol_balance as f64 / 1e9);
-            msg!("Deposit {} SOL or wait until month resets", (net_cost - developer_data.sol_balance) as f64 / 1e9);
-            return Err(ProgramError::InsufficientFunds);
-        }
-        
-        // Charge retroactively from prepaid balance
-        developer_data.sol_balance = developer_data.sol_balance
-            .checked_sub(net_cost)
-            .ok_or(ProgramError::InvalidInstructionData)?;
-        msg!("✓ Charged {} lamports ({} SOL) for {} overage queries", net_cost, net_cost as f64 / 1e9, overage);
-        msg!("Remaining prepaid balance: {} lamports ({} SOL)", developer_data.sol_balance, developer_data.sol_balance as f64 / 1e9);
-    }
-
     // Transfer WHISTLE tokens back from vault
     invoke_signed(
         &token_instruction::transfer(
@@ -3850,119 +3759,77 @@ fn process_developer_query(
         developer_data.last_month_reset = clock.unix_timestamp;
     }
 
-    // Get free query limit for tier
-    let free_limit = match developer_data.tier {
-        DeveloperTier::Hobbyist => 1000,
-        DeveloperTier::Builder => 10000,
-        DeveloperTier::Pro => 50000,
-        DeveloperTier::Enterprise => 250000,
-        DeveloperTier::Whale => 999999999,
-    };
+    // Calculate rebate amount
+    let rebate_amount = query_cost
+        .checked_mul(developer_data.rebate_percentage)
+        .ok_or(ProgramError::InvalidInstructionData)?
+        .checked_div(10000)
+        .ok_or(ProgramError::InvalidInstructionData)?;
 
-    let is_free_query = developer_data.free_queries_used_month < free_limit;
+    let net_cost = query_cost
+        .checked_sub(rebate_amount)
+        .ok_or(ProgramError::InvalidInstructionData)?;
 
-    if !is_free_query {
-        // Beyond free tier - deduct from prepaid balance
-        
-        // Calculate rebate
-        let rebate_amount = query_cost
-            .checked_mul(developer_data.rebate_percentage)
-            .ok_or(ProgramError::InvalidInstructionData)?
-            .checked_div(10000)
-            .ok_or(ProgramError::InvalidInstructionData)?;
+    // Transfer net SOL from developer to payment vault
+    invoke(
+        &system_instruction::transfer(developer.key, payment_vault.key, net_cost),
+        &[developer.clone(), payment_vault.clone(), system_program.clone()],
+    )?;
 
-        let net_cost = query_cost
-            .checked_sub(rebate_amount)
-            .ok_or(ProgramError::InvalidInstructionData)?;
+    // Split payment: 70/20/5/5 (same as regular queries)
+    let provider_share = query_cost.checked_mul(70).ok_or(ProgramError::InvalidInstructionData)? / 100;
+    let bonus_share = query_cost.checked_mul(20).ok_or(ProgramError::InvalidInstructionData)? / 100;
+    let treasury_share = query_cost.checked_mul(5).ok_or(ProgramError::InvalidInstructionData)? / 100;
+    let staker_share = query_cost
+        .checked_sub(provider_share)
+        .ok_or(ProgramError::InvalidInstructionData)?
+        .checked_sub(bonus_share)
+        .ok_or(ProgramError::InvalidInstructionData)?
+        .checked_sub(treasury_share)
+        .ok_or(ProgramError::InvalidInstructionData)?;
 
-        // Check sufficient prepaid balance
-        if developer_data.sol_balance < net_cost {
-            msg!("Insufficient prepaid SOL balance: {} < {}", developer_data.sol_balance, net_cost);
-            msg!("Deposit more SOL at https://whistle.ninja/rpc-access");
-            return Err(ProgramError::InsufficientFunds);
-        }
+    // Update vault pools
+    vault_data.total_collected = vault_data.total_collected
+        .checked_add(query_cost)
+        .ok_or(ProgramError::InvalidInstructionData)?;
+    vault_data.provider_pool = vault_data.provider_pool
+        .checked_add(provider_share)
+        .ok_or(ProgramError::InvalidInstructionData)?;
+    vault_data.bonus_pool = vault_data.bonus_pool
+        .checked_add(bonus_share)
+        .ok_or(ProgramError::InvalidInstructionData)?;
+    vault_data.treasury = vault_data.treasury
+        .checked_add(treasury_share)
+        .ok_or(ProgramError::InvalidInstructionData)?;
+    vault_data.staker_rewards_pool = vault_data.staker_rewards_pool
+        .checked_add(staker_share)
+        .ok_or(ProgramError::InvalidInstructionData)?;
 
-        // Deduct from developer's prepaid balance (not direct transfer)
-        developer_data.sol_balance = developer_data.sol_balance
-            .checked_sub(net_cost)
-            .ok_or(ProgramError::InvalidInstructionData)?;
+    // Track rebate in developer rebate pool (for accounting)
+    vault_data.developer_rebate_pool = vault_data.developer_rebate_pool
+        .checked_add(rebate_amount)
+        .ok_or(ProgramError::InvalidInstructionData)?;
 
-        msg!("Paid query charged: {} lamports (rebate: {})", net_cost, rebate_amount);
-        msg!("Remaining prepaid balance: {} lamports", developer_data.sol_balance);
-    } else {
-        msg!("Free query: {} / {}", developer_data.free_queries_used_month + 1, free_limit);
-    }
-
-    // Only distribute revenue if paid query
-    if !is_free_query {
-        // Split payment: 70/20/5/5 (same as regular queries)
-        let provider_share = query_cost.checked_mul(70).ok_or(ProgramError::InvalidInstructionData)? / 100;
-        let bonus_share = query_cost.checked_mul(20).ok_or(ProgramError::InvalidInstructionData)? / 100;
-        let treasury_share = query_cost.checked_mul(5).ok_or(ProgramError::InvalidInstructionData)? / 100;
-        let staker_share = query_cost
-            .checked_sub(provider_share)
-            .ok_or(ProgramError::InvalidInstructionData)?
-            .checked_sub(bonus_share)
-            .ok_or(ProgramError::InvalidInstructionData)?
-            .checked_sub(treasury_share)
-            .ok_or(ProgramError::InvalidInstructionData)?;
-
-        // Update vault pools
-        vault_data.total_collected = vault_data.total_collected
-            .checked_add(query_cost)
-            .ok_or(ProgramError::InvalidInstructionData)?;
-        vault_data.provider_pool = vault_data.provider_pool
-            .checked_add(provider_share)
-            .ok_or(ProgramError::InvalidInstructionData)?;
-        vault_data.bonus_pool = vault_data.bonus_pool
-            .checked_add(bonus_share)
-            .ok_or(ProgramError::InvalidInstructionData)?;
-        vault_data.treasury = vault_data.treasury
-            .checked_add(treasury_share)
-            .ok_or(ProgramError::InvalidInstructionData)?;
-        vault_data.staker_rewards_pool = vault_data.staker_rewards_pool
-            .checked_add(staker_share)
-            .ok_or(ProgramError::InvalidInstructionData)?;
-
-        // Calculate rebate amount for tracking
-        let rebate_amount = query_cost
-            .checked_mul(developer_data.rebate_percentage)
-            .ok_or(ProgramError::InvalidInstructionData)?
-            .checked_div(10000)
-            .ok_or(ProgramError::InvalidInstructionData)?;
-
-        // Track rebate in developer rebate pool (for accounting)
-        vault_data.developer_rebate_pool = vault_data.developer_rebate_pool
-            .checked_add(rebate_amount)
-            .ok_or(ProgramError::InvalidInstructionData)?;
-
-        // Credit provider
-        provider_data.pending_earnings = provider_data.pending_earnings
-            .checked_add(provider_share)
-            .ok_or(ProgramError::InvalidInstructionData)?;
-        provider_data.total_earned = provider_data.total_earned
-            .checked_add(provider_share)
-            .ok_or(ProgramError::InvalidInstructionData)?;
-    }
-    // Update query counters (for both free and paid)
+    // Credit provider
+    provider_data.pending_earnings = provider_data.pending_earnings
+        .checked_add(provider_share)
+        .ok_or(ProgramError::InvalidInstructionData)?;
+    provider_data.total_earned = provider_data.total_earned
+        .checked_add(provider_share)
+        .ok_or(ProgramError::InvalidInstructionData)?;
     provider_data.queries_served = provider_data.queries_served
         .checked_add(1)
         .ok_or(ProgramError::InvalidInstructionData)?;
 
+    // Update developer stats
     developer_data.total_queries = developer_data.total_queries
         .checked_add(1)
         .ok_or(ProgramError::InvalidInstructionData)?;
 
-    developer_data.free_queries_used_month = developer_data.free_queries_used_month
-        .checked_add(1)
-        .ok_or(ProgramError::InvalidInstructionData)?;
-
     // MEDIUM SECURITY FIX: Enhanced referral earnings validation with pool return
-    // Only process referral for paid queries
     let mut referral_credited = false;
-    if !is_free_query {
-        if let Some(referrer_pubkey) = developer_data.referred_by {
-            let referral_earning = query_cost.checked_mul(2).ok_or(ProgramError::InvalidInstructionData)? / 100;
+    if let Some(referrer_pubkey) = developer_data.referred_by {
+        let referral_earning = query_cost.checked_mul(2).ok_or(ProgramError::InvalidInstructionData)? / 100;
         
         // Try to get referrer account (7th account, optional but recommended)
         match account_info_iter.next() {
@@ -4053,7 +3920,6 @@ fn process_developer_query(
                     .checked_add(referral_earning)
                     .ok_or(ProgramError::InvalidInstructionData)?;
             }
-        }
         }
     }
 
@@ -4246,178 +4112,6 @@ fn claim_referral_earnings(
     developer_data.serialize(&mut &mut developer_account.data.borrow_mut()[..])?;
 
     msg!("Developer claimed {} SOL in referral earnings", amount);
-    Ok(())
-}
-
-/// Deposit SOL to prepaid balance for paid queries
-fn deposit_sol(
-    program_id: &Pubkey,
-    accounts: &[AccountInfo],
-    amount: u64,
-) -> ProgramResult {
-    let account_info_iter = &mut accounts.iter();
-    let developer = next_account_info(account_info_iter)?;
-    let developer_account = next_account_info(account_info_iter)?;
-    let payment_vault = next_account_info(account_info_iter)?;
-    let system_program = next_account_info(account_info_iter)?;
-
-    // Validate system program ID
-    if *system_program.key != solana_program::system_program::id() {
-        msg!("Invalid system program");
-        return Err(ProgramError::IncorrectProgramId);
-    }
-
-    if !developer.is_signer {
-        return Err(ProgramError::MissingRequiredSignature);
-    }
-
-    if developer_account.owner != program_id {
-        return Err(ProgramError::IncorrectProgramId);
-    }
-
-    if payment_vault.owner != program_id {
-        return Err(ProgramError::IncorrectProgramId);
-    }
-
-    // Minimum deposit: 0.001 SOL (1,000,000 lamports = 10 queries)
-    if amount < 1_000_000 {
-        msg!("Minimum deposit is 0.001 SOL");
-        return Err(ProgramError::InvalidInstructionData);
-    }
-
-    let mut developer_data = DeveloperAccount::try_from_slice(&developer_account.data.borrow())?;
-
-    // Verify developer PDA
-    let (developer_pda, _) = Pubkey::find_program_address(
-        &[b"developer", developer.key.as_ref()],
-        program_id,
-    );
-
-    if developer_pda != *developer_account.key {
-        msg!("Invalid developer PDA");
-        return Err(ProgramError::InvalidSeeds);
-    }
-
-    if developer_data.developer != *developer.key {
-        msg!("Not the developer owner");
-        return Err(ProgramError::InvalidAccountData);
-    }
-
-    if !developer_data.is_active {
-        msg!("Developer account is not active");
-        return Err(ProgramError::InvalidAccountData);
-    }
-
-    // Transfer SOL from developer to payment vault
-    invoke(
-        &system_instruction::transfer(developer.key, payment_vault.key, amount),
-        &[developer.clone(), payment_vault.clone(), system_program.clone()],
-    )?;
-
-    // Add to developer's prepaid balance
-    developer_data.sol_balance = developer_data.sol_balance
-        .checked_add(amount)
-        .ok_or(ProgramError::InvalidInstructionData)?;
-
-    developer_data.serialize(&mut &mut developer_account.data.borrow_mut()[..])?;
-
-    msg!("Deposited {} lamports ({}  SOL)", amount, amount as f64 / 1e9);
-    msg!("New balance: {} lamports ({} SOL)", developer_data.sol_balance, developer_data.sol_balance as f64 / 1e9);
-
-    Ok(())
-}
-
-/// Withdraw SOL from prepaid balance
-fn withdraw_sol(
-    program_id: &Pubkey,
-    accounts: &[AccountInfo],
-    amount: u64,
-) -> ProgramResult {
-    let account_info_iter = &mut accounts.iter();
-    let developer = next_account_info(account_info_iter)?;
-    let developer_account = next_account_info(account_info_iter)?;
-    let payment_vault = next_account_info(account_info_iter)?;
-    let system_program = next_account_info(account_info_iter)?;
-
-    // Validate system program ID
-    if *system_program.key != solana_program::system_program::id() {
-        msg!("Invalid system program");
-        return Err(ProgramError::IncorrectProgramId);
-    }
-
-    if !developer.is_signer {
-        return Err(ProgramError::MissingRequiredSignature);
-    }
-
-    if developer_account.owner != program_id {
-        return Err(ProgramError::IncorrectProgramId);
-    }
-
-    if payment_vault.owner != program_id {
-        return Err(ProgramError::IncorrectProgramId);
-    }
-
-    let mut developer_data = DeveloperAccount::try_from_slice(&developer_account.data.borrow())?;
-    let vault_data = PaymentVault::try_from_slice(&payment_vault.data.borrow())?;
-
-    // Verify developer PDA
-    let (developer_pda, _) = Pubkey::find_program_address(
-        &[b"developer", developer.key.as_ref()],
-        program_id,
-    );
-
-    if developer_pda != *developer_account.key {
-        msg!("Invalid developer PDA");
-        return Err(ProgramError::InvalidSeeds);
-    }
-
-    // Verify payment vault PDA
-    let (vault_pda, _) = Pubkey::find_program_address(
-        &[b"payment_vault", vault_data.authority.as_ref()],
-        program_id,
-    );
-
-    if vault_pda != *payment_vault.key {
-        msg!("Invalid payment vault PDA");
-        return Err(ProgramError::InvalidSeeds);
-    }
-
-    if developer_data.developer != *developer.key {
-        return Err(ProgramError::InvalidAccountData);
-    }
-
-    if !developer_data.is_active {
-        msg!("Developer account is not active");
-        return Err(ProgramError::InvalidAccountData);
-    }
-
-    // Check sufficient balance
-    if developer_data.sol_balance < amount {
-        msg!("Insufficient prepaid balance: {} < {}", developer_data.sol_balance, amount);
-        return Err(ProgramError::InsufficientFunds);
-    }
-
-    // Check vault has sufficient balance
-    let vault_lamports = payment_vault.lamports();
-    if vault_lamports < amount {
-        msg!("Insufficient vault balance for withdrawal");
-        return Err(ProgramError::InsufficientFunds);
-    }
-
-    // Transfer SOL from vault to developer
-    **payment_vault.try_borrow_mut_lamports()? -= amount;
-    **developer.try_borrow_mut_lamports()? += amount;
-
-    // Deduct from developer's prepaid balance
-    developer_data.sol_balance = developer_data.sol_balance
-        .checked_sub(amount)
-        .ok_or(ProgramError::InvalidInstructionData)?;
-
-    developer_data.serialize(&mut &mut developer_account.data.borrow_mut()[..])?;
-
-    msg!("Withdrawn {} lamports ({} SOL)", amount, amount as f64 / 1e9);
-    msg!("Remaining balance: {} lamports ({} SOL)", developer_data.sol_balance, developer_data.sol_balance as f64 / 1e9);
-
     Ok(())
 }
 

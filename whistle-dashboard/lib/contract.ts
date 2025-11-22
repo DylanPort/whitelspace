@@ -23,7 +23,7 @@ import * as borsh from 'borsh';
 
 // ============= CONSTANTS =============
 
-// 🎉 WHISTLENET MAINNET - REINITIALIZED WITH 155-BYTE FIX!
+// 🎉 WHISTLENET MAINNET - CORRECT PROGRAM!
 export const WHISTLE_PROGRAM_ID = new PublicKey('whttByewzTQzAz3VMxnyJHdKsd7AyNRdG2tDHXVTksr');
 export const WHISTLE_MINT = new PublicKey('6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump');
 
@@ -32,11 +32,11 @@ export const MIN_PROVIDER_BOND = 1_000_000_000; // 1000 WHISTLE (6 decimals)
 export const QUERY_COST = 10_000; // 0.00001 SOL
 export const WHISTLE_DECIMALS = 6;
 
-// Deployed Account Addresses (REINITIALIZED - 155-byte pool!)
-export const AUTHORITY_ADDRESS = new PublicKey('6BNdVMgx2JZJPvkRCLyV2LLxft4S1cwuqoX2BS9eFyvh');
-export const STAKING_POOL_ADDRESS = new PublicKey('jVaoYCKUFjHkYw975R7tVvRgns5VdfnnquSp2gzwPXB');
+// Deployed Account Addresses - CORRECT WHISTLENET PROGRAM
+export const AUTHORITY_ADDRESS = new PublicKey('6BNdVMgx2JZJPvkRCLyV2LLxft4S1cwuqoX2BS9eFyvh'); // Actual vault authority
+export const STAKING_POOL_ADDRESS = new PublicKey('6Ls9QVrP3K35TdQ8dbSJAp1L48tsYFvcbixsXXL9KDAB'); // Correct pool PDA
 export const TOKEN_VAULT_ADDRESS = new PublicKey('6AP8c7sCQsm2FMvNJw6fQN5PnMdkySH75h7EPE2kD3Yq');
-export const PAYMENT_VAULT_ADDRESS = new PublicKey('CU1ZcHccCbQT8iA6pcb3ZyTjog8ckmDHH8gaAmKfC73G'); // ✅ Initialized!
+export const PAYMENT_VAULT_ADDRESS = new PublicKey('CU1ZcHccCbQT8iA6pcb3ZyTjog8ckmDHH8gaAmKfC73G');
 
 // RPC connection - Whistle Network
 const RPC_ENDPOINT = process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://rpc.whistle.ninja';
@@ -77,6 +77,17 @@ export function getPaymentVaultPDA(): [PublicKey, number] {
   const paymentVault = new PublicKey('CU1ZcHccCbQT8iA6pcb3ZyTjog8ckmDHH8gaAmKfC73G');
   return [paymentVault, 0];
 }
+
+// X402 Payment Wallet PDA
+export function getX402WalletPDA(): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from('x402_payment_wallet')],
+    WHISTLE_PROGRAM_ID
+  );
+}
+
+// Deployed X402 wallet (for reference)
+export const X402_WALLET_ADDRESS = new PublicKey('BMiSBoT5aPCrFcxaTrHuzXMkfrtzCLMcDYqrPTVymNbU');
 
 // ============= DATA STRUCTURES =============
 
@@ -438,6 +449,22 @@ export async function fetchProviderAccount(provider: PublicKey): Promise<Provide
   }
 }
 
+// Fetch token vault balance (REAL total staked in WHISTLE tokens)
+export async function fetchTokenVault() {
+  try {
+    const tokenVaultAddress = TOKEN_VAULT_ADDRESS;
+    const balance = await connection.getTokenAccountBalance(tokenVaultAddress);
+    return {
+      amount: balance.value.amount,
+      uiAmount: balance.value.uiAmount,
+      decimals: balance.value.decimals
+    };
+  } catch (error) {
+    console.error('Error fetching token vault:', error);
+    return null;
+  }
+}
+
 export async function fetchPaymentVault(): Promise<PaymentVault | null> {
   try {
     const [vaultPDA] = getPaymentVaultPDA();
@@ -448,20 +475,35 @@ export async function fetchPaymentVault(): Promise<PaymentVault | null> {
       return null;
     }
 
-    // The payment vault data structure from the deployed contract
-    // might not match our PaymentVault schema exactly
-    // For now, return a default structure
-    return {
-      authority: new Uint8Array(32),
-      totalCollected: BigInt(0),
-      providerPool: BigInt(0),
-      bonusPool: BigInt(0),
-      treasury: BigInt(0),
-      stakerRewardsPool: BigInt(0),
-      lastDistribution: BigInt(0),
-      bump: 0
-    } as PaymentVault;
+    // Parse the ACTUAL vault data from your deployed contract
+    // PaymentVault layout: authority(32) + staker_rewards_pool(8) + bonus_pool(8) + treasury(8) + total_collected(8) = 64+ bytes
+    const data = accountInfo.data;
     
+    if (data.length < 64) {
+      console.warn('Payment vault data too small:', data.length);
+      return null;
+    }
+    
+    const stakerRewardsPool = data.readBigUInt64LE(32); // Offset 32
+    const bonusPool = data.readBigUInt64LE(40);         // Offset 40
+    const treasury = data.readBigUInt64LE(48);          // Offset 48
+    const totalCollected = data.readBigUInt64LE(56);    // Offset 56
+    
+    console.log('✅ Payment Vault Data:');
+    console.log('  Staker Pool:', Number(stakerRewardsPool) / 1e9, 'SOL');
+    console.log('  Bonus Pool:', Number(bonusPool) / 1e9, 'SOL');
+    console.log('  Treasury:', Number(treasury) / 1e9, 'SOL');
+    console.log('  Total Collected:', Number(totalCollected) / 1e9, 'SOL');
+    
+    return {
+      authority: new Uint8Array(data.slice(0, 32)),
+      stakerRewardsPool,
+      bonusPool,
+      treasury,
+      totalCollected,
+      providerPool: BigInt(0),
+      lastDistribution: BigInt(0),
+    };
   } catch (error) {
     console.error('Error fetching payment vault:', error);
     return null;

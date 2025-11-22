@@ -1,0 +1,38 @@
+name = "whistle-rpc-proxy"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+# KV Namespaces
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "YOUR_KV_NAMESPACE_ID"
+
+[[kv_namespaces]]
+binding = "DB"  
+id = "YOUR_DB_NAMESPACE_ID"
+
+[[analytics_engine_datasets]]
+binding = "ANALYTICS"
+
+# DO NOT PUT SECRETS HERE
+# Use wrangler secret instead:
+# wrangler secret put HELIUS_RPC_URL
+
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+# KV Namespaces
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "YOUR_KV_NAMESPACE_ID"
+
+[[kv_namespaces]]
+binding = "DB"  
+id = "YOUR_DB_NAMESPACE_ID"
+
+[[analytics_engine_datasets]]
+binding = "ANALYTICS"
+
+# DO NOT PUT SECRETS HERE
+# Use wrangler secret instead:
+# wrangler secret put HELIUS_RPC_URL

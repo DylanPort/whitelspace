@@ -1,4 +1,4 @@
-# 🛰️ Whistle Network — Community-Owned Private RPC Stack
+# 🛰️ Whistle Network — Community-Owned 
 
 > **"Build the private infrastructure first, then everything else becomes possible."**
 
@@ -11,11 +11,10 @@
 
 ## 📌 TL;DR
 
-- **Custom RPC endpoint** (`https://rpc.whistle.ninja`) with Cloudflare Worker + provider proxy
-- **x402 → SOL 90/10 split** (stakers 90%, treasury 10%) enforced on-chain
+- **Custom RPC endpoint** (`https://rpc.whistle.ninja`) 
 - **Provider + staker smart contract** running on Solana Mainnet (`contracts/encrypted-network-access-token`)
 - **Dashboard** (`whistle-dashboard/`) to monitor pool stats, providers, treasury
-- **40+ privacy tools** (x402 gated) migrating to NLx402 routing
+- **40+ privacy tools** (x402 gated) migrating 
 - **Community-first economics**: every paid query flows back to the people who fund/run the network
 
 ---
@@ -24,7 +23,7 @@
 
 | Track | Status | Details |
 |-------|--------|---------|
-| RPC branding layer | ✅ | Cloudflare Worker + `whistle-rpc-proxy` forward to Helius while shielding metadata |
+| RPC branding layer | ✅ | 
 | RPC ownership | 🚧 | Preparing multi-provider backend + integration nodes |
 | x402 distributor | ✅ | `x402-distributor-cron.js` automates payouts (90/10) |
 | Staker UX | ✅ | `claim-my-rewards.js` + dashboard cards |
@@ -53,8 +52,7 @@
                  │
 ┌────────────────▼─────────────────────────────┐
 │  Upstream Providers                           │
-│  • Distributed provider network                │
-│  • Dynamic routing based on provider health   │
+│    just the team now      │
 │  • Future: community nodes via staking pool   │
 └────────────────┬─────────────────────────────┘
                  │
@@ -70,7 +68,7 @@
 │  Automation + Tooling                         │
 │  • x402-distributor-cron.js                   │
 │  • claim-my-rewards.js                        │
-│  • NLx402 spec (docs)                         │
+│  •                         │
 └──────────────────────────────────────────────┘
 ```
 
@@ -81,7 +79,7 @@
 ### 1. Whistle RPC Edge
 - `cloudflare-worker/`: Auth, rate limits, domain allow-list, abuse guard
 - `whistle-rpc-proxy/`: Node.js proxy for environments outside Workers
-- `wrangler.toml`: provider network configuration
+
 
 ### 2. Solana Smart Contract (ENAT)
 - Location: `contracts/encrypted-network-access-token/src/lib.rs`
@@ -135,7 +133,7 @@ wrangler dev
 wrangler publish
 ```
 
-Set `PRIMARY_RPC_ENDPOINT` and other provider URLs when publishing (or use Secrets UI).
+Set `HELIUS_RPC_URL` when publishing (or use Secrets UI).
 
 ### X402 Distributor
 ```bash
@@ -202,7 +200,7 @@ What’s missing (help wanted):
 
 ## 🧭 Roadmap (public items)
 
-- [x] Replace every client-side Helius reference with `rpc.whistle.ninja`
+
 - [x] Remove Cloudflare “powered by Helius” copy
 - [x] Fix CORS + rate limits for own domains
 - [x] Automate x402 payouts + staker claims
@@ -223,7 +221,7 @@ What’s missing (help wanted):
 
 Areas needing help:
 - Provider onboarding backend
-- NLx402 client integration
+
 - Dashboard graphs + analytics
 - Documentation / tutorials
 
@@ -250,7 +248,7 @@ Areas needing help:
 ---
 
 **Built for Solana builders tired of centralized chokepoints.**  
-If you want to run a provider, integrate NLx402, or help harden the infra — DM us. Privacy infrastructure only exists if we build it ourselves. 🛡️
+If you want to run a provider, or help harden the infra — DM us. Privacy infrastructure only exists if we build it ourselves. 🛡️
 
 ## 🌟 Key Features
 
@@ -501,11 +499,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **Network:** 10+ active bootstrap nodes  
 **Platform:** Web + Mobile (Android)
 
-### Roadmap
-- Q4 2025: Public beta, client-side AI, mobile apps
-- Q1 2026: TEE backend (AWS Nitro Enclaves), Smart routing, Model marketplace
-- Q2 2026: Cross-chain integration, Advanced AI features
-- Q3 2026: Mainnet v2, Enhanced scalability
 
 ---
 

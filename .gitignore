@@ -64,3 +64,8 @@ GOSSIP-TUNNEL-WORKAROUND.sh
 PROFITABLE-RPC-SETUP.md
 verify-offload-issue.sh
 INSTANT-RPC-SETUP.md
+
+# Distribution verification
+PROVE-V1-DISTRIBUTION.md
+verify-v1-claims.js
+v1-distribution-proof.json

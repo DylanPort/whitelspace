@@ -4,7 +4,14 @@
   "metadata": {
     "address": "whttByewzTQzAz3VMxnyJHdKsd7AyNRdG2tDHXVTksr",
     "description": "WHISTLE Network - Decentralized RPC Provider with Staking & Governance",
-    "repository": "https://github.com/DylanPort/whitelspace"
+    "repository": "https://github.com/DylanPort/whitelspace",
+    "deployedAccounts": {
+      "authority": "6BNdVMgx2JZJPvkRCLyV2LLxft4S1cwuqoX2BS9eFyvh",
+      "stakingPool": "6Ls9QVrP3K35TdQ8dbSJAp1L48tsYFvcbixsXXL9KDAB",
+      "tokenVault": "6AP8c7sCQsm2FMvNJw6fQN5PnMdkySH75h7EPE2kD3Yq",
+      "paymentVault": "CU1ZcHccCbQT8iA6pcb3ZyTjog8ckmDHH8gaAmKfC73G",
+      "whistleMint": "6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump"
+    }
   },
   "instructions": [
     {
@@ -135,6 +142,38 @@
       "args": [
         {"name": "newEndpoint", "type": "string"}
       ]
+    },
+    {
+      "name": "InitializeX402Wallet",
+      "accounts": [
+        {"name": "authority", "isMut": true, "isSigner": true},
+        {"name": "x402Wallet", "isMut": true, "isSigner": false},
+        {"name": "paymentVault", "isMut": true, "isSigner": false},
+        {"name": "systemProgram", "isMut": false, "isSigner": false}
+      ],
+      "args": []
+    },
+    {
+      "name": "ProcessX402Payment",
+      "accounts": [
+        {"name": "authority", "isMut": false, "isSigner": true},
+        {"name": "x402Wallet", "isMut": true, "isSigner": false},
+        {"name": "paymentVault", "isMut": true, "isSigner": false},
+        {"name": "stakingPool", "isMut": false, "isSigner": false},
+        {"name": "systemProgram", "isMut": false, "isSigner": false}
+      ],
+      "args": [
+        {"name": "amount", "type": "u64"}
+      ]
+    },
+    {
+      "name": "DistributeStakerRewards",
+      "accounts": [
+        {"name": "authority", "isMut": false, "isSigner": true},
+        {"name": "paymentVault", "isMut": true, "isSigner": false},
+        {"name": "stakingPool", "isMut": false, "isSigner": false}
+      ],
+      "args": []
     }
   ],
   "accounts": [
