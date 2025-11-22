@@ -149,45 +149,78 @@
       validUntil: Date.now() + (ACCESS_DURATION_HOURS * 60 * 60 * 1000)
     }));
     
-    // Store in localStorage for persistence
+    const ttlSeconds = ACCESS_DURATION_HOURS * 60 * 60;
+    const now = Math.floor(Date.now() / 1000);
+    const expiresAt = now + ttlSeconds;
+    
+    // Store in localStorage in format expected by main.html
+    localStorage.setItem('x402_token', accessToken);
+    localStorage.setItem('x402_exp', String(expiresAt));
+    
+    // Also store in x402_access format for backward compatibility
     localStorage.setItem('x402_access', JSON.stringify({
       token: accessToken,
       expires: Date.now() + (ACCESS_DURATION_HOURS * 60 * 60 * 1000),
       txSig
     }));
     
+    console.log('✅ Access token stored:', { accessToken, expiresAt, ttlSeconds });
+    
     return {
       accessToken,
-      ttlSeconds: ACCESS_DURATION_HOURS * 60 * 60,
+      ttlSeconds,
       txSig,
       message: `Access granted for ${ACCESS_DURATION_HOURS} hour!`
     };
   }
   
-  // Check if user has valid access
+  // Check if user has valid access (checks both storage formats)
   function hasValidAccess() {
     try {
-      const stored = localStorage.getItem('x402_access');
-      if (!stored) return false;
+      // Check main.html format first (x402_token + x402_exp)
+      const token = localStorage.getItem('x402_token');
+      const exp = parseInt(localStorage.getItem('x402_exp') || '0', 10);
+      const now = Math.floor(Date.now() / 1000);
       
-      const access = JSON.parse(stored);
-      return access.expires > Date.now();
+      if (token && exp > now + 30) {
+        return true;
+      }
+      
+      // Fallback to x402_access format
+      const stored = localStorage.getItem('x402_access');
+      if (stored) {
+        const access = JSON.parse(stored);
+        return access.expires > Date.now();
+      }
+      
+      return false;
     } catch {
       return false;
     }
   }
   
-  // Clear expired access
+  // Clear expired access (clears both storage formats)
   function clearExpiredAccess() {
     try {
-      const stored = localStorage.getItem('x402_access');
-      if (!stored) return;
+      // Check and clear main.html format
+      const exp = parseInt(localStorage.getItem('x402_exp') || '0', 10);
+      const now = Math.floor(Date.now() / 1000);
+      if (exp <= now) {
+        localStorage.removeItem('x402_token');
+        localStorage.removeItem('x402_exp');
+      }
       
-      const access = JSON.parse(stored);
-      if (access.expires <= Date.now()) {
-        localStorage.removeItem('x402_access');
+      // Check and clear x402_access format
+      const stored = localStorage.getItem('x402_access');
+      if (stored) {
+        const access = JSON.parse(stored);
+        if (access.expires <= Date.now()) {
+          localStorage.removeItem('x402_access');
+        }
       }
     } catch {
+      localStorage.removeItem('x402_token');
+      localStorage.removeItem('x402_exp');
       localStorage.removeItem('x402_access');
     }
   }
