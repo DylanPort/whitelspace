@@ -44,14 +44,44 @@
   
   let solanaWeb3 = null;
   
-  // Derive X402 wallet PDA from WHTT program
+  // Trigger distribution after payment (non-blocking)
+  async function triggerDistribution(paymentTxSig, payerAddress) {
+    try {
+      // Call backend endpoint to trigger distribution
+      const backendUrl = window.location.origin.includes('localhost') 
+        ? 'http://localhost:8888/.netlify/functions/x402-trigger-distribution'
+        : '/.netlify/functions/x402-trigger-distribution';
+      
+      const response = await fetch(backendUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentTxSig,
+          payer: payerAddress
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.triggered) {
+          console.log('✅ Distribution triggered automatically!', result.distributionTxSig);
+        } else {
+          console.log('ℹ️ Distribution not needed (balance below threshold)');
+        }
+      }
+    } catch (err) {
+      // Silent fail - don't block user experience
+      console.warn('Distribution trigger failed:', err.message);
+    }
+  }
+  
+  // Derive X402 wallet PDA from WHTT program (seeds: ["x402_payment_wallet"] only)
   function deriveX402WalletPDA() {
     if (!solanaWeb3) {
       throw new Error('Solana Web3.js not loaded');
     }
     const seeds = [
-      Buffer.from('x402_payment_wallet'),
-      new solanaWeb3.PublicKey(AUTHORITY).toBuffer()
+      Buffer.from('x402_payment_wallet')
     ];
     const [pda] = solanaWeb3.PublicKey.findProgramAddressSync(
       seeds,
@@ -202,6 +232,15 @@
     }));
     
     console.log('✅ Access token stored:', { accessToken, expiresAt, ttlSeconds });
+    
+    // Trigger distribution if threshold met (fire and forget - don't block user)
+    try {
+      triggerDistribution(txSig, wallet.publicKey.toBase58()).catch(err => {
+        console.warn('⚠️ Distribution trigger failed (non-blocking):', err.message);
+      });
+    } catch (err) {
+      console.warn('⚠️ Could not trigger distribution:', err.message);
+    }
     
     return {
       accessToken,

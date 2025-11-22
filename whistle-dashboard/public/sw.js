@@ -75,13 +75,16 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Clone the response
-        const responseToCache = response.clone();
-        
-        // Cache the fetched response
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
+        // Only cache GET requests (POST/PUT/DELETE can't be cached)
+        if (event.request.method === 'GET' && response.ok) {
+          // Clone the response
+          const responseToCache = response.clone();
+          
+          // Cache the fetched response
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+        }
         
         return response;
       })

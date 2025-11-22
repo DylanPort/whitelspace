@@ -11,19 +11,25 @@ import {
   Connection, 
   PublicKey, 
   Transaction, 
+  TransactionInstruction,
   Keypair,
+  SystemProgram,
   LAMPORTS_PER_SOL 
 } from '@solana/web3.js';
 import * as fs from 'fs';
+import * as crypto from 'crypto';
 
 // ============= CONFIGURATION =============
 
 const CONFIG = {
   // RPC endpoint (use your private RPC for reliability)
-  rpcEndpoint: process.env.SOLANA_RPC || 'https://api.mainnet-beta.solana.com',
+  rpcEndpoint: process.env.SOLANA_RPC || 'https://rpc.whistle.ninja',
   
-  // Program ID
-  programId: new PublicKey('5cmaPy5i8efSWSwRVVuWr9VUx8sAMv6qMVSE1o82TRgc'),
+  // Program ID (WHTT program)
+  programId: new PublicKey('whttByewzTQzAz3VMxnyJHdKsd7AyNRdG2tDHXVTksr'),
+  
+  // Authority address (must match the authority that deployed the contract)
+  authorityAddress: new PublicKey('6BNdVMgx2JZJPvkRCLyV2LLxft4S1cwuqoX2BS9eFyvh'),
   
   // Authority keypair path (should have permission to trigger distributions)
   authorityKeypairPath: process.env.AUTHORITY_KEYPAIR || './authority.json',
@@ -107,33 +113,42 @@ async function checkX402Balance() {
   };
 }
 
+// Calculate Anchor discriminator for ProcessX402Payment
+function getAnchorDiscriminator(instructionName) {
+  const preimage = `global:${instructionName}`;
+  const hash = crypto.createHash('sha256').update(preimage).digest();
+  return hash.slice(0, 8);
+}
+
 async function processX402Payment(authority, amount) {
   log(`Processing ${amount / LAMPORTS_PER_SOL} SOL from X402 wallet...`);
   
   const { pda: x402Wallet } = getX402WalletPDA(CONFIG.programId);
-  const { pda: paymentVault } = getPaymentVaultPDA(CONFIG.programId, authority.publicKey);
-  const { pda: stakingPool } = getStakingPoolPDA(CONFIG.programId, authority.publicKey);
+  const { pda: paymentVault } = getPaymentVaultPDA(CONFIG.programId, CONFIG.authorityAddress);
+  const { pda: stakingPool } = getStakingPoolPDA(CONFIG.programId, CONFIG.authorityAddress);
   
-  // Instruction index for ProcessX402Payment (adjust if needed)
-  const PROCESS_X402_INSTRUCTION_INDEX = 25;
+  // Calculate Anchor discriminator
+  const discriminator = getAnchorDiscriminator('process_x402_payment');
   
-  // Serialize instruction data
-  // Format: [instruction_index: u8, amount: u64]
-  const instructionData = Buffer.alloc(9);
-  instructionData.writeUInt8(PROCESS_X402_INSTRUCTION_INDEX, 0);
-  instructionData.writeBigUInt64LE(BigInt(amount), 1);
+  // Build instruction data: [discriminator: 8 bytes][amount: u64]
+  const instructionData = Buffer.alloc(16);
+  discriminator.copy(instructionData, 0);
+  instructionData.writeBigUInt64LE(BigInt(amount), 8);
   
-  // Build transaction
-  const transaction = new Transaction().add({
+  // Build transaction with correct account order (matches IDL)
+  const instruction = new TransactionInstruction({
+    programId: CONFIG.programId,
     keys: [
-      { pubkey: authority.publicKey, isSigner: true, isWritable: true },
+      { pubkey: authority.publicKey, isSigner: true, isWritable: false },
       { pubkey: x402Wallet, isSigner: false, isWritable: true },
       { pubkey: paymentVault, isSigner: false, isWritable: true },
       { pubkey: stakingPool, isSigner: false, isWritable: false },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     ],
-    programId: CONFIG.programId,
     data: instructionData,
   });
+  
+  const transaction = new Transaction().add(instruction);
   
   // Send and confirm
   const signature = await connection.sendTransaction(transaction, [authority], {
@@ -175,10 +190,21 @@ async function runDistributionCheck() {
     }
     
     // Load authority keypair
+    if (!fs.existsSync(CONFIG.authorityKeypairPath)) {
+      error(`Authority keypair file not found: ${CONFIG.authorityKeypairPath}`);
+      return;
+    }
+    
     const authorityData = JSON.parse(fs.readFileSync(CONFIG.authorityKeypairPath, 'utf-8'));
     const authority = Keypair.fromSecretKey(new Uint8Array(authorityData));
     
-    log(`Authority: ${authority.publicKey.toBase58()}`);
+    // Verify authority matches expected address
+    if (!authority.publicKey.equals(CONFIG.authorityAddress)) {
+      error(`Authority mismatch! Expected ${CONFIG.authorityAddress.toBase58()}, got ${authority.publicKey.toBase58()}`);
+      return;
+    }
+    
+    log(`✅ Authority verified: ${authority.publicKey.toBase58()}`);
     log(`🚀 Triggering distribution of ${distributableSOL} SOL...`);
     
     // Process distribution
@@ -204,6 +230,7 @@ async function main() {
   log('=== WHISTLE X402 Payment Distributor Started ===');
   log(`RPC: ${CONFIG.rpcEndpoint}`);
   log(`Program ID: ${CONFIG.programId.toBase58()}`);
+  log(`Authority: ${CONFIG.authorityAddress.toBase58()}`);
   log(`Check Interval: ${CONFIG.checkInterval / 1000}s`);
   log(`Min Threshold: ${CONFIG.minBalanceThreshold} SOL`);
   log(`Reserve Balance: ${CONFIG.reserveBalance} SOL`);

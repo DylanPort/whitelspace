@@ -21,11 +21,10 @@ const PROGRAM_ID = new PublicKey('whttByewzTQzAz3VMxnyJHdKsd7AyNRdG2tDHXVTksr');
 const AUTHORITY_ADDRESS = new PublicKey('6BNdVMgx2JZJPvkRCLyV2LLxft4S1cwuqoX2BS9eFyvh');
 const RPC_ENDPOINT = 'https://rpc.whistle.ninja';
 
-// Derive X402 wallet PDA (same as in x402-client-v2.js)
+// Derive X402 wallet PDA (seeds: ["x402_payment_wallet"] only, no authority)
 function deriveX402WalletPDA() {
   const seeds = [
-    Buffer.from('x402_payment_wallet'),
-    AUTHORITY_ADDRESS.toBuffer()
+    Buffer.from('x402_payment_wallet')
   ];
   const [pda] = PublicKey.findProgramAddressSync(seeds, PROGRAM_ID);
   return pda;
