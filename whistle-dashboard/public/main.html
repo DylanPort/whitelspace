@@ -58,7 +58,7 @@
   <!-- Anchor script removed (unused and caused ESM import error in non-module) -->
   <script src="https://unpkg.com/bn.js@5.2.1/lib/bn.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="/x402-client-v2.js?v=2"></script>
+  <script src="/x402-client-v2.js?v=3"></script>
   <script>
     // BS58 Helper - Inline fallback implementation + CDN detection
     (function() {
@@ -17780,7 +17780,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         console.log('💳 x402: Payment required, requesting quote...');
         await showX402PaymentModal('preparing');
 
-        if (!window.x402 || !window.x402.requestAndPay) throw new Error('x402 client not loaded');
+        if (!window.x402 && window.x402.requestAndPay) throw new Error('x402 client not loaded');
 
         // Try mobile in-app wallet
         const mobilePrivateKey = localStorage.getItem('ghost_mobile_wallet');

@@ -2,6 +2,36 @@
 // Sends 0.02 SOL for 1 hour access directly to smart contract x402 wallet
 
 (function () {
+  // Wait for Solana Web3 to load
+  function waitForSolanaWeb3() {
+    return new Promise((resolve) => {
+      // Check immediately
+      if (window.solanaWeb3) {
+        console.log('✅ Found solanaWeb3');
+        resolve(window.solanaWeb3);
+        return;
+      }
+      
+      // Debug: log what's available
+      console.log('🔍 Waiting for Solana Web3... Available globals:', Object.keys(window).filter(k => k.toLowerCase().includes('solana')));
+      
+      let attempts = 0;
+      const checkInterval = setInterval(() => {
+        attempts++;
+        if (window.solanaWeb3) {
+          clearInterval(checkInterval);
+          console.log('✅ Solana Web3.js loaded after', attempts * 100, 'ms');
+          resolve(window.solanaWeb3);
+        } else if (attempts > 100) { // 10 seconds
+          clearInterval(checkInterval);
+          console.error('❌ Solana Web3.js not found after 10 seconds');
+          console.error('Available:', Object.keys(window).filter(k => k.toLowerCase().includes('solana')));
+          resolve(null);
+        }
+      }, 100);
+    });
+  }
+  
   const WHTT_PROGRAM_ID = 'whttByewzTQzAz3VMxnyJHdKsd7AyNRdG2tDHXVTksr';
   const AUTHORITY = '6BNdVMgx2JZJPvkRCLyV2LLxft4S1cwuqoX2BS9eFyvh';
   const MEMO_PROGRAM_ID = 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr';
@@ -12,8 +42,13 @@
   const PAYMENT_AMOUNT_SOL = 0.02; // 0.02 SOL for 1 hour access
   const ACCESS_DURATION_HOURS = 1;
   
+  let solanaWeb3 = null;
+  
   // Derive X402 wallet PDA from WHTT program
   function deriveX402WalletPDA() {
+    if (!solanaWeb3) {
+      throw new Error('Solana Web3.js not loaded');
+    }
     const seeds = [
       Buffer.from('x402_payment_wallet'),
       new solanaWeb3.PublicKey(AUTHORITY).toBuffer()
@@ -26,6 +61,14 @@
   }
 
   async function requestX402AndPay({ wallet, feature = null }) {
+    // Ensure Solana Web3 is loaded
+    if (!solanaWeb3) {
+      solanaWeb3 = await waitForSolanaWeb3();
+      if (!solanaWeb3) {
+        throw new Error('Solana Web3.js failed to load');
+      }
+    }
+    
     // Free features bypass payment
     const freeFeatures = ['stake', 'unstake', 'run-node', 'staking', 'node'];
     if (feature && freeFeatures.some(f => feature.toLowerCase().includes(f))) {
@@ -49,10 +92,10 @@
     
     // Check wallet SOL balance
     const balance = await connection.getBalance(wallet.publicKey);
-    const requiredLamports = PAYMENT_AMOUNT_SOL * solanaWeb3.LAMPORTS_PER_SOL;
+    const requiredLamports = PAYMENT_AMOUNT_SOL * 1e9; // LAMPORTS_PER_SOL = 1e9
     
     if (balance < requiredLamports) {
-      throw new Error(`Insufficient SOL: need ${PAYMENT_AMOUNT_SOL} SOL but have ${balance / solanaWeb3.LAMPORTS_PER_SOL} SOL`);
+      throw new Error(`Insufficient SOL: need ${PAYMENT_AMOUNT_SOL} SOL but have ${balance / 1e9} SOL`);
     }
     
     console.log(`💰 Sending ${PAYMENT_AMOUNT_SOL} SOL for ${ACCESS_DURATION_HOURS} hour access...`);
@@ -149,17 +192,44 @@
     }
   }
 
-  // Export to window
-  window.x402 = {
-    requestAndPay: requestX402AndPay,
-    hasValidAccess,
-    clearExpiredAccess,
-    PAYMENT_AMOUNT_SOL,
-    ACCESS_DURATION_HOURS,
-    X402_WALLET: deriveX402WalletPDA().toBase58()
-  };
+  // Initialize and export to window
+  async function init() {
+    // Wait for Solana Web3 to load
+    solanaWeb3 = await waitForSolanaWeb3();
+    
+    if (!solanaWeb3) {
+      console.error('❌ X402 Client: Solana Web3.js not found');
+      // Still expose API but it will fail gracefully
+      window.x402 = {
+        requestAndPay: async () => { throw new Error('Solana Web3.js not loaded'); },
+        hasValidAccess,
+        clearExpiredAccess,
+        PAYMENT_AMOUNT_SOL,
+        ACCESS_DURATION_HOURS,
+        X402_WALLET: null
+      };
+      return;
+    }
+    
+    // Export to window
+    window.x402 = {
+      requestAndPay: requestX402AndPay,
+      hasValidAccess,
+      clearExpiredAccess,
+      PAYMENT_AMOUNT_SOL,
+      ACCESS_DURATION_HOURS,
+      X402_WALLET: deriveX402WalletPDA().toBase58()
+    };
+    
+    console.log('✅ X402 Client v2 loaded - SOL payments to WHTT contract');
+    console.log(`   Price: ${PAYMENT_AMOUNT_SOL} SOL for ${ACCESS_DURATION_HOURS} hour`);
+    console.log(`   X402 Wallet: ${deriveX402WalletPDA().toBase58()}`);
+  }
   
-  console.log('✅ X402 Client v2 loaded - SOL payments to WHTT contract');
-  console.log(`   Price: ${PAYMENT_AMOUNT_SOL} SOL for ${ACCESS_DURATION_HOURS} hour`);
-  console.log(`   X402 Wallet: ${deriveX402WalletPDA().toBase58()}`);
+  // Initialize immediately if DOM is ready, otherwise wait
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();
