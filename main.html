@@ -58,7 +58,7 @@
   <!-- Anchor script removed (unused and caused ESM import error in non-module) -->
   <script src="https://unpkg.com/bn.js@5.2.1/lib/bn.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="/x402-client-v2.js?v=1"></script>
+  <script src="/x402-client-v2.js?v=2"></script>
   <script>
     // BS58 Helper - Inline fallback implementation + CDN detection
     (function() {
@@ -7353,9 +7353,9 @@
           try {
             // Check if getX402Token exists (from main App component)
             if (!window.getX402Token) {
-              console.error('❌ getX402Token not available - calling requestX402AndPay directly');
+              console.error('❌ getX402Token not available - calling x402.requestAndPay directly');
               
-              // Fallback: Use requestX402AndPay directly
+              // Fallback: Use x402.requestAndPay directly
               const currentWallet = wallet || window.solana;
               if (!currentWallet || !currentWallet.publicKey) {
                 pushToast('❌ Please connect your wallet first', 'error');
