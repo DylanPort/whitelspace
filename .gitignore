@@ -56,3 +56,13 @@ infrastructure/node-keys/*.json
 *_INTEGRATION.md
 *_CONFIGURED.md
 *_UPDATED.md
+
+# Analysis/documentation that exposes implementation details
+FIX-LIST.md
+EMERGENCY-*.sh
+REMOVE-*.sh
+*TRANSPARENCY*
+*ANALYSIS*
+State-of-*
+.gitignore.additions
+wrangler.toml.template

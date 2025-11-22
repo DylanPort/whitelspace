@@ -5,7 +5,7 @@
  * - API key validation
  * - Rate limiting
  * - Subscription expiry checks
- * - Request forwarding to backend RPC (Helius)
+ * - Request routing to distributed provider network
  * - Usage tracking
  */
 
@@ -87,7 +87,7 @@ export default {
       }, 200, corsHeaders);
     }
 
-    // Main RPC endpoint - proxy to Helius
+    // Main RPC endpoint - route to provider network
     if (url.pathname === '/rpc' || url.pathname === '/') {
       return handleRpcRequest(request, env, corsHeaders);
     }
@@ -123,24 +123,24 @@ async function handleRpcRequest(request, env, corsHeaders) {
     // Skip rate limiting for our own dashboard
     let rateLimit;
     if (!isOwnDashboard) {
-      // Check rate limit
+    // Check rate limit
       rateLimit = await checkRateLimit(env.RATE_LIMIT, apiKey, globalRateLimit);
-      
-      if (!rateLimit.allowed) {
-        return jsonResponse({
-          error: 'rate_limit_exceeded',
-          message: `Rate limit exceeded. Public limit is ${globalRateLimit} requests per minute.`,
-          rateLimit: globalRateLimit,
-          current: rateLimit.current,
-          resetIn: rateLimit.resetIn
-        }, 429, {
-          ...corsHeaders,
-          'X-RateLimit-Limit': String(globalRateLimit),
-          'X-RateLimit-Remaining': '0',
-          'X-RateLimit-Reset': String(rateLimit.resetAt),
-          'Retry-After': String(rateLimit.resetIn)
-        });
-      }
+    
+    if (!rateLimit.allowed) {
+      return jsonResponse({
+        error: 'rate_limit_exceeded',
+        message: `Rate limit exceeded. Public limit is ${globalRateLimit} requests per minute.`,
+        rateLimit: globalRateLimit,
+        current: rateLimit.current,
+        resetIn: rateLimit.resetIn
+      }, 429, {
+        ...corsHeaders,
+        'X-RateLimit-Limit': String(globalRateLimit),
+        'X-RateLimit-Remaining': '0',
+        'X-RateLimit-Reset': String(rateLimit.resetAt),
+        'Retry-After': String(rateLimit.resetIn)
+      });
+    }
     } else {
       // For our own dashboard, create a mock rate limit response
       const now = Math.floor(Date.now() / 1000);
@@ -153,8 +153,8 @@ async function handleRpcRequest(request, env, corsHeaders) {
       };
     }
 
-    // Forward request to backend RPC (Helius)
-    const rpcResponse = await fetch(env.HELIUS_RPC_URL, {
+    // Route to upstream RPC provider
+    const rpcResponse = await fetch(env.UPSTREAM_RPC_URL || env.PRIMARY_RPC_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

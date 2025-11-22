@@ -53,7 +53,8 @@
                  │
 ┌────────────────▼─────────────────────────────┐
 │  Upstream Providers                           │
-│  • Helius today (env.HELIUS_RPC_URL)          │
+│  • Distributed provider network                │
+│  • Dynamic routing based on provider health   │
 │  • Future: community nodes via staking pool   │
 └────────────────┬─────────────────────────────┘
                  │
@@ -80,7 +81,7 @@
 ### 1. Whistle RPC Edge
 - `cloudflare-worker/`: Auth, rate limits, domain allow-list, abuse guard
 - `whistle-rpc-proxy/`: Node.js proxy for environments outside Workers
-- `wrangler.toml`: single source for upstream endpoint (`HELIUS_RPC_URL`)
+- `wrangler.toml`: provider network configuration
 
 ### 2. Solana Smart Contract (ENAT)
 - Location: `contracts/encrypted-network-access-token/src/lib.rs`
@@ -134,7 +135,7 @@ wrangler dev
 wrangler publish
 ```
 
-Set `HELIUS_RPC_URL` when publishing (or use Secrets UI).
+Set `PRIMARY_RPC_ENDPOINT` and other provider URLs when publishing (or use Secrets UI).
 
 ### X402 Distributor
 ```bash
