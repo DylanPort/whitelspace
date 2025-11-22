@@ -5,15 +5,33 @@
   const WHISTLE_MINT = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';
   const TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
   const MEMO_PROGRAM_ID = 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr';
-  const PROGRAM_ID = '2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq';
+  const WHTT_PROGRAM_ID = 'whttByewzTQzAz3VMxnyJHdKsd7AyNRdG2tDHXVTksr';
   const SYSTEM_PROGRAM = '11111111111111111111111111111111';
-  // Direct transfer mode: send fees to this fee collector wallet (not a program)
-  const FEE_COLLECTOR_WALLET = 'G1RHSMtZVZLafmZ9man8anb2HXf7JP5Kh5sbrGZKM6Pg';
+  // X402 Payment Wallet - derives from WHTT program (needs to be initialized)
+  const AUTHORITY = '6BNdVMgx2JZJPvkRCLyV2LLxft4S1cwuqoX2BS9eFyvh';
+  // We'll derive the x402 wallet PDA below
   const RPC_URL = 'https://rpc.whistle.ninja';
   // Only use Whistle RPC - optimized for network
   const RPC_ENDPOINTS = [
     RPC_URL,
   ];
+  
+  // Derive X402 wallet PDA from WHTT program
+  function deriveX402WalletPDA() {
+    const seeds = [
+      Buffer.from('x402_payment_wallet'),
+      new solanaWeb3.PublicKey(AUTHORITY).toBuffer()
+    ];
+    const [pda] = solanaWeb3.PublicKey.findProgramAddressSync(
+      seeds,
+      new solanaWeb3.PublicKey(WHTT_PROGRAM_ID)
+    );
+    return pda;
+  }
+  
+  // Get the x402 wallet address
+  const X402_WALLET_PDA = deriveX402WalletPDA();
+  console.log('X402 Wallet PDA:', X402_WALLET_PDA.toBase58());
 
   async function getOrCreateTokenAccount(connection, ownerPubkey, mintPubkey) {
     // Try multiple RPCs due to rate limiting

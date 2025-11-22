@@ -58,7 +58,7 @@
   <!-- Anchor script removed (unused and caused ESM import error in non-module) -->
   <script src="https://unpkg.com/bn.js@5.2.1/lib/bn.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="/x402-client.js?v=15"></script>
+  <script src="/x402-client-v2.js?v=1"></script>
   <script>
     // BS58 Helper - Inline fallback implementation + CDN detection
     (function() {
@@ -7373,11 +7373,9 @@
                 }
               }
               
-              const paymentResult = await window.requestX402AndPay({
+              const paymentResult = await window.x402.requestAndPay({
                 wallet: currentWallet,
-                hops: 5,
-                feature: 'decentralized-storage-upload',
-                keypair: keypair
+                feature: 'decentralized-storage-upload'
               });
               
               if (!paymentResult || !paymentResult.accessToken) {
@@ -9835,7 +9833,7 @@ console.log('✅ Fingerprint spoofing active!');`;
                         <span className="text-emerald-400">$</span>
                         <span className="tracking-wider">GENERATE_IDENTITY</span>
                       </div>
-                      <div className="text-[10px] text-slate-500">--cost=10000_WHISTLE</div>
+                      <div className="text-[10px] text-slate-500">--cost=0.02_SOL/1hr</div>
                     </div>
                   )}
                 </div>
@@ -17782,7 +17780,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         console.log('💳 x402: Payment required, requesting quote...');
         await showX402PaymentModal('preparing');
 
-        if (!window.requestX402AndPay) throw new Error('x402 client not loaded');
+        if (!window.x402 && window.x402.requestAndPay) throw new Error('x402 client not loaded');
 
         // Try mobile in-app wallet
         const mobilePrivateKey = localStorage.getItem('ghost_mobile_wallet');
@@ -17844,10 +17842,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         console.log('🔐 x402: Initiating payment...');
         await showX402PaymentModal('processing');
 
-        const { accessToken, ttlSeconds } = await window.requestX402AndPay({
+        const { accessToken, ttlSeconds } = await window.x402.requestAndPay({
           wallet,
-          hops,
-          keypair,
           feature
         });
 
@@ -17892,7 +17888,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 <div class="bg-slate-800/50 rounded-xl p-4 border border-cyan-500/20 mb-6">
                   <div class="flex justify-between items-center mb-2">
                     <span class="text-slate-400">Amount:</span>
-                    <span class="text-2xl font-bold text-white">10,000 WHISTLE</span>
+                    <span class="text-2xl font-bold text-white">0.02 SOL</span>
                   </div>
                   <div class="flex justify-between items-center">
                     <span class="text-slate-400">Protocol:</span>
@@ -17933,7 +17929,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 <h2 class="text-2xl font-black text-white text-center mb-4">Processing Payment</h2>
                 <div class="bg-slate-800/50 rounded-xl p-4 border border-cyan-500/20 mb-4">
                   <div class="text-center mb-3">
-                    <span class="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">10,000 WHISTLE</span>
+                    <span class="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">0.02 SOL</span>
                   </div>
                   <div class="flex items-center justify-center gap-2 text-slate-400 text-sm">
                     <div class="animate-spin rounded-full h-4 w-4 border-2 border-cyan-400 border-t-transparent"></div>
@@ -17964,7 +17960,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 <div class="bg-slate-800/50 rounded-xl p-4 border border-emerald-500/20">
                   <div class="flex justify-between items-center">
                     <span class="text-slate-400">Paid:</span>
-                    <span class="text-xl font-bold text-white">10,000 WHISTLE</span>
+                    <span class="text-xl font-bold text-white">0.02 SOL</span>
                   </div>
                 </div>
               </div>
@@ -18484,14 +18480,12 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           // Get x402 token for API access (free for node operations)
           let x402Token = 'FREE_ACCESS';
           try {
-            if (window.requestX402AndPay) {
+            if (window.x402 && window.x402.requestAndPay) {
               const currentKeypair = await getInAppKeypair();
               const currentWallet = wallet || (currentKeypair ? { publicKey: currentKeypair.publicKey, _keypair: currentKeypair } : null);
               if (currentWallet) {
-                const tokenResult = await window.requestX402AndPay({ 
-                  wallet: currentWallet, 
-                  hops: 3,
-                  keypair: currentKeypair,
+                const tokenResult = await window.x402.requestAndPay({ 
+                  wallet: currentWallet,
                   feature: 'node' 
                 });
                 x402Token = tokenResult.accessToken;
@@ -18567,14 +18561,12 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           // Get x402 token for API access (free for node operations)
           let x402Token = 'FREE_ACCESS';
           try {
-            if (window.requestX402AndPay) {
+            if (window.x402 && window.x402.requestAndPay) {
               const currentKeypair = await getInAppKeypair();
               const currentWallet = wallet || (currentKeypair ? { publicKey: currentKeypair.publicKey, _keypair: currentKeypair } : null);
               if (currentWallet) {
-                const tokenResult = await window.requestX402AndPay({ 
-                  wallet: currentWallet, 
-                  hops: 3,
-                  keypair: currentKeypair,
+                const tokenResult = await window.x402.requestAndPay({ 
+                  wallet: currentWallet,
                   feature: 'node' 
                 });
                 x402Token = tokenResult.accessToken;
@@ -19247,10 +19239,8 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           try {
             console.log('🔐 Getting x402 token for node operation...');
             const currentKeypair = await getInAppKeypair();
-            const tokenResult = await window.requestX402AndPay({ 
+            const tokenResult = await window.x402.requestAndPay({ 
               wallet: wallet || { publicKey: solanaWeb3.PublicKey.default },
-              hops: 3,
-              keypair: currentKeypair, // For mobile wallet
               feature: 'run-node' 
             });
             x402Token = tokenResult.accessToken;
