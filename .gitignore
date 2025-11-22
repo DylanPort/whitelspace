@@ -57,12 +57,10 @@ infrastructure/node-keys/*.json
 *_CONFIGURED.md
 *_UPDATED.md
 
-# Analysis/documentation that exposes implementation details
-FIX-LIST.md
-EMERGENCY-*.sh
-REMOVE-*.sh
-*TRANSPARENCY*
-*ANALYSIS*
-State-of-*
-.gitignore.additions
-wrangler.toml.template
+# Server setup and diagnostic guides
+FIX-GOSSIP-CONNECTION.sh
+SERVER-USAGE-GUIDE.md
+GOSSIP-TUNNEL-WORKAROUND.sh
+PROFITABLE-RPC-SETUP.md
+verify-offload-issue.sh
+INSTANT-RPC-SETUP.md
