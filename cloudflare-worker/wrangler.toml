@@ -32,8 +32,8 @@ id = "53d7e5a7e45f46c5a73eb9a1c4fa8937"
 
 # Environment variables
 [vars]
-# PRIMARY_RPC_ENDPOINT - Set via: wrangler secret put PRIMARY_RPC_ENDPOINT
-# Multiple upstream providers configured via environment
+# Set via: wrangler secret put HELIUS_RPC_URL
+# RPC endpoint configured via environment variables
 
 # Development environment
 [env.dev]
@@ -69,6 +69,4 @@ id = "YOUR_PROD_KV_NAMESPACE_ID"
 
 # [[env.production.analytics_engine_datasets]]
 # binding = "ANALYTICS"
-
-
 
