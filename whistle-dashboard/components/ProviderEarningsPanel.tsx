@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
+import type { RpcResponseAndContext, SignatureResult } from '@solana/web3.js';
 import { fetchStakerAccount, fetchStakingPool, fetchTokenVault, createClaimStakerRewardsTransaction, lamportsToSol, connection, fetchPaymentVault } from '@/lib/contract';
 import PanelFrame from './PanelFrame';
 import toast from 'react-hot-toast';
@@ -154,10 +155,10 @@ export default function ProviderEarningsPanel() {
             blockhash: latestBlockhash.blockhash,
             lastValidBlockHeight: latestBlockhash.lastValidBlockHeight
           }, 'confirmed'),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Confirmation timeout')), 30000))
-        ]);
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Confirmation timeout')), 30000))
+        ]) as RpcResponseAndContext<SignatureResult> | null;
 
-        if (confirmation.value?.err) {
+        if (confirmation?.value?.err) {
           throw new Error('Transaction failed on-chain');
         }
         confirmed = true;
