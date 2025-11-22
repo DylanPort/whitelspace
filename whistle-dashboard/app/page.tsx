@@ -25,14 +25,12 @@ import DecentralizationProgress from '@/components/DecentralizationProgress';
 import GovernancePanel from '@/components/GovernancePanel';
 // Removed DeveloperAccessButton - RPC is now public
 import SubscriptionStatusPanel from '@/components/SubscriptionStatusPanel';
-import WhistleDex from '@/components/WhistleDex';
 import { api } from '@/lib/api';
 
 export default function Home() {
   const [backendStatus, setBackendStatus] = useState<'online' | 'offline' | 'checking'>('checking');
   const [rpcSource, setRpcSource] = useState('Checking...');
   const [showHowItWorks, setShowHowItWorks] = useState(false);
-  const [showDex, setShowDex] = useState(false);
   const [isDesktop, setIsDesktop] = useState(true);
   const [mounted, setMounted] = useState(false);
 
@@ -143,18 +141,10 @@ export default function Home() {
             
             {/* Action Buttons Row */}
             <div className="flex gap-2 lg:gap-1.5 w-full lg:w-auto">
-              <div className="flex-1 lg:flex-none lg:w-[120px]">
-                <button
-                  onClick={() => setShowDex(true)}
-                  className="w-full px-4 py-3 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-lg font-bold text-white text-sm hover:shadow-lg hover:shadow-cyan-500/50 transition-all duration-300"
-                >
-                  DEX
-                </button>
-              </div>
-              <div className="flex-1 lg:flex-none lg:w-[120px]">
+              <div className="flex-1 lg:flex-none lg:w-[180px]">
                 <GhostWhistlePanel />
               </div>
-              <div className="flex-1 lg:flex-none lg:w-[120px]">
+              <div className="flex-1 lg:flex-none lg:w-[180px]">
                 <ResourcesPanel />
               </div>
             </div>
@@ -204,12 +194,6 @@ export default function Home() {
       <HowItWorksModal 
         isOpen={showHowItWorks} 
         onClose={() => setShowHowItWorks(false)} 
-      />
-
-      {/* Whistle DEX Modal */}
-      <WhistleDex 
-        isOpen={showDex} 
-        onClose={() => setShowDex(false)} 
       />
     </main>
   );
