@@ -498,7 +498,7 @@ export async function fetchRewardsAccumulator(): Promise<RewardsAccumulator | nu
     // accumulated_per_token: u128 (16 bytes, little-endian) - stored as two u64s
     const low64 = data.readBigUInt64LE(0);
     const high64 = data.readBigUInt64LE(8);
-    const accumulatedPerToken = low64 + (high64 << 64n);
+    const accumulatedPerToken = low64 + (high64 << BigInt(64));
     // total_distributed: u64 (8 bytes, offset 16)
     const totalDistributed = data.readBigUInt64LE(16);
     // last_update: i64 (8 bytes, offset 24) - read as u64 then convert
