@@ -70,8 +70,11 @@ export async function fetchClaimHistory(
 
         if (!tx || !tx.meta || tx.meta.err) continue;
 
+        // Get account keys using the correct API for VersionedMessage
+        const accountKeys = tx.transaction.message.getAccountKeys().staticAccountKeys;
+
         // Check if this transaction involves the WHISTLE program
-        const involvesProgram = tx.transaction.message.accountKeys.some(
+        const involvesProgram = accountKeys.some(
           (key) => key.equals(WHISTLE_PROGRAM_ID)
         );
 
@@ -83,7 +86,7 @@ export async function fetchClaimHistory(
         );
 
         if (isClaimTx) {
-          const stakerIndex = tx.transaction.message.accountKeys.findIndex(
+          const stakerIndex = accountKeys.findIndex(
             (key) => key.equals(staker)
           );
 
