@@ -86,8 +86,19 @@ export function getX402WalletPDA(): [PublicKey, number] {
   );
 }
 
+// Rewards Accumulator PDA (for fair staker distribution)
+export function getRewardsAccumulatorPDA(): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from('rewards_accumulator')],
+    WHISTLE_PROGRAM_ID
+  );
+}
+
 // Deployed X402 wallet (for reference)
 export const X402_WALLET_ADDRESS = new PublicKey('BMiSBoT5aPCrFcxaTrHuzXMkfrtzCLMcDYqrPTVymNbU');
+
+// Deployed Rewards Accumulator (for reference)
+export const REWARDS_ACCUMULATOR_ADDRESS = new PublicKey('8VAPxQePD9eSdroBSxBixJqb5mz7vdz5NJHktg3xwWRG');
 
 // ============= DATA STRUCTURES =============
 
@@ -227,6 +238,19 @@ export class ProviderAccount {
   ]);
 }
 
+export class RewardsAccumulator {
+  accumulatedPerToken!: bigint;  // u128 stored as bigint (cumulative rewards per staked token, scaled by 1e18)
+  totalDistributed!: bigint;      // u64
+  lastUpdate!: bigint;            // i64
+  bump!: number;                   // u8
+
+  constructor(fields?: Partial<RewardsAccumulator>) {
+    if (fields) {
+      Object.assign(this, fields);
+    }
+  }
+}
+
 export class PaymentVault {
   authority!: Uint8Array;
   totalCollected!: bigint;
@@ -234,6 +258,7 @@ export class PaymentVault {
   bonusPool!: bigint;
   treasury!: bigint;
   stakerRewardsPool!: bigint;
+  developerRebatePool!: bigint;
   lastDistribution!: bigint;
   bump!: number;
 
@@ -255,6 +280,7 @@ export class PaymentVault {
           ['bonusPool', 'u64'],
           ['treasury', 'u64'],
           ['stakerRewardsPool', 'u64'],
+          ['developerRebatePool', 'u64'],
           ['lastDistribution', 'i64'],
           ['bump', 'u8'],
         ],
@@ -449,6 +475,50 @@ export async function fetchProviderAccount(provider: PublicKey): Promise<Provide
   }
 }
 
+// Fetch rewards accumulator for fair distribution calculation
+export async function fetchRewardsAccumulator(): Promise<RewardsAccumulator | null> {
+  try {
+    const [accumulatorPDA] = getRewardsAccumulatorPDA();
+    const accountInfo = await connection.getAccountInfo(accumulatorPDA);
+
+    if (!accountInfo || !accountInfo.data) {
+      console.warn('Rewards accumulator account not found');
+      return null;
+    }
+
+    // Manual deserialization: u128(16) + u64(8) + i64(8) + u8(1) = 33 bytes
+    const data = accountInfo.data;
+    
+    if (data.length < 33) {
+      console.warn('Rewards accumulator data too small:', data.length);
+      return null;
+    }
+
+    // Parse RewardsAccumulator struct
+    // accumulated_per_token: u128 (16 bytes, little-endian) - stored as two u64s
+    const low64 = data.readBigUInt64LE(0);
+    const high64 = data.readBigUInt64LE(8);
+    const accumulatedPerToken = low64 + (high64 << 64n);
+    // total_distributed: u64 (8 bytes, offset 16)
+    const totalDistributed = data.readBigUInt64LE(16);
+    // last_update: i64 (8 bytes, offset 24) - read as u64 then convert
+    const lastUpdateRaw = data.readBigUInt64LE(24);
+    const lastUpdate = BigInt.asIntN(64, lastUpdateRaw);
+    // bump: u8 (1 byte, offset 32)
+    const bump = data[32];
+
+    return {
+      accumulatedPerToken,
+      totalDistributed,
+      lastUpdate,
+      bump,
+    };
+  } catch (error) {
+    console.error('Error fetching rewards accumulator:', error);
+    return null;
+  }
+}
+
 // Fetch token vault balance (REAL total staked in WHISTLE tokens)
 export async function fetchTokenVault() {
   try {
@@ -487,12 +557,14 @@ export async function fetchPaymentVault(): Promise<PaymentVault | null> {
     const stakerRewardsPool = data.readBigUInt64LE(32); // Offset 32
     const bonusPool = data.readBigUInt64LE(40);         // Offset 40
     const treasury = data.readBigUInt64LE(48);          // Offset 48
-    const totalCollected = data.readBigUInt64LE(56);    // Offset 56
+    const developerRebatePool = data.readBigUInt64LE(56); // Offset 56
+    const totalCollected = data.readBigUInt64LE(64);     // Offset 64
     
     console.log('✅ Payment Vault Data:');
     console.log('  Staker Pool:', Number(stakerRewardsPool) / 1e9, 'SOL');
     console.log('  Bonus Pool:', Number(bonusPool) / 1e9, 'SOL');
     console.log('  Treasury:', Number(treasury) / 1e9, 'SOL');
+    console.log('  Developer Rebate Pool:', Number(developerRebatePool) / 1e9, 'SOL');
     console.log('  Total Collected:', Number(totalCollected) / 1e9, 'SOL');
     
     return {
@@ -500,6 +572,7 @@ export async function fetchPaymentVault(): Promise<PaymentVault | null> {
       stakerRewardsPool,
       bonusPool,
       treasury,
+      developerRebatePool,
       totalCollected,
       providerPool: BigInt(0),
       lastDistribution: BigInt(0),
@@ -769,17 +842,19 @@ export async function createClaimStakerRewardsTransaction(
   const [stakerAccountPDA] = getStakerAccountPDA(staker);
   const [stakingPoolPDA] = getStakingPoolPDA();
   const [paymentVaultPDA] = getPaymentVaultPDA();
+  const [rewardsAccumulatorPDA] = getRewardsAccumulatorPDA();
 
   const instructionData = new Uint8Array([StakingInstruction.ClaimStakerRewards]);
 
   const claimIx = new TransactionInstruction({
     programId: WHISTLE_PROGRAM_ID,
     keys: [
-      { pubkey: staker, isSigner: true, isWritable: true },
-      { pubkey: stakerAccountPDA, isSigner: false, isWritable: true },
+      { pubkey: staker, isSigner: true, isWritable: true }, // Staker wallet (receives SOL)
+      { pubkey: stakerAccountPDA, isSigner: false, isWritable: true }, // Staker account (MUST be writable to update pending_rewards and reward_debt)
       { pubkey: stakingPoolPDA, isSigner: false, isWritable: false },
       { pubkey: paymentVaultPDA, isSigner: false, isWritable: true },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      { pubkey: rewardsAccumulatorPDA, isSigner: false, isWritable: true }, // REQUIRED: Fair distribution
     ],
     data: Buffer.from(instructionData),
   });

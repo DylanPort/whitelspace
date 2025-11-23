@@ -1,21 +1,29 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { connection, STAKING_POOL_ADDRESS } from '@/lib/contract';
+import { connection, TOKEN_VAULT_ADDRESS, fetchTokenVault } from '@/lib/contract';
 import PanelFrame from './PanelFrame';
 
 export default function PoolInfoPanel() {
-  const [poolData, setPoolData] = useState<any>(null);
+  const [poolData, setPoolData] = useState<{
+    balance: number;
+    dataSize: number;
+    tokenBalance: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchPoolData() {
       try {
-        const accountInfo = await connection.getAccountInfo(STAKING_POOL_ADDRESS);
+        // Fetch token vault account info
+        const accountInfo = await connection.getAccountInfo(TOKEN_VAULT_ADDRESS);
+        const tokenVault = await fetchTokenVault();
+        
         if (accountInfo) {
           setPoolData({
             balance: accountInfo.lamports / 1e9,
             dataSize: accountInfo.data.length,
+            tokenBalance: tokenVault ? `${(Number(tokenVault.uiAmount) || 0).toLocaleString()} WHISTLE` : '0 WHISTLE',
           });
         }
       } catch (error) {
@@ -49,11 +57,11 @@ export default function PoolInfoPanel() {
         <div className="flex justify-between">
           <span className="text-gray-500">Contract</span>
           <button
-            onClick={() => window.open(`https://solscan.io/account/${STAKING_POOL_ADDRESS.toBase58()}`, '_blank')}
+            onClick={() => window.open(`https://solscan.io/account/${TOKEN_VAULT_ADDRESS.toBase58()}`, '_blank')}
             className="font-mono text-[10px] hover:text-blue-400 transition-colors cursor-pointer"
             title="View on Solscan"
           >
-            {STAKING_POOL_ADDRESS.toBase58().slice(0, 8)}...
+            {TOKEN_VAULT_ADDRESS.toBase58().slice(0, 8)}...
           </button>
         </div>
         <div className="flex justify-between">
@@ -68,6 +76,14 @@ export default function PoolInfoPanel() {
             {loading ? '...' : poolData?.dataSize || '0'} bytes
           </span>
         </div>
+        {poolData?.tokenBalance && (
+          <div className="flex justify-between pt-1 border-t border-white/5">
+            <span className="text-gray-500">Staked Tokens</span>
+            <span className="font-semibold text-emerald-400">
+              {poolData.tokenBalance}
+            </span>
+          </div>
+        )}
       </div>
     </PanelFrame>
   );

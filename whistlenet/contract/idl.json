@@ -7,9 +7,11 @@
     "repository": "https://github.com/DylanPort/whitelspace",
     "deployedAccounts": {
       "authority": "6BNdVMgx2JZJPvkRCLyV2LLxft4S1cwuqoX2BS9eFyvh",
-      "stakingPool": "6Ls9QVrP3K35TdQ8dbSJAp1L48tsYFvcbixsXXL9KDAB",
+      "stakingPool": "jVaoYCKUFjHkYw975R7tVvRgns5VdfnnquSp2gzwPXB",
       "tokenVault": "6AP8c7sCQsm2FMvNJw6fQN5PnMdkySH75h7EPE2kD3Yq",
       "paymentVault": "CU1ZcHccCbQT8iA6pcb3ZyTjog8ckmDHH8gaAmKfC73G",
+      "x402Wallet": "BMiSBoT5aPCrFcxaTrHuzXMkfrtzCLMcDYqrPTVymNbU",
+      "rewardsAccumulator": "8VAPxQePD9eSdroBSxBixJqb5mz7vdz5NJHktg3xwWRG",
       "whistleMint": "6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump"
     }
   },
@@ -120,7 +122,8 @@
         {"name": "stakerAccount", "isMut": true, "isSigner": false},
         {"name": "stakingPool", "isMut": false, "isSigner": false},
         {"name": "paymentVault", "isMut": true, "isSigner": false},
-        {"name": "systemProgram", "isMut": false, "isSigner": false}
+        {"name": "systemProgram", "isMut": false, "isSigner": false},
+        {"name": "rewardsAccumulator", "isMut": true, "isSigner": false}
       ],
       "args": []
     },
@@ -160,7 +163,8 @@
         {"name": "x402Wallet", "isMut": true, "isSigner": false},
         {"name": "paymentVault", "isMut": true, "isSigner": false},
         {"name": "stakingPool", "isMut": false, "isSigner": false},
-        {"name": "systemProgram", "isMut": false, "isSigner": false}
+        {"name": "systemProgram", "isMut": false, "isSigner": false},
+        {"name": "rewardsAccumulator", "isMut": true, "isSigner": false}
       ],
       "args": [
         {"name": "amount", "type": "u64"}
@@ -172,6 +176,16 @@
         {"name": "authority", "isMut": false, "isSigner": true},
         {"name": "paymentVault", "isMut": true, "isSigner": false},
         {"name": "stakingPool", "isMut": false, "isSigner": false}
+      ],
+      "args": []
+    },
+    {
+      "name": "InitializeRewardsAccumulator",
+      "accounts": [
+        {"name": "authority", "isMut": true, "isSigner": true},
+        {"name": "rewardsAccumulator", "isMut": true, "isSigner": false},
+        {"name": "stakingPool", "isMut": false, "isSigner": false},
+        {"name": "systemProgram", "isMut": false, "isSigner": false}
       ],
       "args": []
     }
@@ -250,7 +264,20 @@
           {"name": "bonusPool", "type": "u64"},
           {"name": "treasury", "type": "u64"},
           {"name": "stakerRewardsPool", "type": "u64"},
+          {"name": "developerRebatePool", "type": "u64"},
           {"name": "lastDistribution", "type": "i64"},
+          {"name": "bump", "type": "u8"}
+        ]
+      }
+    },
+    {
+      "name": "RewardsAccumulator",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {"name": "accumulatedPerToken", "type": "u128"},
+          {"name": "totalDistributed", "type": "u64"},
+          {"name": "lastUpdate", "type": "i64"},
           {"name": "bump", "type": "u8"}
         ]
       }
@@ -284,7 +311,9 @@
     {"name": "STAKING_POOL_ADDRESS", "type": "string", "value": "jVaoYCKUFjHkYw975R7tVvRgns5VdfnnquSp2gzwPXB"},
     {"name": "TOKEN_VAULT_ADDRESS", "type": "string", "value": "6AP8c7sCQsm2FMvNJw6fQN5PnMdkySH75h7EPE2kD3Yq"},
     {"name": "PAYMENT_VAULT_ADDRESS", "type": "string", "value": "CU1ZcHccCbQT8iA6pcb3ZyTjog8ckmDHH8gaAmKfC73G"},
-    {"name": "AUTHORITY_ADDRESS", "type": "string", "value": "6BNdVMgx2JZJPvkRCLyV2LLXft4S1cwuqoX2BS9eFyvh"},
+    {"name": "X402_WALLET_ADDRESS", "type": "string", "value": "BMiSBoT5aPCrFcxaTrHuzXMkfrtzCLMcDYqrPTVymNbU"},
+    {"name": "REWARDS_ACCUMULATOR_ADDRESS", "type": "string", "value": "8VAPxQePD9eSdroBSxBixJqb5mz7vdz5NJHktg3xwWRG"},
+    {"name": "AUTHORITY_ADDRESS", "type": "string", "value": "6BNdVMgx2JZJPvkRCLyV2LLxft4S1cwuqoX2BS9eFyvh"},
     {"name": "MAX_STAKE_PER_USER", "type": "u64", "value": "100000000000000"},
     {"name": "MIN_PROVIDER_BOND", "type": "u64", "value": "1000000000"},
     {"name": "QUERY_COST", "type": "u64", "value": "10000"},

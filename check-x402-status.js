@@ -1,97 +1,87 @@
-#!/usr/bin/env node
-/**
- * Check X402 system status and calculate your rewards
- */
+const { Connection, PublicKey } = require('@solana/web3.js');
 
-const { Connection, PublicKey, LAMPORTS_PER_SOL } = require('@solana/web3.js');
-
-const RPC = 'https://rpc.whistle.ninja';
-const connection = new Connection(RPC, 'confirmed');
-
-// Addresses
+const RPC_URL = 'https://rpc.whistle.ninja';
 const X402_WALLET = new PublicKey('BMiSBoT5aPCrFcxaTrHuzXMkfrtzCLMcDYqrPTVymNbU');
 const PAYMENT_VAULT = new PublicKey('CU1ZcHccCbQT8iA6pcb3ZyTjog8ckmDHH8gaAmKfC73G');
-const STAKING_POOL = new PublicKey('jVaoYCKUFjHkYw975R7tVvRgns5VdfnnquSp2gzwPXB');
+const REWARDS_ACCUMULATOR = new PublicKey('8VAPxQePD9eSdroBSxBixJqb5mz7vdz5NJHktg3xwWRG');
+const PROGRAM_ID = new PublicKey('whttByewzTQzAz3VMxnyJHdKsd7AyNRdG2tDHXVTksr');
 
 async function checkStatus() {
-  console.log('🔍 Checking X402 System Status\n');
-  console.log('='.repeat(60));
+  const conn = new Connection(RPC_URL, 'confirmed');
   
-  // 1. Check X402 wallet
-  const x402Balance = await connection.getBalance(X402_WALLET);
-  console.log(`\n💰 X402 Wallet (BMiSBoT5...ymNbU)`);
-  console.log(`   Balance: ${x402Balance / LAMPORTS_PER_SOL} SOL`);
-  console.log(`   Status: ${x402Balance > 0 ? '✅ Has funds - needs distribution!' : '❌ Empty'}`);
+  console.log('=== ON-CHAIN STATUS CHECK ===\n');
   
-  // 2. Check Payment Vault
-  const vaultInfo = await connection.getAccountInfo(PAYMENT_VAULT);
-  console.log(`\n🏦 Payment Vault (CU1ZcH...C73G)`);
+  // Check X402 wallet
+  const x402Balance = await conn.getBalance(X402_WALLET);
+  console.log('X402 Wallet:', X402_WALLET.toBase58());
+  console.log('  Balance:', x402Balance / 1e9, 'SOL');
   
-  if (vaultInfo) {
-    console.log(`   Balance: ${vaultInfo.lamports / LAMPORTS_PER_SOL} SOL`);
-    console.log(`   Data size: ${vaultInfo.data.length} bytes`);
-    
-    // Try to parse vault data
-    if (vaultInfo.data.length >= 64) {
-      const data = vaultInfo.data;
-      
-      // Parse PaymentVault struct (assuming layout)
-      const stakerRewardsPool = Number(data.slice(32, 40).readBigUInt64LE(0)) / LAMPORTS_PER_SOL;
-      const bonusPool = Number(data.slice(40, 48).readBigUInt64LE(0)) / LAMPORTS_PER_SOL;
-      const treasury = Number(data.slice(48, 56).readBigUInt64LE(0)) / LAMPORTS_PER_SOL;
-      const totalCollected = Number(data.slice(56, 64).readBigUInt64LE(0)) / LAMPORTS_PER_SOL;
-      
-      console.log(`\n   📊 Vault Distribution:`);
-      console.log(`      Staker Rewards Pool: ${stakerRewardsPool} SOL`);
-      console.log(`      Bonus Pool: ${bonusPool} SOL`);
-      console.log(`      Treasury: ${treasury} SOL`);
-      console.log(`      Total Collected: ${totalCollected} SOL`);
-    }
+  // Check recent transactions
+  const x402Sigs = await conn.getSignaturesForAddress(X402_WALLET, { limit: 5 });
+  console.log('\nRecent X402 Wallet Transactions:');
+  x402Sigs.forEach((sig, i) => {
+    const date = sig.blockTime ? new Date(sig.blockTime * 1000).toISOString() : 'N/A';
+    console.log(`  ${i+1}. ${sig.signature.substring(0, 20)}... - ${sig.err ? 'FAILED' : 'SUCCESS'} - ${date}`);
+  });
+  
+  // Check payment vault
+  const vaultAcc = await conn.getAccountInfo(PAYMENT_VAULT);
+  if (vaultAcc && vaultAcc.data.length >= 64) {
+    const stakerPool = vaultAcc.data.readBigUInt64LE(32);
+    const treasury = vaultAcc.data.readBigUInt64LE(48);
+    console.log('\nPayment Vault:', PAYMENT_VAULT.toBase58());
+    console.log('  Staker Rewards Pool:', Number(stakerPool) / 1e9, 'SOL');
+    console.log('  Treasury:', Number(treasury) / 1e9, 'SOL');
+  }
+  
+  // Check accumulator
+  const accInfo = await conn.getAccountInfo(REWARDS_ACCUMULATOR);
+  if (accInfo && accInfo.data.length >= 33) {
+    const low64 = accInfo.data.readBigUInt64LE(0);
+    const high64 = accInfo.data.readBigUInt64LE(8);
+    const accumulated = low64 + (high64 << 64n);
+    const totalDist = accInfo.data.readBigUInt64LE(16);
+    const lastUpdate = accInfo.data.readBigUInt64LE(24);
+    console.log('\nRewards Accumulator:', REWARDS_ACCUMULATOR.toBase58());
+    console.log('  accumulated_per_token:', accumulated.toString());
+    console.log('  total_distributed:', Number(totalDist) / 1e9, 'SOL');
+    console.log('  last_update:', lastUpdate ? new Date(Number(lastUpdate) * 1000).toISOString() : 'Never');
   } else {
-    console.log(`   Status: ❌ Not initialized or error reading`);
+    console.log('\nRewards Accumulator: NOT FOUND or INVALID');
   }
   
-  // 3. Check Staking Pool
-  const poolInfo = await connection.getAccountInfo(STAKING_POOL);
-  console.log(`\n🎯 Staking Pool (jVaoYC...gwPXB)`);
-  
-  if (poolInfo && poolInfo.data.length >= 56) {
-    const totalStaked = Number(poolInfo.data.slice(48, 56).readBigUInt64LE(0));
-    console.log(`   Total Staked: ${totalStaked / 1e6} WHISTLE`);
-    
-    // Calculate your potential rewards
-    const yourStake = 20300; // From screenshot
-    const yourPercentage = (yourStake / (totalStaked / 1e6)) * 100;
-    
-    console.log(`\n📈 Your Position:`);
-    console.log(`   Your Stake: ${yourStake} WHISTLE`);
-    console.log(`   Your Share: ${yourPercentage.toFixed(4)}%`);
-    
-    if (x402Balance > 0) {
-      const distributableAmount = (x402Balance - 0.001 * LAMPORTS_PER_SOL) / LAMPORTS_PER_SOL;
-      const stakerShare = distributableAmount * 0.9;
-      const yourReward = stakerShare * (yourPercentage / 100);
-      
-      console.log(`\n💡 If distribution happens now:`);
-      console.log(`   Distributable: ${distributableAmount} SOL`);
-      console.log(`   90% to stakers: ${stakerShare} SOL`);
-      console.log(`   Your reward: ${yourReward.toFixed(8)} SOL`);
-      console.log(`   USD value: $${(yourReward * 200).toFixed(2)} (at $200/SOL)`);
+  // Check for ProcessX402Payment transactions
+  console.log('\n=== CHECKING FOR ProcessX402Payment CALLS ===');
+  const programSigs = await conn.getSignaturesForAddress(PROGRAM_ID, { limit: 20 });
+  let foundProcessX402 = false;
+  for (const sig of programSigs) {
+    try {
+      const tx = await conn.getTransaction(sig.signature, { maxSupportedTransactionVersion: 0 });
+      if (tx && tx.transaction && tx.transaction.message) {
+        const accounts = tx.transaction.message.accountKeys;
+        const hasX402Wallet = accounts.some(a => a.toBase58() === X402_WALLET.toBase58());
+        const hasPaymentVault = accounts.some(a => a.toBase58() === PAYMENT_VAULT.toBase58());
+        if (hasX402Wallet && hasPaymentVault) {
+          console.log(`\nFound ProcessX402Payment transaction: ${sig.signature}`);
+          console.log(`  Status: ${sig.err ? 'FAILED' : 'SUCCESS'}`);
+          console.log(`  Block: ${sig.blockTime ? new Date(sig.blockTime * 1000).toISOString() : 'N/A'}`);
+          foundProcessX402 = true;
+        }
+      }
+    } catch (e) {
+      // Skip if can't parse
     }
   }
   
-  console.log('\n' + '='.repeat(60));
-  console.log('\n📝 DIAGNOSIS:\n');
-  
-  if (x402Balance > 0) {
-    console.log('⚠️  X402 wallet has funds but distribution hasn\'t been triggered!');
-    console.log('\nTO FIX:');
-    console.log('1. Run the distributor cron job, OR');
-    console.log('2. Manually trigger with: node trigger-x402-distribution.js');
-    console.log('\nThe funds are there, they just need to be moved to the vault!');
-  } else {
-    console.log('✅ X402 wallet is empty - waiting for new payments');
+  if (!foundProcessX402) {
+    console.log('\n❌ NO ProcessX402Payment transactions found!');
+    console.log('   This means the distribution was NEVER triggered.');
   }
+  
+  console.log('\n=== SUMMARY ===');
+  console.log(`X402 Wallet has ${x402Balance / 1e9} SOL but accumulator is at 0`);
+  console.log('This means ProcessX402Payment was never called with the accumulator account.');
+  console.log('Run trigger-x402-distribution.js to process the funds.');
 }
 
 checkStatus().catch(console.error);

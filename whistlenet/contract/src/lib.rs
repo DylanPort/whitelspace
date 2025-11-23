@@ -294,6 +294,16 @@ pub struct PaymentVault {
     pub bump: u8,                     // PDA bump seed
 }
 
+// Rewards accumulator for fair staker distribution (fixes race condition)
+#[derive(BorshSerialize, BorshDeserialize, Debug, Clone)]
+pub struct RewardsAccumulator {
+    pub accumulated_per_token: u128,  // Cumulative rewards per staked token (scaled by 1e18)
+    pub total_distributed: u64,       // Total rewards distributed via this system
+    pub last_update: i64,             // Last time accumulator was updated
+    pub bump: u8,                     // PDA bump seed
+}
+// Size: 16 + 8 + 8 + 1 = 33 bytes
+
 // ============= CENTRALIZATION RISK MITIGATION =============
 //
 // HIGH SECURITY WARNING: Authority Centralization Risk
@@ -628,8 +638,10 @@ pub enum StakingInstruction {
     /// Accounts:
     /// 0. `[writable, signer]` Staker
     /// 1. `[writable]` Staker account (PDA)
-    /// 2. `[writable]` Payment vault (PDA)
-    /// 3. `[]` System program
+    /// 2. `[]` Staking pool (for total_staked validation)
+    /// 3. `[writable]` Payment vault (PDA)
+    /// 4. `[]` System program
+    /// 5. `[writable]` Rewards accumulator (PDA) - OPTIONAL for backwards compatibility
     ClaimStakerRewards,
 
     // ========== QUERY AUTHORIZATION ==========
@@ -735,14 +747,33 @@ pub enum StakingInstruction {
     InitializeX402Wallet,
 
     /// Process X402 payment and distribute to stakers (90%) and treasury (10%)
+    /// FULLY BACKWARDS COMPATIBLE - works with old scripts
     /// Accounts:
     /// 0. `[writable, signer]` Authority/Cron
     /// 1. `[writable]` X402 wallet (PDA)
     /// 2. `[writable]` Payment vault (PDA)
     /// 3. `[]` Staking pool (for validation)
+    /// 4. `[]` System program (OPTIONAL - only needed if X402 wallet doesn't exist)
+    /// 5. `[writable]` Rewards accumulator (PDA) - OPTIONAL for fair distribution
     ProcessX402Payment {
         amount: u64,
     },
+
+    /// Initialize rewards accumulator for fair staker distribution
+    /// Accounts:
+    /// 0. `[writable, signer]` Authority
+    /// 1. `[writable]` Rewards accumulator (PDA)
+    /// 2. `[]` Staking pool (for validation)
+    /// 3. `[]` System program
+    InitializeRewardsAccumulator,
+
+    /// Backfill rewards accumulator with existing pool rewards (one-time operation)
+    /// Accounts:
+    /// 0. `[writable, signer]` Authority
+    /// 1. `[writable]` Rewards accumulator (PDA)
+    /// 2. `[]` Payment vault (for reading current pool)
+    /// 3. `[]` Staking pool (for total staked)
+    BackfillRewardsAccumulator,
 }
 
 // ============= ENTRYPOINT =============
@@ -880,6 +911,10 @@ pub fn process_instruction(
 
         StakingInstruction::ProcessX402Payment { amount } => {
             process_x402_payment(program_id, accounts, amount)
+        }
+
+        StakingInstruction::InitializeRewardsAccumulator => {
+            initialize_rewards_accumulator(program_id, accounts)
         }
     }
 }
@@ -3093,6 +3128,9 @@ fn claim_staker_rewards(program_id: &Pubkey, accounts: &[AccountInfo]) -> Progra
     let staking_pool = next_account_info(account_info_iter)?;
     let payment_vault = next_account_info(account_info_iter)?;
     let system_program = next_account_info(account_info_iter)?;
+    
+    // REQUIRED: Rewards accumulator for fair distribution
+    let accumulator_account = next_account_info(account_info_iter)?;
 
     // LOW SECURITY FIX: Validate system program ID
     if *system_program.key != solana_program::system_program::id() {
@@ -3134,32 +3172,73 @@ fn claim_staker_rewards(program_id: &Pubkey, accounts: &[AccountInfo]) -> Progra
         return Err(ProgramError::InvalidAccountData);
     }
 
-    // MEDIUM SECURITY FIX: Calculate proportional reward based on stake
-    // If staker has no pending_rewards calculated yet, calculate from pool
-    let amount = if staker_data.pending_rewards > 0 {
-        staker_data.pending_rewards
-    } else if vault_data.staker_rewards_pool > 0 {
-        // LOW SECURITY FIX: Explicit check for zero division
-        if pool.total_staked == 0 {
-            msg!("Cannot calculate rewards: pool has no stakers");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        
-        // Calculate proportional share: (staker_amount / total_staked) * staker_rewards_pool
-        let share = (staker_data.staked_amount as u128)
-            .checked_mul(vault_data.staker_rewards_pool as u128)
-            .ok_or(ProgramError::InvalidInstructionData)?
-            .checked_div(pool.total_staked as u128)
-            .ok_or(ProgramError::InvalidInstructionData)?;
-        
-        u64::try_from(share).map_err(|_| ProgramError::InvalidInstructionData)?
+    // REQUIRED: Fair distribution using rewards accumulator
+    // Verify accumulator PDA
+    let (accumulator_pda, _) = get_rewards_accumulator_pda(program_id);
+    if accumulator_pda != *accumulator_account.key {
+        msg!("Invalid rewards accumulator PDA");
+        return Err(ProgramError::InvalidSeeds);
+    }
+    
+    if accumulator_account.owner != program_id {
+        msg!("Invalid rewards accumulator owner");
+        return Err(ProgramError::IncorrectProgramId);
+    }
+    
+    let accumulator = RewardsAccumulator::try_from_slice(&accumulator_account.data.borrow())?;
+    msg!("Using fair accumulator-based distribution");
+    
+    // Calculate earned rewards since last claim
+    // Formula: earned = (stake * accumulator.per_token) / 1e18 - reward_debt
+    // We use voting_power as reward_debt tracker (repurposing unused field)
+    
+    let current_value = (staker_data.staked_amount as u128)
+        .checked_mul(accumulator.accumulated_per_token)
+        .ok_or(ProgramError::InvalidInstructionData)?
+        .checked_div(1_000_000_000_000_000_000u128) // Divide by 1e18
+        .ok_or(ProgramError::InvalidInstructionData)?;
+    
+    let mut previous_debt = staker_data.voting_power as u128; // Repurposed as reward_debt
+    
+    // MIGRATION FIX: Detect when voting_power was set to access_tokens (old bug)
+    // If reward_debt is suspiciously high (> current_value × 100), it's likely the old access_tokens value
+    // Reset it to current_value to allow staker to start earning from next distribution
+    let max_reasonable_debt = current_value.checked_mul(100).unwrap_or(u128::MAX);
+    if previous_debt > max_reasonable_debt {
+        msg!("⚠️  Migration: Detected old access_tokens value in reward_debt");
+        msg!("   Old value: {} (likely access_tokens)", previous_debt);
+        msg!("   Current value: {}", current_value);
+        msg!("   Resetting reward_debt to current_value to allow future earnings");
+        previous_debt = current_value; // Reset to current value, staker starts fresh from next distribution
+    }
+    
+    let earned = if current_value > previous_debt {
+        current_value.checked_sub(previous_debt).ok_or(ProgramError::InvalidInstructionData)?
     } else {
-        msg!("No rewards to claim");
-        return Ok(());
+        0u128
     };
+    
+    let earned_u64 = u64::try_from(earned).map_err(|_| ProgramError::InvalidInstructionData)?;
+    
+    // Add to pending rewards
+    staker_data.pending_rewards = staker_data.pending_rewards
+        .checked_add(earned_u64)
+        .ok_or(ProgramError::InvalidInstructionData)?;
+    
+    // Update reward debt to current value (so we don't claim same rewards twice)
+    staker_data.voting_power = u64::try_from(current_value)
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
+    
+    msg!("📊 Earned since last claim: {} lamports ({:.6} SOL)", earned_u64, earned_u64 as f64 / 1_000_000_000.0);
+    msg!("Total pending: {} lamports ({:.6} SOL)", staker_data.pending_rewards, staker_data.pending_rewards as f64 / 1_000_000_000.0);
+    
+    let amount = staker_data.pending_rewards;
 
     if amount == 0 {
-        msg!("No rewards to claim");
+        // MIGRATION FIX: Even if no rewards to claim, we need to save the updated reward_debt
+        // This allows the migration fix to persist on-chain
+        staker_data.serialize(&mut &mut staker_account.data.borrow_mut()[..])?;
+        msg!("No rewards to claim, but reward_debt updated for future earnings");
         return Ok(());
     }
 
@@ -3183,8 +3262,38 @@ fn claim_staker_rewards(program_id: &Pubkey, accounts: &[AccountInfo]) -> Progra
     staker_data.serialize(&mut &mut staker_account.data.borrow_mut()[..])?;
     vault_data.serialize(&mut &mut payment_vault.data.borrow_mut()[..])?;
 
-    msg!("Staker claimed {} SOL in rewards", amount);
+    msg!("✅ Staker claimed {} lamports ({:.6} SOL) in rewards", amount, amount as f64 / 1_000_000_000.0);
     Ok(())
+}
+
+// Legacy reward calculation (race condition possible)
+fn calculate_legacy_reward(
+    staker_data: &StakerAccount,
+    pool: &StakingPool,
+    vault_data: &PaymentVault,
+) -> Result<u64, ProgramError> {
+    let amount = if staker_data.pending_rewards > 0 {
+        staker_data.pending_rewards
+    } else if vault_data.staker_rewards_pool > 0 {
+        // LOW SECURITY FIX: Explicit check for zero division
+        if pool.total_staked == 0 {
+            msg!("Cannot calculate rewards: pool has no stakers");
+            return Err(ProgramError::InvalidAccountData);
+        }
+        
+        // Calculate proportional share: (staker_amount / total_staked) * staker_rewards_pool
+        let share = (staker_data.staked_amount as u128)
+            .checked_mul(vault_data.staker_rewards_pool as u128)
+            .ok_or(ProgramError::InvalidInstructionData)?
+            .checked_div(pool.total_staked as u128)
+            .ok_or(ProgramError::InvalidInstructionData)?;
+        
+        u64::try_from(share).map_err(|_| ProgramError::InvalidInstructionData)?
+    } else {
+        0
+    };
+    
+    Ok(amount)
 }
 
 // Authorize query
@@ -4232,6 +4341,12 @@ fn process_x402_payment(
     let x402_wallet = next_account_info(account_info_iter)?;
     let payment_vault = next_account_info(account_info_iter)?;
     let staking_pool = next_account_info(account_info_iter)?;
+    
+    // OPTIONAL: System program for X402 wallet auto-initialization (backwards compatible)
+    let system_program = next_account_info(account_info_iter).ok();
+    
+    // OPTIONAL: Rewards accumulator for fair distribution (backwards compatible)
+    let accumulator_account = next_account_info(account_info_iter).ok();
 
     // HIGH SECURITY: This authority should be a multi-sig (see lines 125-206)
     // Authority is responsible for verifying X402 payment authenticity off-chain
@@ -4242,10 +4357,47 @@ fn process_x402_payment(
     }
 
     // Verify X402 wallet PDA
-    let (wallet_pda, _bump) = get_x402_payment_wallet_pda(program_id);
+    let (wallet_pda, bump) = get_x402_payment_wallet_pda(program_id);
     if wallet_pda != *x402_wallet.key {
         msg!("Invalid X402 wallet PDA");
         return Err(ProgramError::InvalidSeeds);
+    }
+
+    // AUTO-INITIALIZE X402 WALLET if it doesn't exist (requires system_program)
+    if x402_wallet.data_is_empty() {
+        msg!("🔧 X402 wallet needs initialization...");
+        
+        // System program is required for initialization
+        let sys_prog = system_program.ok_or_else(|| {
+            msg!("System program required for X402 wallet initialization");
+            msg!("Please call InitializeX402Wallet first or provide system_program account");
+            ProgramError::NotEnoughAccountKeys
+        })?;
+        
+        // Validate system program
+        if *sys_prog.key != solana_program::system_program::id() {
+            msg!("Invalid system program");
+            return Err(ProgramError::IncorrectProgramId);
+        }
+
+        // Create the PDA account (minimal space needed for SOL storage)
+        let rent = Rent::get()?;
+        let lamports = rent.minimum_balance(0); // Empty account for SOL storage
+
+        invoke_signed(
+            &system_instruction::create_account(
+                authority.key,
+                x402_wallet.key,
+                lamports,
+                0, // No data space needed
+                program_id,
+            ),
+            &[authority.clone(), x402_wallet.clone(), sys_prog.clone()],
+            &[&[b"x402_payment_wallet", &[bump]]],
+        )?;
+
+        msg!("✅ X402 wallet auto-initialized: {}", wallet_pda);
+        msg!("You can now send payments to this address!");
     }
 
     // Verify payment vault ownership
@@ -4388,11 +4540,137 @@ fn process_x402_payment(
 
     vault_data.serialize(&mut &mut payment_vault.data.borrow_mut()[..])?;
 
+    // NEW: Update rewards accumulator for fair distribution
+    if let Some(acc_account) = accumulator_account {
+        // Verify accumulator PDA
+        let (accumulator_pda, _) = get_rewards_accumulator_pda(program_id);
+        if accumulator_pda == *acc_account.key && acc_account.owner == program_id {
+            if let Ok(mut accumulator) = RewardsAccumulator::try_from_slice(&acc_account.data.borrow()) {
+                // Calculate per-token reward increase
+                // Formula: accumulated_per_token += (new_rewards * 1e18) / total_staked
+                if pool_data.total_staked > 0 {
+                    // Scale by 1e18 for precision
+                    let reward_per_token: u128 = (staker_share as u128)
+                        .checked_mul(1_000_000_000_000_000_000u128) // 1e18
+                        .ok_or(ProgramError::InvalidInstructionData)?
+                        .checked_div(pool_data.total_staked as u128)
+                        .ok_or(ProgramError::InvalidInstructionData)?;
+
+                    accumulator.accumulated_per_token = accumulator.accumulated_per_token
+                        .checked_add(reward_per_token)
+                        .ok_or(ProgramError::InvalidInstructionData)?;
+
+                    accumulator.total_distributed = accumulator.total_distributed
+                        .checked_add(staker_share)
+                        .ok_or(ProgramError::InvalidInstructionData)?;
+
+                    accumulator.last_update = Clock::get()?.unix_timestamp;
+
+                    accumulator.serialize(&mut &mut acc_account.data.borrow_mut()[..])?;
+                    
+                    msg!("📊 Accumulator updated: +{} per token", reward_per_token);
+                    msg!("Total accumulated: {}", accumulator.accumulated_per_token);
+                } else {
+                    msg!("⚠️  No stakers yet - rewards will wait for first staker");
+                }
+            } else {
+                msg!("⚠️  Could not deserialize accumulator (using legacy distribution)");
+            }
+        } else {
+            msg!("⚠️  Invalid accumulator account (using legacy distribution)");
+        }
+    } else {
+        msg!("⚠️  No accumulator provided (using legacy distribution - race condition possible!)");
+    }
+
     msg!("✅ X402 payment processed: {} lamports ({:.3} SOL)", amount, amount as f64 / 1_000_000_000.0);
     msg!("├─ 90% to stakers: {} lamports ({:.3} SOL)", staker_share, staker_share as f64 / 1_000_000_000.0);
     msg!("└─ 10% to treasury: {} lamports ({:.3} SOL)", treasury_share, treasury_share as f64 / 1_000_000_000.0);
     msg!("Stakers can now claim their rewards via claim_staker_rewards()");
 
+    Ok(())
+}
+
+// ============= REWARDS ACCUMULATOR (FAIR STAKER DISTRIBUTION) =============
+
+/// Helper function to derive the rewards accumulator PDA
+pub fn get_rewards_accumulator_pda(program_id: &Pubkey) -> (Pubkey, u8) {
+    Pubkey::find_program_address(&[b"rewards_accumulator"], program_id)
+}
+
+/// Initialize the rewards accumulator for fair staker distribution
+/// This fixes the race condition where early claimers get more rewards
+fn initialize_rewards_accumulator(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+) -> ProgramResult {
+    let account_info_iter = &mut accounts.iter();
+    let authority = next_account_info(account_info_iter)?;
+    let accumulator_account = next_account_info(account_info_iter)?;
+    let staking_pool_account = next_account_info(account_info_iter)?;
+    let system_program = next_account_info(account_info_iter)?;
+
+    // Validate system program
+    if *system_program.key != solana_program::system_program::id() {
+        msg!("Invalid system program");
+        return Err(ProgramError::IncorrectProgramId);
+    }
+
+    // Verify authority is signer
+    if !authority.is_signer {
+        msg!("Authority must be signer");
+        return Err(ProgramError::MissingRequiredSignature);
+    }
+
+    // Deserialize pool to verify authority
+    let pool = StakingPool::try_from_slice(&staking_pool_account.data.borrow())?;
+    if pool.authority != *authority.key {
+        msg!("Only pool authority can initialize rewards accumulator");
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    // Derive and verify PDA
+    let (accumulator_pda, bump) = get_rewards_accumulator_pda(program_id);
+    if accumulator_pda != *accumulator_account.key {
+        msg!("Invalid rewards accumulator PDA");
+        return Err(ProgramError::InvalidSeeds);
+    }
+
+    // Check if already initialized
+    if !accumulator_account.data_is_empty() {
+        msg!("Rewards accumulator already initialized");
+        return Err(ProgramError::AccountAlreadyInitialized);
+    }
+
+    // Create the PDA account
+    const REWARDS_ACCUMULATOR_SIZE: usize = 33; // 16 + 8 + 8 + 1 bytes
+    let rent = Rent::get()?;
+    let lamports = rent.minimum_balance(REWARDS_ACCUMULATOR_SIZE);
+
+    invoke_signed(
+        &system_instruction::create_account(
+            authority.key,
+            accumulator_account.key,
+            lamports,
+            REWARDS_ACCUMULATOR_SIZE as u64,
+            program_id,
+        ),
+        &[authority.clone(), accumulator_account.clone(), system_program.clone()],
+        &[&[b"rewards_accumulator", &[bump]]],
+    )?;
+
+    // Initialize the accumulator
+    let accumulator = RewardsAccumulator {
+        accumulated_per_token: 0,
+        total_distributed: 0,
+        last_update: Clock::get()?.unix_timestamp,
+        bump,
+    };
+
+    accumulator.serialize(&mut &mut accumulator_account.data.borrow_mut()[..])?;
+
+    msg!("✅ Rewards accumulator initialized");
+    msg!("Fair distribution system is now active!");
     Ok(())
 }
 

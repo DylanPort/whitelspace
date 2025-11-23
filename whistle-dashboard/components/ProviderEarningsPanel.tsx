@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import type { RpcResponseAndContext, SignatureResult } from '@solana/web3.js';
-import { fetchStakerAccount, fetchStakingPool, fetchTokenVault, createClaimStakerRewardsTransaction, lamportsToSol, connection, fetchPaymentVault } from '@/lib/contract';
+import { fetchStakerAccount, fetchStakingPool, fetchTokenVault, createClaimStakerRewardsTransaction, lamportsToSol, connection, fetchPaymentVault, fetchRewardsAccumulator } from '@/lib/contract';
+import { fetchClaimHistory, type ClaimHistory } from '@/lib/claim-history';
 import PanelFrame from './PanelFrame';
 import toast from 'react-hot-toast';
 
@@ -14,106 +15,128 @@ export default function ProviderEarningsPanel() {
   const [totalStakerRewards, setTotalStakerRewards] = useState(0);
   const [loading, setLoading] = useState(false);
   const [claiming, setClaiming] = useState(false);
+  const [needsMigration, setNeedsMigration] = useState(false);
+  const [claimHistory, setClaimHistory] = useState<ClaimHistory | null>(null);
 
   // Load staker rewards function (can be called from useEffect or after claim)
   const loadStakerRewards = async () => {
-    if (!publicKey) {
-      setEarnings(0);
-      setStakedAmount(0);
-      setTotalStakerRewards(0);
-      return;
-    }
+      if (!publicKey) {
+        setEarnings(0);
+        setStakedAmount(0);
+        setTotalStakerRewards(0);
+        return;
+      }
 
-    setLoading(true);
-    try {
-      console.log('='.repeat(60));
-      console.log('🔍 LOADING STAKER REWARDS FOR:', publicKey.toBase58());
-      console.log('='.repeat(60));
-      
-      // Fetch staker account
-      const stakerAccount = await fetchStakerAccount(publicKey);
+      setLoading(true);
+      try {
+        console.log('='.repeat(60));
+        console.log('🔍 LOADING STAKER REWARDS FOR:', publicKey.toBase58());
+        console.log('='.repeat(60));
+        
+        // Fetch staker account
+        const stakerAccount = await fetchStakerAccount(publicKey);
       console.log('==== PROVIDER EARNINGS PANEL DEBUG ====');
       console.log('Wallet:', publicKey.toBase58());
-      console.log('Staker Account:', stakerAccount);
-      
-      if (stakerAccount) {
+        console.log('Staker Account:', stakerAccount);
+        
+        if (stakerAccount) {
         console.log('Raw staked amount:', stakerAccount.stakedAmount);
         console.log('Raw pending rewards:', stakerAccount.pendingRewards);
-        setStakedAmount(Number(stakerAccount.stakedAmount) / 1e6); // WHISTLE tokens (6 decimals)
-        let calculatedEarnings = lamportsToSol(stakerAccount.pendingRewards); // SOL rewards
+        console.log('Raw voting power (reward debt):', stakerAccount.votingPower);
+          setStakedAmount(Number(stakerAccount.stakedAmount) / 1e6); // WHISTLE tokens (6 decimals)
         
-        // Fetch payment vault and token vault once (used for both calculation and display)
+        // Fetch accumulator, payment vault, and token vault
+        const accumulator = await fetchRewardsAccumulator();
         const vault = await fetchPaymentVault();
         const tokenVault = await fetchTokenVault();
         
-        // Set total staker rewards pool (for display)
+        // Set total staker rewards pool (for display) - this is the actual pool amount
         if (vault) {
           const totalPool = lamportsToSol(vault.stakerRewardsPool);
           setTotalStakerRewards(totalPool);
           console.log('💰 Total Staker Rewards Pool:', totalPool, 'SOL');
         }
         
-        // If no pending rewards set, calculate from pool
-        if (calculatedEarnings === 0) {
-          console.log('🔍 Calculating rewards from pool...');
+        // Calculate earnings using accumulator formula
+        let calculatedEarnings = 0;
+        
+        if (accumulator) {
+          console.log('📊 Using accumulator-based calculation');
+          console.log('Accumulated per token:', accumulator.accumulatedPerToken.toString());
+          console.log('Total distributed:', accumulator.totalDistributed.toString());
           
-          console.log('Token Vault:', tokenVault);
-          console.log('Payment Vault:', vault);
+          // Formula: earned = (stake * accumulated_per_token) / 1e18 - reward_debt
+          // voting_power is repurposed as reward_debt
+          const stakeAmount = BigInt(stakerAccount.stakedAmount);
+          const accumulatedPerToken = accumulator.accumulatedPerToken;
+          let rewardDebt = BigInt(stakerAccount.votingPower); // Repurposed field
           
-          // Only calculate from pool if pool has meaningful amount (> 0.000001 SOL)
-          const minPoolThreshold = 1000; // 0.000001 SOL in lamports
+          // Calculate: (stake * accumulated_per_token) / 1e18
+          const currentValue = (stakeAmount * accumulatedPerToken) / BigInt(1_000_000_000_000_000_000); // Divide by 1e18
           
-          if (tokenVault && vault && vault.stakerRewardsPool > minPoolThreshold) {
-            // Use token vault balance as the REAL total staked
-            const realTotalStaked = Number(tokenVault.amount);
-            
-            console.log('Real Total Staked:', realTotalStaked);
-            console.log('Your Staked Amount:', stakerAccount.stakedAmount);
-            console.log('Staker Rewards Pool:', vault.stakerRewardsPool);
-            
-            if (realTotalStaked > 0) {
-              // Calculate proportional share using REAL total
-              const stakerShare = (Number(stakerAccount.stakedAmount) / realTotalStaked) * Number(vault.stakerRewardsPool);
-              calculatedEarnings = lamportsToSol(stakerShare);
-              
-              // Only show if above minimum threshold (avoid dust)
-              if (calculatedEarnings < 0.000001) {
-                calculatedEarnings = 0;
-              }
-              
-              console.log('Calculated Share:', stakerShare, 'lamports');
-              console.log('Calculated Earnings:', calculatedEarnings, 'SOL');
-            }
-          } else {
-            console.log('❌ Missing data or pool too small:', { 
-              tokenVault: !!tokenVault, 
-              vault: !!vault, 
-              pool: vault?.stakerRewardsPool,
-              threshold: minPoolThreshold
-            });
-            calculatedEarnings = 0; // Ensure 0 if pool is empty or too small
+          // MIGRATION FIX: Detect when voting_power was set to access_tokens (old bug)
+          // If reward_debt is suspiciously high (> current_value × 100), it's likely the old access_tokens value
+          // Reset it to current_value to allow staker to start earning from next distribution
+          const maxReasonableDebt = currentValue * BigInt(100);
+          const migrationNeeded = rewardDebt > maxReasonableDebt;
+          setNeedsMigration(migrationNeeded);
+          
+          if (migrationNeeded) {
+            console.log('⚠️ Migration: Detected old access_tokens value in reward_debt');
+            console.log('   Old value:', rewardDebt.toString(), '(likely access_tokens)');
+            console.log('   Current value:', currentValue.toString());
+            console.log('   Resetting reward_debt to current_value to allow future earnings');
+            console.log('   ⚠️ You need to CLAIM (even if 0) to fix your on-chain reward_debt!');
+            rewardDebt = currentValue; // Reset to current value, staker starts fresh from next distribution
           }
+          
+          // Calculate earned: current_value - reward_debt
+          const earned = currentValue > rewardDebt ? currentValue - rewardDebt : BigInt(0);
+          
+          // Add pending rewards (already accumulated but not yet claimed)
+          const totalEarned = earned + BigInt(stakerAccount.pendingRewards);
+          
+          calculatedEarnings = lamportsToSol(totalEarned);
+          
+          console.log('Stake amount:', stakeAmount.toString());
+          console.log('Current value:', currentValue.toString());
+          console.log('Reward debt (adjusted):', rewardDebt.toString());
+          console.log('Earned since last claim:', earned.toString());
+          console.log('Pending rewards:', stakerAccount.pendingRewards.toString());
+          console.log('Total earned:', totalEarned.toString());
+          console.log('Calculated earnings:', calculatedEarnings, 'SOL');
         } else {
-          console.log('✅ Using pending rewards:', calculatedEarnings, 'SOL');
+          console.warn('⚠️ Rewards accumulator not found, using pending rewards only');
+          calculatedEarnings = lamportsToSol(stakerAccount.pendingRewards);
+        }
+          
+          setEarnings(calculatedEarnings);
+        } else {
+          // Not a staker yet
+          setStakedAmount(0);
+          setEarnings(0);
+        setTotalStakerRewards(0);
         }
         
-        setEarnings(calculatedEarnings);
-      } else {
-        // Not a staker yet
-        setStakedAmount(0);
+        // Load claim history (non-blocking, don't wait for it)
+        if (publicKey) {
+          fetchClaimHistory(publicKey, connection)
+            .then(setClaimHistory)
+            .catch(err => {
+              console.warn('Failed to load claim history (non-critical):', err);
+              // Don't set error state, just skip it
+            });
+        }
+        
+      } catch (err) {
+        console.error('💥 Failed to load staker rewards:', err);
+        console.error('Error details:', err);
         setEarnings(0);
+        setStakedAmount(0);
         setTotalStakerRewards(0);
+      } finally {
+        setLoading(false);
       }
-      
-    } catch (err) {
-      console.error('💥 Failed to load staker rewards:', err);
-      console.error('Error details:', err);
-      setEarnings(0);
-      setStakedAmount(0);
-      setTotalStakerRewards(0);
-    } finally {
-      setLoading(false);
-    }
   };
 
   useEffect(() => {
@@ -125,7 +148,9 @@ export default function ProviderEarningsPanel() {
   }, [publicKey]);
 
   const handleClaim = async () => {
-    if (!publicKey || !connected || earnings === 0) return;
+    if (!publicKey || !connected) return;
+    // Allow claiming if earnings > 0 OR if migration is needed (to fix on-chain state)
+    if (earnings === 0 && !needsMigration) return;
 
     setClaiming(true);
     try {
@@ -148,12 +173,12 @@ export default function ProviderEarningsPanel() {
       // Wait for confirmation (with timeout handling for WebSocket failures)
       let confirmed = false;
       try {
-        const latestBlockhash = await connection.getLatestBlockhash();
+      const latestBlockhash = await connection.getLatestBlockhash();
         const confirmation = await Promise.race([
           connection.confirmTransaction({
-            signature,
-            blockhash: latestBlockhash.blockhash,
-            lastValidBlockHeight: latestBlockhash.lastValidBlockHeight
+        signature,
+        blockhash: latestBlockhash.blockhash,
+        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight
           }, 'confirmed'),
           new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Confirmation timeout')), 30000))
         ]) as RpcResponseAndContext<SignatureResult> | null;
@@ -172,7 +197,7 @@ export default function ProviderEarningsPanel() {
             confirmed = true;
             console.log('✅ Transaction confirmed via status check!');
           } else if (status && status.value && status.value.err) {
-            throw new Error('Transaction failed on-chain');
+        throw new Error('Transaction failed on-chain');
           } else {
             // Transaction might still be pending, but grant success anyway since it was sent
             console.warn('⚠️ Transaction status unknown, but granting success (transaction was sent)');
@@ -223,6 +248,12 @@ export default function ProviderEarningsPanel() {
       
       // Refresh balance from blockchain (with delay to allow blockchain to update)
       console.log('🔄 Refreshing staker rewards after claim...');
+      
+      // Refresh claim history immediately (transaction is confirmed)
+      if (publicKey) {
+        const history = await fetchClaimHistory(publicKey, connection);
+        setClaimHistory(history);
+      }
       
       // Wait a bit for blockchain to update, then refresh
       setTimeout(async () => {
@@ -316,12 +347,18 @@ export default function ProviderEarningsPanel() {
 
         {/* Claim Button */}
         <button
-          disabled={!connected || earnings === 0 || claiming}
+          disabled={!connected || (earnings === 0 && !needsMigration) || claiming}
           onClick={handleClaim}
           className="btn-primary w-full"
         >
-          {claiming ? 'CLAIMING...' : 'CLAIM REWARDS'}
+          {claiming ? 'CLAIMING...' : needsMigration && earnings === 0 ? 'FIX REWARD DEBT (0 SOL)' : 'CLAIM REWARDS'}
         </button>
+        
+        {needsMigration && earnings === 0 && (
+          <div className="mt-2 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded text-xs text-yellow-400">
+            ⚠️ Migration needed: Your reward_debt needs to be fixed. Claim now (0 SOL) to fix it, then you'll earn from the next distribution.
+          </div>
+        )}
 
         {/* Info */}
         {connected && stakedAmount > 0 && (
@@ -341,6 +378,30 @@ export default function ProviderEarningsPanel() {
                 <span>Total Pool:</span>
                 <span className="text-emerald-400">{totalStakerRewards.toFixed(4)} SOL</span>
               </div>
+            )}
+            {claimHistory && claimHistory.claimCount > 0 && (
+              <>
+                <div className="flex justify-between pt-1 border-t border-white/5 mt-1">
+                  <span>Last Claim:</span>
+                  <span className="text-emerald-300">
+                    {claimHistory.lastClaimTime
+                      ? new Date(claimHistory.lastClaimTime).toLocaleDateString()
+                      : 'Never'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Last Amount:</span>
+                  <span className="text-emerald-300">{claimHistory.lastClaimAmount.toFixed(6)} SOL</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Total Claimed:</span>
+                  <span className="text-emerald-300">{claimHistory.totalClaimed.toFixed(6)} SOL</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Claim Count:</span>
+                  <span className="text-emerald-300">{claimHistory.claimCount}</span>
+                </div>
+              </>
             )}
             {earnings > 0 && earnings < 0.0001 && (
               <div className="mt-2 text-[8px] text-yellow-500 text-center">

@@ -98,10 +98,16 @@ async function triggerDistribution() {
     PROGRAM_ID
   );
   
+  const [rewardsAccumulator] = PublicKey.findProgramAddressSync(
+    [Buffer.from('rewards_accumulator')],
+    PROGRAM_ID
+  );
+  
   console.log('PDAs:');
   console.log(`X402 Wallet: ${X402_WALLET.toBase58()}`);
   console.log(`Payment Vault: ${paymentVault.toBase58()}`);
-  console.log(`Staking Pool: ${stakingPool.toBase58()}\n`);
+  console.log(`Staking Pool: ${stakingPool.toBase58()}`);
+  console.log(`Rewards Accumulator: ${rewardsAccumulator.toBase58()}\n`);
   
   // Calculate Anchor discriminator for ProcessX402Payment
   // Anchor uses: sha256("global:process_x402_payment")[0..8]
@@ -129,6 +135,7 @@ async function triggerDistribution() {
       { pubkey: paymentVault, isSigner: false, isWritable: true },
       { pubkey: stakingPool, isSigner: false, isWritable: false },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      { pubkey: rewardsAccumulator, isSigner: false, isWritable: true }, // REQUIRED: Update accumulator
     ],
     data: instructionData,
   });
