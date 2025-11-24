@@ -313,14 +313,6 @@ export default {
   registerCacheNode,
   subscribeToMetrics,
 };
-
- * Cache Node API Integration
- * Connects frontend to cache node metrics and smart contract data
- */
-
-import { Connection, PublicKey } from '@solana/web3.js';
-
-const WHISTLE_PROGRAM_ID = 'whttByewzTQzAz3VMxnyJHdKsd7AyNRdG2tDHXVTksr';
 const COORDINATOR_API = process.env.NEXT_PUBLIC_COORDINATOR_URL || 'https://coordinator.whistle.network';
 const QUERY_COST_SOL = 0.0001; // Cost per RPC query
 
