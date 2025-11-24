@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import dynamic from 'next/dynamic';
 
@@ -332,20 +332,6 @@ export default function BecomeProviderSection() {
     </div>
   );
 }
-
-import React, { useState, useEffect } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
-import dynamic from 'next/dynamic';
-
-// Dynamically import the dashboard to avoid SSR issues
-const ProviderDashboardDark = dynamic(
-  () => import('./ProviderDashboardDark'),
-  { ssr: false }
-);
-
-type Platform = 'windows' | 'mac' | 'linux';
-
-export default function BecomeProviderSection() {
   const { connected, publicKey } = useWallet();
   const [showDashboard, setShowDashboard] = useState(false);
   const [showSetup, setShowSetup] = useState(false);
