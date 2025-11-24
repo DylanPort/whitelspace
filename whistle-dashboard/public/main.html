@@ -156,7 +156,7 @@
     if (window.location.hostname === 'localhost') {
       window.X402_GATEWAY = 'http://localhost:3001'; // Local development
     } else {
-      window.X402_GATEWAY = window.location.origin; // Production (Netlify functions)
+      window.X402_GATEWAY = 'https://whistle-backend.onrender.com'; // Production (Render backend)
     }
     
     // Clear any testing bypass
@@ -11484,7 +11484,12 @@ console.log('✅ Fingerprint spoofing active!');`;
 
       const fetchStats = async () => {
         try {
-          const response = await fetch('/api/rpc/stats');
+          // Backend URL - use Render backend in production
+          const BACKEND_URL = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3001'
+            : 'https://whistle-backend.onrender.com';
+          
+          const response = await fetch(`${BACKEND_URL}/api/rpc/stats`);
           const data = await response.json();
           if (data.success) {
             setStats(data.stats);
@@ -18230,6 +18235,11 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
     // NLx402 RPC Access Integration
     async function getNLx402RPCAccess(queryCount = 100) {
       try {
+        // Backend URL - use Render backend in production
+        const BACKEND_URL = window.location.hostname === 'localhost' 
+          ? 'http://localhost:3001'
+          : 'https://whistle-backend.onrender.com';
+        
         // Check for cached NLx402 access token
         const cached = localStorage.getItem('nlx402_rpc_access');
         if (cached) {
@@ -18252,7 +18262,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         }
 
         // Step 1: Get Quote
-        const quoteResponse = await fetch('/api/rpc/quote', {
+        const quoteResponse = await fetch(`${BACKEND_URL}/api/rpc/quote`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -18272,7 +18282,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         console.log(`📋 NLx402 Quote: ${queryCount} queries for ${quote.whistle?.totalPrice || quote.amount} SOL`);
         
         // Step 2: Verify Quote
-        const verifyResponse = await fetch('/api/rpc/verify', {
+        const verifyResponse = await fetch(`${BACKEND_URL}/api/rpc/verify`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -18326,7 +18336,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
         console.log('✅ Payment confirmed:', txSig);
 
         // Step 4: Unlock Access
-        const unlockResponse = await fetch('/api/rpc/unlock', {
+        const unlockResponse = await fetch(`${BACKEND_URL}/api/rpc/unlock`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -18370,11 +18380,16 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
     // Enhanced RPC Query with NLx402 protection
     async function makeProtectedRPCQuery(method, params = []) {
       try {
+        // Backend URL - use Render backend in production
+        const BACKEND_URL = window.location.hostname === 'localhost' 
+          ? 'http://localhost:3001'
+          : 'https://whistle-backend.onrender.com';
+        
         // Get or refresh NLx402 access token
         const accessToken = await getNLx402RPCAccess(100);
         
         // Make RPC request with access token
-        const response = await fetch('/api/rpc', {
+        const response = await fetch(`${BACKEND_URL}/api/rpc`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

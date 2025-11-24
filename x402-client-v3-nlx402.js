@@ -36,7 +36,7 @@
   // NLx402 Configuration
   const NLX402_BASE_URL = window.location.hostname === 'localhost' 
     ? 'http://localhost:3001'
-    : window.location.origin;
+    : 'https://whistle-backend.onrender.com';
   
   // Payment configuration - same as v2 for compatibility
   const PAYMENT_AMOUNT_SOL = 0.02; // 0.02 SOL total (user pays)
