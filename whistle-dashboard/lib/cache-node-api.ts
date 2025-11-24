@@ -313,7 +313,6 @@ export default {
   registerCacheNode,
   subscribeToMetrics,
 };
-const COORDINATOR_API = process.env.NEXT_PUBLIC_COORDINATOR_URL || 'https://coordinator.whistle.network';
 const QUERY_COST_SOL = 0.0001; // Cost per RPC query
 
 // Payment split from smart contract
