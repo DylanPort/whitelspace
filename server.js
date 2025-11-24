@@ -235,6 +235,337 @@ app.post('/x402/validate', (req, res) => {
   return res.json({ ok: true, expiresAt: exp });
 });
 
+// ===== NLx402 RPC Integration =====
+const WhistleNLx402Integration = require('./lib/nlx402-rpc-integration');
+const axios = require('axios');
+
+// Initialize NLx402 for RPC protection
+const nlx402RPC = new WhistleNLx402Integration({
+  apiKey: process.env.NLX402_API_KEY,
+  perQueryPrice: 0.0001, // 0.0001 SOL per query
+});
+
+// ===== NLx402 General Access Integration (for all x402 features) =====
+const WhistleNLx402GeneralAccess = require('./lib/nlx402-general-access');
+
+// Initialize NLx402 for general x402 feature protection
+const nlx402General = new WhistleNLx402GeneralAccess({
+  accessDuration: 3600, // 1 hour
+  x402Wallet: 'BMiSBoT5aPCrFcxaTrHuzXMkfrtzCLMcDYqrPTVymNbU', // X402 PDA (receives 0.019 SOL)
+  facilitatorWallet: 'GwtbzDh6QHwVan4DVyUR11gzBVcBT92KjnaPdk43fMG5' // Facilitator (receives 0.001 SOL)
+});
+
+// Upstream RPC endpoints for fallback
+const UPSTREAM_RPCS = [
+  process.env.HELIUS_RPC_URL,
+  process.env.QUICKNODE_RPC_URL,
+  'https://api.mainnet-beta.solana.com',
+].filter(Boolean);
+
+// ===== NLx402 RPC Endpoints =====
+
+// Get RPC pricing and metadata
+app.get('/api/rpc/metadata', (req, res) => {
+  res.json({
+    network: 'solana-mainnet',
+    pricing: {
+      perQuery: 0.0001,
+      currency: 'SOL',
+      bulkDiscounts: {
+        '100': '5% off',
+        '1000': '10% off',
+        '10000': '15% off'
+      }
+    },
+    supportedMethods: [
+      'getAccountInfo', 'getBalance', 'getTransaction',
+      'getBlock', 'getLatestBlockhash', 'sendTransaction'
+    ],
+    paymentMethods: ['SOL', 'WHISTLE'],
+    version: '1.0.0'
+  });
+});
+
+// Generate RPC quote with NLx402
+app.post('/api/rpc/quote', async (req, res) => {
+  try {
+    const { walletAddress, queryCount = 1, rpcMethod } = req.body;
+    
+    if (!walletAddress) {
+      return res.status(400).json({ success: false, error: 'walletAddress required' });
+    }
+    
+    if (queryCount < 1 || queryCount > 100000) {
+      return res.status(400).json({ success: false, error: 'queryCount must be 1-100000' });
+    }
+    
+    const result = await nlx402RPC.generateRPCQuote({
+      walletAddress,
+      queryCount,
+      rpcMethod
+    });
+    
+    res.json(result);
+  } catch (error) {
+    console.error('RPC quote error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Verify RPC quote
+app.post('/api/rpc/verify', async (req, res) => {
+  try {
+    const { quote, nonce, walletAddress } = req.body;
+    
+    if (!quote || !nonce || !walletAddress) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'quote, nonce, and walletAddress required' 
+      });
+    }
+    
+    const result = await nlx402RPC.verifyRPCQuote({
+      quote,
+      nonce,
+      walletAddress
+    });
+    
+    res.json(result);
+  } catch (error) {
+    console.error('RPC verify error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Unlock RPC access after payment
+app.post('/api/rpc/unlock', async (req, res) => {
+  try {
+    const { tx, nonce, walletAddress } = req.body;
+    
+    if (!tx || !nonce || !walletAddress) {
+      return res.status(400).json({
+        success: false,
+        error: 'tx, nonce, and walletAddress required'
+      });
+    }
+    
+    const result = await nlx402RPC.unlockRPCAccess({
+      tx,
+      nonce,
+      walletAddress
+    });
+    
+    res.json(result);
+  } catch (error) {
+    console.error('RPC unlock error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Protected RPC endpoint with NLx402
+app.post('/api/rpc', async (req, res) => {
+  try {
+    const accessToken = req.headers['x-access-token'] || req.headers['authorization']?.replace('Bearer ', '');
+    
+    if (!accessToken) {
+      return res.status(402).json({
+        jsonrpc: '2.0',
+        error: {
+          code: -32000,
+          message: 'Payment required. Get a quote at /api/rpc/quote'
+        },
+        id: req.body.id
+      });
+    }
+    
+    // Validate access token
+    const validation = nlx402RPC.validateRPCRequest(accessToken, req.body.method);
+    
+    if (!validation.valid) {
+      return res.status(402).json({
+        jsonrpc: '2.0',
+        error: {
+          code: -32000,
+          message: validation.error
+        },
+        id: req.body.id
+      });
+    }
+    
+    // Log request
+    console.log(`RPC: ${req.body.method} | Wallet: ${validation.walletAddress} | ${validation.queriesUsed}/${validation.queriesRemaining + validation.queriesUsed}`);
+    
+    // Forward to upstream RPC
+    let lastError = null;
+    for (const rpcUrl of UPSTREAM_RPCS) {
+      try {
+        const response = await axios.post(rpcUrl, req.body, {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 10000
+        });
+        
+        const result = response.data;
+        if (!result.error) {
+          result.whistle = {
+            queriesUsed: validation.queriesUsed,
+            queriesRemaining: validation.queriesRemaining
+          };
+        }
+        
+        return res.json(result);
+      } catch (error) {
+        lastError = error;
+        // Try next upstream
+      }
+    }
+    
+    // All upstreams failed
+    res.status(503).json({
+      jsonrpc: '2.0',
+      error: {
+        code: -32000,
+        message: 'All upstream RPC nodes unavailable'
+      },
+      id: req.body.id
+    });
+  } catch (error) {
+    console.error('RPC error:', error);
+    res.status(500).json({
+      jsonrpc: '2.0',
+      error: {
+        code: -32000,
+        message: 'Internal server error'
+      },
+      id: req.body.id
+    });
+  }
+});
+
+// RPC stats endpoint
+app.get('/api/rpc/stats', (req, res) => {
+  const stats = nlx402RPC.getStats();
+  res.json({
+    success: true,
+    stats: {
+      ...stats,
+      upstreamNodes: UPSTREAM_RPCS.length,
+      pricing: {
+        perQuery: 0.0001,
+        currency: 'SOL'
+      }
+    }
+  });
+});
+
+// ===== NLx402 General X402 Access Endpoints =====
+
+// Generate quote for x402 access (Vanishing Payments, Ghost Identity, etc.)
+app.post('/api/nlx402/quote', async (req, res) => {
+  try {
+    const { walletAddress, feature, amount, duration } = req.body;
+
+    if (!walletAddress) {
+      return res.status(400).json({ success: false, error: 'walletAddress required' });
+    }
+
+    const result = await nlx402General.generateX402Quote({
+      walletAddress,
+      feature: feature || 'x402-access',
+      amount,
+      duration
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('NLx402 quote error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Verify x402 quote
+app.post('/api/nlx402/verify', async (req, res) => {
+  try {
+    const { quote, nonce, walletAddress } = req.body;
+
+    if (!quote || !nonce || !walletAddress) {
+      return res.status(400).json({
+        success: false,
+        error: 'quote, nonce, and walletAddress required'
+      });
+    }
+
+    const result = await nlx402General.verifyX402Quote({
+      quote,
+      nonce,
+      walletAddress
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('NLx402 verify error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Unlock x402 access after payment
+app.post('/api/nlx402/unlock', async (req, res) => {
+  try {
+    const { tx, nonce, walletAddress, feature } = req.body;
+
+    if (!tx || !nonce || !walletAddress) {
+      return res.status(400).json({
+        success: false,
+        error: 'tx, nonce, and walletAddress required'
+      });
+    }
+
+    const result = await nlx402General.unlockX402Access({
+      tx,
+      nonce,
+      walletAddress,
+      feature
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('NLx402 unlock error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Validate x402 access token
+app.post('/api/nlx402/validate', async (req, res) => {
+  try {
+    const { accessToken, feature } = req.body;
+
+    if (!accessToken) {
+      return res.status(400).json({
+        success: false,
+        error: 'accessToken required'
+      });
+    }
+
+    const result = nlx402General.validateAccessToken(accessToken, feature);
+
+    res.json({
+      success: result.valid,
+      ...result
+    });
+  } catch (error) {
+    console.error('NLx402 validate error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get NLx402 general access stats
+app.get('/api/nlx402/stats', (req, res) => {
+  const stats = nlx402General.getStats();
+  res.json({
+    success: true,
+    stats
+  });
+});
+
 // ===== HaveIBeenPwned API Proxy (to avoid CORS) =====
 // Get your API key at: https://haveibeenpwned.com/API/Key
 // Set HIBP_API_KEY in your .env file

@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WHISTLE Cache Node - Easy Installer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 100%;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        
+        .earnings-banner {
+            background: #10b981;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .step {
+            margin-bottom: 30px;
+            opacity: 0.3;
+            transition: all 0.3s ease;
+        }
+        
+        .step.active {
+            opacity: 1;
+        }
+        
+        .step.completed {
+            opacity: 0.7;
+        }
+        
+        .step-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: #e5e7eb;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .step.active .step-number {
+            background: #667eea;
+            color: white;
+        }
+        
+        .step.completed .step-number {
+            background: #10b981;
+            color: white;
+        }
+        
+        .step-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .step-content {
+            margin-left: 55px;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .location-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .location-btn {
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        
+        .location-btn:hover {
+            border-color: #667eea;
+            background: #f3f4f6;
+        }
+        
+        .location-btn.selected {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+        
+        .download-section {
+            display: none;
+        }
+        
+        .download-section.show {
+            display: block;
+        }
+        
+        .download-btn {
+            display: inline-block;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: bold;
+            margin: 10px 10px 10px 0;
+            transition: transform 0.3s ease;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .command-box {
+            background: #1e293b;
+            color: #10b981;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin: 10px 0;
+            position: relative;
+            word-break: break-all;
+        }
+        
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #374151;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .copy-btn:hover {
+            background: #4b5563;
+        }
+        
+        .success-message {
+            display: none;
+            background: #10b981;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .success-message.show {
+            display: block;
+        }
+        
+        .status-check {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+        
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 10px;
+            background: #e5e7eb;
+        }
+        
+        .status-indicator.green {
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .simple-setup {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .simple-setup h3 {
+            margin-bottom: 15px;
+        }
+        
+        .one-click-btn {
+            background: white;
+            color: #10b981;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .one-click-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+        }
+        
+        .one-click-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .os-detector {
+            background: #f3f4f6;
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .os-icon {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 WHISTLE Cache Node Installer</h1>
+            <p>Start earning SOL in 60 seconds - No technical knowledge required!</p>
+        </div>
+        
+        <div class="earnings-banner">
+            💰 Earn $50-500/month by sharing your internet
+        </div>
+        
+        <div class="content">
+            <div class="os-detector">
+                <div>
+                    <span class="os-icon" id="osIcon">💻</span>
+                    <span id="osName">Detecting your system...</span>
+                </div>
+                <span id="osVersion"></span>
+            </div>
+            
+            <!-- Simple One-Click Setup -->
+            <div class="simple-setup">
+                <h3>⚡ Fastest Setup Ever</h3>
+                <p style="margin-bottom: 15px;">Just enter your wallet and click install!</p>
+                <button class="one-click-btn" onclick="startQuickInstall()" id="quickInstallBtn">
+                    START QUICK INSTALL
+                </button>
+            </div>
+            
+            <!-- Step 1: Wallet -->
+            <div class="step active" id="step1">
+                <div class="step-header">
+                    <div class="step-number">1</div>
+                    <div class="step-title">Enter Your Solana Wallet</div>
+                </div>
+                <div class="step-content">
+                    <input type="text" 
+                           id="walletInput" 
+                           placeholder="Your Solana wallet address (e.g., 7xKXtg2CW87d...)"
+                           onchange="validateWallet()">
+                    <small style="color: #6b7280;">This is where your earnings will be sent</small>
+                </div>
+            </div>
+            
+            <!-- Step 2: Location -->
+            <div class="step" id="step2">
+                <div class="step-header">
+                    <div class="step-number">2</div>
+                    <div class="step-title">Select Your Location</div>
+                </div>
+                <div class="step-content">
+                    <div class="location-grid">
+                        <button class="location-btn" onclick="selectLocation('US-East')">🇺🇸 US East</button>
+                        <button class="location-btn" onclick="selectLocation('US-West')">🇺🇸 US West</button>
+                        <button class="location-btn" onclick="selectLocation('Europe')">🇪🇺 Europe</button>
+                        <button class="location-btn" onclick="selectLocation('Asia')">🌏 Asia</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 3: Install -->
+            <div class="step" id="step3">
+                <div class="step-header">
+                    <div class="step-number">3</div>
+                    <div class="step-title">Install & Run</div>
+                </div>
+                <div class="step-content">
+                    <div class="download-section" id="downloadSection">
+                        <!-- Dynamic content based on OS -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Success Message -->
+            <div class="success-message" id="successMessage">
+                <h3>🎉 Congratulations!</h3>
+                <p>Your cache node is running and earning SOL!</p>
+                <div class="status-check">
+                    <div class="status-item">
+                        <div class="status-indicator green"></div>
+                        <span>Node Status: Online</span>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-indicator green"></div>
+                        <span>Earning: Active</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let userWallet = '';
+        let userLocation = '';
+        let userOS = 'windows';
+        
+        // Detect OS
+        function detectOS() {
+            const platform = navigator.platform.toLowerCase();
+            const userAgent = navigator.userAgent.toLowerCase();
+            
+            if (platform.includes('win') || userAgent.includes('windows')) {
+                userOS = 'windows';
+                document.getElementById('osIcon').textContent = '🪟';
+                document.getElementById('osName').textContent = 'Windows detected';
+                document.getElementById('osVersion').textContent = 'Ready to install';
+            } else if (platform.includes('mac') || userAgent.includes('mac')) {
+                userOS = 'mac';
+                document.getElementById('osIcon').textContent = '🍎';
+                document.getElementById('osName').textContent = 'macOS detected';
+                document.getElementById('osVersion').textContent = 'Ready to install';
+            } else if (platform.includes('linux') || userAgent.includes('linux')) {
+                userOS = 'linux';
+                document.getElementById('osIcon').textContent = '🐧';
+                document.getElementById('osName').textContent = 'Linux detected';
+                document.getElementById('osVersion').textContent = 'Ready to install';
+            }
+        }
+        
+        // Validate wallet
+        function validateWallet() {
+            const wallet = document.getElementById('walletInput').value;
+            if (wallet.length > 30) { // Basic validation
+                userWallet = wallet;
+                document.getElementById('step1').classList.add('completed');
+                document.getElementById('step2').classList.add('active');
+                return true;
+            }
+            return false;
+        }
+        
+        // Select location
+        function selectLocation(location) {
+            userLocation = location;
+            
+            // Update UI
+            document.querySelectorAll('.location-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            event.target.classList.add('selected');
+            
+            // Move to next step
+            document.getElementById('step2').classList.add('completed');
+            document.getElementById('step3').classList.add('active');
+            
+            // Show download section
+            generateInstallCommand();
+        }
+        
+        // Generate install command based on OS
+        function generateInstallCommand() {
+            const downloadSection = document.getElementById('downloadSection');
+            downloadSection.classList.add('show');
+            
+            let content = '';
+            
+            if (userOS === 'windows') {
+                content = `
+                    <h4>Option 1: Download Installer (Easiest)</h4>
+                    <a href="#" class="download-btn" onclick="downloadInstaller('windows')">
+                        📥 Download Windows Installer
+                    </a>
+                    <p style="margin-top: 10px; color: #6b7280;">Just run the downloaded file!</p>
+                    
+                    <h4 style="margin-top: 20px;">Option 2: Quick Command</h4>
+                    <div class="command-box">
+                        docker run -d --name whistle-cache -e WALLET_ADDRESS=${userWallet} -e NODE_LOCATION=${userLocation} -p 8545:8545 whistlenet/cache-node
+                        <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
+                    </div>
+                    <small style="color: #6b7280;">Run this in Command Prompt or PowerShell</small>
+                `;
+            } else if (userOS === 'mac') {
+                content = `
+                    <h4>Option 1: Download Installer (Easiest)</h4>
+                    <a href="#" class="download-btn" onclick="downloadInstaller('mac')">
+                        📥 Download Mac Installer
+                    </a>
+                    <p style="margin-top: 10px; color: #6b7280;">Open Terminal and run the downloaded script</p>
+                    
+                    <h4 style="margin-top: 20px;">Option 2: Quick Command</h4>
+                    <div class="command-box">
+                        curl -sSL https://whistle.network/install | WALLET=${userWallet} LOCATION=${userLocation} bash
+                        <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
+                    </div>
+                    <small style="color: #6b7280;">Paste this in Terminal</small>
+                `;
+            } else {
+                content = `
+                    <h4>Quick Install Command</h4>
+                    <div class="command-box">
+                        curl -sSL https://whistle.network/install | WALLET=${userWallet} LOCATION=${userLocation} bash
+                        <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
+                    </div>
+                    <small style="color: #6b7280;">Run this in your terminal</small>
+                `;
+            }
+            
+            downloadSection.innerHTML = content;
+        }
+        
+        // Quick install function
+        function startQuickInstall() {
+            if (!validateWallet()) {
+                alert('Please enter your Solana wallet address first!');
+                document.getElementById('walletInput').focus();
+                return;
+            }
+            
+            // Auto-select location based on timezone
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            if (timezone.includes('America')) {
+                userLocation = timezone.includes('New_York') ? 'US-East' : 'US-West';
+            } else if (timezone.includes('Europe')) {
+                userLocation = 'Europe';
+            } else if (timezone.includes('Asia')) {
+                userLocation = 'Asia';
+            } else {
+                userLocation = 'US-East'; // Default
+            }
+            
+            // Generate installer
+            generateQuickInstaller();
+        }
+        
+        // Generate quick installer
+        function generateQuickInstaller() {
+            // Create downloadable installer based on OS
+            let script = '';
+            let filename = '';
+            
+            if (userOS === 'windows') {
+                filename = 'whistle-quick-install.bat';
+                script = `@echo off
+echo Installing WHISTLE Cache Node...
+echo.
+docker stop whistle-cache 2>nul
+docker rm whistle-cache 2>nul
+docker run -d --name whistle-cache -e WALLET_ADDRESS=${userWallet} -e NODE_LOCATION=${userLocation} -p 8545:8545 --restart unless-stopped whistlenet/cache-node:latest
+if %errorlevel% == 0 (
+    echo.
+    echo SUCCESS! Your node is earning SOL!
+    echo Check status: docker logs whistle-cache
+) else (
+    echo.
+    echo Please install Docker Desktop first from https://docker.com
+    start https://docker.com
+)
+pause`;
+            } else {
+                filename = 'whistle-quick-install.sh';
+                script = `#!/bin/bash
+echo "Installing WHISTLE Cache Node..."
+docker stop whistle-cache 2>/dev/null
+docker rm whistle-cache 2>/dev/null
+docker run -d --name whistle-cache -e WALLET_ADDRESS=${userWallet} -e NODE_LOCATION=${userLocation} -p 8545:8545 --restart unless-stopped whistlenet/cache-node:latest
+if [ $? -eq 0 ]; then
+    echo "SUCCESS! Your node is earning SOL!"
+    echo "Check status: docker logs whistle-cache"
+else
+    echo "Please install Docker first"
+    open https://docker.com
+fi`;
+            }
+            
+            // Download the script
+            const blob = new Blob([script], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            
+            // Show success message
+            setTimeout(() => {
+                document.getElementById('successMessage').classList.add('show');
+                document.getElementById('quickInstallBtn').disabled = true;
+                document.getElementById('quickInstallBtn').textContent = '✓ INSTALLED';
+            }, 1000);
+        }
+        
+        // Download installer
+        function downloadInstaller(os) {
+            generateQuickInstaller();
+        }
+        
+        // Copy command
+        function copyCommand(button) {
+            const command = button.parentElement.textContent.replace('Copy', '').trim();
+            navigator.clipboard.writeText(command);
+            button.textContent = '✓ Copied!';
+            setTimeout(() => {
+                button.textContent = 'Copy';
+            }, 2000);
+        }
+        
+        // Initialize
+        detectOS();
+    </script>
+</body>
+</html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WHISTLE Cache Node - Easy Installer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 100%;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        
+        .earnings-banner {
+            background: #10b981;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .step {
+            margin-bottom: 30px;
+            opacity: 0.3;
+            transition: all 0.3s ease;
+        }
+        
+        .step.active {
+            opacity: 1;
+        }
+        
+        .step.completed {
+            opacity: 0.7;
+        }
+        
+        .step-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: #e5e7eb;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .step.active .step-number {
+            background: #667eea;
+            color: white;
+        }
+        
+        .step.completed .step-number {
+            background: #10b981;
+            color: white;
+        }
+        
+        .step-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .step-content {
+            margin-left: 55px;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .location-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .location-btn {
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        
+        .location-btn:hover {
+            border-color: #667eea;
+            background: #f3f4f6;
+        }
+        
+        .location-btn.selected {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+        
+        .download-section {
+            display: none;
+        }
+        
+        .download-section.show {
+            display: block;
+        }
+        
+        .download-btn {
+            display: inline-block;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: bold;
+            margin: 10px 10px 10px 0;
+            transition: transform 0.3s ease;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .command-box {
+            background: #1e293b;
+            color: #10b981;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin: 10px 0;
+            position: relative;
+            word-break: break-all;
+        }
+        
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #374151;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .copy-btn:hover {
+            background: #4b5563;
+        }
+        
+        .success-message {
+            display: none;
+            background: #10b981;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .success-message.show {
+            display: block;
+        }
+        
+        .status-check {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+        
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 10px;
+            background: #e5e7eb;
+        }
+        
+        .status-indicator.green {
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .simple-setup {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .simple-setup h3 {
+            margin-bottom: 15px;
+        }
+        
+        .one-click-btn {
+            background: white;
+            color: #10b981;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .one-click-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+        }
+        
+        .one-click-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .os-detector {
+            background: #f3f4f6;
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .os-icon {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 WHISTLE Cache Node Installer</h1>
+            <p>Start earning SOL in 60 seconds - No technical knowledge required!</p>
+        </div>
+        
+        <div class="earnings-banner">
+            💰 Earn $50-500/month by sharing your internet
+        </div>
+        
+        <div class="content">
+            <div class="os-detector">
+                <div>
+                    <span class="os-icon" id="osIcon">💻</span>
+                    <span id="osName">Detecting your system...</span>
+                </div>
+                <span id="osVersion"></span>
+            </div>
+            
+            <!-- Simple One-Click Setup -->
+            <div class="simple-setup">
+                <h3>⚡ Fastest Setup Ever</h3>
+                <p style="margin-bottom: 15px;">Just enter your wallet and click install!</p>
+                <button class="one-click-btn" onclick="startQuickInstall()" id="quickInstallBtn">
+                    START QUICK INSTALL
+                </button>
+            </div>
+            
+            <!-- Step 1: Wallet -->
+            <div class="step active" id="step1">
+                <div class="step-header">
+                    <div class="step-number">1</div>
+                    <div class="step-title">Enter Your Solana Wallet</div>
+                </div>
+                <div class="step-content">
+                    <input type="text" 
+                           id="walletInput" 
+                           placeholder="Your Solana wallet address (e.g., 7xKXtg2CW87d...)"
+                           onchange="validateWallet()">
+                    <small style="color: #6b7280;">This is where your earnings will be sent</small>
+                </div>
+            </div>
+            
+            <!-- Step 2: Location -->
+            <div class="step" id="step2">
+                <div class="step-header">
+                    <div class="step-number">2</div>
+                    <div class="step-title">Select Your Location</div>
+                </div>
+                <div class="step-content">
+                    <div class="location-grid">
+                        <button class="location-btn" onclick="selectLocation('US-East')">🇺🇸 US East</button>
+                        <button class="location-btn" onclick="selectLocation('US-West')">🇺🇸 US West</button>
+                        <button class="location-btn" onclick="selectLocation('Europe')">🇪🇺 Europe</button>
+                        <button class="location-btn" onclick="selectLocation('Asia')">🌏 Asia</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 3: Install -->
+            <div class="step" id="step3">
+                <div class="step-header">
+                    <div class="step-number">3</div>
+                    <div class="step-title">Install & Run</div>
+                </div>
+                <div class="step-content">
+                    <div class="download-section" id="downloadSection">
+                        <!-- Dynamic content based on OS -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Success Message -->
+            <div class="success-message" id="successMessage">
+                <h3>🎉 Congratulations!</h3>
+                <p>Your cache node is running and earning SOL!</p>
+                <div class="status-check">
+                    <div class="status-item">
+                        <div class="status-indicator green"></div>
+                        <span>Node Status: Online</span>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-indicator green"></div>
+                        <span>Earning: Active</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let userWallet = '';
+        let userLocation = '';
+        let userOS = 'windows';
+        
+        // Detect OS
+        function detectOS() {
+            const platform = navigator.platform.toLowerCase();
+            const userAgent = navigator.userAgent.toLowerCase();
+            
+            if (platform.includes('win') || userAgent.includes('windows')) {
+                userOS = 'windows';
+                document.getElementById('osIcon').textContent = '🪟';
+                document.getElementById('osName').textContent = 'Windows detected';
+                document.getElementById('osVersion').textContent = 'Ready to install';
+            } else if (platform.includes('mac') || userAgent.includes('mac')) {
+                userOS = 'mac';
+                document.getElementById('osIcon').textContent = '🍎';
+                document.getElementById('osName').textContent = 'macOS detected';
+                document.getElementById('osVersion').textContent = 'Ready to install';
+            } else if (platform.includes('linux') || userAgent.includes('linux')) {
+                userOS = 'linux';
+                document.getElementById('osIcon').textContent = '🐧';
+                document.getElementById('osName').textContent = 'Linux detected';
+                document.getElementById('osVersion').textContent = 'Ready to install';
+            }
+        }
+        
+        // Validate wallet
+        function validateWallet() {
+            const wallet = document.getElementById('walletInput').value;
+            if (wallet.length > 30) { // Basic validation
+                userWallet = wallet;
+                document.getElementById('step1').classList.add('completed');
+                document.getElementById('step2').classList.add('active');
+                return true;
+            }
+            return false;
+        }
+        
+        // Select location
+        function selectLocation(location) {
+            userLocation = location;
+            
+            // Update UI
+            document.querySelectorAll('.location-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            event.target.classList.add('selected');
+            
+            // Move to next step
+            document.getElementById('step2').classList.add('completed');
+            document.getElementById('step3').classList.add('active');
+            
+            // Show download section
+            generateInstallCommand();
+        }
+        
+        // Generate install command based on OS
+        function generateInstallCommand() {
+            const downloadSection = document.getElementById('downloadSection');
+            downloadSection.classList.add('show');
+            
+            let content = '';
+            
+            if (userOS === 'windows') {
+                content = `
+                    <h4>Option 1: Download Installer (Easiest)</h4>
+                    <a href="#" class="download-btn" onclick="downloadInstaller('windows')">
+                        📥 Download Windows Installer
+                    </a>
+                    <p style="margin-top: 10px; color: #6b7280;">Just run the downloaded file!</p>
+                    
+                    <h4 style="margin-top: 20px;">Option 2: Quick Command</h4>
+                    <div class="command-box">
+                        docker run -d --name whistle-cache -e WALLET_ADDRESS=${userWallet} -e NODE_LOCATION=${userLocation} -p 8545:8545 whistlenet/cache-node
+                        <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
+                    </div>
+                    <small style="color: #6b7280;">Run this in Command Prompt or PowerShell</small>
+                `;
+            } else if (userOS === 'mac') {
+                content = `
+                    <h4>Option 1: Download Installer (Easiest)</h4>
+                    <a href="#" class="download-btn" onclick="downloadInstaller('mac')">
+                        📥 Download Mac Installer
+                    </a>
+                    <p style="margin-top: 10px; color: #6b7280;">Open Terminal and run the downloaded script</p>
+                    
+                    <h4 style="margin-top: 20px;">Option 2: Quick Command</h4>
+                    <div class="command-box">
+                        curl -sSL https://whistle.network/install | WALLET=${userWallet} LOCATION=${userLocation} bash
+                        <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
+                    </div>
+                    <small style="color: #6b7280;">Paste this in Terminal</small>
+                `;
+            } else {
+                content = `
+                    <h4>Quick Install Command</h4>
+                    <div class="command-box">
+                        curl -sSL https://whistle.network/install | WALLET=${userWallet} LOCATION=${userLocation} bash
+                        <button class="copy-btn" onclick="copyCommand(this)">Copy</button>
+                    </div>
+                    <small style="color: #6b7280;">Run this in your terminal</small>
+                `;
+            }
+            
+            downloadSection.innerHTML = content;
+        }
+        
+        // Quick install function
+        function startQuickInstall() {
+            if (!validateWallet()) {
+                alert('Please enter your Solana wallet address first!');
+                document.getElementById('walletInput').focus();
+                return;
+            }
+            
+            // Auto-select location based on timezone
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            if (timezone.includes('America')) {
+                userLocation = timezone.includes('New_York') ? 'US-East' : 'US-West';
+            } else if (timezone.includes('Europe')) {
+                userLocation = 'Europe';
+            } else if (timezone.includes('Asia')) {
+                userLocation = 'Asia';
+            } else {
+                userLocation = 'US-East'; // Default
+            }
+            
+            // Generate installer
+            generateQuickInstaller();
+        }
+        
+        // Generate quick installer
+        function generateQuickInstaller() {
+            // Create downloadable installer based on OS
+            let script = '';
+            let filename = '';
+            
+            if (userOS === 'windows') {
+                filename = 'whistle-quick-install.bat';
+                script = `@echo off
+echo Installing WHISTLE Cache Node...
+echo.
+docker stop whistle-cache 2>nul
+docker rm whistle-cache 2>nul
+docker run -d --name whistle-cache -e WALLET_ADDRESS=${userWallet} -e NODE_LOCATION=${userLocation} -p 8545:8545 --restart unless-stopped whistlenet/cache-node:latest
+if %errorlevel% == 0 (
+    echo.
+    echo SUCCESS! Your node is earning SOL!
+    echo Check status: docker logs whistle-cache
+) else (
+    echo.
+    echo Please install Docker Desktop first from https://docker.com
+    start https://docker.com
+)
+pause`;
+            } else {
+                filename = 'whistle-quick-install.sh';
+                script = `#!/bin/bash
+echo "Installing WHISTLE Cache Node..."
+docker stop whistle-cache 2>/dev/null
+docker rm whistle-cache 2>/dev/null
+docker run -d --name whistle-cache -e WALLET_ADDRESS=${userWallet} -e NODE_LOCATION=${userLocation} -p 8545:8545 --restart unless-stopped whistlenet/cache-node:latest
+if [ $? -eq 0 ]; then
+    echo "SUCCESS! Your node is earning SOL!"
+    echo "Check status: docker logs whistle-cache"
+else
+    echo "Please install Docker first"
+    open https://docker.com
+fi`;
+            }
+            
+            // Download the script
+            const blob = new Blob([script], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            
+            // Show success message
+            setTimeout(() => {
+                document.getElementById('successMessage').classList.add('show');
+                document.getElementById('quickInstallBtn').disabled = true;
+                document.getElementById('quickInstallBtn').textContent = '✓ INSTALLED';
+            }, 1000);
+        }
+        
+        // Download installer
+        function downloadInstaller(os) {
+            generateQuickInstaller();
+        }
+        
+        // Copy command
+        function copyCommand(button) {
+            const command = button.parentElement.textContent.replace('Copy', '').trim();
+            navigator.clipboard.writeText(command);
+            button.textContent = '✓ Copied!';
+            setTimeout(() => {
+                button.textContent = 'Copy';
+            }, 2000);
+        }
+        
+        // Initialize
+        detectOS();
+    </script>
+</body>
+</html>

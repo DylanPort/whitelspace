@@ -34,6 +34,7 @@
     "@solana/spl-token": "^0.4.7",
     "@solana/web3.js": "^1.95.3",
     "@supabase/supabase-js": "^2.76.1",
+    "axios": "^1.13.2",
     "bs58": "^5.0.0",
     "compression": "^1.8.1",
     "concurrently": "^9.1.0",
@@ -41,6 +42,7 @@
     "dotenv": "^16.6.1",
     "express": "^4.18.2",
     "helmet": "^8.1.0",
+    "lucide-react": "^0.554.0",
     "morgan": "^1.10.1",
     "node-fetch": "^2.7.0",
     "ws": "^8.18.3"

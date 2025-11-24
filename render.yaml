@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: whistle-backend
+    runtime: node
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NLX402_BASE_URL
+        value: https://pay.thrt.ai
+      - key: NLX402_API_KEY
+        sync: false
+      - key: HELIUS_RPC_URL
+        sync: false
+      - key: QUICKNODE_RPC_URL
+        sync: false
+      - key: HIBP_API_KEY
+        sync: false
+

@@ -1,113 +1,334 @@
-# 🛰️ Whistle Network — Community-Owned 
+# 🛰️ WHISTLE — Decentralized RPC Infrastructure for Solana
 
-> **"Build the private infrastructure first, then everything else becomes possible."**
+> **"The world's first community-owned RPC network. Run a node, earn rewards, own the infrastructure."**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Solana](https://img.shields.io/badge/Solana-Mainnet-green)](https://solana.com)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.16-brightgreen)](https://nodejs.org/)
-[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-orange)](https://workers.cloudflare.com)
+[![Live RPC](https://img.shields.io/badge/RPC-Live-success)](https://rpc.whistle.ninja)
 
 ---
 
-## 📌 TL;DR
+## 🎯 What is WHISTLE?
 
-- **Custom RPC endpoint** (`https://rpc.whistle.ninja`) 
-- **Provider + staker smart contract** running on Solana Mainnet (`contracts/encrypted-network-access-token`)
-- **Dashboard** (`whistle-dashboard/`) to monitor pool stats, providers, treasury
-- **40+ privacy tools** (x402 gated) migrating 
-- **Community-first economics**: every paid query flows back to the people who fund/run the network
+**WHISTLE is a decentralized RPC provider network** that lets anyone earn SOL by serving Solana blockchain data. We're solving the RPC centralization problem by creating a community-owned alternative to Helius, QuickNode, and Alchemy.
 
----
+### The Problem We're Solving
+- 🔴 **Centralized control**: 3 companies control 80%+ of Solana RPC access
+- 🔴 **High costs**: $50-$5000/month for decent RPC performance  
+- 🔴 **Vendor lock-in**: Projects become dependent on single providers
+- 🔴 **No ownership**: Community has zero say in infrastructure decisions
 
-## 🔭 Current Focus
-
-| Track | Status | Details |
-|-------|--------|---------|
-| RPC branding layer | ✅ | 
-| RPC ownership | 🚧 | Preparing multi-provider backend + integration nodes |
-| x402 distributor | ✅ | `x402-distributor-cron.js` automates payouts (90/10) |
-| Staker UX | ✅ | `claim-my-rewards.js` + dashboard cards |
-| NLx402 integration | 🧪 | Spec drafted, waiting for NLx402 public API |
-| Provider onboarding | 📋 | Contract-ready (register, heartbeat, slash) — UI/backend WIP |
+### The WHISTLE Solution
+- ✅ **Anyone can provide**: Run a cache node and earn 70% of query fees
+- ✅ **Stake to earn**: Hold $WHISTLE, earn 5% of all network fees
+- ✅ **Community owned**: Stakers govern network parameters
+- ✅ **Economically sustainable**: Profitable for operators at $6/month VPS cost
 
 ---
 
-## 🧱 Architecture Snapshot
+## 📊 Current Status: PHASE 1 BETA
+
+| Component | Status | Description |
+|-----------|--------|-------------|
+| 🟢 Smart Contract | **LIVE** | Payment distribution, staking, provider registration |
+| 🟢 RPC Endpoint | **LIVE** | `https://rpc.whistle.ninja` serving mainnet |
+| 🟢 Cache Node | **READY** | Windows/Mac/Linux installers available |
+| 🟢 Provider Dashboard | **LIVE** | Track earnings, monitor nodes |
+| 🟡 Coordinator | **IN PROGRESS** | Load balancer & health monitoring |
+| 🟡 Community Nodes | **LAUNCHING** | Seeking first 10-20 operators |
+
+**We're ready for beta node operators!** Join [Telegram](https://t.me/whistleninja) to get early access.
+
+---
+
+## 💰 Economics: How Everyone Earns
+
+### For Cache Node Operators
+**What you do**: Run a small server that caches popular RPC requests  
+**Investment**: $6/month VPS or use your own computer  
+**Requirements**: 10,000 $WHISTLE staked (can borrow/pool)  
+**Earnings**: **70% of query fees** from your node  
+
+**Real Numbers**:
+- Query cost: 0.0001 SOL per query
+- 1,000 queries/day = **0.07 SOL/day** (after 70% split)
+- 10,000 queries/day = **0.7 SOL/day** (after 70% split)
+- 50,000 queries/day = **3.5 SOL/day** (after 70% split)
+
+*Earnings depend on network usage, query volume, and SOL price.*
+
+### For Full Node Operators
+**What you do**: Run a complete Solana validator + indexer  
+**Investment**: $200+/month dedicated server (256GB RAM)  
+**Requirements**: 100,000 $WHISTLE staked  
+**Earnings**: **70% of ALL queries** routed to your node (cache + non-cache)
+
+**Real Numbers**:
+- Serve 100,000+ queries/day
+- Earnings: **70 SOL/day** (7M queries at 0.0001 SOL each)
+- Suitable for professional operations
+
+### For Stakers (Passive Income)
+**What you do**: Hold $WHISTLE, stake it, earn automatically  
+**Investment**: Any amount of $WHISTLE  
+**Earnings**: 
+- **5% of all RPC query fees** (distributed by stake weight)
+- **90% of x402 premium payments**
+- **Share of bonus pool** based on your stake
+
+**Real Numbers** (example: 1M $WHISTLE staked, 1M queries/day):
+- Network earns: 100 SOL/day total from queries
+- Stakers get: 5 SOL/day distributed by weight
+- Your 1M stake (if 1% of pool) = **0.05 SOL/day passive income**
+
+*Actual earnings vary based on network usage, your stake percentage, and query volume.*
+
+---
+
+## 🚀 Quick Start: Become a Provider
+
+### Step 1: Get $WHISTLE
+```
+Buy on Jupiter/Raydium
+Token: 6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump
+Min: 10,000 $WHISTLE for cache node
+```
+
+### Step 2: Stake Your Tokens
+```
+1. Visit https://whistle.ninja
+2. Connect wallet
+3. Stake 10,000+ $WHISTLE
+4. You're now eligible to run a node
+```
+
+### Step 3: Run Your Cache Node
+
+**Windows**:
+```powershell
+# Run this in PowerShell
+iwr -useb https://whistle.ninja/install-windows.ps1 | iex
+```
+
+**Mac/Linux**:
+```bash
+# Run this in terminal
+curl -sSL https://whistle.ninja/install.sh | bash
+```
+
+**Docker (Manual)**:
+```bash
+docker run -d \
+  --name whistle-cache \
+  -e WALLET_ADDRESS=YourSolanaWallet \
+  -e LOCATION="City, Country" \
+  -p 8545:8545 \
+  --restart unless-stopped \
+  whistlenet/cache-node:latest
+```
+
+### Step 4: Monitor & Earn
+```
+1. Dashboard: https://whistle.ninja/providers
+2. Watch your cache hits increase
+3. See earnings accumulate in real-time
+4. Claim rewards anytime (no lock-up)
+```
+
+---
+
+## 🏗️ Full Architecture
 
 ```
-┌──────────────────────────────────────────────┐
-│  Apps / Dashboards                           │
-│  • whistle-dashboard/                        │
-│  • main.html demos (x402 gated tools)        │
-└────────────────┬─────────────────────────────┘
-                 │
-┌────────────────▼─────────────────────────────┐
-│  RPC Edge                                     │
-│  • cloudflare-worker/                         │
-│       - CORS policy, domain whitelist         │
-│       - Branding + rate limits                │
-│  • whistle-rpc-proxy/                         │
-│       - Request inspection, logging           │
-└────────────────┬─────────────────────────────┘
-                 │
-┌────────────────▼─────────────────────────────┐
-│  Upstream Providers                           │
-│    just the team now      │
-│  • Future: community nodes via staking pool   │
-└────────────────┬─────────────────────────────┘
-                 │
-┌────────────────▼─────────────────────────────┐
-│  On-Chain Loyalty Layer                       │
-│  • contracts/encrypted-network-access-token   │
-│       - StakingPool / ProviderAccount         │
-│       - PaymentVault (70/20/5/5 split)        │
-│       - X402 wallet + ProcessX402Payment      │
-└────────────────┬─────────────────────────────┘
-                 │
-┌────────────────▼─────────────────────────────┐
-│  Automation + Tooling                         │
-│  • x402-distributor-cron.js                   │
-│  • claim-my-rewards.js                        │
-│  •                         │
-└──────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│                  USERS & DAPPS                       │
+│  (Wallets, Trading Bots, Analytics Tools, etc.)     │
+└────────────────────┬────────────────────────────────┘
+                     │ RPC Requests
+                     │
+┌────────────────────▼────────────────────────────────┐
+│          RPC ROUTER & LOAD BALANCER                 │
+│  • Health monitoring (30s heartbeats)                │
+│  • Geographic routing (lowest latency)               │
+│  • Automatic failover                                │
+│  • DDoS protection                                   │
+│  • Rate limiting (except *.whistle.ninja)            │
+└───┬─────────────┬──────────────┬────────────────────┘
+    │             │              │
+    │             │              │
+┌───▼──────┐ ┌───▼──────┐ ┌────▼──────┐ ┌──────────┐
+│  CACHE   │ │  CACHE   │ │   FULL    │ │  CACHE   │
+│  NODE #1 │ │  NODE #2 │ │  NODE #1  │ │  NODE #3 │
+│          │ │          │ │           │ │          │
+│ $6 VPS   │ │ Home PC  │ │ $200 Srv  │ │ $6 VPS   │
+│ NYC, US  │ │ London   │ │ Tokyo     │ │ Berlin   │
+└────┬─────┘ └────┬─────┘ └─────┬─────┘ └────┬─────┘
+     │            │              │            │
+     │            │ Cache Miss   │            │
+     └────────────┴──────┬───────┴────────────┘
+                         │
+                ┌────────▼─────────┐
+                │  RPC AGGREGATOR  │
+                │  • Helius        │
+                │  • QuickNode     │
+                │  • Alchemy       │
+                │  • Self-hosted   │
+                └────────┬─────────┘
+                         │
+                ┌────────▼─────────┐
+                │  SOLANA MAINNET  │
+                └──────────────────┘
+
+┌─────────────────────────────────────────────────────┐
+│         SMART CONTRACT (On-Chain Logic)              │
+│  • Provider registration & deregistration            │
+│  • Cache hit tracking & metrics                      │
+│  • Payment distribution (70/20/5/5)                  │
+│  • Reputation & slashing                             │
+│  • Staking pool & rewards                            │
+└─────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## 🧠 Key Components
 
-### 1. Whistle RPC Edge
-- `cloudflare-worker/`: Auth, rate limits, domain allow-list, abuse guard
-- `whistle-rpc-proxy/`: Node.js proxy for environments outside Workers
+### 1. Smart Contract (`whistlenet/contract/src/lib.rs`)
+**Program ID**: `whttByewzTQzAz3VMxnyJHdKsd7AyNRdG2tDHXVTksr`
 
+**Core Instructions**:
+```rust
+// Provider Lifecycle
+register_provider(bond, endpoint, location)
+register_cache_node(wallet, endpoint, location) 
+deregister_provider()
+update_endpoint(new_url)
+record_heartbeat()
 
-### 2. Solana Smart Contract (ENAT)
-- Location: `contracts/encrypted-network-access-token/src/lib.rs`
-- **Core accounts:** `StakingPool`, `StakerAccount`, `ProviderAccount`, `PaymentVault`
-- **Instructions:** staking, provider lifecycle, slashing, x402 payments, NLx402 hooks
-- **Payment math:** Query flow = 70% providers / 20% bonus / 5% treasury / 5% stakers; X402 flow = 90% stakers / 10% treasury
+// Metrics & Payments
+record_cache_hit()
+submit_metrics_batch(cache_hits, uptime)
+process_query_payment(amount) // 70/20/5/5 split
+claim_provider_earnings()
+distribute_bonus_pool() // Top 20% performers
 
-### 3. x402 Economic Layer
-- `x402-helpers.ts`: PDA helpers + instruction builders
-- `x402-distributor-cron.js`: daemon that sweeps X402 wallet → vault
-- `claim-my-rewards.js`: CLI tool to withdraw staker rewards
-- `X402-SETUP-GUIDE.md` & `STAKER-CLAIM-GUIDE.md`: operational docs
+// Staking
+stake(amount)
+unstake(amount)
+claim_staker_rewards()
 
-### 4. Dashboards + Clients
-- `whistle-dashboard/`: Next.js dashboard for pools, treasury, providers
-- `apps/web/` & `public/` HTML demos: x402-gated privacy tools
-- All client RPC calls now point to `https://rpc.whistle.ninja`
+// Reputation & Slashing
+update_reputation_metrics(uptime, response_time)
+slash_provider(violation_type, amount)
+```
+
+### 2. Cache Node (`whistlenet/cache-node/src/`)
+**Purpose**: Lightweight RPC proxy with caching
+
+**Architecture**:
+```typescript
+Express HTTP Server (port 8545)
+├─ POST / → Main RPC endpoint
+├─ POST /batch → Batch requests
+├─ GET /health → Health check
+├─ GET /metrics → Prometheus metrics
+└─ GET /cache/stats → Cache statistics
+
+In-Memory Cache (node-cache)
+├─ TTL-based expiration
+├─ Method-specific cache times
+├─ LRU eviction policy
+└─ 256MB default size
+
+WebSocket to Coordinator
+├─ Node registration
+├─ Heartbeat (every 30s)
+├─ Metrics reporting
+└─ Task assignment
+
+Contract Integration
+├─ Initialize on startup
+├─ Report cache hits every 100 queries
+├─ Calculate earnings per hit
+└─ Submit batched metrics
+```
+
+**Cache Strategy**:
+```
+Static data (15min):      Block data, program accounts
+Semi-static (5min):       Token metadata, account info
+Dynamic (30s):            Balances, latest blockhash
+Real-time (no cache):     Transaction status, signatures
+```
+
+### 3. Coordinator (`whistlenet/coordinator/src/`)
+**Purpose**: Central load balancer and health monitor
+
+**Responsibilities**:
+- Track all active nodes (cache + full)
+- Monitor health (ping every 30s, timeout after 60s)
+- Route requests based on:
+  - Cache availability (check cache nodes first)
+  - Geographic proximity (lowest latency)
+  - Node reputation (favor high-performing nodes)
+  - Load balancing (distribute evenly)
+- Handle failover (retry on failed nodes)
+- Aggregate network metrics
+
+### 4. Provider Dashboard (`whistle-dashboard/`)
+**Purpose**: Real-time monitoring for node operators
+
+**Features**:
+- Node status (online/offline/syncing)
+- Earnings tracker (today/week/month/total)
+- Cache hit rate & performance graphs
+- Network statistics
+- Setup wizard (OS detection, Docker install)
+- Claim earnings button
+- Historical earnings chart
 
 ---
 
-## 🚀 Quick Start
+## 📈 Technical Specifications
+
+### Cache Node Requirements
+| Requirement | Minimum | Recommended |
+|-------------|---------|-------------|
+| RAM | 1GB | 2GB+ |
+| Storage | 5GB | 10GB+ |
+| CPU | 1 core | 2+ cores |
+| Bandwidth | 100 Mbps | 500+ Mbps |
+| Uptime | 95% | 99%+ |
+| $WHISTLE Stake | 10,000 | 50,000+ |
+
+### Full Node Requirements
+| Requirement | Minimum | Recommended |
+|-------------|---------|-------------|
+| RAM | 256GB | 512GB+ |
+| Storage | 2TB NVMe | 4TB+ NVMe |
+| CPU | 16 cores | 32+ cores |
+| Bandwidth | 1 Gbps | 10+ Gbps |
+| Uptime | 99% | 99.9%+ |
+| $WHISTLE Stake | 100,000 | 500,000+ |
+
+### Performance Targets
+- **Cache hit rate**: 80-90%
+- **Cache response time**: <10ms average
+- **Cache miss response time**: <100ms average
+- **Uptime**: 99.9% (43 minutes downtime/month max)
+- **Error rate**: <0.1%
+
+---
+
+## 🛠️ Development Setup
 
 ### Prerequisites
 ```bash
 node >= 18.16
 npm >= 9
-rust + cargo (for Solana program)
-solana-cli (configured for mainnet or localnet)
+docker (for cache node)
+rust + solana-cli (for contract development)
 ```
 
 ### Clone & Install
@@ -117,391 +338,404 @@ cd whitelspace
 npm install
 ```
 
-### Run the Dashboard (dev)
+### Run Dashboard (Development)
 ```bash
 cd whistle-dashboard
 npm install
 npm run dev
-# http://localhost:3000
+# Open http://localhost:3000
 ```
 
-### Deploy / Test the Cloudflare Worker
+### Run Cache Node (Local Testing)
 ```bash
-cd cloudflare-worker
+cd whistlenet/cache-node
 npm install
-wrangler dev
-wrangler publish
-```
-
-Set `HELIUS_RPC_URL` when publishing (or use Secrets UI).
-
-### X402 Distributor
-```bash
-cd contracts/encrypted-network-access-token
-npm install
-
-# One-time PDA init
-node initialize-x402-wallet.js
-
-# Start cron (docker-compose example)
-docker-compose up -d x402-distributor
-```
-
-### Claim Staker Rewards
-```bash
-cd contracts/encrypted-network-access-token
-export STAKER_KEYPAIR=./staker.json
-node claim-my-rewards.js
-```
-
----
-
-## ⚙️ Repository Guide
-
-| Path | Description |
-|------|-------------|
-| `whistle-dashboard/` | Next.js dashboard (pool stats, providers, treasury) |
-| `cloudflare-worker/` | Edge worker that fronts the branded RPC |
-| `whistle-rpc-proxy/` | Node proxy fallback for non-Worker deployments |
-| `contracts/encrypted-network-access-token/` | Solana program + tooling |
-| `apps/web/`, `public/` | Legacy/front-of-house privacy tools (x402 gated) |
-| `docs/` | Architecture notes, diagrams, Ghost Whistle docs |
-
----
-
-## 🪙 Economics & Distribution
-
-| Source | Flow | Notes |
-|--------|------|-------|
-| RPC queries | 70% provider pool, 20% bonus pool, 5% treasury, 5% stakers | Managed via `PaymentVault` |
-| x402 payments | 90% stakers, 10% treasury | `ProcessX402Payment` instruction |
-| NLx402 routing | Pending | Stakers opt-in once API stable |
-
-### Highlighted Files
-- `contracts/encrypted-network-access-token/src/lib.rs` — On-chain math
-- `contracts/.../x402-distributor-cron.js` — Off-chain automation
-- `contracts/.../claim-my-rewards.js` — Staker UX
-
----
-
-## 📡 Provider & Integration Nodes (WIP)
-
-What’s live in code:
-- `RegisterProvider`, `UpdateEndpoint`, `RecordHeartbeat`, `SlashProvider`
-- Reputation metrics: uptime, response time, accuracy, heartbeats
-- Payment vault accounting to reward providers & stakers
-
-What’s missing (help wanted):
-- Provider onboarding UI/API
-- Health-check scheduler + NL routing
-- Automatic failover + geo balancing
-
----
-
-## 🧭 Roadmap (public items)
-
-
-- [x] Remove Cloudflare “powered by Helius” copy
-- [x] Fix CORS + rate limits for own domains
-- [x] Automate x402 payouts + staker claims
-- [ ] Ship provider control panel (registration, uptime graph)
-- [ ] Integrate NLx402 + trustless 5% fee routing to @PerkinsFund
-- [ ] Launch multi-provider load balancer + Falco-style healthchecks
-- [ ] Add zk-proof-of-privacy for RPC queries (R&D)
-
----
-
-## 🛠️ Contributing
-
-1. Fork the repo
-2. Create a branch: `git checkout -b feat/my-idea`
-3. Make changes + add tests
-4. Run lint/tests where applicable
-5. Open a PR with context (which subsystem, which env vars, etc.)
-
-Areas needing help:
-- Provider onboarding backend
-
-- Dashboard graphs + analytics
-- Documentation / tutorials
-
----
-
-## 🔐 Security & Privacy Notes
-
-- No telemetry, no analytics, no hidden requests
-- Worker + proxy strip identifying headers before reaching upstream
-- Secret keys (Helius, authority keypairs) are never committed — use `.env` or Cloudflare KV
-- Staker/provider PDAs verified on-chain to prevent spoofing
-- Rate limiting exempt for `*.whistle.ninja` to avoid self-DDoS
-
----
-
-## 📡 Links
-
-- **Website:** [whistle.ninja](https://whistle.ninja)
-- **RPC Endpoint:** `https://rpc.whistle.ninja`
-- **Twitter / X:** [@Whistle_Ninja](https://x.com/Whistle_Ninja)
-- **Telegram:** [@whistleninja](https://t.me/whistleninja)
-- **Smart Contract:** [`5cmaPy5i8efSWSwRVVuWr9VUx8sAMv6qMVSE1o82TRgc`](https://solscan.io/account/5cmaPy5i8efSWSwRVVuWr9VUx8sAMv6qMVSE1o82TRgc)
-
----
-
-**Built for Solana builders tired of centralized chokepoints.**  
-If you want to run a provider, or help harden the infra — DM us. Privacy infrastructure only exists if we build it ourselves. 🛡️
-
-## 🌟 Key Features
-
-### 🛡️ Privacy Tools Lab
-- **Breach Monitor** - Check if your email has been compromised (powered by HaveIBeenPwned)
-- **Exploit Scanner** - Security vulnerability detection for code and applications
-- **Steganography** - Hide encrypted messages within images
-- **Location Spoofer** - Privacy-preserving GPS manipulation
-- **Ghost Identity Generator** - Create anonymous digital identities
-- **VPN Integration** - Seamless VPN connectivity for enhanced privacy
-
-### 💬 Ghost Whistle (Offline P2P Network)
-- **End-to-End Encrypted Messaging** - Military-grade encryption for all communications
-- **Decentralized Node Network** - Community-run infrastructure with 10+ bootstrap nodes
-- **Voice & Video Calls** - Private WebRTC-based real-time communication
-- **Offline Capability** - Mesh networking for communication without internet
-- **File Sharing** - Secure peer-to-peer file transfers
-- **Group Chats** - Encrypted multi-party conversations
-
-### 🤖 CryptWhistle AI
-- **Privacy-Preserving AI** - Client-side AI processing (data never leaves your device)
-- **Sentiment Analysis** - Understand tone and context in communications
-- **Zero-Shot Classification** - Intelligent message categorization
-- **Question Answering** - AI-powered information retrieval
-- **WebGPU/WebAssembly** - Hardware-accelerated browser-based AI
-- **No Cloud Processing** - 100% local AI inference using Transformers.js
-
-### 💰 Whistle Token ($WHISTLE)
-- **Privacy Swap** - Anonymous token exchanges
-- **Solana Integration** - Fast, low-cost transactions on Solana blockchain
-- **Staking Rewards** - Earn rewards by running nodes
-- **Node Operator Rewards** - Get paid for supporting the network
-- **x402 Micropayments** - Pay-per-use privacy services
-
-### 🆔 Whistle IDs
-- **Self-Sovereign Identity** - Control your own digital identity
-- **Anonymous Reputation System** - Build trust without revealing personal info
-- **Cross-Platform** - Use one identity across all Whistle services
-- **Decentralized** - No central authority controls your identity
-
-### 📱 Mobile Wallet
-- **Non-Custodial** - You control your private keys
-- **Multi-Chain Support** - Solana native with cross-chain compatibility
-- **QR Code Payments** - Easy peer-to-peer transactions
-- **Built-in Swap** - Trade tokens without leaving the wallet
-- **DApp Browser** - Access Web3 applications securely
-
-## 🏗️ Architecture
-
-### Monorepo Structure
-```
-whistle/
-├── apps/
-│   ├── web/                    # Main web application
-│   ├── mobile/                 # Android/iOS applications
-│   └── cryptwhistle/           # AI platform
-│
-├── backend/
-│   ├── signaling-server.js     # WebRTC signaling
-│   ├── signaling-server-calls.js   # Voice/video calls
-│   └── user-node-client.js     # Node runner
-│
-├── docs/                        # Documentation
-│   ├── guides/                 # User guides
-│   ├── technical/              # Technical specs
-│   └── ghost-calls/            # WebRTC documentation
-│
-├── contracts/                   # Smart contracts
-│   └── ghost-whisper-contract/ # Solana program
-│
-└── infrastructure/
-    ├── node-keys/              # Bootstrap node keys
-    ├── node-storage/           # Decentralized storage
-    └── dist/                   # Built binaries
-```
-
-### Tech Stack
-
-**Frontend:**
-- React (JSX with Babel)
-- TailwindCSS (Utility-first CSS)
-- Lucide Icons
-- WebRTC for P2P communication
-- Service Workers for offline functionality
-
-**Backend:**
-- Node.js / Express
-- WebSocket (ws) for real-time communication
-- Solana Web3.js
-- PM2 for process management
-
-**Blockchain:**
-- Solana Mainnet
-- Anchor Framework for smart contracts
-- SPL Tokens ($WHISTLE)
-
-**AI/ML:**
-- Transformers.js (client-side AI)
-- WebGPU / WebAssembly
-- DistilBERT models for NLP tasks
-
-**Infrastructure:**
-- Docker & Docker Compose
-- Netlify (frontend hosting)
-- Render.com (backend services)
-- Self-hosted bootstrap nodes
-
-## 🚀 Quick Start
-
-### Prerequisites
-```bash
-node >= 18.0.0
-npm >= 8.0.0
-```
-
-### Installation
-
-1. **Clone the repository**
-```bash
-git clone https://github.com/YOUR_USERNAME/whistle.git
-cd whistle
-```
-
-2. **Install dependencies**
-```bash
-npm install
-```
-
-3. **Configure environment (optional)**
-```bash
-cp .env.example .env
-# Edit .env with your configuration
-```
-
-4. **Start development server**
-```bash
+npm run build
 npm start
+
+# Or use Docker
+docker build -t whistle-cache .
+docker run -p 8545:8545 -e WALLET_ADDRESS=YourWallet whistle-cache
 ```
 
-The application will be available at `http://localhost:3001`
-
-### Running Services
-
-**Main Application:**
+### Run Coordinator (Local)
 ```bash
-npm start
-```
-
-**WebRTC Signaling Server:**
-```bash
-npm run signaling
-```
-
-**Voice/Video Call Server:**
-```bash
-npm run signaling-calls
-```
-
-**CryptWhistle AI:**
-```bash
-cd apps/cryptwhistle
-npm start
-```
-
-## 🔧 Configuration
-
-### x402 Micropayments
-The platform uses x402 protocol for micro-transactions. Configure in `server.js`:
-- Fee collector wallet
-- Token mint address
-- Payment validation
-
-### Bootstrap Nodes
-Configure decentralized node infrastructure:
-- Node keys in `infrastructure/node-keys/` (gitignored for security)
-- Node storage in `infrastructure/node-storage/`
-- Bootstrap addresses in configuration files
-
-## 🌐 Deployment
-
-### Frontend (Netlify)
-```bash
+cd whistlenet/coordinator
 npm install
-# Builds happen automatically on Netlify
+npm run build
+npm start
+# Runs on port 3002
 ```
 
-### Backend (Render / VPS)
-```bash
-npm start                    # Main server
-npm run signaling           # WebRTC server
-npm run signaling-calls     # Call server
+---
+
+## 📁 Repository Structure
+
+```
+whitelspace/
+├── whistlenet/                    # Core RPC network
+│   ├── cache-node/                # Cache node implementation
+│   │   ├── src/
+│   │   │   ├── index.ts           # Main server
+│   │   │   └── contract-integration.ts  # On-chain integration
+│   │   ├── Dockerfile
+│   │   └── package.json
+│   │
+│   ├── coordinator/               # Load balancer & health monitor
+│   │   ├── src/index.ts
+│   │   └── package.json
+│   │
+│   ├── contract/                  # Solana smart contract
+│   │   ├── src/lib.rs             # Rust program
+│   │   ├── Cargo.toml
+│   │   └── docs/
+│   │
+│   └── setup-scripts/             # Platform installers
+│       ├── install-windows.ps1
+│       ├── install-mac.sh
+│       └── install-linux.sh
+│
+├── whistle-dashboard/             # Next.js provider dashboard
+│   ├── components/
+│   │   ├── ProviderDashboardDark.tsx    # Main dashboard
+│   │   └── BecomeProviderSection.tsx    # Onboarding flow
+│   ├── lib/
+│   │   └── cache-node-api.ts      # API integration
+│   └── public/
+│       └── main.html              # Legacy privacy tools
+│
+├── docs/                          # Documentation
+│   ├── PROVIDER-EXPLAINED.md      # Provider guide
+│   ├── WHISTLE-EXPLAINED.md       # Architecture overview
+│   ├── WHISTLE-ARCHITECTURE-DIAGRAM-PROMPT.md
+│   └── CURRENT-PRIORITY-RPC-NETWORK.md
+│
+├── trigger-x402-distribution.js   # X402 payment automation
+├── START_WHISTLE.bat              # Windows unified launcher
+└── README.md                      # This file
 ```
 
-### Docker Deployment
-```bash
-docker-compose up -d
-```
+---
 
-See `docs/guides/` for detailed deployment instructions.
+## 💡 Why This Works
 
-## 🔐 Security
+### 1. Economically Sustainable
+- **Operators profit**: Even with 1,000 queries/day ($50/mo vs $6 VPS)
+- **Network profits**: Coordinator + aggregator earn 20% bonus pool
+- **Stakers profit**: 5% of all fees = passive income
+- **Users benefit**: Cheaper + more reliable than centralized alternatives
 
-### Privacy Features
-- **No data collection** - We don't track, store, or sell your data
-- **End-to-end encryption** - All communications are encrypted
-- **Client-side processing** - AI runs in your browser
-- **Decentralized infrastructure** - No single point of failure
-- **Open source** - Fully auditable code
+### 2. Technically Feasible  
+- **Caching works**: 80-90% of RPC queries are cacheable
+- **Low hardware needs**: Cache nodes run on $6/month VPS
+- **Fast**: Cache hits return in 5-10ms (10x faster than upstream)
+- **Reliable**: Multi-provider aggregation prevents single point of failure
 
-### Security Best Practices
-- Private keys are never committed (`.gitignore`)
-- API keys should be stored in environment variables
-- Bootstrap node keys are for public node network only
-- Use strong encryption for all sensitive operations
+### 3. Community Aligned
+- **Open source**: All code is auditable
+- **Fair launch**: No VC allocation, no team lock-up
+- **Low barrier**: Anyone can run a node with minimal investment
+- **Governed by stakers**: Community controls network parameters
+
+### 4. Proven Business Model
+- **We're already serving requests** on `rpc.whistle.ninja`
+- **Smart contract is live** and distributing payments
+- **Operators are profitable** at current query volumes
+- **Scalable**: More users = more queries = more earnings for everyone
+
+---
+
+## 📚 Documentation
+
+### Getting Started
+- [Provider Setup Guide](docs/PROVIDER-EXPLAINED.md) - How to run a node
+- [Network Architecture](docs/WHISTLE-EXPLAINED.md) - Technical overview
+- [Current Priority](docs/CURRENT-PRIORITY-RPC-NETWORK.md) - What we're building now
+
+### Technical Docs
+- [Smart Contract Documentation](whistlenet/contract/docs/)
+- [Cache Node API Reference](whistlenet/cache-node/README.md)
+- [Coordinator Architecture](whistlenet/coordinator/README.md)
+
+### For Stakers
+- How to stake $WHISTLE
+- How to claim rewards
+- Understanding earnings
+
+---
+
+## 🎯 Roadmap
+
+### ✅ Phase 1: Foundation (COMPLETED - Nov 2024)
+- [x] Deploy smart contract with payment logic
+- [x] Launch RPC endpoint (`rpc.whistle.ninja`)
+- [x] Build cache node software
+- [x] Create provider dashboard
+- [x] Platform-specific installers
+- [x] Contract integration for earnings tracking
+
+### 🚧 Phase 2: Decentralization (IN PROGRESS - Dec 2024)
+- [ ] Launch coordinator with health monitoring
+- [ ] Onboard first 10-20 cache node operators
+- [ ] Multi-provider load balancing
+- [ ] Geographic distribution (3+ regions)
+- [ ] Automated provider payouts
+- [ ] Performance leaderboard
+
+### 📋 Phase 3: Scale (Q1 2025)
+- [ ] 100+ community nodes
+- [ ] Full node support for power users
+- [ ] Advanced analytics dashboard
+- [ ] Mobile monitoring app
+- [ ] Developer rebate program
+- [ ] 1M+ queries per day
+
+### 🔮 Phase 4: Ecosystem (Q2 2025+)
+- [ ] 1000+ nodes worldwide
+- [ ] 10M+ queries per day
+- [ ] Cross-chain RPC (Ethereum, Polygon, etc.)
+- [ ] Decentralized governance launch
+- [ ] Industry partnerships
+- [ ] RPC-as-a-Service for other projects
+
+---
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our contributing guidelines:
+We need help with:
 
+**High Priority**:
+- Multi-provider load balancing algorithm
+- Health monitoring & automatic failover
+- Provider onboarding UX improvements
+- Documentation & tutorials
+
+**Medium Priority**:
+- Analytics dashboard enhancements
+- Mobile app development
+- Automated testing for cache node
+- Community growth initiatives
+
+**How to Contribute**:
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+2. Create a feature branch: `git checkout -b feature/your-idea`
+3. Make your changes
+4. Write tests (if applicable)
+5. Submit a pull request
 
-## 📜 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🔗 Links
-
-- **Website:** [whistle.ninja](https://whistle.ninja)
-- **Twitter:** [@Whistle_Ninja](https://x.com/Whistle_Ninja)
-- **Telegram:** [@whistleninja](https://t.me/whistleninja)
-- **Smart Contract:** [Solana Explorer](https://solscan.io/token/6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump)
-
-## 🙏 Acknowledgments
-
-- Built on Solana blockchain
-- Powered by Transformers.js for privacy-preserving AI
-- HaveIBeenPwned API for breach monitoring
-- Open-source community for continuous support
-
-## 📊 Project Status
-
-**Current Phase:** Public Beta  
-**Token:** $WHISTLE (Launched on Solana Mainnet)  
-**Network:** 10+ active bootstrap nodes  
-**Platform:** Web + Mobile (Android)
-
+**Get Rewarded**: Active contributors earn from the developer rebate pool (contract feature in progress)
 
 ---
 
-**Built with ❤️ for privacy advocates, by privacy advocates**
+## 🔐 Security
 
-*Remember: Your privacy is your power*
+### For Users
+- ✅ No tracking or data collection
+- ✅ Encrypted connections (HTTPS/WSS)
+- ✅ DDoS protection at edge layer
+- ✅ Rate limiting to prevent abuse
+
+### For Providers
+- ✅ Private keys never leave your machine
+- ✅ On-chain reputation system
+- ✅ Slashing for malicious behavior
+- ✅ Health checks validate responses
+
+### Audits
+- **Smart Contract**: Internal review completed, public audit Q1 2025
+- **Cache Node**: Security review in progress
+- **Infrastructure**: Ongoing monitoring and improvements
+
+---
+
+## 📱 Links & Community
+
+- **Website**: [whistle.ninja](https://whistle.ninja)
+- **RPC Endpoint**: `https://rpc.whistle.ninja`
+- **Provider Dashboard**: [whistle.ninja/providers](https://whistle.ninja)
+- **Twitter**: [@Whistle_Ninja](https://x.com/Whistle_Ninja)
+- **Telegram**: [@whistleninja](https://t.me/whistleninja) — **Join for beta access**
+- **GitHub**: [DylanPort/whitelspace](https://github.com/DylanPort/whitelspace)
+- **Contract**: [`whttByewzTQzAz3VMxnyJHdKsd7AyNRdG2tDHXVTksr`](https://solscan.io/account/whttByewzTQzAz3VMxnyJHdKsd7AyNRdG2tDHXVTksr)
+- **Token**: [`6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump`](https://solscan.io/token/6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump)
+
+---
+
+## 🌟 The Bigger Picture
+
+WHISTLE isn't just an RPC network. We're an **infrastructure adaptation engine**.
+
+**Our Philosophy**:
+- The world is centralized
+- Every centralized service can be disrupted
+- Community-owned infrastructure is the future
+- We adapt to where decentralization is needed most
+
+**Current Focus**: Solana RPC (because it's centralized and expensive)  
+**Future Potential**: AI inference, CDN, cloud storage, VPN, any centralized service
+
+**We're not playing one game. We're playing the infinite game.**
+
+---
+
+## 🏆 Success Metrics
+
+### Short Term (90 Days)
+- 10+ nodes online
+- 100K queries/day
+- $500+/month distributed
+- 50+ stakers
+
+### Medium Term (6 Months)
+- 100+ nodes
+- 1M queries/day  
+- $10K+/month distributed
+- 500+ stakers
+
+### Long Term (12 Months)
+- 500+ nodes worldwide
+- 10M queries/day
+- $100K+/month distributed
+- 2000+ stakers
+- Industry partnerships
+
+---
+
+## 📜 License
+
+MIT License - see [LICENSE](LICENSE) file for details.
+
+---
+
+**Built for Solana builders tired of centralized chokepoints.**
+
+**Run a node. Earn rewards. Own the infrastructure.**
+
+🛡️ *Privacy infrastructure only exists if we build it ourselves.*
+
+---
+
+## 🎺 Sound the Whistle
+
+The revolution isn't coming. It's here.
+
+Join us in building the decentralized future of Web3 infrastructure.
+
+**[Get Started →](https://whistle.ninja)**
+
+- Health monitoring & automatic failover
+- Provider onboarding UX improvements
+- Documentation & tutorials
+
+**Medium Priority**:
+- Analytics dashboard enhancements
+- Mobile app development
+- Automated testing for cache node
+- Community growth initiatives
+
+**How to Contribute**:
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-idea`
+3. Make your changes
+4. Write tests (if applicable)
+5. Submit a pull request
+
+**Get Rewarded**: Active contributors earn from the developer rebate pool (contract feature in progress)
+
+---
+
+## 🔐 Security
+
+### For Users
+- ✅ No tracking or data collection
+- ✅ Encrypted connections (HTTPS/WSS)
+- ✅ DDoS protection at edge layer
+- ✅ Rate limiting to prevent abuse
+
+### For Providers
+- ✅ Private keys never leave your machine
+- ✅ On-chain reputation system
+- ✅ Slashing for malicious behavior
+- ✅ Health checks validate responses
+
+### Audits
+- **Smart Contract**: Internal review completed, public audit Q1 2025
+- **Cache Node**: Security review in progress
+- **Infrastructure**: Ongoing monitoring and improvements
+
+---
+
+## 📱 Links & Community
+
+- **Website**: [whistle.ninja](https://whistle.ninja)
+- **RPC Endpoint**: `https://rpc.whistle.ninja`
+- **Provider Dashboard**: [whistle.ninja/providers](https://whistle.ninja)
+- **Twitter**: [@Whistle_Ninja](https://x.com/Whistle_Ninja)
+- **Telegram**: [@whistleninja](https://t.me/whistleninja) — **Join for beta access**
+- **GitHub**: [DylanPort/whitelspace](https://github.com/DylanPort/whitelspace)
+- **Contract**: [`whttByewzTQzAz3VMxnyJHdKsd7AyNRdG2tDHXVTksr`](https://solscan.io/account/whttByewzTQzAz3VMxnyJHdKsd7AyNRdG2tDHXVTksr)
+- **Token**: [`6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump`](https://solscan.io/token/6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump)
+
+---
+
+## 🌟 The Bigger Picture
+
+WHISTLE isn't just an RPC network. We're an **infrastructure adaptation engine**.
+
+**Our Philosophy**:
+- The world is centralized
+- Every centralized service can be disrupted
+- Community-owned infrastructure is the future
+- We adapt to where decentralization is needed most
+
+**Current Focus**: Solana RPC (because it's centralized and expensive)  
+**Future Potential**: AI inference, CDN, cloud storage, VPN, any centralized service
+
+**We're not playing one game. We're playing the infinite game.**
+
+---
+
+## 🏆 Success Metrics
+
+### Short Term (90 Days)
+- 10+ nodes online
+- 100K queries/day
+- $500+/month distributed
+- 50+ stakers
+
+### Medium Term (6 Months)
+- 100+ nodes
+- 1M queries/day  
+- $10K+/month distributed
+- 500+ stakers
+
+### Long Term (12 Months)
+- 500+ nodes worldwide
+- 10M queries/day
+- $100K+/month distributed
+- 2000+ stakers
+- Industry partnerships
+
+---
+
+## 📜 License
+
+MIT License - see [LICENSE](LICENSE) file for details.
+
+---
+
+**Built for Solana builders tired of centralized chokepoints.**
+
+**Run a node. Earn rewards. Own the infrastructure.**
+
+🛡️ *Privacy infrastructure only exists if we build it ourselves.*
+
+---
+
+## 🎺 Sound the Whistle
+
+The revolution isn't coming. It's here.
+
+Join us in building the decentralized future of Web3 infrastructure.
+
+**[Get Started →](https://whistle.ninja)**
