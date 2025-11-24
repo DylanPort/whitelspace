@@ -8,7 +8,7 @@ const { Connection, PublicKey } = require('@solana/web3.js');
 const { getAssociatedTokenAddressSync } = require('@solana/spl-token');
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 // CORS middleware MUST be first (before any other middleware)
 app.use((req, res, next) => {
@@ -39,7 +39,21 @@ app.use(express.json());
 
 // Redirect root to Whistlenet Dashboard (main homepage)
 app.get('/', (req, res) => {
-  res.redirect('http://localhost:3000');
+  // Only redirect in development, serve health check in production
+  if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production') {
+    res.redirect('http://localhost:3000');
+  } else {
+    // In production, serve health check or API info
+    res.json({
+      service: 'WHISTLE Backend API',
+      version: '1.0.0',
+      endpoints: {
+        health: '/health',
+        nlx402: '/api/nlx402/*',
+        rpc: '/api/rpc/*'
+      }
+    });
+  }
 });
 
 // Main website still accessible at /main.html
@@ -662,9 +676,21 @@ app.get('/cryptwhistle', (req, res) => {
   res.sendFile(path.join(__dirname, 'apps/cryptwhistle/index.html'));
 });
 
+// Health check endpoint (required for Render)
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: Date.now(),
+    uptime: process.uptime(),
+    service: 'WHISTLE Backend API',
+    version: '1.0.0'
+  });
+});
+
 app.listen(PORT, () => {
     console.log(`🚀 Server running at http://localhost:${PORT}`);
     console.log(`📖 How It Works page: http://localhost:${PORT}/howto`);
     console.log(`🏠 Main app: http://localhost:${PORT}`);
     console.log(`🤖 CryptWhistle AI: http://localhost:${PORT}/cryptwhistle`);
+    console.log(`💚 Health check: http://localhost:${PORT}/health`);
 });
