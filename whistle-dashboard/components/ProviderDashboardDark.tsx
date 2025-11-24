@@ -642,9 +642,6 @@ export default function ProviderDashboardDark() {
     </div>
   );
 }
-
-                CACHE HITS TODAY
-              </p>
               <p style={{ fontSize: '28px', fontWeight: 'bold' }}>
                 {totalCacheHits.toLocaleString()}
               </p>
