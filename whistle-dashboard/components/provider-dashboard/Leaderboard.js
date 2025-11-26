@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Trophy, Medal, Award } from 'lucide-react'
-import { coordinator } from '../lib/coordinator'
+import { coordinator } from '@/lib/provider-dashboard/coordinator'
 
 export function Leaderboard() {
   const [leaderboard, setLeaderboard] = useState([])

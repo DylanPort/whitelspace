@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useWalletSafe } from '../lib/useWalletSafe'
+import { useWalletSafe } from '@/lib/provider-dashboard/useWalletSafe'
 import { UserPlus, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 import { WalletButton } from './WalletButton'
 import bs58 from 'bs58'

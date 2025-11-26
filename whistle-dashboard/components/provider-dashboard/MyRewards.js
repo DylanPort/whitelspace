@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useWalletSafe } from '../lib/useWalletSafe'
+import { useWalletSafe } from '@/lib/provider-dashboard/useWalletSafe'
 import { Award, TrendingUp, Clock, Coins } from 'lucide-react'
-import { coordinator } from '../lib/coordinator'
+import { coordinator } from '@/lib/provider-dashboard/coordinator'
 
 export function MyRewards() {
   const { publicKey, connected } = useWalletSafe()

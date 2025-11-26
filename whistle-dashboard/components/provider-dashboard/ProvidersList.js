@@ -1,7 +1,7 @@
 'use client'
 
 import { Users, ExternalLink, Clock } from 'lucide-react'
-import { useProviders } from '../lib/hooks'
+import { useProviders } from '@/lib/provider-dashboard/hooks'
 
 function formatTimeAgo(timestamp) {
   if (!timestamp) return 'Never'

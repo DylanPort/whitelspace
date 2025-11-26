@@ -20,7 +20,7 @@ import {
   fetchAllProviders,
   WHISTLE_PROGRAM_ID,
   connection,
-} from '../lib/whistle-contract'
+} from '@/lib/provider-dashboard/whistle-contract'
 
 export function OnChainLeaderboard() {
   const [providers, setProviders] = useState([])

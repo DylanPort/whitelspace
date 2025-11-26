@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useWalletSafe } from '../lib/useWalletSafe'
+import { useWalletSafe } from '@/lib/provider-dashboard/useWalletSafe'
 import { 
   Server, 
   Terminal, 

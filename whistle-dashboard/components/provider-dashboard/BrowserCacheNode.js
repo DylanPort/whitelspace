@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useWalletSafe } from '../lib/useWalletSafe'
+import { useWalletSafe } from '@/lib/provider-dashboard/useWalletSafe'
 import { 
   Play, 
   Square, 
@@ -20,7 +20,7 @@ import {
   ChevronUp,
   RefreshCw
 } from 'lucide-react'
-import { BrowserCacheNode as CacheNodeClient } from '../lib/browser-cache'
+import { BrowserCacheNode as CacheNodeClient } from '@/lib/provider-dashboard/browser-cache'
 
 export function BrowserCacheNode() {
   const { publicKey, connected: walletConnected } = useWalletSafe()

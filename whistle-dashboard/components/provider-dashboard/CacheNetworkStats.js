@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Server, Zap, HardDrive, TrendingUp, Award, Users } from 'lucide-react'
-import { coordinator } from '../lib/coordinator'
+import { coordinator } from '@/lib/provider-dashboard/coordinator'
 
 export function CacheNetworkStats() {
   const [stats, setStats] = useState(null)

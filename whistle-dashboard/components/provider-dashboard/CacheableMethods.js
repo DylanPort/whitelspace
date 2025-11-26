@@ -12,7 +12,7 @@ import {
   RefreshCw,
   Info
 } from 'lucide-react'
-import { CACHE_TTL, NO_CACHE_METHODS } from '../lib/browser-cache'
+import { CACHE_TTL, NO_CACHE_METHODS } from '@/lib/provider-dashboard/browser-cache'
 
 // Categorize methods
 const METHOD_CATEGORIES = {

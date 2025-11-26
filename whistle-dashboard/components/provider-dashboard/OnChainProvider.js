@@ -14,7 +14,7 @@ import {
   RefreshCw
 } from 'lucide-react'
 import { WalletButton } from './WalletButton'
-import { useWalletSafe } from '../lib/useWalletSafe'
+import { useWalletSafe } from '@/lib/provider-dashboard/useWalletSafe'
 import {
   fetchStakerAccount,
   fetchProviderAccount,
@@ -31,7 +31,7 @@ import {
   contractConfig,
   MIN_PROVIDER_BOND,
   connection,
-} from '../lib/whistle-contract'
+} from '@/lib/provider-dashboard/whistle-contract'
 
 export function OnChainProvider() {
   const { publicKey, connected, signTransaction } = useWalletSafe()

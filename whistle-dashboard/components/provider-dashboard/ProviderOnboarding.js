@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useWalletSafe } from '../lib/useWalletSafe'
+import { useWalletSafe } from '@/lib/provider-dashboard/useWalletSafe'
 import {
   Wallet,
   Coins,
@@ -32,7 +32,7 @@ import {
   contractConfig,
   MIN_PROVIDER_BOND,
   connection,
-} from '../lib/whistle-contract'
+} from '@/lib/provider-dashboard/whistle-contract'
 
 // 6 Steps for Provider Registration
 const STEPS = [

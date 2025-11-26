@@ -1,6 +1,6 @@
 'use client'
 
-import { useRpcHealth } from '../lib/hooks-rpc'
+import { useRpcHealth } from '@/lib/provider-dashboard/hooks-rpc'
 import { WalletButton } from './WalletButton'
 
 export function HeaderRpc() {

@@ -2,7 +2,7 @@
 
 import { useWallet } from '@solana/wallet-adapter-react'
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
-import { useApiHealth } from '../lib/hooks'
+import { useApiHealth } from '@/lib/provider-dashboard/hooks'
 
 export function Header() {
   const { publicKey } = useWallet()

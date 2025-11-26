@@ -14,11 +14,11 @@ import {
   Send,
   DollarSign
 } from 'lucide-react'
-import { useWalletSafe } from '../lib/useWalletSafe'
+import { useWalletSafe } from '@/lib/provider-dashboard/useWalletSafe'
 import { 
   connection,
   PAYMENT_VAULT_ADDRESS,
-} from '../lib/whistle-contract'
+} from '@/lib/provider-dashboard/whistle-contract'
 import { PublicKey, Transaction, SystemProgram } from '@solana/web3.js'
 
 // Query cost tiers (in lamports - 1 SOL = 1,000,000,000 lamports)
