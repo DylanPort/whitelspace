@@ -584,3 +584,42 @@ input::placeholder {
     height: 12px;
   }
 }
+
+/* Ensure Tailwind utilities work on provider page */
+.provider-dashboard .grid {
+  display: grid;
+}
+
+.provider-dashboard .gap-6 {
+  gap: 1.5rem;
+}
+
+.provider-dashboard .space-y-6 > * + * {
+  margin-top: 1.5rem;
+}
+
+.provider-dashboard .lg\:col-span-3 {
+  grid-column: span 3 / span 3;
+}
+
+.provider-dashboard .lg\:col-span-6 {
+  grid-column: span 6 / span 6;
+}
+
+.provider-dashboard .lg\:grid-cols-12 {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+@media (min-width: 1024px) {
+  .provider-dashboard .lg\:col-span-3 {
+    grid-column: span 3 / span 3;
+  }
+  
+  .provider-dashboard .lg\:col-span-6 {
+    grid-column: span 6 / span 6;
+  }
+  
+  .provider-dashboard .lg\:grid-cols-12 {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+}
