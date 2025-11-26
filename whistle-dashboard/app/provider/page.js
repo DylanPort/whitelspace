@@ -22,7 +22,7 @@ export default function Dashboard() {
   const { history, loading: historyLoading } = useMetricsHistory()
 
   return (
-    <div className="min-h-screen bg-whistle-darker">
+    <div className="provider-dashboard min-h-screen bg-whistle-darker">
       {/* Video Background */}
       <div className="fixed inset-0 z-0 overflow-hidden">
         <video
