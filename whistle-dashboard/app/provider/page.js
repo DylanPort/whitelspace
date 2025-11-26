@@ -1,6 +1,5 @@
 'use client'
 
-import '../provider-globals.css'
 import { HeaderRpc } from '@/components/provider-dashboard/HeaderRpc'
 import { StatsGrid } from '@/components/provider-dashboard/StatsGrid'
 import { MetricsChart } from '@/components/provider-dashboard/MetricsChart'
