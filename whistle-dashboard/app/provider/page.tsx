@@ -1,13 +1,15 @@
 'use client';
 
-import { redirect } from 'next/navigation';
-import { useEffect } from 'react';
+import ProviderDashboardDark from '@/components/ProviderDashboardDark';
+import Navigation from '@/components/Navigation';
 
 export default function ProviderPage() {
-  useEffect(() => {
-    // Redirect to main page
-    window.location.href = '/';
-  }, []);
-
-  return null;
+  return (
+    <div className="min-h-screen bg-black">
+      <Navigation />
+      <main className="pt-16">
+        <ProviderDashboardDark />
+      </main>
+    </div>
+  );
 }

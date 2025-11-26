@@ -6,8 +6,8 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 
 const WHISTLE_PROGRAM_ID = 'whttByewzTQzAz3VMxnyJHdKsd7AyNRdG2tDHXVTksr';
-const COORDINATOR_API = process.env.NEXT_PUBLIC_COORDINATOR_URL || 'https://coordinator.whistle.network';
-const QUERY_COST_SOL = 0.0001; // Cost per RPC query
+const COORDINATOR_API = process.env.NEXT_PUBLIC_COORDINATOR_URL || 'https://whistle-backend.onrender.com';
+const QUERY_COST_SOL = 0.00001; // Cost per RPC query (10,000 lamports)
 
 // Payment split from smart contract
 export const PAYMENT_SPLIT = {

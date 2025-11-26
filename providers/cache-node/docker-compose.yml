@@ -1,0 +1,48 @@
+# WHISTLE Cache Node - Docker Compose
+# 
+# Quick start:
+#   docker-compose up -d
+#
+# With your wallet:
+#   PROVIDER_WALLET=YourWalletAddress docker-compose up -d
+
+version: '3.8'
+
+services:
+  cache-node:
+    build: .
+    container_name: whistle-cache
+    restart: unless-stopped
+    ports:
+      - "8545:8545"
+    environment:
+      - PORT=8545
+      - UPSTREAM_RPC=${UPSTREAM_RPC:-https://rpc.whistle.ninja/rpc}
+      - COORDINATOR_URL=${COORDINATOR_URL:-https://coordinator.whistle.ninja}
+      - PROVIDER_WALLET=${PROVIDER_WALLET:-}
+      - NODE_ID=${NODE_ID:-}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8545/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Optional: Redis for distributed caching (uncomment if needed)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: whistle-redis
+  #   restart: unless-stopped
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+
+# volumes:
+#   redis_data:
+

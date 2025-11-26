@@ -1,0 +1,24 @@
+# Render Blueprint for WHISTLE Coordinator
+# Deploy with: render blueprint sync
+
+services:
+  - type: web
+    name: whistle-coordinator
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3003
+      - key: SOLANA_RPC_URL
+        value: https://rpc.whistle.ninja/rpc
+      - key: WHISTLE_PROGRAM_ID
+        value: whttByewzTQzAz3VMxnyJHdKsd7AyNRdG2tDHXVTksr
+      - key: WHISTLE_MINT
+        value: 6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump
+

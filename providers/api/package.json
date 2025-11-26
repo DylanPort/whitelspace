@@ -1,0 +1,19 @@
+{
+  "name": "whistle-provider-api",
+  "version": "1.0.0",
+  "description": "Whistlenet Provider API - Real metrics from Solana validators",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "@solana/web3.js": "^1.87.6",
+    "bs58": "^5.0.0",
+    "tweetnacl": "^1.0.3",
+    "better-sqlite3": "^9.2.2"
+  }
+}
+
