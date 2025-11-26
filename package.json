@@ -44,6 +44,8 @@
     "helmet": "^8.1.0",
     "lucide-react": "^0.554.0",
     "morgan": "^1.10.1",
+    "neo-blessed": "^0.2.0",
+    "figlet": "^1.7.0",
     "node-fetch": "^2.7.0",
     "ws": "^8.18.3"
   },

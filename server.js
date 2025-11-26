@@ -41,7 +41,7 @@ app.use(express.json());
 app.get('/', (req, res) => {
   // Only redirect in development, serve health check in production
   if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production') {
-    res.redirect('http://localhost:3000');
+  res.redirect('http://localhost:3000');
   } else {
     // In production, serve health check or API info
     res.json({

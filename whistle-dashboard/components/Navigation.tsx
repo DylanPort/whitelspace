@@ -17,8 +17,8 @@ export default function Navigation() {
     { href: '/docs', label: 'DOCS' },
   ];
 
-  // Only show navigation if not on home page
-  if (pathname === '/') return null;
+  // Only show navigation if not on home page or provider page (provider has its own header)
+  if (pathname === '/' || pathname === '/provider') return null;
 
   return (
     <nav className="sticky top-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-sm border-b border-white/10">
