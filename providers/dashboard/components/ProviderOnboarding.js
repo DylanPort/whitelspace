@@ -204,7 +204,7 @@ export function ProviderOnboarding() {
     }
   }
 
-  // Handle Register Provider
+  // Handle Register Provider - REAL ON-CHAIN REGISTRATION
   const handleRegister = async () => {
     if (!publicKey || !signTransaction) return
     
@@ -213,56 +213,65 @@ export function ProviderOnboarding() {
     setSuccess(null)
     
     try {
-      // Try on-chain first
+      // Build the on-chain transaction
       const tx = await createRegisterProviderTx(publicKey, endpoint, bondAmount)
-      const { blockhash } = await connection.getLatestBlockhash()
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash()
       tx.recentBlockhash = blockhash
       tx.feePayer = publicKey
       
-      // Simulate
-      const simulation = await connection.simulateTransaction(tx)
+      console.log('[Register] Transaction built, requesting wallet signature...')
+      console.log('[Register] This will bond', bondAmount, 'WHISTLE tokens')
       
-      if (simulation.value.err) {
-        // Check for known bug, fallback to off-chain
-        const isBorshError = simulation.value.logs?.some(log => 
-          log.includes('BorshIoError') || log.includes('serialize or deserialize')
-        )
-        
-        if (isBorshError) {
-          // Off-chain registration
-          const response = await fetch(`${coordinatorUrl}/api/providers/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              wallet: publicKey.toBase58(),
-              name: `Provider-${publicKey.toBase58().slice(0, 8)}`,
-              endpoint: endpoint,
-            })
-          })
-          
-          if (!response.ok) throw new Error('Off-chain registration failed')
-          
-          const data = await response.json()
-          setOffChainProvider(data)
-          setSuccess('Registered as provider (off-chain)!')
-          return
-        }
-        
-        throw new Error(`Simulation failed: ${JSON.stringify(simulation.value.err)}`)
-      }
-      
+      // Sign with wallet - this will show the approval popup
       const signed = await signTransaction(tx)
-      const sig = await connection.sendRawTransaction(signed.serialize())
       
+      console.log('[Register] Wallet signed! Sending transaction...')
+      setSuccess('Transaction signed! Sending to network...')
+      
+      // Send the transaction
+      const sig = await connection.sendRawTransaction(signed.serialize(), {
+        skipPreflight: true, // Skip simulation, send directly
+        maxRetries: 3,
+      })
+      
+      console.log('[Register] Transaction sent:', sig)
+      setTxSig(sig)
       setSuccess('Transaction sent! Confirming...')
+      
+      // Wait for confirmation
       await confirmTransactionPolling(sig)
       
-      setTxSig(sig)
-      setSuccess('Successfully registered as provider!')
+      setSuccess('Successfully registered as provider ON-CHAIN! Your bond is locked.')
+      
+      // Also register with coordinator for tracking
+      try {
+        await fetch(`${coordinatorUrl}/api/providers/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            wallet: publicKey.toBase58(),
+            name: `Provider-${publicKey.toBase58().slice(0, 8)}`,
+            endpoint: endpoint,
+            onChainTx: sig, // Link to on-chain tx
+          })
+        })
+      } catch (e) {
+        console.log('[Register] Coordinator registration optional, on-chain is what matters')
+      }
+      
       fetchAccountData()
       
     } catch (err) {
-      setError(err.message || 'Failed to register')
+      console.error('[Register] Error:', err)
+      // Show detailed error
+      if (err.message?.includes('User rejected')) {
+        setError('Transaction cancelled by user')
+      } else if (err.logs) {
+        console.error('[Register] Transaction logs:', err.logs)
+        setError(`Transaction failed: ${err.message}\nCheck console for logs`)
+      } else {
+        setError(err.message || 'Failed to register')
+      }
     } finally {
       setLoading(false)
     }
