@@ -15,7 +15,7 @@
     "@solana/wallet-adapter-wallets": "^0.19.32",
     "@solana/web3.js": "^1.87.6",
     "bs58": "^5.0.0",
-    "lucide-react": "^0.294.0",
+    "lucide-react": "^0.554.0",
     "next": "14.0.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
