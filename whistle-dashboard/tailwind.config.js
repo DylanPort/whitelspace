@@ -1,0 +1,1 @@
+/** @type {import('tailwindcss').Config} */\nexport default {\n  content: [\n    './app/**/*.{js,jsx,ts,tsx,mdx}',\n    './components/**/*.{js,jsx,ts,tsx,mdx}',\n    './lib/**/*.{js,jsx,ts,tsx}',\n  ],\n}\n
