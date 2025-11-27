@@ -452,7 +452,7 @@ export default function LinksPage() {
         {/* Trading Links */}
         <div className="grid grid-cols-2 gap-3 mb-10">
           <a
-            href="https://www.coingecko.com/en/coins/whistle"
+            href="https://www.coingecko.com/en/coins/whistle-privacy-focused-utility-and-cult"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 p-4 bg-black/60 border-2 border-[#8dc647]/50 hover:bg-[#8dc647]/20 hover:border-[#8dc647] transition-all group backdrop-blur-sm"
@@ -462,7 +462,7 @@ export default function LinksPage() {
           </a>
           
           <a
-            href="https://jup.ag/swap/SOL-6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump"
+            href="https://jup.ag/tokens/6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 p-4 bg-black/60 border-2 border-[#c7f284]/50 hover:bg-[#c7f284]/20 hover:border-[#c7f284] transition-all group backdrop-blur-sm"
