@@ -697,9 +697,11 @@ export async function createRegisterProviderTransaction(
 
   const bondAmount = BigInt(Math.floor(bondAmountWhistle * 10 ** WHISTLE_DECIMALS));
 
-  // Serialize: instruction (1) + endpoint length (4) + endpoint + bond amount (8)
+  // Testing REVERSED field order: bond_amount first, then endpoint
+  // If deployed contract has: RegisterProvider { bond_amount: u64, endpoint: String }
+  // Serialize: instruction (1) + bond amount (8) + endpoint length (4) + endpoint
   const endpointBytes = new TextEncoder().encode(endpoint);
-  const instructionData = new Uint8Array(1 + 4 + endpointBytes.length + 8);
+  const instructionData = new Uint8Array(1 + 8 + 4 + endpointBytes.length);
   const view = new DataView(instructionData.buffer);
   
   let offset = 0;
@@ -708,16 +710,18 @@ export async function createRegisterProviderTransaction(
   instructionData[offset] = StakingInstruction.RegisterProvider;
   offset += 1;
 
+  // Bond amount FIRST (8 bytes, little-endian)
+  view.setBigUint64(offset, bondAmount, true);
+  offset += 8;
+
   // Endpoint length (4 bytes, little-endian)
   view.setUint32(offset, endpointBytes.length, true);
   offset += 4;
 
   // Endpoint string
   instructionData.set(endpointBytes, offset);
-  offset += endpointBytes.length;
-
-  // Bond amount (8 bytes, little-endian)
-  view.setBigUint64(offset, bondAmount, true);
+  
+  console.log('[RegisterProvider] REVERSED field order - instruction data:', Array.from(instructionData).map(b => b.toString(16).padStart(2, '0')).join(' '));
 
   const registerIx = new TransactionInstruction({
     programId: WHISTLE_PROGRAM_ID,

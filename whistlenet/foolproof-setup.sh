@@ -332,3 +332,5 @@ echo "$VALIDATOR_IDENTITY" > /root/validator-identity.txt
 echo "Validator identity saved to: /root/validator-identity.txt"
 echo ""
 
+
+

@@ -36,3 +36,5 @@ CREATE TABLE IF NOT EXISTS rate_limits (
 -- Index for cleanup of old rate limit data
 CREATE INDEX IF NOT EXISTS idx_minute_bucket ON rate_limits(minute_bucket);
 
+
+

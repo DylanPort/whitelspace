@@ -172,3 +172,5 @@ async function storeInCloudflareD1(sub) {
   });
 }
 
+
+

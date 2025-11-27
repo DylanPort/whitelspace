@@ -91,3 +91,5 @@ export default function QueryResultModal({ isOpen, onClose, result, method, para
   );
 }
 
+
+
