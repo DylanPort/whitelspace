@@ -477,30 +477,30 @@ export async function createRegisterProviderTx(provider, endpoint, bondAmount = 
   // Build instruction data using Borsh format:
   // - 1 byte: instruction discriminator (9 for RegisterProvider)
   // - 4 bytes: string length (u32 little-endian)
-  // Testing REVERSED field order: bond_amount first, then endpoint
-  // If deployed contract has: RegisterProvider { bond_amount: u64, endpoint: String }
-  // - 1 byte: discriminator (9)
-  // - 8 bytes: bond amount (u64 little-endian)
+  // ORIGINAL field order: endpoint first, then bond_amount
+  // Testing with discriminator 3 (from program-config.ts, might match deployed contract)
+  // - 1 byte: discriminator (3 instead of 9)
   // - 4 bytes: string length (u32 little-endian)
   // - N bytes: string content
+  // - 8 bytes: bond amount (u64 little-endian)
   const endpointBytes = new TextEncoder().encode(endpoint);
   const bondLamports = BigInt(Math.floor(bondAmount * 10 ** WHISTLE_DECIMALS));
   
   console.log('[RegisterProvider] Endpoint bytes length:', endpointBytes.length);
   console.log('[RegisterProvider] Bond lamports:', bondLamports.toString());
-  console.log('[RegisterProvider] USING REVERSED FIELD ORDER: bond_amount first');
+  console.log('[RegisterProvider] TRYING DISCRIMINATOR 3 (original field order)');
   
-  const instructionData = new Uint8Array(1 + 8 + 4 + endpointBytes.length);
+  const instructionData = new Uint8Array(1 + 4 + endpointBytes.length + 8);
   const view = new DataView(instructionData.buffer);
   
-  // Instruction discriminator (RegisterProvider = 9)
-  instructionData[0] = Instructions.RegisterProvider;
-  // Bond amount FIRST (8 bytes, little-endian)
-  view.setBigUint64(1, bondLamports, true);
+  // Instruction discriminator - TRYING 3 instead of 9
+  instructionData[0] = 3;  // Testing: RegisterProvider might be at index 3 in deployed contract
   // String length (4 bytes, little-endian)
-  view.setUint32(9, endpointBytes.length, true);
+  view.setUint32(1, endpointBytes.length, true);
   // String content
-  instructionData.set(endpointBytes, 13);
+  instructionData.set(endpointBytes, 5);
+  // Bond amount (8 bytes, little-endian)
+  view.setBigUint64(5 + endpointBytes.length, bondLamports, true);
 
   console.log('[RegisterProvider] Instruction data:', Array.from(instructionData).map(b => b.toString(16).padStart(2, '0')).join(' '));
 

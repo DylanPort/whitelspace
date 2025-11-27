@@ -697,22 +697,18 @@ export async function createRegisterProviderTransaction(
 
   const bondAmount = BigInt(Math.floor(bondAmountWhistle * 10 ** WHISTLE_DECIMALS));
 
-  // Testing REVERSED field order: bond_amount first, then endpoint
-  // If deployed contract has: RegisterProvider { bond_amount: u64, endpoint: String }
-  // Serialize: instruction (1) + bond amount (8) + endpoint length (4) + endpoint
+  // ORIGINAL field order: endpoint first, then bond_amount
+  // Testing with discriminator 3 (might match deployed contract)
+  // Serialize: instruction (1) + endpoint length (4) + endpoint + bond amount (8)
   const endpointBytes = new TextEncoder().encode(endpoint);
-  const instructionData = new Uint8Array(1 + 8 + 4 + endpointBytes.length);
+  const instructionData = new Uint8Array(1 + 4 + endpointBytes.length + 8);
   const view = new DataView(instructionData.buffer);
   
   let offset = 0;
   
-  // Instruction type
-  instructionData[offset] = StakingInstruction.RegisterProvider;
+  // Instruction type - TRYING 3 instead of 9
+  instructionData[offset] = 3;  // Testing: RegisterProvider might be at index 3 in deployed contract
   offset += 1;
-
-  // Bond amount FIRST (8 bytes, little-endian)
-  view.setBigUint64(offset, bondAmount, true);
-  offset += 8;
 
   // Endpoint length (4 bytes, little-endian)
   view.setUint32(offset, endpointBytes.length, true);
@@ -720,8 +716,12 @@ export async function createRegisterProviderTransaction(
 
   // Endpoint string
   instructionData.set(endpointBytes, offset);
+  offset += endpointBytes.length;
+
+  // Bond amount (8 bytes, little-endian)
+  view.setBigUint64(offset, bondAmount, true);
   
-  console.log('[RegisterProvider] REVERSED field order - instruction data:', Array.from(instructionData).map(b => b.toString(16).padStart(2, '0')).join(' '));
+  console.log('[RegisterProvider] DISCRIMINATOR 3 - instruction data:', Array.from(instructionData).map(b => b.toString(16).padStart(2, '0')).join(' '));
 
   const registerIx = new TransactionInstruction({
     programId: WHISTLE_PROGRAM_ID,
