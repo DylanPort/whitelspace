@@ -5,7 +5,7 @@ export const metadata = {
   title: 'WHISTLE Provider Dashboard',
   description: 'Real-time metrics and management for Whistlenet providers',
   icons: {
-    icon: '/favicon.ico',
+    icon: '/whistle-logo.png',
   },
 }
 
