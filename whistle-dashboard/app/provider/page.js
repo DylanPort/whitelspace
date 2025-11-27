@@ -22,19 +22,7 @@ export default function Dashboard() {
   const { history, loading: historyLoading } = useMetricsHistory()
 
   return (
-    <>
-      <style jsx global>{`
-        .provider-dashboard .grid { display: grid !important; }
-        .provider-dashboard .gap-6 { gap: 1.5rem !important; }
-        .provider-dashboard .space-y-6 > * + * { margin-top: 1.5rem !important; }
-        .provider-dashboard .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)) !important; }
-        @media (min-width: 1024px) {
-          .provider-dashboard .lg\\:col-span-3 { grid-column: span 3 / span 3 !important; }
-          .provider-dashboard .lg\\:col-span-6 { grid-column: span 6 / span 6 !important; }
-          .provider-dashboard .lg\\:grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)) !important; }
-        }
-      `}</style>
-      <div className="provider-dashboard min-h-screen bg-whistle-darker">
+    <div className="provider-dashboard min-h-screen bg-whistle-darker" style={{ isolation: 'isolate' }}>
       {/* Video Background */}
       <div className="fixed inset-0 z-0 overflow-hidden">
         <video
@@ -259,6 +247,6 @@ export default function Dashboard() {
           </p>
         </footer>
       </div>
-    </>
+    </div>
   )
 }

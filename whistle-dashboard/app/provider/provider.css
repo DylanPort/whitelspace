@@ -1,5 +1,43 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
+/* CRITICAL LAYOUT FIXES - MUST BE FIRST */
+.provider-dashboard .grid,
+div.provider-dashboard .grid {
+  display: grid !important;
+}
+
+.provider-dashboard .gap-6,
+div.provider-dashboard .gap-6 {
+  gap: 1.5rem !important;
+}
+
+.provider-dashboard .space-y-6 > * + *,
+div.provider-dashboard .space-y-6 > * + * {
+  margin-top: 1.5rem !important;
+}
+
+.provider-dashboard .grid-cols-1,
+div.provider-dashboard .grid-cols-1 {
+  grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+}
+
+@media (min-width: 1024px) {
+  .provider-dashboard .lg\:col-span-3,
+  div.provider-dashboard .lg\:col-span-3 {
+    grid-column: span 3 / span 3 !important;
+  }
+  
+  .provider-dashboard .lg\:col-span-6,
+  div.provider-dashboard .lg\:col-span-6 {
+    grid-column: span 6 / span 6 !important;
+  }
+  
+  .provider-dashboard .lg\:grid-cols-12,
+  div.provider-dashboard .lg\:grid-cols-12 {
+    grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+  }
+}
+
 /* ========================================
    WHISTLE NETWORK - MANGA HACKER THEME
    Pure Black/White/Green Terminal Aesthetic
