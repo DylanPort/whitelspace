@@ -234,7 +234,7 @@ export function ProviderOnboarding() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              providerWallet: publicKey.toBase58(),
+              wallet: publicKey.toBase58(),
               name: `Provider-${publicKey.toBase58().slice(0, 8)}`,
               endpoint: endpoint,
             })
