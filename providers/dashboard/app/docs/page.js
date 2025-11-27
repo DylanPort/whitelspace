@@ -146,25 +146,6 @@ export default function DocsPage() {
           </p>
         </div>
 
-        {/* Quick Links */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-          {[
-            { icon: FileCode, label: 'Smart Contract', href: '#contract' },
-            { icon: Server, label: 'Node Setup', href: '#node-setup' },
-            { icon: Coins, label: 'Economics', href: '#economics' },
-            { icon: Code, label: 'API Reference', href: '#api' },
-          ].map((item, i) => (
-            <a
-              key={i}
-              href={item.href}
-              className="flex flex-col items-center gap-2 p-4 border border-gray-800 rounded-lg hover:border-whistle-accent/50 hover:bg-whistle-accent/5 transition-all"
-            >
-              <item.icon size={24} className="text-whistle-accent" />
-              <span className="text-sm text-white font-medium">{item.label}</span>
-            </a>
-          ))}
-        </div>
-
         {/* Table of Contents */}
         <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-6 mb-12">
           <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
