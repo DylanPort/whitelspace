@@ -290,25 +290,32 @@ export class PaymentVault {
 }
 
 // ============= INSTRUCTION ENUM =============
-// CRITICAL: MUST match the DEPLOYED contract IDL order!
-// See: whistlenet/contract/idl.json for canonical instruction indices
-// The source code lib.rs has more instructions that aren't deployed yet
+// CRITICAL: MUST match the DEPLOYED contract source code!
+// See: C:\Users\salva\Downloads\whistle\whistlenet\contract\src\lib.rs
+// The IDL file is outdated - use the actual source code enum order
 
 enum StakingInstruction {
   InitializePool = 0,
   Stake = 1,
   Unstake = 2,
-  InitializePaymentVault = 3,
-  RegisterProvider = 4,        // Fixed: was 9, deployed contract has it at index 4
-  ProcessQueryPayment = 5,
-  ClaimProviderEarnings = 6,
-  ClaimStakerRewards = 7,
-  RecordHeartbeat = 8,
-  UpdateEndpoint = 9,
-  InitializeX402Wallet = 10,
-  ProcessX402Payment = 11,
-  DistributeStakerRewards = 12,
-  InitializeRewardsAccumulator = 13,
+  TransferAccess = 3,
+  ActivateNodeOperator = 4,
+  RecordDataUsage = 5,
+  SetPoolStatus = 6,
+  LockRate = 7,
+  InitializePaymentVault = 8,
+  RegisterProvider = 9,        // Correct: index 9 in deployed contract
+  DeregisterProvider = 10,
+  UpdateEndpoint = 11,
+  RecordHeartbeat = 12,
+  RecordQueryMetrics = 13,
+  UpdateReputationMetrics = 14,
+  SlashProvider = 15,
+  ProcessQueryPayment = 16,
+  ClaimProviderEarnings = 17,
+  DistributeBonusPool = 18,
+  DistributeStakerRewards = 19,
+  ClaimStakerRewards = 20,
 }
 
 // ============= ACCOUNT FETCHING =============

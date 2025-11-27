@@ -161,23 +161,30 @@ function getAnchorDiscriminator(instructionName) {
   return discriminators[instructionName] || [0, 0, 0, 0, 0, 0, 0, 0];
 }
 
-// Instruction discriminators - MUST match deployed contract IDL order!
-// See: whistlenet/contract/idl.json for canonical instruction indices
+// Instruction discriminators - MUST match deployed contract source code!
+// See: C:\Users\salva\Downloads\whistle\whistlenet\contract\src\lib.rs
 const Instructions = {
   InitializePool: 0,
   Stake: 1,
   Unstake: 2,
-  InitializePaymentVault: 3,
-  RegisterProvider: 4,        // Fixed: was 9, but deployed contract has it at index 4
-  ProcessQueryPayment: 5,
-  ClaimProviderEarnings: 6,
-  ClaimStakerRewards: 7,
-  RecordHeartbeat: 8,
-  UpdateEndpoint: 9,
-  InitializeX402Wallet: 10,
-  ProcessX402Payment: 11,
-  DistributeStakerRewards: 12,
-  InitializeRewardsAccumulator: 13,
+  TransferAccess: 3,
+  ActivateNodeOperator: 4,
+  RecordDataUsage: 5,
+  SetPoolStatus: 6,
+  LockRate: 7,
+  InitializePaymentVault: 8,
+  RegisterProvider: 9,        // Correct: index 9 in deployed contract
+  DeregisterProvider: 10,
+  UpdateEndpoint: 11,
+  RecordHeartbeat: 12,
+  RecordQueryMetrics: 13,
+  UpdateReputationMetrics: 14,
+  SlashProvider: 15,
+  ProcessQueryPayment: 16,
+  ClaimProviderEarnings: 17,
+  DistributeBonusPool: 18,
+  DistributeStakerRewards: 19,
+  ClaimStakerRewards: 20,
 };
 
 // ============= PDA DERIVATION =============
