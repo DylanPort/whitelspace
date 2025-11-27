@@ -114,6 +114,22 @@ function Table({ headers, rows }) {
 export default function DocsPage() {
   return (
     <div className="min-h-screen bg-whistle-darker">
+      {/* Video Background */}
+      <div className="fixed inset-0 z-0 overflow-hidden">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute w-full h-full object-cover opacity-30"
+        >
+          <source src="/bg-video.mp4" type="video/mp4" />
+        </video>
+        <div className="absolute inset-0 bg-black/60" />
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10">
       {/* Header */}
       <header className="border-b border-gray-800 bg-black/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-6 py-4">
@@ -189,36 +205,82 @@ export default function DocsPage() {
             </p>
           </div>
 
-          <CodeBlock language="diagram" code={`
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           WHISTLENET ARCHITECTURE                        │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│   ┌──────────┐     ┌───────────────┐     ┌──────────────────┐          │
-│   │  Users   │────▶│  Cache Nodes  │────▶│  Upstream RPC    │          │
-│   │  (dApps) │     │  (Providers)  │     │  (Validators)    │          │
-│   └──────────┘     └───────────────┘     └──────────────────┘          │
-│                            │                                             │
-│                            │ Reports Metrics                            │
-│                            ▼                                             │
-│                    ┌───────────────┐                                    │
-│                    │  Coordinator  │                                    │
-│                    │  (Off-chain)  │                                    │
-│                    └───────────────┘                                    │
-│                            │                                             │
-│                            │ Triggers Settlements                       │
-│                            ▼                                             │
-│   ┌─────────────────────────────────────────────────────────────┐      │
-│   │                    SOLANA BLOCKCHAIN                          │      │
-│   │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │      │
-│   │  │ WHTT Program │  │ Token Vault  │  │ Payment Vault│       │      │
-│   │  │ (whtt...)    │  │ (Provider    │  │ (Query fees) │       │      │
-│   │  │              │  │  Bonds)      │  │              │       │      │
-│   │  └──────────────┘  └──────────────┘  └──────────────┘       │      │
-│   └─────────────────────────────────────────────────────────────┘      │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-`} />
+          {/* Architecture Diagram */}
+          <div className="bg-black/50 border border-gray-800 rounded-lg p-8 mb-6">
+            <h3 className="text-center text-whistle-accent font-bold text-lg mb-8 tracking-wider">WHISTLENET ARCHITECTURE</h3>
+            
+            {/* Top Flow: Users → Cache Nodes → Upstream */}
+            <div className="flex items-center justify-center gap-4 mb-8">
+              <div className="border-2 border-blue-500/50 bg-blue-500/10 rounded-lg p-4 text-center min-w-[120px]">
+                <Users size={24} className="mx-auto mb-2 text-blue-400" />
+                <p className="text-white font-bold text-sm">Users</p>
+                <p className="text-gray-500 text-xs">(dApps)</p>
+              </div>
+              <div className="flex items-center">
+                <div className="w-8 h-0.5 bg-gray-600"></div>
+                <ChevronRight className="text-gray-500" size={20} />
+              </div>
+              <div className="border-2 border-whistle-accent/50 bg-whistle-accent/10 rounded-lg p-4 text-center min-w-[140px]">
+                <Server size={24} className="mx-auto mb-2 text-whistle-accent" />
+                <p className="text-white font-bold text-sm">Cache Nodes</p>
+                <p className="text-gray-500 text-xs">(Providers)</p>
+              </div>
+              <div className="flex items-center">
+                <div className="w-8 h-0.5 bg-gray-600"></div>
+                <ChevronRight className="text-gray-500" size={20} />
+              </div>
+              <div className="border-2 border-purple-500/50 bg-purple-500/10 rounded-lg p-4 text-center min-w-[140px]">
+                <Globe size={24} className="mx-auto mb-2 text-purple-400" />
+                <p className="text-white font-bold text-sm">Upstream RPC</p>
+                <p className="text-gray-500 text-xs">(Validators)</p>
+              </div>
+            </div>
+
+            {/* Arrow down to Coordinator */}
+            <div className="flex flex-col items-center mb-6">
+              <div className="h-8 w-0.5 bg-gray-600"></div>
+              <p className="text-gray-500 text-xs my-2">Reports Metrics</p>
+              <ChevronDown className="text-gray-500" size={20} />
+            </div>
+
+            {/* Coordinator */}
+            <div className="flex justify-center mb-6">
+              <div className="border-2 border-yellow-500/50 bg-yellow-500/10 rounded-lg p-4 text-center min-w-[160px]">
+                <Database size={24} className="mx-auto mb-2 text-yellow-400" />
+                <p className="text-white font-bold text-sm">Coordinator</p>
+                <p className="text-gray-500 text-xs">(Off-chain)</p>
+              </div>
+            </div>
+
+            {/* Arrow down to Blockchain */}
+            <div className="flex flex-col items-center mb-6">
+              <div className="h-8 w-0.5 bg-gray-600"></div>
+              <p className="text-gray-500 text-xs my-2">Triggers Settlements</p>
+              <ChevronDown className="text-gray-500" size={20} />
+            </div>
+
+            {/* Solana Blockchain */}
+            <div className="border-2 border-green-500/30 bg-green-500/5 rounded-lg p-6">
+              <h4 className="text-center text-green-400 font-bold text-sm mb-4 tracking-wider">SOLANA BLOCKCHAIN</h4>
+              <div className="flex items-center justify-center gap-4 flex-wrap">
+                <div className="border border-green-500/50 bg-green-500/10 rounded-lg p-3 text-center min-w-[120px]">
+                  <FileCode size={20} className="mx-auto mb-2 text-green-400" />
+                  <p className="text-white font-bold text-xs">WHTT Program</p>
+                  <p className="text-gray-500 text-[10px] font-mono">whtt...</p>
+                </div>
+                <div className="border border-green-500/50 bg-green-500/10 rounded-lg p-3 text-center min-w-[120px]">
+                  <Coins size={20} className="mx-auto mb-2 text-green-400" />
+                  <p className="text-white font-bold text-xs">Token Vault</p>
+                  <p className="text-gray-500 text-[10px]">(Provider Bonds)</p>
+                </div>
+                <div className="border border-green-500/50 bg-green-500/10 rounded-lg p-3 text-center min-w-[120px]">
+                  <Zap size={20} className="mx-auto mb-2 text-green-400" />
+                  <p className="text-white font-bold text-xs">Payment Vault</p>
+                  <p className="text-gray-500 text-[10px]">(Query fees)</p>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div className="grid md:grid-cols-3 gap-4 mt-6">
             <div className="p-4 border border-gray-800 rounded-lg">
@@ -964,6 +1026,7 @@ solana account whttByewzTQzAz3VMxnyJHdKsd7AyNRdG2tDHXVTksr`} />
           </div>
         </footer>
       </main>
+      </div>
     </div>
   )
 }
