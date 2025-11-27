@@ -1,19 +1,8 @@
 [build]
-  # Base directory is the dashboard folder itself
-  base = "."
-  
-  # Build command for Next.js
   command = "npm run build"
-  
-  # Publish directory for Next.js
-  publish = ".next"
 
-# Environment variables (if needed)
 [build.environment]
-  NODE_VERSION = "18.20.8"
+  NODE_VERSION = "20.18.0"
 
-# Redirects and rewrites for Next.js
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
