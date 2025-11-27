@@ -1,13 +1,31 @@
-# Netlify Configuration - Providers Dashboard
-# This deploys the Next.js dashboard from providers/dashboard directory
+# Netlify Configuration - Whistlenet Dashboard
+# This deploys the Next.js dashboard from whistle-dashboard directory
 
 [build]
-  base = "providers/dashboard"
+  base = "whistle-dashboard"
   command = "npm run build"
+  publish = ".next"
 
 [build.environment]
-  NODE_VERSION = "20.18.0"
+  NODE_VERSION = "20"
+
+# Functions directory (relative to base directory)
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
 
 # Enable Next.js on Netlify
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+# Serve static files from root (for x402-client.js, images, etc.)
+[[redirects]]
+  from = "/x402-client.js"
+  to = "/x402-client.js"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/main"
+  to = "/main.html"
+  status = 200
