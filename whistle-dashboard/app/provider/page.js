@@ -1,6 +1,5 @@
 'use client'
 
-import './provider.css'
 import { HeaderRpc } from '@/components/provider-dashboard/HeaderRpc'
 import { StatsGrid } from '@/components/provider-dashboard/StatsGrid'
 import { MetricsChart } from '@/components/provider-dashboard/MetricsChart'
@@ -23,7 +22,7 @@ export default function Dashboard() {
   const { history, loading: historyLoading } = useMetricsHistory()
 
   return (
-    <div className="provider-dashboard min-h-screen bg-whistle-darker" style={{ isolation: 'isolate' }}>
+    <div className="min-h-screen bg-whistle-darker">
       {/* Video Background */}
       <div className="fixed inset-0 z-0 overflow-hidden">
         <video
