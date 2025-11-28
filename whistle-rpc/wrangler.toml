@@ -2,23 +2,36 @@ name = "whistle-rpc-proxy"
 main = "src/index.js"
 compatibility_date = "2024-11-20"
 
-# KV Namespaces for subscription and rate limit storage
-[[kv_namespaces]]
-binding = "SUBSCRIPTIONS"
-id = "SUBSCRIPTIONS_NAMESPACE_ID" # Replace with actual KV namespace ID after creation
+# Enable WebSocket support (available on all plans)
+# WebSockets work automatically with Cloudflare Workers
 
-[[kv_namespaces]]
-binding = "RATE_LIMITS"
-id = "RATE_LIMITS_NAMESPACE_ID" # Replace with actual KV namespace ID after creation
+# KV Namespaces for subscription and rate limit storage (optional)
+# Uncomment and replace IDs after creating namespaces with:
+#   wrangler kv:namespace create SUBSCRIPTIONS
+#   wrangler kv:namespace create RATE_LIMITS
 
-# Environment variables (set via wrangler secret)
+# [[kv_namespaces]]
+# binding = "SUBSCRIPTIONS"
+# id = "your-subscriptions-namespace-id"
+
+# [[kv_namespaces]]
+# binding = "RATE_LIMITS"
+# id = "your-rate-limits-namespace-id"
+
+# Environment variables
 [vars]
+# You can set upstream RPC here if needed
+# UPSTREAM_HTTP = "https://api.mainnet-beta.solana.com"
+# UPSTREAM_WS = "wss://api.mainnet-beta.solana.com"
 
-# Secrets (set via: wrangler secret put HELIUS_API_KEY)
-# HELIUS_API_KEY = "your-helius-key-here"
-
-# Custom domain configuration (optional)
+# Custom domain configuration
+# After deploying, set up a custom domain in Cloudflare dashboard
+# or use routes:
 # routes = [
-#   { pattern = "rpc.whistlenet.io", zone_name = "whistlenet.io" }
+#   { pattern = "rpc.whistle.ninja/*", zone_name = "whistle.ninja" }
 # ]
 
+# For production with custom domain:
+# routes = [
+#   { pattern = "rpc.whistle.ninja", zone_name = "whistle.ninja", custom_domain = true }
+# ]

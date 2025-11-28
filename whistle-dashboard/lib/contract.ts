@@ -706,8 +706,8 @@ export async function createRegisterProviderTransaction(
   
   let offset = 0;
   
-  // Instruction type - TRYING 3 instead of 9
-  instructionData[offset] = 3;  // Testing: RegisterProvider might be at index 3 in deployed contract
+  // Instruction type - RegisterProvider = 9 in deployed contract
+  instructionData[offset] = StakingInstruction.RegisterProvider;  // = 9
   offset += 1;
 
   // Endpoint length (4 bytes, little-endian)
@@ -721,7 +721,7 @@ export async function createRegisterProviderTransaction(
   // Bond amount (8 bytes, little-endian)
   view.setBigUint64(offset, bondAmount, true);
   
-  console.log('[RegisterProvider] DISCRIMINATOR 3 - instruction data:', Array.from(instructionData).map(b => b.toString(16).padStart(2, '0')).join(' '));
+  console.log('[RegisterProvider] instruction data:', Array.from(instructionData).map(b => b.toString(16).padStart(2, '0')).join(' '));
 
   const registerIx = new TransactionInstruction({
     programId: WHISTLE_PROGRAM_ID,

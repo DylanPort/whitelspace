@@ -54,23 +54,29 @@ export const RPC_CONFIG = {
 };
 
 // Instruction Discriminators (for raw instruction building)
+// MUST match the deployed contract enum order exactly!
 export const INSTRUCTIONS = {
   InitializePool: 0,
   Stake: 1,
   Unstake: 2,
-  RegisterProvider: 3,
-  DeregisterProvider: 4,
-  ProcessQueryPayment: 5,
-  ClaimProviderEarnings: 6,
-  ClaimStakerRewards: 7,
-  RecordHeartbeat: 8,
-  UpdateEndpoint: 9,
-  SlashProvider: 10,
-  DistributeBonusPool: 11,
-  DistributeStakerRewards: 12,
-  InitializePaymentVault: 13,
-  InitializeX402Wallet: 14,
-  ProcessX402Payment: 15,
+  TransferAccess: 3,
+  ActivateNodeOperator: 4,
+  RecordDataUsage: 5,
+  SetPoolStatus: 6,
+  LockRate: 7,
+  InitializePaymentVault: 8,
+  RegisterProvider: 9,        // Correct: index 9 in deployed contract
+  DeregisterProvider: 10,
+  UpdateEndpoint: 11,
+  RecordHeartbeat: 12,
+  RecordQueryMetrics: 13,
+  UpdateReputationMetrics: 14,
+  SlashProvider: 15,
+  ProcessQueryPayment: 16,
+  ClaimProviderEarnings: 17,
+  DistributeBonusPool: 18,
+  DistributeStakerRewards: 19,
+  ClaimStakerRewards: 20,
 };
 
 // Account Sizes (for rent calculations)

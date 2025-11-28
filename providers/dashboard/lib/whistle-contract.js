@@ -488,13 +488,12 @@ export async function createRegisterProviderTx(provider, endpoint, bondAmount = 
   
   console.log('[RegisterProvider] Endpoint bytes length:', endpointBytes.length);
   console.log('[RegisterProvider] Bond lamports:', bondLamports.toString());
-  console.log('[RegisterProvider] TRYING DISCRIMINATOR 3 (original field order)');
   
   const instructionData = new Uint8Array(1 + 4 + endpointBytes.length + 8);
   const view = new DataView(instructionData.buffer);
   
-  // Instruction discriminator - TRYING 3 instead of 9
-  instructionData[0] = 3;  // Testing: RegisterProvider might be at index 3 in deployed contract
+  // Instruction discriminator - RegisterProvider = 9 in deployed contract
+  instructionData[0] = Instructions.RegisterProvider;  // = 9
   // String length (4 bytes, little-endian)
   view.setUint32(1, endpointBytes.length, true);
   // String content

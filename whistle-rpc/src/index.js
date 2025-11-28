@@ -6,11 +6,28 @@
  * - Time-based subscription validation
  * - Rate limiting (per-minute)
  * - Request forwarding to Whistle RPC
+ * - WebSocket support for transaction confirmations
  * - WHISTLE branding
  */
 
+// Upstream RPC endpoints
+const UPSTREAM_HTTP = 'https://api.mainnet-beta.solana.com';
+const UPSTREAM_WS = 'wss://api.mainnet-beta.solana.com';
+
+// Alternative: Use Helius if you have an API key
+// const UPSTREAM_HTTP = 'https://mainnet.helius-rpc.com/?api-key=YOUR_KEY';
+// const UPSTREAM_WS = 'wss://mainnet.helius-rpc.com/?api-key=YOUR_KEY';
+
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    
+    // Handle WebSocket upgrade requests
+    const upgradeHeader = request.headers.get('Upgrade');
+    if (upgradeHeader && upgradeHeader.toLowerCase() === 'websocket') {
+      return handleWebSocket(request, env);
+    }
+    
     // Only allow POST requests for RPC calls
     if (request.method === 'POST') {
       return await handleRPC(request, env);
@@ -21,8 +38,8 @@ export default {
       return new Response(null, {
         headers: {
           'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, X-API-Key, solana-client'
+          'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, X-API-Key, solana-client, Upgrade, Connection'
         }
       });
     }
@@ -30,86 +47,239 @@ export default {
     // Return info page for GET requests
     return new Response(JSON.stringify({
       service: 'WHISTLE Network RPC',
-      version: '2.0.0',
+      version: '2.1.0',
       status: 'online',
+      features: {
+        http: 'POST / (JSON-RPC)',
+        websocket: 'wss://rpc.whistle.ninja/ (subscriptions & confirmations)',
+      },
       documentation: 'https://whistlenet.io/docs/rpc',
       endpoints: {
-        rpc: 'POST / (requires X-API-Key header)',
+        rpc: 'POST / (requires X-API-Key header for premium)',
+        websocket: 'WSS / (for transaction confirmations)',
         subscribe: 'https://whistlenet.io/dashboard (get API key)'
       }
-    }), {
+    }, null, 2), {
       headers: {
         'Content-Type': 'application/json',
-        'Server': 'WHISTLE-RPC/2.0.0'
+        'Server': 'WHISTLE-RPC/2.1.0'
       }
     });
   }
 };
 
+/**
+ * Handle WebSocket connections - proxy to upstream Solana RPC
+ */
+async function handleWebSocket(request, env) {
+  // Create a WebSocket pair - one for the client, one for us
+  const webSocketPair = new WebSocketPair();
+  const [client, server] = Object.values(webSocketPair);
+
+  // Accept the WebSocket connection from our side
+  server.accept();
+
+  // Connect to upstream Solana WebSocket
+  let upstream = null;
+  let isConnected = false;
+  let messageQueue = [];
+
+  // Function to connect to upstream
+  const connectUpstream = async () => {
+    try {
+      const upstreamResponse = await fetch(UPSTREAM_WS, {
+        headers: {
+          'Upgrade': 'websocket',
+        },
+      });
+
+      upstream = upstreamResponse.webSocket;
+      
+      if (!upstream) {
+        console.error('Failed to establish upstream WebSocket');
+        server.send(JSON.stringify({
+          jsonrpc: '2.0',
+          error: { code: -32603, message: 'WHISTLE: Failed to connect to upstream RPC' },
+          id: null
+        }));
+        server.close(1011, 'Upstream connection failed');
+        return;
+      }
+
+      upstream.accept();
+      isConnected = true;
+
+      // Send any queued messages
+      while (messageQueue.length > 0) {
+        const msg = messageQueue.shift();
+        upstream.send(msg);
+      }
+
+      // Forward messages from upstream to client
+      upstream.addEventListener('message', (event) => {
+        try {
+          // Optionally transform/brand the response
+          let data = event.data;
+          
+          // Try to parse and add branding for JSON responses
+          try {
+            const parsed = JSON.parse(data);
+            if (typeof parsed === 'object' && parsed !== null) {
+              parsed._whistle = {
+                node: 'whistle-ws-1',
+                timestamp: Date.now()
+              };
+              data = JSON.stringify(parsed);
+            }
+          } catch (e) {
+            // Not JSON, forward as-is
+          }
+          
+          if (server.readyState === WebSocket.OPEN) {
+            server.send(data);
+          }
+        } catch (e) {
+          console.error('Error forwarding upstream message:', e);
+        }
+      });
+
+      // Handle upstream close
+      upstream.addEventListener('close', (event) => {
+        isConnected = false;
+        if (server.readyState === WebSocket.OPEN) {
+          server.close(event.code, event.reason || 'Upstream closed');
+        }
+      });
+
+      // Handle upstream errors
+      upstream.addEventListener('error', (event) => {
+        console.error('Upstream WebSocket error:', event);
+        isConnected = false;
+      });
+
+    } catch (error) {
+      console.error('Error connecting to upstream:', error);
+      server.send(JSON.stringify({
+        jsonrpc: '2.0',
+        error: { code: -32603, message: 'WHISTLE: Connection error' },
+        id: null
+      }));
+      server.close(1011, 'Connection error');
+    }
+  };
+
+  // Start upstream connection
+  connectUpstream();
+
+  // Handle messages from client
+  server.addEventListener('message', (event) => {
+    try {
+      const data = event.data;
+      
+      // Log subscription requests for debugging
+      try {
+        const parsed = JSON.parse(data);
+        if (parsed.method) {
+          console.log(`WHISTLE WS: ${parsed.method}`);
+        }
+      } catch (e) {
+        // Not JSON
+      }
+
+      // Forward to upstream
+      if (isConnected && upstream && upstream.readyState === WebSocket.OPEN) {
+        upstream.send(data);
+      } else {
+        // Queue if not yet connected
+        messageQueue.push(data);
+      }
+    } catch (e) {
+      console.error('Error handling client message:', e);
+    }
+  });
+
+  // Handle client disconnect
+  server.addEventListener('close', (event) => {
+    if (upstream && upstream.readyState === WebSocket.OPEN) {
+      upstream.close(event.code, event.reason);
+    }
+  });
+
+  // Handle client errors
+  server.addEventListener('error', (event) => {
+    console.error('Client WebSocket error:', event);
+    if (upstream && upstream.readyState === WebSocket.OPEN) {
+      upstream.close(1011, 'Client error');
+    }
+  });
+
+  // Return the client end of the WebSocket pair
+  return new Response(null, {
+    status: 101,
+    webSocket: client,
+    headers: {
+      'Upgrade': 'websocket',
+      'Connection': 'Upgrade',
+    }
+  });
+}
+
+/**
+ * Handle HTTP RPC requests
+ */
 async function handleRPC(request, env) {
   try {
-    // Extract API key from header
+    // Extract API key from header (optional for basic access)
     const apiKey = request.headers.get('X-API-Key');
     
-    if (!apiKey) {
-      return jsonResponse({
-        jsonrpc: '2.0',
-        error: { 
-          code: -32001, 
-          message: 'Missing API key. Get yours at https://whistlenet.io/dashboard'
-        },
-        id: null
-      }, 401);
+    // If API key provided, verify subscription
+    if (apiKey) {
+      const verification = await verifySubscription(apiKey, env);
+      
+      if (!verification.valid) {
+        return jsonResponse({
+          jsonrpc: '2.0',
+          error: { 
+            code: -32002, 
+            message: verification.reason || 'Invalid or expired subscription'
+          },
+          id: null
+        }, 403);
+      }
+
+      // Check rate limit for premium users
+      const rateLimitCheck = await checkRateLimit(apiKey, verification.rateLimit, env);
+      
+      if (!rateLimitCheck.allowed) {
+        return jsonResponse({
+          jsonrpc: '2.0',
+          error: { 
+            code: -32003, 
+            message: `Rate limit exceeded. Your limit: ${verification.rateLimit} requests/minute. Try again in ${rateLimitCheck.retryAfter}s`
+          },
+          id: null
+        }, 429, {
+          'Retry-After': rateLimitCheck.retryAfter.toString(),
+          'X-RateLimit-Limit': verification.rateLimit.toString(),
+          'X-RateLimit-Remaining': '0'
+        });
+      }
     }
 
-    // Verify subscription
-    const verification = await verifySubscription(apiKey, env);
-    
-    if (!verification.valid) {
-      return jsonResponse({
-        jsonrpc: '2.0',
-        error: { 
-          code: -32002, 
-          message: verification.reason || 'Invalid or expired subscription'
-        },
-        id: null
-      }, 403);
-    }
-
-    // Check rate limit
-    const rateLimitCheck = await checkRateLimit(apiKey, verification.rateLimit, env);
-    
-    if (!rateLimitCheck.allowed) {
-      return jsonResponse({
-        jsonrpc: '2.0',
-        error: { 
-          code: -32003, 
-          message: `Rate limit exceeded. Your limit: ${verification.rateLimit} requests/minute. Try again in ${rateLimitCheck.retryAfter}s`
-        },
-        id: null
-      }, 429, {
-        'Retry-After': rateLimitCheck.retryAfter.toString(),
-        'X-RateLimit-Limit': verification.rateLimit.toString(),
-        'X-RateLimit-Remaining': '0'
-      });
-    }
-
-    // Forward to Whistle RPC
-    const WHISTLE_RPC = `https://rpc.whistle.ninja`;
-    
+    // Forward to upstream RPC
     const body = await request.text();
     
-    const whistleResponse = await fetch(WHISTLE_RPC, {
+    const upstreamResponse = await fetch(UPSTREAM_HTTP, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'User-Agent': 'WHISTLE-Node/2.0.0'
+        'User-Agent': 'WHISTLE-Node/2.1.0'
       },
       body: body
     });
     
     // Parse response
-    let data = await whistleResponse.json();
+    let data = await upstreamResponse.json();
     
     // Remove external metadata
     if (data._metadata) delete data._metadata;
@@ -124,25 +294,17 @@ async function handleRPC(request, env) {
     }
     
     // Add WHISTLE branding
-    data.whistle = {
+    data._whistle = {
       node_id: `whistle-node-${Math.floor(Math.random() * 10) + 1}`,
       region: 'global',
-      version: '2.0.0',
-      timestamp: Date.now(),
-      subscription: verification.packageName
+      version: '2.1.0',
+      timestamp: Date.now()
     };
     
-    // Add random delay to mask timing patterns (50-150ms)
-    const delay = Math.floor(Math.random() * 100) + 50;
-    await new Promise(resolve => setTimeout(resolve, delay));
-    
     // Return with WHISTLE branding
-    return jsonResponse(data, whistleResponse.status, {
+    return jsonResponse(data, upstreamResponse.status, {
       'X-RPC-Provider': 'WHISTLE Network',
-      'X-Node-ID': data.whistle.node_id,
-      'X-Response-Time': `${delay}ms`,
-      'X-RateLimit-Limit': verification.rateLimit.toString(),
-      'X-RateLimit-Remaining': rateLimitCheck.remaining.toString()
+      'X-Node-ID': data._whistle.node_id
     });
     
   } catch (error) {
@@ -163,8 +325,11 @@ async function handleRPC(request, env) {
  */
 async function verifySubscription(apiKey, env) {
   try {
-    // Query subscription from D1 database
-    // For now, we'll use KV as a simple store
+    if (!env.SUBSCRIPTIONS) {
+      // KV not configured, allow request with default limits
+      return { valid: true, rateLimit: 300, packageName: 'free' };
+    }
+
     const subData = await env.SUBSCRIPTIONS.get(apiKey);
     
     if (!subData) {
@@ -194,10 +359,8 @@ async function verifySubscription(apiKey, env) {
     
   } catch (error) {
     console.error('Subscription verification error:', error);
-    return { 
-      valid: false, 
-      reason: 'Unable to verify subscription. Please try again.'
-    };
+    // On error, allow with default limits
+    return { valid: true, rateLimit: 300, packageName: 'free' };
   }
 }
 
@@ -206,11 +369,15 @@ async function verifySubscription(apiKey, env) {
  */
 async function checkRateLimit(apiKey, limit, env) {
   try {
+    if (!env.RATE_LIMITS) {
+      // KV not configured, allow request
+      return { allowed: true, remaining: limit };
+    }
+
     const now = Math.floor(Date.now() / 1000);
     const currentMinute = Math.floor(now / 60);
     const key = `ratelimit:${apiKey}:${currentMinute}`;
     
-    // Get current count from KV
     const countStr = await env.RATE_LIMITS.get(key);
     const count = countStr ? parseInt(countStr) : 0;
     
@@ -227,7 +394,7 @@ async function checkRateLimit(apiKey, limit, env) {
     
     // Increment counter
     await env.RATE_LIMITS.put(key, (count + 1).toString(), {
-      expirationTtl: 60 // Expire after 60 seconds
+      expirationTtl: 60
     });
     
     return {
@@ -237,7 +404,6 @@ async function checkRateLimit(apiKey, limit, env) {
     
   } catch (error) {
     console.error('Rate limit check error:', error);
-    // On error, allow the request (fail open)
     return { allowed: true, remaining: limit };
   }
 }
@@ -250,10 +416,9 @@ function jsonResponse(data, status = 200, extraHeaders = {}) {
     status: status,
     headers: {
       'Content-Type': 'application/json',
-      'Server': 'WHISTLE-RPC/2.0.0',
+      'Server': 'WHISTLE-RPC/2.1.0',
       'Access-Control-Allow-Origin': '*',
       ...extraHeaders
     }
   });
 }
-
