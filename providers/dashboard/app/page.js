@@ -10,10 +10,10 @@ import { CacheNetworkStats } from '../components/CacheNetworkStats'
 import { CacheableMethods } from '../components/CacheableMethods'
 import { MyRewards } from '../components/MyRewards'
 import { Leaderboard } from '../components/Leaderboard'
-import { OnChainProvider } from '../components/OnChainProvider'
 import { OnChainLeaderboard } from '../components/OnChainLeaderboard'
 import { ProviderOnboarding } from '../components/ProviderOnboarding'
 import { CreditAccount } from '../components/CreditAccount'
+import { NodeMap } from '../components/NodeMap'
 import { useLiveMetrics, useMetricsHistory } from '../lib/hooks-rpc'
 import { RefreshCw } from 'lucide-react'
 
@@ -214,14 +214,14 @@ export default function Dashboard() {
           {/* ================================================================== */}
           
           <div className="mt-8 space-y-6">
+            {/* Global Node Map */}
+            <NodeMap />
+            
             {/* Server Cache Setup */}
             <ServerCacheSetup />
             
-            {/* Rewards & Provider Status Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <MyRewards />
-              <OnChainProvider />
-            </div>
+            {/* Rewards */}
+            <MyRewards />
             
             {/* Leaderboards Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

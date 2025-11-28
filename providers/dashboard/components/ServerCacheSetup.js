@@ -4,420 +4,235 @@ import { useState } from 'react'
 import { useWalletSafe } from '../lib/useWalletSafe'
 import { 
   Server, 
-  Terminal, 
-  Copy, 
-  Check, 
-  CheckCircle,
-  ChevronDown, 
-  ChevronUp,
-  ExternalLink,
-  Zap,
-  Shield,
-  Clock,
-  Award,
   Download,
-  Play,
-  Settings,
-  AlertCircle
+  Monitor,
+  Laptop,
+  Terminal,
+  CheckCircle,
+  Zap,
+  Award,
+  Shield,
+  ExternalLink
 } from 'lucide-react'
 
 export function ServerCacheSetup() {
   const { publicKey, connected } = useWalletSafe()
-  const [expandedSection, setExpandedSection] = useState('docker')
-  const [copiedItem, setCopiedItem] = useState(null)
+  const [hoveredPlatform, setHoveredPlatform] = useState(null)
   
-  const walletAddress = publicKey?.toBase58() || 'YOUR_WALLET_ADDRESS'
-  const coordinatorUrl = process.env.NEXT_PUBLIC_COORDINATOR_URL || 'https://coordinator.whistle.ninja'
+  const walletAddress = publicKey?.toBase58() || ''
   
-  const copyToClipboard = (text, itemId) => {
-    navigator.clipboard.writeText(text)
-    setCopiedItem(itemId)
-    setTimeout(() => setCopiedItem(null), 2000)
-  }
-
-  const CopyButton = ({ text, itemId }) => (
-    <button
-      onClick={() => copyToClipboard(text, itemId)}
-      className="p-1.5 hover:bg-gray-700 rounded transition-colors"
-      title="Copy to clipboard"
-    >
-      {copiedItem === itemId ? (
-        <Check size={14} className="text-whistle-green" />
-      ) : (
-        <Copy size={14} className="text-gray-400" />
-      )}
-    </button>
-  )
-
-  const CodeBlock = ({ code, itemId, language = 'bash' }) => (
-    <div className="relative group">
-      <pre className="bg-gray-950 border border-gray-800 rounded-lg p-4 overflow-x-auto text-sm font-mono text-gray-300">
-        <code>{code}</code>
-      </pre>
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <CopyButton text={code} itemId={itemId} />
-      </div>
-    </div>
-  )
-
-  // Docker Compose configuration
-  const dockerCompose = `version: '3.8'
-services:
-  whistle-cache:
-    image: whistlenet/cache-node:latest
-    container_name: whistle-cache
-    restart: unless-stopped
-    ports:
-      - "8545:8545"
-    environment:
-      - PROVIDER_WALLET=${walletAddress}
-      - COORDINATOR_URL=${coordinatorUrl}
-      - UPSTREAM_RPC=https://rpc.whistle.ninja/rpc
-      - CACHE_PORT=8545
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      - redis
-    
-  redis:
-    image: redis:7-alpine
-    container_name: whistle-redis
-    restart: unless-stopped
-    volumes:
-      - redis_data:/data
-
-volumes:
-  redis_data:`
-
-  // Manual Node.js setup
-  const repoUrl = 'https://github.com/DylanPort/whitelspace.git'
-  
-  const nodeSetup = `# Clone the repository
-git clone ${repoUrl}
-cd whitelspace/providers/cache-node
-
-# Install dependencies
-npm install
-
-# Create .env file
-cat > .env << EOF
-PROVIDER_WALLET=${walletAddress}
-COORDINATOR_URL=${coordinatorUrl}
-UPSTREAM_RPC=https://rpc.whistle.ninja/rpc
-CACHE_PORT=8545
-REDIS_URL=redis://localhost:6379
-EOF
-
-# Start Redis (if not running)
-docker run -d --name redis -p 6379:6379 redis:7-alpine
-
-# Start the cache node
-npm start`
-
-  // Systemd service file
-  const systemdService = `[Unit]
-Description=WHISTLE Cache Node
-After=network.target redis.service
-
-[Service]
-Type=simple
-User=whistle
-WorkingDirectory=/opt/whistle-cache
-Environment=NODE_ENV=production
-Environment=PROVIDER_WALLET=${walletAddress}
-Environment=COORDINATOR_URL=${coordinatorUrl}
-Environment=UPSTREAM_RPC=https://rpc.whistle.ninja/rpc
-Environment=CACHE_PORT=8545
-Environment=REDIS_URL=redis://localhost:6379
-ExecStart=/usr/bin/node src/index.js
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target`
-
-  // Test command
-  const testCommand = `# Test your cache node
-curl -X POST http://localhost:8545 \\
-  -H "Content-Type: application/json" \\
-  -d '{"jsonrpc":"2.0","id":1,"method":"getSlot","params":[]}'`
-
-  // Verify registration
-  const verifyCommand = `# Check if your node is registered
-curl "${coordinatorUrl}/api/nodes" | jq '.nodes[] | select(.wallet=="${walletAddress}")'`
-
-  if (!connected) {
-    return (
-      <div className="card p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-gray-800 rounded-lg">
-            <Server size={24} className="text-gray-500" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold">Server Cache Node Setup</h3>
-            <p className="text-gray-400 text-sm">Earn real SOL rewards • 70% of query fees</p>
-          </div>
-        </div>
-        <p className="text-gray-500 text-center py-4">
-          Connect your wallet to see personalized setup instructions
-        </p>
-      </div>
-    )
+  // Download URLs - update these when you publish the installers
+  const downloads = {
+    windows: {
+      name: 'Windows',
+      icon: Monitor,
+      file: 'WHISTLE-Cache-Node-Setup-1.0.0.exe',
+      url: 'https://github.com/DylanPort/whitelspace/releases/download/v1.0.0/WHISTLE-Cache-Node-Setup-1.0.0.exe',
+      color: 'from-blue-500 to-blue-600',
+      size: '~80 MB',
+      available: true
+    },
+    mac: {
+      name: 'macOS',
+      icon: Laptop,
+      file: 'WHISTLE-Cache-Node-1.0.0.dmg',
+      url: '#',
+      color: 'from-gray-600 to-gray-700',
+      size: '~85 MB',
+      available: false
+    },
+    linux: {
+      name: 'Linux',
+      icon: Terminal,
+      file: 'WHISTLE-Cache-Node-1.0.0.AppImage',
+      url: '#',
+      color: 'from-orange-500 to-orange-600',
+      size: '~90 MB',
+      available: false
+    }
   }
 
   return (
     <div className="card p-6">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-whistle-accent/20 rounded-lg">
-          <Server size={24} className="text-whistle-accent" />
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-gradient-to-br from-whistle-accent/20 to-whistle-accent/5 rounded-xl border border-whistle-accent/30">
+            <Server size={28} className="text-whistle-accent" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-white">Run a Cache Node</h3>
+            <p className="text-gray-400 text-sm">Download the app • Start earning SOL</p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-lg font-semibold">Server Cache Node Setup</h3>
-          <p className="text-gray-400 text-sm">Tier 1 • Earn real SOL rewards • 24/7 uptime</p>
-        </div>
-      </div>
-
-      {/* Active Payment Banner */}
-      <div className="flex items-start gap-3 p-3 mb-6 bg-whistle-green/10 border border-whistle-green/30 rounded-lg">
-        <CheckCircle size={18} className="text-whistle-green mt-0.5 flex-shrink-0" />
-        <div className="text-xs">
-          <p className="text-whistle-green font-bold uppercase tracking-wider mb-1">Payments Active</p>
-          <p className="text-gray-400">
-            Server providers earn 70% of query fees paid to the smart contract. 
-            Register on-chain, run your node, and claim SOL rewards.
-          </p>
+        <div className="px-3 py-1 bg-whistle-green/20 border border-whistle-green/40 rounded-full">
+          <span className="text-whistle-green text-xs font-semibold uppercase tracking-wider">Earn 70%</span>
         </div>
       </div>
 
-      {/* Benefits */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <div className="bg-gray-800/50 rounded-lg p-3 text-center">
+      {/* Benefits Row */}
+      <div className="grid grid-cols-4 gap-3 mb-8">
+        <div className="text-center p-3 bg-gray-800/30 rounded-lg border border-gray-700/50">
           <Award size={20} className="mx-auto mb-2 text-whistle-green" />
-          <p className="text-sm font-medium text-whistle-green">70%</p>
-          <p className="text-xs text-gray-500">Query Revenue</p>
+          <p className="text-white font-bold text-sm">70%</p>
+          <p className="text-gray-500 text-xs">Revenue Share</p>
         </div>
-        <div className="bg-gray-800/50 rounded-lg p-3 text-center">
-          <Clock size={20} className="mx-auto mb-2 text-whistle-green" />
-          <p className="text-sm font-medium text-white">+50%</p>
-          <p className="text-xs text-gray-500">Uptime Bonus</p>
+        <div className="text-center p-3 bg-gray-800/30 rounded-lg border border-gray-700/50">
+          <Zap size={20} className="mx-auto mb-2 text-yellow-400" />
+          <p className="text-white font-bold text-sm">&lt;10ms</p>
+          <p className="text-gray-500 text-xs">Response Time</p>
         </div>
-        <div className="bg-gray-800/50 rounded-lg p-3 text-center">
-          <Zap size={20} className="mx-auto mb-2 text-whistle-accent" />
-          <p className="text-sm font-medium text-white">&lt;10ms</p>
-          <p className="text-xs text-gray-500">Latency</p>
-        </div>
-        <div className="bg-gray-800/50 rounded-lg p-3 text-center">
+        <div className="text-center p-3 bg-gray-800/30 rounded-lg border border-gray-700/50">
           <Shield size={20} className="mx-auto mb-2 text-purple-400" />
-          <p className="text-sm font-medium text-white">Redis</p>
-          <p className="text-xs text-gray-500">Backed</p>
+          <p className="text-white font-bold text-sm">Auto</p>
+          <p className="text-gray-500 text-xs">Earnings</p>
+        </div>
+        <div className="text-center p-3 bg-gray-800/30 rounded-lg border border-gray-700/50">
+          <CheckCircle size={20} className="mx-auto mb-2 text-blue-400" />
+          <p className="text-white font-bold text-sm">Easy</p>
+          <p className="text-gray-500 text-xs">1-Click Setup</p>
         </div>
       </div>
 
-      {/* Your Wallet */}
-      <div className="mb-6 p-4 bg-whistle-accent/10 border border-whistle-accent/30 rounded-lg">
-        <p className="text-xs text-gray-400 mb-1">Your Provider Wallet</p>
-        <div className="flex items-center justify-between">
-          <code className="text-whistle-accent font-mono text-sm">{walletAddress}</code>
-          <CopyButton text={walletAddress} itemId="wallet" />
-        </div>
-      </div>
-
-      {/* Requirements */}
+      {/* Download Section */}
       <div className="mb-6">
-        <h4 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
-          <Settings size={16} />
-          Requirements
+        <h4 className="text-sm font-semibold text-gray-300 mb-4 uppercase tracking-wider">
+          Download for your platform
         </h4>
-        <ul className="space-y-2 text-sm text-gray-400">
-          <li className="flex items-center gap-2">
-            <Check size={14} className="text-whistle-green" />
-            VPS or dedicated server (2GB+ RAM recommended)
-          </li>
-          <li className="flex items-center gap-2">
-            <Check size={14} className="text-whistle-green" />
-            Docker or Node.js 18+ installed
-          </li>
-          <li className="flex items-center gap-2">
-            <Check size={14} className="text-whistle-green" />
-            Port 8545 open (or custom port)
-          </li>
-          <li className="flex items-center gap-2">
-            <Check size={14} className="text-whistle-green" />
-            Stable internet connection
-          </li>
-        </ul>
-      </div>
-
-      {/* Setup Options */}
-      <div className="space-y-3">
-        {/* Docker Setup */}
-        <div className="border border-gray-800 rounded-lg overflow-hidden">
-          <button
-            onClick={() => setExpandedSection(expandedSection === 'docker' ? null : 'docker')}
-            className="w-full p-4 flex items-center justify-between hover:bg-gray-800/50 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <Download size={18} className="text-blue-400" />
-              <div className="text-left">
-                <p className="font-medium">Docker Setup</p>
-                <p className="text-xs text-gray-500">Recommended • Easiest setup</p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {Object.entries(downloads).map(([key, platform]) => {
+            const Icon = platform.icon
+            const isHovered = hoveredPlatform === key
+            const isAvailable = platform.available
+            
+            const content = (
+              <>
+                {/* Coming Soon Badge */}
+                {!isAvailable && (
+                  <div className="absolute -top-2 -right-2 z-10">
+                    <span className="px-2 py-1 bg-gradient-to-r from-yellow-500 to-orange-500 text-black text-[10px] font-bold rounded-full uppercase tracking-wider shadow-lg">
+                      Coming Soon
+                    </span>
+                  </div>
+                )}
+                
+                {/* Background gradient on hover */}
+                <div className={`
+                  absolute inset-0 rounded-xl bg-gradient-to-br ${platform.color} opacity-0 
+                  ${isAvailable ? 'group-hover:opacity-10' : ''} transition-opacity duration-300
+                `} />
+                
+                <div className="relative flex flex-col items-center text-center">
+                  <div className={`
+                    p-3 rounded-xl mb-3 transition-all duration-300
+                    ${isHovered && isAvailable ? 'bg-whistle-accent/20' : 'bg-gray-700/50'}
+                    ${!isAvailable ? 'opacity-60' : ''}
+                  `}>
+                    <Icon size={32} className={isHovered && isAvailable ? 'text-whistle-accent' : 'text-gray-400'} />
+                  </div>
+                  
+                  <h5 className={`font-bold text-lg mb-1 ${!isAvailable ? 'text-gray-400' : 'text-white'}`}>
+                    {platform.name}
+                  </h5>
+                  <p className="text-gray-500 text-xs mb-3">{platform.size}</p>
+                  
+                  <div className={`
+                    flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300
+                    ${!isAvailable 
+                      ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed' 
+                      : isHovered 
+                        ? 'bg-whistle-accent text-black' 
+                        : 'bg-gray-700 text-gray-300'
+                    }
+                  `}>
+                    <Download size={16} />
+                    {isAvailable ? 'Download' : 'Soon'}
+                  </div>
+                </div>
+              </>
+            )
+            
+            // Return link for available, div for coming soon
+            return isAvailable ? (
+              <a
+                key={key}
+                href={platform.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onMouseEnter={() => setHoveredPlatform(key)}
+                onMouseLeave={() => setHoveredPlatform(null)}
+                className={`
+                  relative group p-5 rounded-xl border-2 transition-all duration-300 cursor-pointer
+                  ${isHovered 
+                    ? 'border-whistle-accent bg-whistle-accent/10 transform -translate-y-1' 
+                    : 'border-gray-700 bg-gray-800/30 hover:border-gray-600'
+                  }
+                `}
+              >
+                {content}
+              </a>
+            ) : (
+              <div
+                key={key}
+                className="relative p-5 rounded-xl border-2 border-gray-700/50 bg-gray-800/20 cursor-not-allowed opacity-80"
+              >
+                {content}
               </div>
-            </div>
-            {expandedSection === 'docker' ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-          </button>
-          
-          {expandedSection === 'docker' && (
-            <div className="p-4 border-t border-gray-800 space-y-4">
-              <div>
-                <p className="text-sm text-gray-400 mb-2">1. Create <code className="text-whistle-accent">docker-compose.yml</code>:</p>
-                <CodeBlock code={dockerCompose} itemId="docker-compose" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-400 mb-2">2. Start the cache node:</p>
-                <CodeBlock code="docker-compose up -d" itemId="docker-start" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-400 mb-2">3. Check logs:</p>
-                <CodeBlock code="docker-compose logs -f whistle-cache" itemId="docker-logs" />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Node.js Setup */}
-        <div className="border border-gray-800 rounded-lg overflow-hidden">
-          <button
-            onClick={() => setExpandedSection(expandedSection === 'nodejs' ? null : 'nodejs')}
-            className="w-full p-4 flex items-center justify-between hover:bg-gray-800/50 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <Terminal size={18} className="text-green-400" />
-              <div className="text-left">
-                <p className="font-medium">Node.js Setup</p>
-                <p className="text-xs text-gray-500">Manual installation</p>
-              </div>
-            </div>
-            {expandedSection === 'nodejs' ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-          </button>
-          
-          {expandedSection === 'nodejs' && (
-            <div className="p-4 border-t border-gray-800 space-y-4">
-              <CodeBlock code={nodeSetup} itemId="node-setup" />
-            </div>
-          )}
-        </div>
-
-        {/* Systemd Setup */}
-        <div className="border border-gray-800 rounded-lg overflow-hidden">
-          <button
-            onClick={() => setExpandedSection(expandedSection === 'systemd' ? null : 'systemd')}
-            className="w-full p-4 flex items-center justify-between hover:bg-gray-800/50 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <Play size={18} className="text-purple-400" />
-              <div className="text-left">
-                <p className="font-medium">Systemd Service</p>
-                <p className="text-xs text-gray-500">Auto-start on boot</p>
-              </div>
-            </div>
-            {expandedSection === 'systemd' ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-          </button>
-          
-          {expandedSection === 'systemd' && (
-            <div className="p-4 border-t border-gray-800 space-y-4">
-              <div>
-                <p className="text-sm text-gray-400 mb-2">Create <code className="text-whistle-accent">/etc/systemd/system/whistle-cache.service</code>:</p>
-                <CodeBlock code={systemdService} itemId="systemd" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-400 mb-2">Enable and start:</p>
-                <CodeBlock 
-                  code={`sudo systemctl daemon-reload
-sudo systemctl enable whistle-cache
-sudo systemctl start whistle-cache
-sudo systemctl status whistle-cache`} 
-                  itemId="systemd-enable" 
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Verify Setup */}
-        <div className="border border-gray-800 rounded-lg overflow-hidden">
-          <button
-            onClick={() => setExpandedSection(expandedSection === 'verify' ? null : 'verify')}
-            className="w-full p-4 flex items-center justify-between hover:bg-gray-800/50 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <Check size={18} className="text-whistle-green" />
-              <div className="text-left">
-                <p className="font-medium">Verify & Test</p>
-                <p className="text-xs text-gray-500">Confirm your node is working</p>
-              </div>
-            </div>
-            {expandedSection === 'verify' ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-          </button>
-          
-          {expandedSection === 'verify' && (
-            <div className="p-4 border-t border-gray-800 space-y-4">
-              <div>
-                <p className="text-sm text-gray-400 mb-2">Test your cache node locally:</p>
-                <CodeBlock code={testCommand} itemId="test-local" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-400 mb-2">Verify registration with coordinator:</p>
-                <CodeBlock code={verifyCommand} itemId="verify-reg" />
-              </div>
-              <div className="p-3 bg-whistle-green/10 border border-whistle-green/30 rounded-lg">
-                <p className="text-sm text-whistle-green flex items-center gap-2">
-                  <Check size={16} />
-                  Your node will automatically start earning once it reports metrics!
-                </p>
-              </div>
-            </div>
-          )}
+            )
+          })}
         </div>
       </div>
 
-      {/* Important Notes */}
-      <div className="mt-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-        <div className="flex items-start gap-2">
-          <AlertCircle size={18} className="text-yellow-400 mt-0.5" />
-          <div className="text-sm">
-            <p className="text-yellow-400 font-medium mb-1">Important Notes</p>
-            <ul className="text-gray-400 space-y-1">
-              <li>• Your node must stay online 24/7 to maximize rewards</li>
-              <li>• 95%+ uptime = 1.2x bonus, 99%+ uptime = 1.5x bonus</li>
-              <li>• Metrics are reported automatically every 30 seconds</li>
-              <li>• Rewards are calculated hourly based on cache hits</li>
-            </ul>
+      {/* Quick Start Steps */}
+      <div className="p-4 bg-gray-800/30 rounded-xl border border-gray-700/50">
+        <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+          <Zap size={16} className="text-whistle-accent" />
+          Quick Start
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-6 h-6 rounded-full bg-whistle-accent/20 border border-whistle-accent/50 flex items-center justify-center text-whistle-accent text-xs font-bold flex-shrink-0">
+              1
+            </div>
+            <div>
+              <p className="text-white text-sm font-medium">Download & Install</p>
+              <p className="text-gray-500 text-xs">Choose your platform above</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <div className="w-6 h-6 rounded-full bg-whistle-accent/20 border border-whistle-accent/50 flex items-center justify-center text-whistle-accent text-xs font-bold flex-shrink-0">
+              2
+            </div>
+            <div>
+              <p className="text-white text-sm font-medium">Link Your Wallet</p>
+              <p className="text-gray-500 text-xs">Enter your wallet address</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <div className="w-6 h-6 rounded-full bg-whistle-accent/20 border border-whistle-accent/50 flex items-center justify-center text-whistle-accent text-xs font-bold flex-shrink-0">
+              3
+            </div>
+            <div>
+              <p className="text-white text-sm font-medium">Start Earning!</p>
+              <p className="text-gray-500 text-xs">Automatic SOL rewards</p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Links */}
-      <div className="mt-6 flex flex-wrap gap-3">
+      {/* Source Code Link */}
+      <div className="mt-4 text-center">
         <a 
-          href="https://github.com/whistlenet/cache-node" 
+          href="https://github.com/whistlenet/cache-node-app" 
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition-colors"
+          className="inline-flex items-center gap-2 text-gray-500 hover:text-whistle-accent text-sm transition-colors"
         >
           <ExternalLink size={14} />
-          GitHub Repository
-        </a>
-        <a 
-          href="https://docs.whistle.ninja/cache-node" 
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition-colors"
-        >
-          <ExternalLink size={14} />
-          Full Documentation
+          View source code on GitHub
         </a>
       </div>
     </div>
   )
 }
-
