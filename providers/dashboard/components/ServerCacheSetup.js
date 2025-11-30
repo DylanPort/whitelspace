@@ -12,14 +12,30 @@ import {
   Zap,
   Award,
   Shield,
-  ExternalLink
+  ExternalLink,
+  Copy,
+  X
 } from 'lucide-react'
 
 export function ServerCacheSetup() {
   const { publicKey, connected } = useWalletSafe()
   const [hoveredPlatform, setHoveredPlatform] = useState(null)
+  const [showLinuxModal, setShowLinuxModal] = useState(false)
+  const [copied, setCopied] = useState(false)
   
   const walletAddress = publicKey?.toBase58() || ''
+  
+  const linuxCommand = 'curl -fsSL https://raw.githubusercontent.com/DylanPort/whitelspace/main/CACHE-NODE-EASY.sh | bash'
+  
+  const copyCommand = async () => {
+    try {
+      await navigator.clipboard.writeText(linuxCommand)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
   
   // Download URLs - auto-built via GitHub Actions
   const downloads = {
@@ -35,15 +51,12 @@ export function ServerCacheSetup() {
     linux: {
       name: 'Linux',
       icon: Terminal,
-      file: 'AppImage / Docker',
-      url: 'https://github.com/DylanPort/whitelspace/releases/latest/download/WHISTLE-Cache-Node-1.0.0-linux-x64.AppImage',
+      file: 'Docker / AppImage',
+      url: '#',
       color: 'from-orange-500 to-orange-600',
-      size: '~90 MB',
+      size: 'Docker',
       available: true,
-      altFormats: [
-        { label: '.deb', url: 'https://github.com/DylanPort/whitelspace/releases/latest/download/WHISTLE-Cache-Node-1.0.0-linux-x64.deb' },
-        { label: '.rpm', url: 'https://github.com/DylanPort/whitelspace/releases/latest/download/WHISTLE-Cache-Node-1.0.0-linux-x64.rpm' }
-      ]
+      isLinux: true
     },
     mac: {
       name: 'macOS',
@@ -150,14 +163,34 @@ export function ServerCacheSetup() {
                         : 'bg-gray-700 text-gray-300'
                     }
                   `}>
-                    <Download size={16} />
-                    {isAvailable ? 'Download' : 'Soon'}
+                    {platform.isLinux ? <Terminal size={16} /> : <Download size={16} />}
+                    {!isAvailable ? 'Soon' : platform.isLinux ? 'Get Started' : 'Download'}
                   </div>
                 </div>
               </>
             )
             
-            // Return link for available, div for coming soon
+            // Return link for available, div for coming soon, button for Linux
+            if (platform.isLinux) {
+              return (
+                <button
+                  key={key}
+                  onClick={() => setShowLinuxModal(true)}
+                  onMouseEnter={() => setHoveredPlatform(key)}
+                  onMouseLeave={() => setHoveredPlatform(null)}
+                  className={`
+                    relative group p-5 rounded-xl border-2 transition-all duration-300 cursor-pointer text-left
+                    ${isHovered 
+                      ? 'border-whistle-accent bg-whistle-accent/10 transform -translate-y-1' 
+                      : 'border-gray-700 bg-gray-800/30 hover:border-gray-600'
+                    }
+                  `}
+                >
+                  {content}
+                </button>
+              )
+            }
+            
             return isAvailable ? (
               <a
                 key={key}
@@ -187,6 +220,108 @@ export function ServerCacheSetup() {
           })}
         </div>
       </div>
+
+      {/* Linux Installation Modal */}
+      {showLinuxModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowLinuxModal(false)}>
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl max-w-2xl w-full p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-500/20 rounded-lg">
+                  <Terminal size={24} className="text-orange-400" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Linux Installation</h3>
+                  <p className="text-gray-400 text-sm">One command to start earning</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowLinuxModal(false)}
+                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <X size={20} className="text-gray-400" />
+              </button>
+            </div>
+
+            {/* Docker Command */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold text-gray-300">Run this in your terminal:</span>
+                <span className="text-xs text-orange-400 bg-orange-500/10 px-2 py-1 rounded">Requires Docker</span>
+              </div>
+              <div className="relative">
+                <div className="bg-black rounded-xl p-4 font-mono text-sm overflow-x-auto border border-gray-800">
+                  <code className="text-green-400 break-all">{linuxCommand}</code>
+                </div>
+                <button
+                  onClick={copyCommand}
+                  className={`absolute top-2 right-2 p-2 rounded-lg transition-all ${
+                    copied 
+                      ? 'bg-green-500/20 text-green-400' 
+                      : 'bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {copied ? <CheckCircle size={18} /> : <Copy size={18} />}
+                </button>
+              </div>
+              {copied && (
+                <p className="text-green-400 text-xs mt-2 flex items-center gap-1">
+                  <CheckCircle size={12} /> Copied to clipboard!
+                </p>
+              )}
+            </div>
+
+            {/* Steps */}
+            <div className="bg-gray-800/50 rounded-xl p-4 mb-6">
+              <h4 className="text-sm font-semibold text-white mb-3">How it works:</h4>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-5 h-5 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold flex-shrink-0 mt-0.5">1</div>
+                  <p className="text-gray-300 text-sm">Copy the command above</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-5 h-5 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold flex-shrink-0 mt-0.5">2</div>
+                  <p className="text-gray-300 text-sm">Open your terminal and paste it</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-5 h-5 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold flex-shrink-0 mt-0.5">3</div>
+                  <p className="text-gray-300 text-sm">Enter your Solana wallet address when prompted</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 text-xs font-bold flex-shrink-0 mt-0.5">✓</div>
+                  <p className="text-gray-300 text-sm">Done! Start earning SOL automatically</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Alternative Downloads */}
+            <div className="border-t border-gray-800 pt-4">
+              <p className="text-xs text-gray-500 mb-3">Alternative downloads (GUI app):</p>
+              <div className="flex flex-wrap gap-2">
+                <a 
+                  href="https://github.com/DylanPort/whitelspace/releases/latest/download/WHISTLE-Cache-Node-1.0.0-linux-x64.AppImage"
+                  className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg text-xs text-gray-300 hover:text-white transition-colors flex items-center gap-2"
+                >
+                  <Download size={12} /> AppImage
+                </a>
+                <a 
+                  href="https://github.com/DylanPort/whitelspace/releases/latest/download/WHISTLE-Cache-Node-1.0.0-linux-x64.deb"
+                  className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg text-xs text-gray-300 hover:text-white transition-colors flex items-center gap-2"
+                >
+                  <Download size={12} /> .deb (Ubuntu)
+                </a>
+                <a 
+                  href="https://github.com/DylanPort/whitelspace/releases/latest/download/WHISTLE-Cache-Node-1.0.0-linux-x64.rpm"
+                  className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg text-xs text-gray-300 hover:text-white transition-colors flex items-center gap-2"
+                >
+                  <Download size={12} /> .rpm (Fedora)
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Quick Start Steps */}
       <div className="p-4 bg-gray-800/30 rounded-xl border border-gray-700/50">
@@ -223,25 +358,6 @@ export function ServerCacheSetup() {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Linux Docker Quick Start */}
-      <div className="mt-6 p-4 bg-gradient-to-br from-orange-500/10 to-orange-600/5 rounded-xl border border-orange-500/30">
-        <div className="flex items-center gap-3 mb-3">
-          <Terminal size={20} className="text-orange-400" />
-          <h4 className="text-sm font-semibold text-white">Linux Quick Start (Docker)</h4>
-        </div>
-        <p className="text-gray-400 text-xs mb-3">
-          Run this command in your terminal to start a cache node instantly:
-        </p>
-        <div className="bg-black/50 rounded-lg p-3 font-mono text-xs overflow-x-auto">
-          <code className="text-green-400">
-            curl -fsSL https://raw.githubusercontent.com/DylanPort/whitelspace/main/CACHE-NODE-EASY.sh | bash
-          </code>
-        </div>
-        <p className="text-gray-500 text-xs mt-2">
-          Requires Docker installed. Works on Ubuntu, Debian, CentOS, Fedora, and more.
-        </p>
       </div>
 
       {/* Source Code Link */}
