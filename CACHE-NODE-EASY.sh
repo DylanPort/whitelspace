@@ -237,21 +237,40 @@ get_wallet() {
     WALLET_FILE="$HOME/.whistle-cache-node/wallet-address.txt"
     if [ -f "$WALLET_FILE" ]; then
         SAVED_WALLET=$(cat "$WALLET_FILE")
-        echo ""
-        print_info "Found saved wallet: ${CYAN}$SAVED_WALLET${NC}"
-        read -p "Use this wallet? [Y/n]: " USE_SAVED
-        if [ "${USE_SAVED,,}" != "n" ]; then
+        if [ -n "$SAVED_WALLET" ]; then
+            print_info "Using saved wallet: ${CYAN}$SAVED_WALLET${NC}"
             WALLET="$SAVED_WALLET"
             return
         fi
     fi
     
-    # Interactive prompt
+    # Check if we're running from a pipe (curl | bash)
+    if [ ! -t 0 ]; then
+        echo ""
+        print_error "Wallet address is required!"
+        echo ""
+        echo -e "${YELLOW}Since you're running via curl | bash, you need to provide your wallet.${NC}"
+        echo ""
+        echo -e "Option 1 - Run with wallet argument:"
+        echo -e "  ${CYAN}curl -fsSL https://raw.githubusercontent.com/DylanPort/whitelspace/main/CACHE-NODE-EASY.sh | bash -s -- YOUR_WALLET${NC}"
+        echo ""
+        echo -e "Option 2 - Download and run:"
+        echo -e "  ${CYAN}wget https://raw.githubusercontent.com/DylanPort/whitelspace/main/CACHE-NODE-EASY.sh${NC}"
+        echo -e "  ${CYAN}chmod +x CACHE-NODE-EASY.sh${NC}"
+        echo -e "  ${CYAN}./CACHE-NODE-EASY.sh${NC}"
+        echo ""
+        echo -e "Option 3 - Set environment variable:"
+        echo -e "  ${CYAN}curl -fsSL https://raw.githubusercontent.com/DylanPort/whitelspace/main/CACHE-NODE-EASY.sh | WALLET=YOUR_WALLET bash${NC}"
+        echo ""
+        exit 1
+    fi
+    
+    # Interactive prompt (only works in terminal)
     echo ""
     echo -e "${YELLOW}Enter your Solana wallet address:${NC}"
     echo "(This is where you'll receive your earnings)"
     echo ""
-    read -p "Wallet address: " WALLET
+    read -p "Wallet address: " WALLET </dev/tty
     
     if [ -z "$WALLET" ]; then
         print_error "Wallet address is required!"
@@ -261,7 +280,7 @@ get_wallet() {
     # Validate wallet format (basic check - 32-44 base58 characters)
     if ! [[ "$WALLET" =~ ^[1-9A-HJ-NP-Za-km-z]{32,44}$ ]]; then
         print_warning "Wallet address looks invalid. Please double-check it."
-        read -p "Continue anyway? [y/N]: " CONTINUE
+        read -p "Continue anyway? [y/N]: " CONTINUE </dev/tty
         if [ "${CONTINUE,,}" != "y" ]; then
             exit 1
         fi
