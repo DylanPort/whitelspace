@@ -28,9 +28,10 @@ BOLD='\033[1m'
 
 # Configuration
 CONTAINER_NAME="whistle-cache"
-IMAGE_NAME="whistlenet/cache-node:latest"
+IMAGE_NAME="whistle-cache-node:local"
 HOST_PORT=8546  # Use 8546 to avoid conflicts with common ports
 CONTAINER_PORT=8545
+REPO_URL="https://raw.githubusercontent.com/DylanPort/whitelspace/main"
 
 # Print banner
 print_banner() {
@@ -303,13 +304,48 @@ cleanup_container() {
     fi
 }
 
-# Pull latest image
-pull_image() {
-    print_step "Pulling latest WHISTLE cache node image..."
-    if $DOCKER_CMD pull "$IMAGE_NAME"; then
-        print_success "Image updated to latest version"
+# Build or pull image
+build_image() {
+    print_step "Setting up WHISTLE cache node image..."
+    
+    # Check if image already exists
+    if $DOCKER_CMD images -q "$IMAGE_NAME" 2>/dev/null | grep -q .; then
+        print_info "Using existing local image"
+        return 0
+    fi
+    
+    print_info "Building image from source (first time setup)..."
+    
+    # Create temp directory for build
+    BUILD_DIR=$(mktemp -d)
+    cd "$BUILD_DIR"
+    
+    # Download necessary files
+    print_info "Downloading source files..."
+    
+    mkdir -p src
+    
+    # Download Dockerfile
+    curl -fsSL "$REPO_URL/providers/cache-node/Dockerfile" -o Dockerfile
+    
+    # Download package.json
+    curl -fsSL "$REPO_URL/providers/cache-node/package.json" -o package.json
+    
+    # Download source
+    curl -fsSL "$REPO_URL/providers/cache-node/src/index.js" -o src/index.js
+    
+    # Build the image
+    print_step "Building Docker image (this may take a minute)..."
+    if $DOCKER_CMD build -t "$IMAGE_NAME" . ; then
+        print_success "Image built successfully!"
+        cd - > /dev/null
+        rm -rf "$BUILD_DIR"
+        return 0
     else
-        print_warning "Could not pull latest image, using cached version"
+        print_error "Failed to build image"
+        cd - > /dev/null
+        rm -rf "$BUILD_DIR"
+        return 1
     fi
 }
 
@@ -320,9 +356,9 @@ start_container() {
     $DOCKER_CMD run -d \
         --name "$CONTAINER_NAME" \
         --restart unless-stopped \
-        -e WALLET_ADDRESS="$WALLET" \
+        -e PROVIDER_WALLET="$WALLET" \
+        -e UPSTREAM_RPC="https://api.mainnet-beta.solana.com" \
         -p "${HOST_PORT}:${CONTAINER_PORT}" \
-        -v whistle-cache-data:/data \
         "$IMAGE_NAME"
     
     if [ $? -eq 0 ]; then
@@ -380,7 +416,7 @@ main() {
     echo ""
     
     cleanup_container
-    pull_image
+    build_image
     start_container
     
     # Wait for container to start
