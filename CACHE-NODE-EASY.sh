@@ -4,9 +4,10 @@
 # ═══════════════════════════════════════════════════════════════════
 # Run a WHISTLE cache node with Docker and start earning SOL!
 #
-# Requirements:
-#   - Docker installed and running
-#   - Your Solana wallet address
+# This script will:
+#   - Automatically install Docker if not present
+#   - Set up and start a WHISTLE cache node
+#   - Configure everything for you
 #
 # Usage:
 #   ./CACHE-NODE-EASY.sh                    # Interactive mode
@@ -74,35 +75,150 @@ print_warning() {
     echo -e "${YELLOW}⚠${NC} $1"
 }
 
-# Check if Docker is installed and running
+# Detect OS
+detect_os() {
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        OS=$ID
+        OS_VERSION=$VERSION_ID
+    elif [ -f /etc/redhat-release ]; then
+        OS="rhel"
+    else
+        OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+    fi
+    print_info "Detected OS: $OS"
+}
+
+# Install Docker automatically
+install_docker() {
+    print_step "Installing Docker..."
+    echo ""
+    
+    case $OS in
+        ubuntu|debian|pop|linuxmint)
+            print_info "Installing Docker for Ubuntu/Debian..."
+            sudo apt-get update
+            sudo apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
+            
+            # Add Docker's official GPG key
+            sudo mkdir -p /etc/apt/keyrings
+            curl -fsSL https://download.docker.com/linux/$OS/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg 2>/dev/null || true
+            
+            # Set up repository
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/$OS $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+            
+            # Install Docker
+            sudo apt-get update
+            sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin || sudo apt-get install -y docker.io docker-compose
+            ;;
+            
+        centos|rhel|rocky|almalinux)
+            print_info "Installing Docker for CentOS/RHEL..."
+            sudo yum install -y yum-utils
+            sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+            sudo yum install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+            ;;
+            
+        fedora)
+            print_info "Installing Docker for Fedora..."
+            sudo dnf -y install dnf-plugins-core
+            sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+            sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+            ;;
+            
+        arch|manjaro)
+            print_info "Installing Docker for Arch Linux..."
+            sudo pacman -Sy --noconfirm docker docker-compose
+            ;;
+            
+        opensuse*|sles)
+            print_info "Installing Docker for openSUSE..."
+            sudo zypper install -y docker docker-compose
+            ;;
+            
+        *)
+            print_error "Unsupported OS: $OS"
+            echo ""
+            echo "Please install Docker manually:"
+            echo "  https://docs.docker.com/engine/install/"
+            exit 1
+            ;;
+    esac
+    
+    # Start and enable Docker service
+    print_step "Starting Docker service..."
+    sudo systemctl start docker 2>/dev/null || sudo service docker start
+    sudo systemctl enable docker 2>/dev/null || true
+    
+    # Add current user to docker group
+    if ! groups | grep -q docker; then
+        print_step "Adding user to docker group..."
+        sudo usermod -aG docker "$USER"
+        print_warning "You've been added to the docker group."
+        print_warning "Running with sudo for this session..."
+        NEED_SUDO=true
+    fi
+    
+    print_success "Docker installed successfully!"
+}
+
+# Check if Docker is installed and running, install if not
 check_docker() {
     print_step "Checking Docker installation..."
     
+    detect_os
+    
     if ! command -v docker &> /dev/null; then
-        print_error "Docker is not installed!"
+        print_warning "Docker is not installed!"
         echo ""
-        echo "Please install Docker first:"
-        echo "  Ubuntu/Debian: sudo apt-get install docker.io docker-compose"
-        echo "  CentOS/RHEL:   sudo yum install docker docker-compose"
-        echo "  Fedora:        sudo dnf install docker docker-compose"
-        echo ""
-        echo "Then add yourself to the docker group:"
-        echo "  sudo usermod -aG docker \$USER"
-        echo "  (Log out and back in for this to take effect)"
-        exit 1
+        read -p "Would you like to install Docker automatically? [Y/n]: " INSTALL_DOCKER
+        if [ "${INSTALL_DOCKER,,}" != "n" ]; then
+            install_docker
+        else
+            echo ""
+            echo "Please install Docker manually:"
+            echo "  Ubuntu/Debian: sudo apt-get install docker.io"
+            echo "  CentOS/RHEL:   sudo yum install docker"
+            echo "  Fedora:        sudo dnf install docker"
+            echo ""
+            exit 1
+        fi
     fi
     
-    if ! docker info &> /dev/null; then
-        print_error "Docker daemon is not running!"
-        echo ""
-        echo "Start Docker with:"
-        echo "  sudo systemctl start docker"
-        echo "  sudo systemctl enable docker  # Auto-start on boot"
-        exit 1
+    # Check if Docker daemon is running
+    if ! docker info &> /dev/null 2>&1; then
+        if ! sudo docker info &> /dev/null 2>&1; then
+            print_warning "Docker daemon is not running. Starting it..."
+            sudo systemctl start docker 2>/dev/null || sudo service docker start
+            sleep 2
+        else
+            NEED_SUDO=true
+        fi
     fi
     
-    print_success "Docker is installed and running"
+    # Verify Docker is working
+    if [ "$NEED_SUDO" = true ]; then
+        if sudo docker info &> /dev/null; then
+            print_success "Docker is installed and running (using sudo)"
+            DOCKER_CMD="sudo docker"
+        else
+            print_error "Docker is not working properly"
+            exit 1
+        fi
+    else
+        if docker info &> /dev/null; then
+            print_success "Docker is installed and running"
+            DOCKER_CMD="docker"
+        else
+            print_warning "Need sudo for Docker commands"
+            DOCKER_CMD="sudo docker"
+        fi
+    fi
 }
+
+# Docker command wrapper (handles sudo if needed)
+DOCKER_CMD="docker"
+NEED_SUDO=false
 
 # Get wallet address
 get_wallet() {
@@ -161,9 +277,9 @@ get_wallet() {
 cleanup_container() {
     print_step "Cleaning up existing container..."
     
-    if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-        docker stop "$CONTAINER_NAME" 2>/dev/null || true
-        docker rm "$CONTAINER_NAME" 2>/dev/null || true
+    if $DOCKER_CMD ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+        $DOCKER_CMD stop "$CONTAINER_NAME" 2>/dev/null || true
+        $DOCKER_CMD rm "$CONTAINER_NAME" 2>/dev/null || true
         print_info "Removed existing container"
     fi
 }
@@ -171,7 +287,7 @@ cleanup_container() {
 # Pull latest image
 pull_image() {
     print_step "Pulling latest WHISTLE cache node image..."
-    if docker pull "$IMAGE_NAME"; then
+    if $DOCKER_CMD pull "$IMAGE_NAME"; then
         print_success "Image updated to latest version"
     else
         print_warning "Could not pull latest image, using cached version"
@@ -182,7 +298,7 @@ pull_image() {
 start_container() {
     print_step "Starting WHISTLE cache node..."
     
-    docker run -d \
+    $DOCKER_CMD run -d \
         --name "$CONTAINER_NAME" \
         --restart unless-stopped \
         -e WALLET_ADDRESS="$WALLET" \
@@ -206,7 +322,7 @@ show_status() {
     echo -e "${GREEN}════════════════════════════════════════════════════════════════════════${NC}"
     echo ""
     echo -e "  ${BOLD}Wallet:${NC}     ${CYAN}$WALLET${NC}"
-    echo -e "  ${BOLD}Status:${NC}     $(docker ps --filter name=$CONTAINER_NAME --format '{{.Status}}')"
+    echo -e "  ${BOLD}Status:${NC}     $($DOCKER_CMD ps --filter name=$CONTAINER_NAME --format '{{.Status}}')"
     echo -e "  ${BOLD}Container:${NC}  $CONTAINER_NAME"
     echo ""
     echo -e "  ${BOLD}📊 Metrics:${NC}       ${CYAN}http://localhost:${HOST_PORT}/metrics${NC}"
@@ -229,7 +345,7 @@ show_logs() {
     echo ""
     print_info "Initial container logs:"
     echo "─────────────────────────────────────────"
-    docker logs "$CONTAINER_NAME" 2>&1 | tail -15
+    $DOCKER_CMD logs "$CONTAINER_NAME" 2>&1 | tail -15
     echo "─────────────────────────────────────────"
     echo ""
 }
