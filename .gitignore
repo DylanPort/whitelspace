@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
 package-lock.json
+!whistle-cache-node-app/package-lock.json
 
 # Build outputs
 dist/

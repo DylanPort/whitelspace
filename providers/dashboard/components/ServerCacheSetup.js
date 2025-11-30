@@ -21,13 +21,13 @@ export function ServerCacheSetup() {
   
   const walletAddress = publicKey?.toBase58() || ''
   
-  // Download URLs
+  // Download URLs - auto-built via GitHub Actions
   const downloads = {
     windows: {
       name: 'Windows',
       icon: Monitor,
       file: 'WHISTLE-Cache-Node-Setup-1.0.0.exe',
-      url: 'https://github.com/DylanPort/whitelspace/releases/download/v1.0.0/WHISTLE-Cache-Node-Setup-1.0.0.exe',
+      url: 'https://github.com/DylanPort/whitelspace/releases/latest/download/WHISTLE-Cache-Node-Setup-1.0.0.exe',
       color: 'from-blue-500 to-blue-600',
       size: '~80 MB',
       available: true
@@ -35,21 +35,24 @@ export function ServerCacheSetup() {
     linux: {
       name: 'Linux',
       icon: Terminal,
-      file: 'Docker Setup Script',
-      url: 'https://raw.githubusercontent.com/DylanPort/whitelspace/main/CACHE-NODE-EASY.sh',
+      file: 'AppImage / Docker',
+      url: 'https://github.com/DylanPort/whitelspace/releases/latest/download/WHISTLE-Cache-Node-1.0.0-linux-x64.AppImage',
       color: 'from-orange-500 to-orange-600',
-      size: 'Docker',
+      size: '~90 MB',
       available: true,
-      isScript: true
+      altFormats: [
+        { label: '.deb', url: 'https://github.com/DylanPort/whitelspace/releases/latest/download/WHISTLE-Cache-Node-1.0.0-linux-x64.deb' },
+        { label: '.rpm', url: 'https://github.com/DylanPort/whitelspace/releases/latest/download/WHISTLE-Cache-Node-1.0.0-linux-x64.rpm' }
+      ]
     },
     mac: {
       name: 'macOS',
       icon: Laptop,
       file: 'WHISTLE-Cache-Node-1.0.0.dmg',
-      url: '#',
+      url: 'https://github.com/DylanPort/whitelspace/releases/latest/download/WHISTLE-Cache-Node-1.0.0-x64.dmg',
       color: 'from-gray-600 to-gray-700',
       size: '~85 MB',
-      available: false
+      available: true
     }
   }
 
@@ -147,8 +150,8 @@ export function ServerCacheSetup() {
                         : 'bg-gray-700 text-gray-300'
                     }
                   `}>
-                    {platform.isScript ? <Terminal size={16} /> : <Download size={16} />}
-                    {!isAvailable ? 'Soon' : platform.isScript ? 'Get Script' : 'Download'}
+                    <Download size={16} />
+                    {isAvailable ? 'Download' : 'Soon'}
                   </div>
                 </div>
               </>
