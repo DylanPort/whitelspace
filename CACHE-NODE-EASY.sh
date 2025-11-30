@@ -389,7 +389,6 @@ show_status() {
     echo -e "    Stop node:        ${YELLOW}docker stop $CONTAINER_NAME${NC}"
     echo -e "    Restart node:     ${YELLOW}docker restart $CONTAINER_NAME${NC}"
     echo ""
-    echo -e "  ${BOLD}💰 Expected Earnings: \$50-500/month${NC}"
     echo -e "  ${BOLD}🌐 Dashboard:${NC} ${CYAN}https://provider.whistle.ninja${NC}"
     echo ""
     echo -e "${GREEN}════════════════════════════════════════════════════════════════════════${NC}"
