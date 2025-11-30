@@ -25,7 +25,9 @@ export function ServerCacheSetup() {
   
   const walletAddress = publicKey?.toBase58() || ''
   
-  const linuxCommand = 'curl -fsSL https://raw.githubusercontent.com/DylanPort/whitelspace/main/CACHE-NODE-EASY.sh | bash -s -- YOUR_WALLET'
+  const linuxCommand = connected && walletAddress
+    ? `curl -fsSL "https://raw.githubusercontent.com/DylanPort/whitelspace/main/CACHE-NODE-EASY.sh?$(date +%s)" | bash -s -- ${walletAddress}`
+    : 'curl -fsSL https://raw.githubusercontent.com/DylanPort/whitelspace/main/CACHE-NODE-EASY.sh | bash -s -- YOUR_WALLET'
   
   const copyCommand = async () => {
     try {
@@ -272,24 +274,45 @@ export function ServerCacheSetup() {
               )}
             </div>
 
+            {/* Wallet Status */}
+            {connected && walletAddress ? (
+              <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 mb-4 flex items-center gap-3">
+                <CheckCircle size={18} className="text-green-400" />
+                <div>
+                  <p className="text-green-400 text-sm font-semibold">Wallet Connected!</p>
+                  <p className="text-gray-400 text-xs">Command includes your wallet: {walletAddress.slice(0, 8)}...{walletAddress.slice(-6)}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mb-4 flex items-center gap-3">
+                <Zap size={18} className="text-yellow-400" />
+                <div>
+                  <p className="text-yellow-400 text-sm font-semibold">Connect Wallet for Auto-Fill</p>
+                  <p className="text-gray-400 text-xs">Or replace YOUR_WALLET in the command manually</p>
+                </div>
+              </div>
+            )}
+
             {/* Steps */}
             <div className="bg-gray-800/50 rounded-xl p-4 mb-6">
               <h4 className="text-sm font-semibold text-white mb-3">How it works:</h4>
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
                   <div className="w-5 h-5 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold flex-shrink-0 mt-0.5">1</div>
-                  <p className="text-gray-300 text-sm">Copy the command above</p>
+                  <p className="text-gray-300 text-sm">Copy the command above {connected ? <span className="text-green-400">(your wallet is included!)</span> : ''}</p>
                 </div>
+                {!connected && (
+                  <div className="flex items-start gap-3">
+                    <div className="w-5 h-5 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold flex-shrink-0 mt-0.5">2</div>
+                    <p className="text-gray-300 text-sm"><strong className="text-white">Replace YOUR_WALLET</strong> with your Solana wallet address</p>
+                  </div>
+                )}
                 <div className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold flex-shrink-0 mt-0.5">2</div>
-                  <p className="text-gray-300 text-sm"><strong className="text-white">Replace YOUR_WALLET</strong> with your Solana wallet address</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold flex-shrink-0 mt-0.5">3</div>
+                  <div className="w-5 h-5 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold flex-shrink-0 mt-0.5">{connected ? '2' : '3'}</div>
                   <p className="text-gray-300 text-sm">Paste into terminal and press Enter</p>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold flex-shrink-0 mt-0.5">4</div>
+                  <div className="w-5 h-5 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold flex-shrink-0 mt-0.5">{connected ? '3' : '4'}</div>
                   <p className="text-gray-300 text-sm">Docker installs automatically if needed</p>
                 </div>
                 <div className="flex items-start gap-3">
