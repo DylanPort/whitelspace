@@ -21,7 +21,7 @@ export function ServerCacheSetup() {
   
   const walletAddress = publicKey?.toBase58() || ''
   
-  // Download URLs - update these when you publish the installers
+  // Download URLs
   const downloads = {
     windows: {
       name: 'Windows',
@@ -32,6 +32,17 @@ export function ServerCacheSetup() {
       size: '~80 MB',
       available: true
     },
+    linux: {
+      name: 'Linux',
+      icon: Terminal,
+      file: 'WHISTLE-Cache-Node-1.0.0.AppImage',
+      url: 'https://github.com/DylanPort/whitelspace/releases/download/v1.0.0/WHISTLE-Cache-Node-1.0.0-linux-x64.AppImage',
+      color: 'from-orange-500 to-orange-600',
+      size: '~90 MB',
+      available: true,
+      altUrl: 'https://raw.githubusercontent.com/DylanPort/whitelspace/main/CACHE-NODE-EASY.sh',
+      altLabel: 'Docker Script'
+    },
     mac: {
       name: 'macOS',
       icon: Laptop,
@@ -39,15 +50,6 @@ export function ServerCacheSetup() {
       url: '#',
       color: 'from-gray-600 to-gray-700',
       size: '~85 MB',
-      available: false
-    },
-    linux: {
-      name: 'Linux',
-      icon: Terminal,
-      file: 'WHISTLE-Cache-Node-1.0.0.AppImage',
-      url: '#',
-      color: 'from-orange-500 to-orange-600',
-      size: '~90 MB',
       available: false
     }
   }
@@ -221,10 +223,29 @@ export function ServerCacheSetup() {
         </div>
       </div>
 
+      {/* Linux Docker Quick Start */}
+      <div className="mt-6 p-4 bg-gradient-to-br from-orange-500/10 to-orange-600/5 rounded-xl border border-orange-500/30">
+        <div className="flex items-center gap-3 mb-3">
+          <Terminal size={20} className="text-orange-400" />
+          <h4 className="text-sm font-semibold text-white">Linux Quick Start (Docker)</h4>
+        </div>
+        <p className="text-gray-400 text-xs mb-3">
+          Run this command in your terminal to start a cache node instantly:
+        </p>
+        <div className="bg-black/50 rounded-lg p-3 font-mono text-xs overflow-x-auto">
+          <code className="text-green-400">
+            curl -fsSL https://raw.githubusercontent.com/DylanPort/whitelspace/main/CACHE-NODE-EASY.sh | bash
+          </code>
+        </div>
+        <p className="text-gray-500 text-xs mt-2">
+          Requires Docker installed. Works on Ubuntu, Debian, CentOS, Fedora, and more.
+        </p>
+      </div>
+
       {/* Source Code Link */}
       <div className="mt-4 text-center">
         <a 
-          href="https://github.com/whistlenet/cache-node-app" 
+          href="https://github.com/DylanPort/whitelspace/tree/main/whistle-cache-node-app" 
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 text-gray-500 hover:text-whistle-accent text-sm transition-colors"
