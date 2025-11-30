@@ -35,13 +35,12 @@ export function ServerCacheSetup() {
     linux: {
       name: 'Linux',
       icon: Terminal,
-      file: 'WHISTLE-Cache-Node-1.0.0.AppImage',
-      url: 'https://github.com/DylanPort/whitelspace/releases/download/v1.0.0/WHISTLE-Cache-Node-1.0.0-linux-x64.AppImage',
+      file: 'Docker Setup Script',
+      url: 'https://raw.githubusercontent.com/DylanPort/whitelspace/main/CACHE-NODE-EASY.sh',
       color: 'from-orange-500 to-orange-600',
-      size: '~90 MB',
+      size: 'Docker',
       available: true,
-      altUrl: 'https://raw.githubusercontent.com/DylanPort/whitelspace/main/CACHE-NODE-EASY.sh',
-      altLabel: 'Docker Script'
+      isScript: true
     },
     mac: {
       name: 'macOS',
@@ -148,8 +147,8 @@ export function ServerCacheSetup() {
                         : 'bg-gray-700 text-gray-300'
                     }
                   `}>
-                    <Download size={16} />
-                    {isAvailable ? 'Download' : 'Soon'}
+                    {platform.isScript ? <Terminal size={16} /> : <Download size={16} />}
+                    {!isAvailable ? 'Soon' : platform.isScript ? 'Get Script' : 'Download'}
                   </div>
                 </div>
               </>
