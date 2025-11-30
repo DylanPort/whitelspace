@@ -414,7 +414,7 @@ export default function LinksPage() {
           />
           
           <LinkCard
-            href="https://github.com/DylanPort/whitelspace/blob/main/idl/whistle.json"
+            href="https://github.com/DylanPort/whitelspace/blob/main/whistlenet/contract/idl.json"
             icon={FileCode}
             title="CONTRACT IDL"
             subtitle="Anchor IDL • Build On Us"
