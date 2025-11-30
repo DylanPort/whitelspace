@@ -300,7 +300,7 @@ async function runCacheEasy() {
     tags: true,
     style: { fg: 'gray', bg: 'black' },
     content:
-      ' {bold}Q{/bold}: close  {bold}R{/bold}: run real CACHE-NODE-EASY.bat (Windows only)',
+      ' {bold}Q{/bold}: close  {bold}R{/bold}: run cache node launcher (Windows/Linux/Mac)',
   });
 
   screen.render();
@@ -347,17 +347,95 @@ async function runCacheEasy() {
   });
 
   overlay.key(['r', 'R'], () => {
-    const scriptPath = path.resolve(__dirname, '..', 'CACHE-NODE-EASY.bat');
-    if (os.platform() === 'win32' && fs.existsSync(scriptPath)) {
-      log.log('');
-      log.log('{yellow-fg}> Launching real CACHE-NODE-EASY.bat in a new window...{/yellow-fg}');
-      spawn('cmd.exe', ['/c', 'start', '""', scriptPath], {
-        detached: true,
-        stdio: 'ignore',
-      }).unref();
-      screen.render();
+    const platform = os.platform();
+    
+    if (platform === 'win32') {
+      const scriptPath = path.resolve(__dirname, '..', 'CACHE-NODE-EASY.bat');
+      if (fs.existsSync(scriptPath)) {
+        log.log('');
+        log.log('{yellow-fg}> Launching real CACHE-NODE-EASY.bat in a new window...{/yellow-fg}');
+        spawn('cmd.exe', ['/c', 'start', '""', scriptPath], {
+          detached: true,
+          stdio: 'ignore',
+        }).unref();
+        screen.render();
+      } else {
+        log.log('{red-fg}> Windows launcher not found.{/red-fg}');
+        screen.render();
+      }
+    } else if (platform === 'linux' || platform === 'darwin') {
+      const scriptPath = path.resolve(__dirname, '..', 'CACHE-NODE-EASY.sh');
+      if (fs.existsSync(scriptPath)) {
+        log.log('');
+        log.log('{yellow-fg}> Launching CACHE-NODE-EASY.sh...{/yellow-fg}');
+        log.log('{cyan-fg}> Check your terminal for the cache node setup!{/cyan-fg}');
+        
+        // Make script executable
+        try {
+          fs.chmodSync(scriptPath, '755');
+        } catch (e) {
+          // Ignore chmod errors
+        }
+        
+        // Try different terminal emulators
+        const terminals = [
+          { cmd: 'gnome-terminal', args: ['--', 'bash', scriptPath] },
+          { cmd: 'konsole', args: ['-e', 'bash', scriptPath] },
+          { cmd: 'xfce4-terminal', args: ['-e', `bash ${scriptPath}`] },
+          { cmd: 'xterm', args: ['-e', 'bash', scriptPath] },
+          { cmd: 'mate-terminal', args: ['-e', `bash ${scriptPath}`] },
+        ];
+        
+        if (platform === 'darwin') {
+          // macOS - use Terminal.app
+          spawn('open', ['-a', 'Terminal', scriptPath], {
+            detached: true,
+            stdio: 'ignore',
+          }).unref();
+          log.log('{green-fg}> Opened in Terminal.app{/green-fg}');
+          screen.render();
+          return;
+        }
+        
+        // Linux - try each terminal emulator
+        let launched = false;
+        for (const term of terminals) {
+          try {
+            const which = spawn('which', [term.cmd]);
+            which.on('close', (code) => {
+              if (code === 0 && !launched) {
+                launched = true;
+                spawn(term.cmd, term.args, {
+                  detached: true,
+                  stdio: 'ignore',
+                }).unref();
+                log.log(`{green-fg}> Opened in ${term.cmd}{/green-fg}`);
+                screen.render();
+              }
+            });
+          } catch (e) {
+            // Continue trying other terminals
+          }
+        }
+        
+        // Fallback: run in background
+        setTimeout(() => {
+          if (!launched) {
+            log.log('{yellow-fg}> No terminal found. Running in background...{/yellow-fg}');
+            spawn('bash', [scriptPath], {
+              detached: true,
+              stdio: 'ignore',
+            }).unref();
+            screen.render();
+          }
+        }, 1000);
+      } else {
+        log.log('{red-fg}> Linux launcher not found at: ' + scriptPath + '{/red-fg}');
+        log.log('{cyan-fg}> You can run directly: docker run -d --name whistle-cache -e WALLET_ADDRESS=YOUR_WALLET -p 8546:8545 whistlenet/cache-node:latest{/cyan-fg}');
+        screen.render();
+      }
     } else {
-      log.log('{red-fg}> Real launcher not available on this platform or file missing.{/red-fg}');
+      log.log('{red-fg}> Platform not supported: ' + platform + '{/red-fg}');
       screen.render();
     }
   });

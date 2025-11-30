@@ -6,6 +6,16 @@ package-lock.json
 dist/
 build/
 *.log
+*.exe
+*.dmg
+*.AppImage
+*.deb
+*.rpm
+
+# ═══════════════════════════════════════════════════════════════
+# WHISTLE DEX - Excluded from this repo (separate deployment)
+# ═══════════════════════════════════════════════════════════════
+whistle-dex/
 
 # OS files
 .DS_Store

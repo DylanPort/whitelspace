@@ -1,0 +1,71 @@
+# WHISTLE Cache Node - Docker Compose Configuration
+# ═══════════════════════════════════════════════════════════════════
+# Easy deployment for Linux servers using Docker Compose
+#
+# Usage:
+#   1. Copy .env.example to .env and set your wallet address
+#   2. Run: docker-compose up -d
+#   3. Check logs: docker-compose logs -f
+#
+# ═══════════════════════════════════════════════════════════════════
+
+version: '3.8'
+
+services:
+  whistle-cache:
+    image: whistlenet/cache-node:latest
+    container_name: whistle-cache
+    restart: unless-stopped
+    
+    # Environment configuration
+    environment:
+      - WALLET_ADDRESS=${WALLET_ADDRESS:-YOUR_WALLET_HERE}
+      - PRIMARY_RPC=${PRIMARY_RPC:-https://api.mainnet-beta.solana.com}
+      - NODE_ENV=production
+    
+    # Port mapping (host:container)
+    ports:
+      - "${HOST_PORT:-8546}:8545"
+    
+    # Persistent storage for cache database
+    volumes:
+      - whistle-cache-data:/data
+      - whistle-cache-logs:/logs
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8545/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    # Resource limits (optional, uncomment to enable)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2'
+    #       memory: 2G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 512M
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+
+# Named volumes for persistent data
+volumes:
+  whistle-cache-data:
+    name: whistle-cache-data
+  whistle-cache-logs:
+    name: whistle-cache-logs
+
+# Network (optional, for multi-service setups)
+networks:
+  default:
+    name: whistle-network
+

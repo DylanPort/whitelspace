@@ -1,0 +1,68 @@
+# WHISTLE Cache Node systemd Service
+# ═══════════════════════════════════════════════════════════════════
+# Run WHISTLE Cache Node as a system service for headless Linux servers
+#
+# Installation:
+#   1. Copy this file to /etc/systemd/system/
+#   2. Edit the Environment variables below
+#   3. Run: sudo systemctl daemon-reload
+#   4. Run: sudo systemctl enable whistle-cache-node
+#   5. Run: sudo systemctl start whistle-cache-node
+#
+# ═══════════════════════════════════════════════════════════════════
+
+[Unit]
+Description=WHISTLE Cache Node - Earn SOL by serving RPC requests
+Documentation=https://github.com/DylanPort/whitelspace
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=root
+Group=docker
+
+# === CONFIGURATION - EDIT THESE ===
+Environment="WALLET_ADDRESS=YOUR_SOLANA_WALLET_HERE"
+Environment="NODE_PORT=8546"
+Environment="CONTAINER_NAME=whistle-cache"
+Environment="IMAGE_NAME=whistlenet/cache-node:latest"
+
+# Pre-start: cleanup any existing container
+ExecStartPre=-/usr/bin/docker stop ${CONTAINER_NAME}
+ExecStartPre=-/usr/bin/docker rm ${CONTAINER_NAME}
+ExecStartPre=/usr/bin/docker pull ${IMAGE_NAME}
+
+# Start the container
+ExecStart=/usr/bin/docker run \
+    --name ${CONTAINER_NAME} \
+    --rm \
+    -e WALLET_ADDRESS=${WALLET_ADDRESS} \
+    -p ${NODE_PORT}:8545 \
+    -v whistle-cache-data:/data \
+    ${IMAGE_NAME}
+
+# Stop the container gracefully
+ExecStop=/usr/bin/docker stop -t 30 ${CONTAINER_NAME}
+
+# Restart configuration
+Restart=always
+RestartSec=10
+TimeoutStartSec=300
+TimeoutStopSec=60
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=whistle-cache
+
+# Security
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+

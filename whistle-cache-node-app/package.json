@@ -1,0 +1,164 @@
+{
+  "name": "whistle-cache-node",
+  "version": "1.0.0",
+  "description": "WHISTLE Cache Node - Earn SOL by serving RPC requests",
+  "main": "main.js",
+  "author": "WHISTLE Network",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build": "npm run build:all",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux",
+    "build:linux:appimage": "electron-builder --linux AppImage",
+    "build:linux:deb": "electron-builder --linux deb",
+    "build:linux:rpm": "electron-builder --linux rpm",
+    "build:linux:tar": "electron-builder --linux tar.gz",
+    "build:all": "electron-builder --win --mac --linux",
+    "postinstall": "electron-builder install-app-deps",
+    "rebuild": "electron-rebuild -f -w better-sqlite3"
+  },
+  "dependencies": {
+    "@solana/spl-token": "^0.4.14",
+    "@solana/web3.js": "^1.98.4",
+    "axios": "^1.6.0",
+    "better-sqlite3": "^9.6.0",
+    "bs58": "^6.0.0",
+    "electron-store": "^8.1.0",
+    "express": "^4.18.2",
+    "node-cache": "^5.1.2"
+  },
+  "devDependencies": {
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4",
+    "electron-rebuild": "^3.2.9"
+  },
+  "build": {
+    "appId": "network.whistle.cachenode",
+    "productName": "WHISTLE Cache Node",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "cache-node.js",
+      "whistle-contract.js",
+      "renderer/**/*",
+      "assets/**/*",
+      "node_modules/**/*"
+    ],
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "WHISTLE-Cache-Node-Setup-${version}.${ext}"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.icns",
+      "artifactName": "WHISTLE-Cache-Node-${version}-${arch}.${ext}",
+      "category": "public.app-category.utilities"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "rpm",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "tar.gz",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icons",
+      "artifactName": "WHISTLE-Cache-Node-${version}-linux-${arch}.${ext}",
+      "category": "Network",
+      "maintainer": "WHISTLE Network <support@whistle.ninja>",
+      "vendor": "WHISTLE Network",
+      "synopsis": "WHISTLE Cache Node for Solana RPC",
+      "description": "Run a cache node for the WHISTLE Network and earn SOL by serving RPC requests. Provides decentralized caching for Solana RPC endpoints.",
+      "desktop": {
+        "Name": "WHISTLE Cache Node",
+        "Comment": "Earn SOL by running a WHISTLE cache node",
+        "Categories": "Network;P2P;Finance;",
+        "Keywords": "whistle;solana;crypto;node;cache;rpc;earn",
+        "StartupNotify": "true",
+        "StartupWMClass": "whistle-cache-node"
+      }
+    },
+    "deb": {
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0"
+      ],
+      "priority": "optional",
+      "compression": "xz"
+    },
+    "rpm": {
+      "depends": [
+        "gtk3",
+        "libnotify",
+        "nss",
+        "libXScrnSaver",
+        "libXtst",
+        "xdg-utils",
+        "at-spi2-core",
+        "libuuid",
+        "libsecret"
+      ],
+      "compression": "xz"
+    },
+    "appImage": {
+      "artifactName": "WHISTLE-Cache-Node-${version}-linux-x64.AppImage",
+      "license": "LICENSE"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "WHISTLE Cache Node"
+    }
+  }
+}

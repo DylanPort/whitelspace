@@ -1,0 +1,1652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WHISTLE Cache Node</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    :root {
+      --bg-primary: #0a0a0a;
+      --bg-secondary: #111111;
+      --bg-tertiary: #1a1a1a;
+      --accent: #00ff88;
+      --accent-dim: #00ff8833;
+      --text-primary: #ffffff;
+      --text-secondary: #888888;
+      --text-muted: #555555;
+      --border: #222222;
+      --danger: #ff4444;
+      --warning: #ffaa00;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Title Bar */
+    .titlebar {
+      -webkit-app-region: drag;
+      height: 40px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      flex-shrink: 0;
+    }
+    
+    .titlebar-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .titlebar-title .logo {
+      width: 20px;
+      height: 20px;
+      background: var(--accent);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 12px;
+      color: #000;
+    }
+    
+    .titlebar-controls {
+      -webkit-app-region: no-drag;
+      display: flex;
+      gap: 4px;
+    }
+    
+    .titlebar-btn {
+      width: 28px;
+      height: 28px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: all 0.15s;
+    }
+    
+    .titlebar-btn:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+    
+    .titlebar-btn.close:hover {
+      background: var(--danger);
+      color: white;
+    }
+    
+    /* Main Content */
+    .main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      overflow: hidden;
+    }
+    
+    /* Sidebar */
+    .sidebar {
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
+    }
+    
+    .status-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .status-indicator {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      transition: all 0.3s;
+    }
+    
+    .status-indicator.running {
+      background: var(--accent-dim);
+      box-shadow: 0 0 30px var(--accent-dim);
+      animation: pulse 2s infinite;
+    }
+    
+    .status-indicator.stopped {
+      background: #ff444433;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 20px var(--accent-dim); }
+      50% { box-shadow: 0 0 40px var(--accent); }
+    }
+    
+    .status-text {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    
+    .status-text.running { color: var(--accent); }
+    .status-text.stopped { color: var(--danger); }
+    
+    .status-uptime {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    .control-btn {
+      width: 100%;
+      padding: 14px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    .control-btn.start {
+      background: var(--accent);
+      color: #000;
+    }
+    
+    .control-btn.start:hover {
+      background: #00cc6a;
+      transform: translateY(-1px);
+    }
+    
+    .control-btn.stop {
+      background: var(--danger);
+      color: white;
+    }
+    
+    .control-btn.stop:hover {
+      background: #cc3333;
+    }
+    
+    .control-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    /* Quick Stats */
+    .quick-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    
+    .quick-stat {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+    
+    .quick-stat-value {
+      font-size: 18px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent);
+    }
+    
+    .quick-stat-label {
+      font-size: 10px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 4px;
+    }
+    
+    /* Content Area */
+    .content {
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 4px;
+    }
+    
+    .tab {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    
+    .tab:hover {
+      color: var(--text-primary);
+    }
+    
+    .tab.active {
+      background: var(--bg-tertiary);
+      color: var(--accent);
+    }
+    
+    /* Panels */
+    .panel {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .panel.active {
+      display: flex;
+    }
+    
+    /* Dashboard Grid */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    
+    .metric-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    
+    .metric-card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    
+    .metric-card-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--accent-dim);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    
+    .metric-card-title {
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .metric-card-value {
+      font-size: 28px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-primary);
+    }
+    
+    .metric-card-value.earnings {
+      color: var(--accent);
+    }
+    
+    .metric-card-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    
+    /* Logs */
+    .logs-container {
+      flex: 1;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .logs-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .logs-title {
+      font-size: 13px;
+      font-weight: 600;
+    }
+    
+    .logs-clear {
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 11px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .logs-clear:hover {
+      border-color: var(--text-secondary);
+      color: var(--text-primary);
+    }
+    
+    .logs-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+    
+    .log-time {
+      color: var(--text-muted);
+    }
+    
+    .log-level {
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    
+    .log-level.info { background: #0066ff33; color: #66aaff; }
+    .log-level.warn { background: #ffaa0033; color: var(--warning); }
+    .log-level.error { background: #ff444433; color: var(--danger); }
+    
+    .log-message {
+      color: var(--text-primary);
+    }
+    
+    /* Settings */
+    .settings-form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .form-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+    
+    .form-input {
+      padding: 12px 16px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      transition: all 0.2s;
+    }
+    
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    
+    .form-input::placeholder {
+      color: var(--text-muted);
+    }
+    
+    .form-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .checkbox-group input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+    }
+    
+    .save-btn {
+      padding: 14px 24px;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      align-self: flex-start;
+    }
+    
+    .save-btn:hover {
+      background: #00cc6a;
+    }
+    
+    /* Links */
+    .links-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    
+    .link-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .link-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+    
+    .link-card-icon {
+      font-size: 24px;
+    }
+    
+    .link-card-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    
+    .link-card-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    
+    /* Live Cache Activity */
+    .cache-activity-feed {
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+    }
+    
+    .cache-activity-empty {
+      color: var(--text-muted);
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .cache-activity-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 8px;
+      border-radius: 4px;
+      margin-bottom: 4px;
+      animation: slideIn 0.3s ease;
+    }
+    
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-10px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    
+    .cache-activity-item.hit {
+      background: rgba(0, 255, 136, 0.1);
+      border-left: 3px solid var(--accent);
+    }
+    
+    .cache-activity-item.miss {
+      background: rgba(255, 170, 0, 0.1);
+      border-left: 3px solid var(--warning);
+    }
+    
+    .cache-activity-item.store {
+      background: rgba(0, 102, 255, 0.1);
+      border-left: 3px solid #66aaff;
+    }
+    
+    .cache-activity-type {
+      font-weight: 600;
+      min-width: 50px;
+    }
+    
+    .cache-activity-type.hit { color: var(--accent); }
+    .cache-activity-type.miss { color: var(--warning); }
+    .cache-activity-type.store { color: #66aaff; }
+    
+    .cache-activity-method {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+    
+    .cache-activity-params {
+      color: var(--text-muted);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .cache-activity-time {
+      color: var(--text-muted);
+      font-size: 10px;
+    }
+    
+    .live-indicator {
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: blink 1s infinite;
+    }
+    
+    .test-btn {
+      padding: 6px 12px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      font-size: 11px;
+      font-weight: 500;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .test-btn:hover {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+    }
+    
+    .test-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    /* Network Panel Styles */
+    .network-section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .section-icon {
+      font-size: 20px;
+    }
+    
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+    
+    .wallet-connect-card, .wallet-info-card, .provider-register-card, .provider-status-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    
+    .wallet-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+    
+    .wallet-address-container {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    
+    .wallet-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+    
+    .wallet-address {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--accent);
+    }
+    
+    .wallet-balances {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 12px;
+    }
+    
+    .balance-item {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .balance-value {
+      font-size: 24px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    .balance-label {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    
+    .action-btn {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .action-btn.primary {
+      background: var(--accent);
+      color: #000;
+    }
+    
+    .action-btn.primary:hover {
+      background: #00cc6a;
+      transform: translateY(-1px);
+    }
+    
+    .action-btn.secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+    
+    .action-btn.secondary:hover {
+      border-color: var(--accent);
+    }
+    
+    .action-btn.full-width {
+      width: 100%;
+      justify-content: center;
+    }
+    
+    .action-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .small-btn {
+      padding: 6px 12px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 11px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .small-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    
+    .refresh-btn {
+      padding: 8px 16px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .refresh-btn:hover {
+      border-color: var(--text-secondary);
+      color: var(--text-primary);
+    }
+    
+    .provider-info-box {
+      background: var(--bg-primary);
+      border: 1px solid var(--accent-dim);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    
+    .provider-status-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    
+    .status-badge {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    .status-badge.active {
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+    
+    .provider-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    
+    .provider-stat {
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+    
+    .provider-stat-value {
+      display: block;
+      font-size: 16px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+      word-break: break-all;
+    }
+    
+    .provider-stat-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+    
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    
+    .modal {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 500px;
+      width: 90%;
+    }
+    
+    .modal-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    
+    .modal-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    /* How It Works */
+    .how-it-works-step {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+    
+    .step-number {
+      width: 32px;
+      height: 32px;
+      background: var(--accent);
+      color: #000;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+      margin: 0 auto 10px;
+    }
+    
+    .step-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    
+    .step-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <!-- Title Bar -->
+  <div class="titlebar">
+    <div class="titlebar-title">
+      <div class="logo">W</div>
+      WHISTLE Cache Node
+    </div>
+    <div class="titlebar-controls">
+      <button class="titlebar-btn" onclick="api.minimizeWindow()">─</button>
+      <button class="titlebar-btn" onclick="api.maximizeWindow()">□</button>
+      <button class="titlebar-btn close" onclick="api.closeWindow()">✕</button>
+    </div>
+  </div>
+  
+  <!-- Main Content -->
+  <div class="main">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="status-card">
+        <div class="status-indicator" id="statusIndicator">
+          <span id="statusIcon">⏸</span>
+        </div>
+        <div class="status-text" id="statusText">STOPPED</div>
+        <div class="status-uptime" id="uptimeText">—</div>
+      </div>
+      
+      <button class="control-btn start" id="controlBtn" onclick="toggleNode()">
+        <span>▶</span> Start Node
+      </button>
+      
+      <div class="quick-stats">
+        <div class="quick-stat">
+          <div class="quick-stat-value" id="hitRate">0%</div>
+          <div class="quick-stat-label">Hit Rate</div>
+        </div>
+        <div class="quick-stat">
+          <div class="quick-stat-value" id="totalRequests">0</div>
+          <div class="quick-stat-label">Requests</div>
+        </div>
+        <div class="quick-stat">
+          <div class="quick-stat-value" id="cacheSize">0</div>
+          <div class="quick-stat-label">Cached</div>
+        </div>
+        <div class="quick-stat">
+          <div class="quick-stat-value" id="avgResponse">0ms</div>
+          <div class="quick-stat-label">Avg Time</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Content -->
+    <div class="content">
+      <div class="tabs">
+        <button class="tab active" data-tab="dashboard">Dashboard</button>
+        <button class="tab" data-tab="network">🌐 Network</button>
+        <button class="tab" data-tab="logs">Logs</button>
+        <button class="tab" data-tab="settings">Settings</button>
+      </div>
+      
+      <!-- Dashboard Panel -->
+      <div class="panel active" id="dashboard">
+        <div class="dashboard-grid">
+          <div class="metric-card">
+            <div class="metric-card-header">
+              <div class="metric-card-icon">💰</div>
+              <div class="metric-card-title">Total Earnings</div>
+            </div>
+            <div class="metric-card-value earnings" id="totalEarnings">0.000000</div>
+            <div class="metric-card-subtitle">SOL earned from cache hits</div>
+          </div>
+          
+          <div class="metric-card">
+            <div class="metric-card-header">
+              <div class="metric-card-icon">✅</div>
+              <div class="metric-card-title">Cache Hits</div>
+            </div>
+            <div class="metric-card-value" id="cacheHits">0</div>
+            <div class="metric-card-subtitle">Requests served from cache</div>
+          </div>
+          
+          <div class="metric-card">
+            <div class="metric-card-header">
+              <div class="metric-card-icon">❌</div>
+              <div class="metric-card-title">Cache Misses</div>
+            </div>
+            <div class="metric-card-value" id="cacheMisses">0</div>
+            <div class="metric-card-subtitle">Requests forwarded to RPC</div>
+          </div>
+        </div>
+        
+        <div class="metric-card" style="grid-column: span 3;">
+          <div class="metric-card-header">
+            <div class="metric-card-icon">💾</div>
+            <div class="metric-card-title">Disk Cache</div>
+          </div>
+          <div style="display: flex; gap: 40px; align-items: center;">
+            <div>
+              <div class="metric-card-value" id="diskCacheSize">0 MB</div>
+              <div class="metric-card-subtitle">Cache size on disk</div>
+            </div>
+            <div>
+              <div class="metric-card-value" style="font-size: 18px;" id="diskCacheEntries">0</div>
+              <div class="metric-card-subtitle">Cached entries</div>
+            </div>
+            <div style="flex: 1;">
+              <div style="font-size: 12px; color: var(--accent); font-family: 'JetBrains Mono', monospace; word-break: break-all; cursor: pointer; text-decoration: underline;" id="diskCachePath" onclick="openCacheFolder()">~/.whistle-cache-node/cache.db</div>
+              <div class="metric-card-subtitle">📂 Click to open cache folder</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Live Cache Activity -->
+        <div class="metric-card" style="grid-column: span 3;">
+          <div class="metric-card-header">
+            <div class="metric-card-icon">⚡</div>
+            <div class="metric-card-title">Live Cache Activity</div>
+            <div style="margin-left: auto; display: flex; align-items: center; gap: 12px;">
+              <button class="test-btn" onclick="runTestRequests()" id="testBtn">🧪 Test Cache</button>
+              <div class="live-indicator"></div>
+              <span style="font-size: 11px; color: var(--text-secondary);">Real-time</span>
+            </div>
+          </div>
+          <div class="cache-activity-feed" id="cacheActivityFeed">
+            <div class="cache-activity-empty">
+              <div style="margin-bottom: 10px;">No cache activity yet</div>
+              <div style="font-size: 10px;">Click "🧪 Test Cache" or send requests to <code style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 3px;">http://localhost:8545</code></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="links-grid">
+          <div class="link-card" onclick="api.openExternal('https://provider.whistle.ninja')">
+            <div class="link-card-icon">📊</div>
+            <div>
+              <div class="link-card-title">Provider Dashboard</div>
+              <div class="link-card-desc">View your stats online</div>
+            </div>
+          </div>
+          <div class="link-card" onclick="api.openExternal('https://whistle.ninja')">
+            <div class="link-card-icon">🌐</div>
+            <div>
+              <div class="link-card-title">WHISTLE Network</div>
+              <div class="link-card-desc">Learn more about WHISTLE</div>
+            </div>
+          </div>
+          <div class="link-card" onclick="api.openExternal('https://t.me/whistleninja')">
+            <div class="link-card-icon">💬</div>
+            <div>
+              <div class="link-card-title">Telegram Community</div>
+              <div class="link-card-desc">Join the community</div>
+            </div>
+          </div>
+          <div class="link-card" onclick="api.openExternal('https://x.com/Whistle_Ninja')">
+            <div class="link-card-icon">🐦</div>
+            <div>
+              <div class="link-card-title">Twitter / X</div>
+              <div class="link-card-desc">Follow for updates</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Logs Panel -->
+      <div class="panel" id="logs">
+        <div class="logs-container">
+          <div class="logs-header">
+            <div class="logs-title">📋 Node Logs</div>
+            <button class="logs-clear" onclick="clearLogs()">Clear</button>
+          </div>
+          <div class="logs-content" id="logsContent">
+            <div class="log-entry">
+              <span class="log-time">--:--:--</span>
+              <span class="log-level info">INFO</span>
+              <span class="log-message">Waiting for node to start...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Network Panel -->
+      <div class="panel" id="network">
+        <!-- Link Account Section -->
+        <div class="network-section">
+          <div class="section-header">
+            <span class="section-icon">🔗</span>
+            <span class="section-title">Link Your Provider Account</span>
+          </div>
+          
+          <div class="provider-info-box" style="margin-bottom: 20px;">
+            <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">Already registered on provider.whistle.ninja?</div>
+            <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.6;">
+              Just enter your wallet address below. This app runs your cache node and reports metrics.<br>
+              <span style="color: var(--accent);">Earnings accumulate automatically</span> - claim them on the web dashboard!
+            </div>
+          </div>
+          
+          <div id="accountNotLinked">
+            <div class="form-group">
+              <label class="form-label">Your Solana Wallet Address</label>
+              <input type="text" class="form-input" id="linkWalletAddress" placeholder="e.g., 4S8fvGCekcwUHNP6kaUPN37bsBVUPdm8jxZcbZQHqsEK">
+              <div class="form-hint">The wallet you used to register on provider.whistle.ninja</div>
+            </div>
+            
+            <button class="action-btn primary full-width" onclick="linkProviderAccount()" id="linkBtn">
+              🔗 Link Account & Check Status
+            </button>
+            
+            <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
+              <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Not registered yet?</div>
+              <button class="action-btn secondary" onclick="api.openExternal('https://provider.whistle.ninja')">
+                🌐 Register on provider.whistle.ninja
+              </button>
+            </div>
+          </div>
+          
+          <div id="accountLinked" style="display: none;">
+            <div class="provider-status-header">
+              <span class="status-badge active" id="providerStatusBadge">✅ LINKED</span>
+              <button class="small-btn" onclick="unlinkAccount()">🔓 Unlink</button>
+            </div>
+            
+            <div class="wallet-info-card" style="margin-bottom: 16px;">
+              <div class="wallet-address-container">
+                <span class="wallet-label">Linked Wallet</span>
+                <span class="wallet-address" id="linkedWalletAddress">-</span>
+              </div>
+            </div>
+            
+            <div id="providerFound" style="display: none;">
+              <div class="provider-stats-grid">
+                <div class="provider-stat">
+                  <span class="provider-stat-value" id="providerEndpointDisplay">-</span>
+                  <span class="provider-stat-label">Registered Endpoint</span>
+                </div>
+                <div class="provider-stat">
+                  <span class="provider-stat-value" id="providerQueriesServed">0</span>
+                  <span class="provider-stat-label">Queries Served</span>
+                </div>
+                <div class="provider-stat">
+                  <span class="provider-stat-value" id="providerTotalEarned">0.0000</span>
+                  <span class="provider-stat-label">Total Earned (SOL)</span>
+                </div>
+                <div class="provider-stat">
+                  <span class="provider-stat-value" id="providerPendingEarnings">0.0000</span>
+                  <span class="provider-stat-label">Pending (SOL)</span>
+                </div>
+                <div class="provider-stat">
+                  <span class="provider-stat-value" id="providerReputation">0</span>
+                  <span class="provider-stat-label">Reputation</span>
+                </div>
+                <div class="provider-stat">
+                  <span class="provider-stat-value" id="providerStakeBond">0</span>
+                  <span class="provider-stat-label">Stake Bond</span>
+                </div>
+              </div>
+              
+              <div style="margin-top: 16px; display: flex; gap: 10px;">
+                <button class="action-btn secondary" onclick="refreshProviderStatus()">🔄 Refresh Status</button>
+                <button class="action-btn secondary" onclick="api.openExternal('https://provider.whistle.ninja')">💰 Claim on Dashboard</button>
+              </div>
+            </div>
+            
+            <div id="providerNotFound" style="display: none;">
+              <div style="background: #ff444422; border: 1px solid var(--danger); border-radius: 8px; padding: 16px; text-align: center;">
+                <div style="font-size: 24px; margin-bottom: 8px;">⚠️</div>
+                <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">Not Registered as Provider</div>
+                <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px;">
+                  This wallet hasn't registered as a provider yet.
+                </div>
+                <button class="action-btn primary" onclick="api.openExternal('https://provider.whistle.ninja')">
+                  🚀 Register Now
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- How It Works -->
+        <div class="network-section">
+          <div class="section-header">
+            <span class="section-icon">💡</span>
+            <span class="section-title">How It Works</span>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+            <div class="how-it-works-step">
+              <div class="step-number">1</div>
+              <div class="step-title">Register</div>
+              <div class="step-desc">on provider.whistle.ninja</div>
+            </div>
+            <div class="how-it-works-step">
+              <div class="step-number">2</div>
+              <div class="step-title">Link</div>
+              <div class="step-desc">your wallet here</div>
+            </div>
+            <div class="how-it-works-step">
+              <div class="step-number">3</div>
+              <div class="step-title">Run</div>
+              <div class="step-desc">the cache node</div>
+            </div>
+            <div class="how-it-works-step">
+              <div class="step-number">4</div>
+              <div class="step-title">Earn</div>
+              <div class="step-desc">SOL automatically!</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Settings Panel -->
+      <div class="panel" id="settings">
+        <div class="settings-form">
+          <div class="form-group">
+            <label class="form-label">Wallet Address (Solana)</label>
+            <input type="text" class="form-input" id="walletAddress" placeholder="Your Solana wallet address">
+            <div class="form-hint">Required to track and receive earnings</div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Node Port</label>
+            <input type="number" class="form-input" id="nodePort" value="8545">
+            <div class="form-hint">Port for the cache node to listen on</div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Primary RPC Endpoint</label>
+            <input type="text" class="form-input" id="primaryRpc" placeholder="https://api.mainnet-beta.solana.com">
+            <div class="form-hint">Fallback RPC for cache misses</div>
+          </div>
+          
+          <div class="form-group">
+            <label class="checkbox-group">
+              <input type="checkbox" id="autoStart">
+              <span>Auto-start node when app opens</span>
+            </label>
+          </div>
+          
+          <div class="form-group">
+            <label class="checkbox-group">
+              <input type="checkbox" id="minimizeToTray" checked>
+              <span>Minimize to system tray</span>
+            </label>
+          </div>
+          
+          <button class="save-btn" onclick="saveSettings()">💾 Save Settings</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    let isRunning = false;
+    let logs = [];
+    
+    // Initialize
+    async function init() {
+      // Load settings
+      const settings = await api.getSettings();
+      document.getElementById('walletAddress').value = settings.walletAddress || '';
+      document.getElementById('nodePort').value = settings.nodePort || 8545;
+      document.getElementById('primaryRpc').value = settings.primaryRpc || 'https://api.mainnet-beta.solana.com';
+      document.getElementById('autoStart').checked = settings.autoStart || false;
+      document.getElementById('minimizeToTray').checked = settings.minimizeToTray !== false;
+      
+      // Get initial status
+      const status = await api.getStatus();
+      if (status.running) {
+        updateUI(true);
+        if (status.metrics) {
+          updateMetrics(status.metrics);
+        }
+      }
+      
+      // Setup event listeners
+      api.onNodeStatus((data) => {
+        updateUI(data.running);
+      });
+      
+      api.onMetrics((metrics) => {
+        updateMetrics(metrics);
+      });
+      
+      api.onLog((log) => {
+        addLog(log);
+      });
+      
+      api.onError((error) => {
+        addLog({ level: 'error', message: error, timestamp: new Date().toISOString() });
+      });
+    }
+    
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+      });
+    });
+    
+    // Toggle node
+    async function toggleNode() {
+      const btn = document.getElementById('controlBtn');
+      btn.disabled = true;
+      
+      try {
+        if (isRunning) {
+          await api.stopNode();
+        } else {
+          await api.startNode();
+        }
+      } catch (e) {
+        console.error(e);
+      }
+      
+      btn.disabled = false;
+    }
+    
+    // Update UI based on running state
+    function updateUI(running) {
+      isRunning = running;
+      const indicator = document.getElementById('statusIndicator');
+      const statusText = document.getElementById('statusText');
+      const statusIcon = document.getElementById('statusIcon');
+      const btn = document.getElementById('controlBtn');
+      
+      if (running) {
+        indicator.className = 'status-indicator running';
+        statusIcon.textContent = '⚡';
+        statusText.textContent = 'RUNNING';
+        statusText.className = 'status-text running';
+        btn.className = 'control-btn stop';
+        btn.innerHTML = '<span>⏹</span> Stop Node';
+      } else {
+        indicator.className = 'status-indicator stopped';
+        statusIcon.textContent = '⏸';
+        statusText.textContent = 'STOPPED';
+        statusText.className = 'status-text stopped';
+        btn.className = 'control-btn start';
+        btn.innerHTML = '<span>▶</span> Start Node';
+        document.getElementById('uptimeText').textContent = '—';
+      }
+    }
+    
+    // Update metrics
+    function updateMetrics(metrics) {
+      document.getElementById('totalEarnings').textContent = metrics.totalEarnings;
+      document.getElementById('cacheHits').textContent = metrics.cacheHits.toLocaleString();
+      document.getElementById('cacheMisses').textContent = metrics.cacheMisses.toLocaleString();
+      document.getElementById('hitRate').textContent = metrics.hitRate;
+      document.getElementById('totalRequests').textContent = metrics.totalRequests.toLocaleString();
+      document.getElementById('cacheSize').textContent = metrics.cacheSize.toLocaleString();
+      document.getElementById('avgResponse').textContent = metrics.avgResponseTime + 'ms';
+      document.getElementById('uptimeText').textContent = metrics.uptimeFormatted;
+      
+      // Disk cache info
+      document.getElementById('diskCacheSize').textContent = (metrics.cacheSizeMB || '0') + ' MB';
+      document.getElementById('diskCacheEntries').textContent = (metrics.cacheSize || 0).toLocaleString();
+      document.getElementById('diskCachePath').textContent = metrics.cachePath || 'Loading...';
+    }
+    
+    // Add log entry
+    function addLog(log) {
+      logs.push(log);
+      if (logs.length > 500) logs.shift();
+      
+      const container = document.getElementById('logsContent');
+      const time = new Date(log.timestamp).toLocaleTimeString();
+      
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.innerHTML = `
+        <span class="log-time">${time}</span>
+        <span class="log-level ${log.level}">${log.level.toUpperCase()}</span>
+        <span class="log-message">${log.message}</span>
+      `;
+      
+      container.appendChild(entry);
+      container.scrollTop = container.scrollHeight;
+    }
+    
+    // Clear logs
+    function clearLogs() {
+      logs = [];
+      document.getElementById('logsContent').innerHTML = '';
+    }
+    
+    // Save settings
+    async function saveSettings() {
+      const settings = {
+        walletAddress: document.getElementById('walletAddress').value,
+        nodePort: parseInt(document.getElementById('nodePort').value) || 8545,
+        primaryRpc: document.getElementById('primaryRpc').value || 'https://api.mainnet-beta.solana.com',
+        autoStart: document.getElementById('autoStart').checked,
+        minimizeToTray: document.getElementById('minimizeToTray').checked,
+      };
+      
+      await api.saveSettings(settings);
+      
+      // Show saved notification
+      const btn = document.querySelector('.save-btn');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '✅ Saved!';
+      btn.style.background = '#00cc6a';
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.style.background = '';
+      }, 2000);
+    }
+    
+    // Open cache folder
+    function openCacheFolder() {
+      const path = document.getElementById('diskCachePath').textContent;
+      if (path && path !== 'Loading...') {
+        // Get folder path (remove filename)
+        const folderPath = path.replace(/[/\\][^/\\]+$/, '');
+        api.openFolder(folderPath);
+      }
+    }
+    
+    // Test cache with sample requests
+    async function runTestRequests() {
+      if (!isRunning) {
+        alert('Start the node first!');
+        return;
+      }
+      
+      const btn = document.getElementById('testBtn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Testing...';
+      
+      const testMethods = [
+        { method: 'getSlot', params: [] },
+        { method: 'getBlockHeight', params: [] },
+        { method: 'getHealth', params: [] },
+        { method: 'getVersion', params: [] },
+        { method: 'getSlot', params: [] }, // Repeat for cache hit
+        { method: 'getBlockHeight', params: [] }, // Repeat for cache hit
+      ];
+      
+      const port = document.getElementById('nodePort').value || 8545;
+      
+      for (const test of testMethods) {
+        try {
+          await fetch(`http://localhost:${port}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              id: 1,
+              method: test.method,
+              params: test.params
+            })
+          });
+          await new Promise(r => setTimeout(r, 300)); // Small delay between requests
+        } catch (e) {
+          console.error('Test request failed:', e);
+        }
+      }
+      
+      btn.disabled = false;
+      btn.textContent = '🧪 Test Cache';
+    }
+    
+    // Cache activity feed
+    const cacheActivity = [];
+    const maxActivityItems = 50;
+    
+    function addCacheActivity(activity) {
+      cacheActivity.unshift(activity);
+      if (cacheActivity.length > maxActivityItems) {
+        cacheActivity.pop();
+      }
+      renderCacheActivity();
+    }
+    
+    function renderCacheActivity() {
+      const feed = document.getElementById('cacheActivityFeed');
+      if (cacheActivity.length === 0) {
+        feed.innerHTML = '<div class="cache-activity-empty">Waiting for cache activity...</div>';
+        return;
+      }
+      
+      feed.innerHTML = cacheActivity.map(item => `
+        <div class="cache-activity-item ${item.type}">
+          <span class="cache-activity-type ${item.type}">${item.type.toUpperCase()}</span>
+          <span class="cache-activity-method">${item.method}</span>
+          <span class="cache-activity-params">${item.params || ''}</span>
+          <span class="cache-activity-time">${item.time}</span>
+        </div>
+      `).join('');
+    }
+    
+    // Listen for cache activity events
+    api.onCacheActivity((activity) => {
+      addCacheActivity(activity);
+    });
+    
+    // ============= PROVIDER ACCOUNT LINKING =============
+    
+    let linkedWallet = null;
+    
+    // Initialize - check for saved linked account
+    async function initNetworkTab() {
+      const settings = await api.getSettings();
+      if (settings.linkedWallet) {
+        linkedWallet = settings.linkedWallet;
+        showAccountLinked(linkedWallet);
+        await refreshProviderStatus();
+      }
+    }
+    
+    async function linkProviderAccount() {
+      const address = document.getElementById('linkWalletAddress').value.trim();
+      
+      if (!address) {
+        alert('Please enter your wallet address');
+        return;
+      }
+      
+      // Basic validation (Solana addresses are 32-44 chars base58)
+      if (address.length < 32 || address.length > 44) {
+        alert('Invalid Solana wallet address');
+        return;
+      }
+      
+      const btn = document.getElementById('linkBtn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Checking...';
+      
+      try {
+        // Save to settings
+        await api.saveSettings({ linkedWallet: address, walletAddress: address });
+        linkedWallet = address;
+        
+        showAccountLinked(address);
+        await refreshProviderStatus();
+      } catch (error) {
+        alert('Error: ' + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🔗 Link Account & Check Status';
+      }
+    }
+    
+    function showAccountLinked(address) {
+      document.getElementById('accountNotLinked').style.display = 'none';
+      document.getElementById('accountLinked').style.display = 'block';
+      document.getElementById('linkedWalletAddress').textContent = address;
+    }
+    
+    async function unlinkAccount() {
+      if (!confirm('Unlink this account?')) return;
+      
+      await api.saveSettings({ linkedWallet: '', walletAddress: '' });
+      linkedWallet = null;
+      
+      document.getElementById('accountNotLinked').style.display = 'block';
+      document.getElementById('accountLinked').style.display = 'none';
+      document.getElementById('linkWalletAddress').value = '';
+    }
+    
+    async function refreshProviderStatus() {
+      if (!linkedWallet) return;
+      
+      try {
+        const status = await api.providerGetStatusByAddress(linkedWallet);
+        
+        if (status) {
+          document.getElementById('providerFound').style.display = 'block';
+          document.getElementById('providerNotFound').style.display = 'none';
+          document.getElementById('providerStatusBadge').textContent = '✅ ACTIVE PROVIDER';
+          document.getElementById('providerStatusBadge').className = 'status-badge active';
+          
+          document.getElementById('providerEndpointDisplay').textContent = status.endpoint || '-';
+          document.getElementById('providerQueriesServed').textContent = (status.queriesServed || 0).toLocaleString();
+          document.getElementById('providerTotalEarned').textContent = (status.totalEarned || 0).toFixed(4);
+          document.getElementById('providerPendingEarnings').textContent = (status.pendingEarnings || 0).toFixed(4);
+          document.getElementById('providerReputation').textContent = status.reputationScore || 0;
+          document.getElementById('providerStakeBond').textContent = (status.stakeBond || 0).toLocaleString();
+        } else {
+          document.getElementById('providerFound').style.display = 'none';
+          document.getElementById('providerNotFound').style.display = 'block';
+          document.getElementById('providerStatusBadge').textContent = '⚠️ NOT REGISTERED';
+          document.getElementById('providerStatusBadge').className = 'status-badge';
+        }
+      } catch (error) {
+        console.error('Error fetching provider status:', error);
+        document.getElementById('providerFound').style.display = 'none';
+        document.getElementById('providerNotFound').style.display = 'block';
+      }
+    }
+    
+    // Initialize on load
+    init();
+    initNetworkTab();
+  </script>
+</body>
+</html>
+
