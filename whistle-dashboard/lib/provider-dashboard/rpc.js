@@ -1,9 +1,9 @@
 /**
  * Direct RPC client for Whistlenet
- * Connects directly to https://rpc.whistle.ninja/rpc
+ * Connects directly to our validator
  */
 
-const RPC_URL = process.env.NEXT_PUBLIC_RPC_ENDPOINT || 'https://rpc.whistle.ninja/rpc'
+const RPC_URL = process.env.NEXT_PUBLIC_RPC_ENDPOINT || 'http://212.108.83.86/rpc'
 
 class SolanaRPC {
   constructor(endpoint = RPC_URL) {
