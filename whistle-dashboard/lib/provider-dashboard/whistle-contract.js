@@ -36,7 +36,7 @@ export const QUERY_COST = 10_000; // 0.00001 SOL per query
 
 // RPC Connection - Whistle Network (our own validator!)
 // Disable WebSocket to avoid connection errors (use polling for confirmations)
-const RPC_ENDPOINT = 'https://rpc.whistle.ninja/rpc';
+const RPC_ENDPOINT = 'https://rpc.whistle.ninja';
 export const connection = new Connection(RPC_ENDPOINT, {
   commitment: 'confirmed',
   wsEndpoint: undefined,  // Disable WebSocket - use HTTP polling instead
@@ -45,7 +45,7 @@ export const connection = new Connection(RPC_ENDPOINT, {
 
 // Our own RPC - no rate limits!
 const RPC_LIST = [
-  'https://rpc.whistle.ninja/rpc',
+  'https://rpc.whistle.ninja',
 ];
 
 /**
@@ -54,7 +54,7 @@ const RPC_LIST = [
 export async function fetchWhistleBalance(wallet) {
   // Our own RPC - no rate limits!
   const RPC_ENDPOINTS = [
-    'https://rpc.whistle.ninja/rpc',
+    'https://rpc.whistle.ninja',
   ];
   
   for (const rpcUrl of RPC_ENDPOINTS) {
@@ -84,7 +84,7 @@ export async function fetchWhistleBalance(wallet) {
   // Try fetching all token accounts as fallback (using our RPC)
   try {
     console.log('[Contract] Trying getParsedTokenAccountsByOwner fallback...');
-    const conn = new Connection('https://rpc.whistle.ninja/rpc', 'confirmed');
+    const conn = new Connection('https://rpc.whistle.ninja', 'confirmed');
     
     const tokenAccounts = await conn.getParsedTokenAccountsByOwner(wallet, {
       mint: WHISTLE_MINT
@@ -122,7 +122,7 @@ export async function fetchWhistleBalance(wallet) {
 export async function fetchSolBalance(wallet) {
   // Our own RPC - no rate limits!
   const RPC_ENDPOINTS = [
-    'https://rpc.whistle.ninja/rpc',
+    'https://rpc.whistle.ninja',
   ];
   
   for (const rpcUrl of RPC_ENDPOINTS) {

@@ -3,7 +3,7 @@
  * Our own validator - no rate limits!
  */
 
-const RPC_URL = process.env.NEXT_PUBLIC_RPC_ENDPOINT || 'https://rpc.whistle.ninja/rpc'
+const RPC_URL = process.env.NEXT_PUBLIC_RPC_ENDPOINT || 'https://rpc.whistle.ninja'
 
 class SolanaRPC {
   constructor(endpoint = RPC_URL) {
