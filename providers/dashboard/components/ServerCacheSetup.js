@@ -25,7 +25,7 @@ export function ServerCacheSetup() {
   
   const walletAddress = publicKey?.toBase58() || ''
   
-  const linuxCommand = 'curl -fsSL https://raw.githubusercontent.com/DylanPort/whitelspace/main/CACHE-NODE-EASY.sh | bash'
+  const linuxCommand = 'curl -fsSL https://raw.githubusercontent.com/DylanPort/whitelspace/main/CACHE-NODE-EASY.sh | bash -s -- YOUR_WALLET'
   
   const copyCommand = async () => {
     try {
@@ -282,15 +282,15 @@ export function ServerCacheSetup() {
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="w-5 h-5 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold flex-shrink-0 mt-0.5">2</div>
-                  <p className="text-gray-300 text-sm">Open your terminal and paste it</p>
+                  <p className="text-gray-300 text-sm"><strong className="text-white">Replace YOUR_WALLET</strong> with your Solana wallet address</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="w-5 h-5 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold flex-shrink-0 mt-0.5">3</div>
-                  <p className="text-gray-300 text-sm">Docker installs automatically if needed (Ubuntu, Debian, Fedora, CentOS, Arch)</p>
+                  <p className="text-gray-300 text-sm">Paste into terminal and press Enter</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="w-5 h-5 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold flex-shrink-0 mt-0.5">4</div>
-                  <p className="text-gray-300 text-sm">Enter your Solana wallet address when prompted</p>
+                  <p className="text-gray-300 text-sm">Docker installs automatically if needed</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 text-xs font-bold flex-shrink-0 mt-0.5">✓</div>
