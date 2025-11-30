@@ -248,7 +248,7 @@ export function ServerCacheSetup() {
             <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-semibold text-gray-300">Run this in your terminal:</span>
-                <span className="text-xs text-orange-400 bg-orange-500/10 px-2 py-1 rounded">Requires Docker</span>
+                <span className="text-xs text-green-400 bg-green-500/10 px-2 py-1 rounded">Auto-installs Docker</span>
               </div>
               <div className="relative">
                 <div className="bg-black rounded-xl p-4 font-mono text-sm overflow-x-auto border border-gray-800">
@@ -286,6 +286,10 @@ export function ServerCacheSetup() {
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="w-5 h-5 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold flex-shrink-0 mt-0.5">3</div>
+                  <p className="text-gray-300 text-sm">Docker installs automatically if needed (Ubuntu, Debian, Fedora, CentOS, Arch)</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-5 h-5 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold flex-shrink-0 mt-0.5">4</div>
                   <p className="text-gray-300 text-sm">Enter your Solana wallet address when prompted</p>
                 </div>
                 <div className="flex items-start gap-3">
