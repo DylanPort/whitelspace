@@ -34,27 +34,27 @@ export const WHISTLE_DECIMALS = 6;
 export const MIN_PROVIDER_BOND = 1000; // 1000 WHISTLE minimum
 export const QUERY_COST = 10_000; // 0.00001 SOL per query
 
-// RPC Connection - use our validator directly (no rate limits!)
+// RPC Connection - use Whistle RPC exclusively (no rate limits!)
 // Disable WebSocket to avoid connection errors (use polling for confirmations)
-const RPC_ENDPOINT = 'http://212.108.83.86/rpc';
+const RPC_ENDPOINT = 'https://rpc.whistle.ninja/rpc';
 export const connection = new Connection(RPC_ENDPOINT, {
   commitment: 'confirmed',
   wsEndpoint: undefined,  // Disable WebSocket - use HTTP polling instead
   disableRetryOnRateLimit: false,
 });
 
-// Use only our RPC - direct to validator
+// Use only our RPC - no fallbacks needed since we own it!
 const RPC_LIST = [
-  'http://212.108.83.86/rpc',
+  'https://rpc.whistle.ninja/rpc',
 ];
 
 /**
  * Fetch WHISTLE token balance for a wallet
  */
 export async function fetchWhistleBalance(wallet) {
-  // Use only our RPC - direct to validator
+  // Use only our RPC - no rate limits!
   const RPC_ENDPOINTS = [
-    'http://212.108.83.86/rpc',
+    'https://rpc.whistle.ninja/rpc',
   ];
   
   for (const rpcUrl of RPC_ENDPOINTS) {
@@ -84,7 +84,7 @@ export async function fetchWhistleBalance(wallet) {
   // Try fetching all token accounts as fallback (using our RPC)
   try {
     console.log('[Contract] Trying getParsedTokenAccountsByOwner fallback...');
-    const conn = new Connection('http://212.108.83.86/rpc', 'confirmed');
+    const conn = new Connection('https://rpc.whistle.ninja/rpc', 'confirmed');
     
     const tokenAccounts = await conn.getParsedTokenAccountsByOwner(wallet, {
       mint: WHISTLE_MINT
@@ -120,9 +120,9 @@ export async function fetchWhistleBalance(wallet) {
  * Fetch SOL balance for a wallet
  */
 export async function fetchSolBalance(wallet) {
-  // Use only our RPC - direct to validator
+  // Use only our RPC - no rate limits!
   const RPC_ENDPOINTS = [
-    'http://212.108.83.86/rpc',
+    'https://rpc.whistle.ninja/rpc',
   ];
   
   for (const rpcUrl of RPC_ENDPOINTS) {
