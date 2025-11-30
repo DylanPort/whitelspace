@@ -1,9 +1,9 @@
 /**
  * Direct RPC client for Whistlenet
- * Connects directly to https://rpc.whistle.ninja/rpc
+ * Helius RPC (temporary while fixing CORS)
  */
 
-const RPC_URL = process.env.NEXT_PUBLIC_RPC_ENDPOINT || 'https://rpc.whistle.ninja/rpc'
+const RPC_URL = process.env.NEXT_PUBLIC_RPC_ENDPOINT || 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba'
 
 class SolanaRPC {
   constructor(endpoint = RPC_URL) {

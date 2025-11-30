@@ -38,8 +38,8 @@ export const STAKING_POOL_ADDRESS = new PublicKey('6Ls9QVrP3K35TdQ8dbSJAp1L48tsY
 export const TOKEN_VAULT_ADDRESS = new PublicKey('6AP8c7sCQsm2FMvNJw6fQN5PnMdkySH75h7EPE2kD3Yq');
 export const PAYMENT_VAULT_ADDRESS = new PublicKey('CU1ZcHccCbQT8iA6pcb3ZyTjog8ckmDHH8gaAmKfC73G');
 
-// RPC connection - Whistle Network
-const RPC_ENDPOINT = process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://rpc.whistle.ninja/rpc';
+// RPC connection - Helius Mainnet (temporary while fixing CORS on our RPC)
+const RPC_ENDPOINT = process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
 export const connection = new Connection(RPC_ENDPOINT, 'confirmed');
 
 // ============= PDA DERIVATION =============
