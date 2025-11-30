@@ -2242,7 +2242,7 @@
     }
 
     // RPC defaults (hidden in UI; configurable via localStorage keys rpcHttpUrl / rpcWsUrl)
-    const DEFAULT_RPC_HTTP = 'https://rpc.whistle.ninja';
+    const DEFAULT_RPC_HTTP = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
     const DEFAULT_RPC_WS   = 'wss://rpc.whistle.ninja';
     function getRpcUrls(){
       try{
@@ -3386,7 +3386,7 @@
           
           setLoadingBalance(true);
           try {
-            const rpc = 'https://rpc.whistle.ninja';
+            const rpc = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
             const response = await fetch(rpc, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -3428,7 +3428,7 @@
           
           try {
             const WHISTLE_MINT = 'EJEQQT8gv7bZuqb6p8DiM48K1SpWQnKMw9z9kQKfpump';
-            const rpc = 'https://rpc.whistle.ninja';
+            const rpc = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
             
             const response = await fetch(rpc, {
               method: 'POST',
@@ -3774,7 +3774,7 @@
           }
           
           const keypair = solanaWeb3.Keypair.fromSecretKey(secretKey);
-          const connection = new solanaWeb3.Connection('https://rpc.whistle.ninja');
+          const connection = new solanaWeb3.Connection('https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba');
           
           // Validate recipient address
           let recipientPubkey;
@@ -5140,7 +5140,7 @@
       };
 
       // Solana RPC connection
-      const SOLANA_RPC = 'https://rpc.whistle.ninja';
+      const SOLANA_RPC = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
       const solanaConnection = selectedChain === 'solana' ? new solanaWeb3.Connection(SOLANA_RPC, 'confirmed') : null;
 
       // Major DeFi protocols to scan
@@ -7208,7 +7208,7 @@
           console.log('?? Fetching real nodes from blockchain...');
           
           const PROGRAM_ID = '2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq';
-          const RPC_URL = 'https://rpc.whistle.ninja';
+          const RPC_URL = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
           
           const connection = new solanaWeb3.Connection(RPC_URL, 'confirmed');
           const programId = new solanaWeb3.PublicKey(PROGRAM_ID);
@@ -8337,7 +8337,7 @@
       
       const PROGRAM_ID = '2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq';
       const WHISTLE_MINT = '6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump';
-      const RPC_URL = 'https://rpc.whistle.ninja';
+      const RPC_URL = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
       const BLOCKED_WALLETS = new Set([
         'G1RHSMtZVZLafmZ9man8anb2HXf7JP5Kh5sbrGZKM6Pg',
         '7NFFKUqmQCXHps19XxFkB9qh7AX52UZE8HJVdUu8W6XF'
@@ -10448,7 +10448,7 @@ console.log('? Fingerprint spoofing active!');`;
       const libAvailable = typeof solanaWeb3 !== 'undefined';
       
       // Always call hooks in the same order
-      const [rpc, setRpc] = useState('https://rpc.whistle.ninja');
+      const [rpc, setRpc] = useState('https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba');
       const [showRpcInput, setShowRpcInput] = useState(false);
       const [tool, setTool] = useState('deadman');
       
@@ -10950,7 +10950,7 @@ console.log('? Fingerprint spoofing active!');`;
                   />
                 </div>
                 <div className="flex flex-wrap gap-2 text-xs">
-                  <button onClick={()=>{setRpc('https://rpc.whistle.ninja'); pushToast?.('Switched to Helius Mainnet', 'ok');}} className="px-3 py-1 bg-white/5 border border-white/10 rounded text-white/70 hover:bg-white/10 transition-all">Helius Mainnet</button>
+                  <button onClick={()=>{setRpc('https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba'); pushToast?.('Switched to Helius Mainnet', 'ok');}} className="px-3 py-1 bg-white/5 border border-white/10 rounded text-white/70 hover:bg-white/10 transition-all">Helius Mainnet</button>
                   <button onClick={()=>{setRpc('https://api.devnet.solana.com'); pushToast?.('Switched to Devnet', 'ok');}} className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded text-emerald-400 hover:bg-emerald-500/20 transition-all">Devnet (Test)</button>
                 </div>
                 <p className="text-xs text-white/40">?? Using SolanaTracker RPC (no rate limits). Can also use <a href="https://helius.dev" target="_blank" className="text-emerald-400 hover:underline">Helius</a> or <a href="https://quicknode.com" target="_blank" className="text-emerald-400 hover:underline">QuickNode</a></p>
@@ -14511,7 +14511,7 @@ console.log('? Fingerprint spoofing active!');`;
           
           setLoadingBalance(true);
           try {
-            const rpc = 'https://rpc.whistle.ninja';
+            const rpc = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
             const response = await fetch(rpc, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -14882,7 +14882,7 @@ console.log('? Fingerprint spoofing active!');`;
         
         // Fetch token data from chain
         try{
-          const rpc = 'https://rpc.whistle.ninja';
+          const rpc = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
           
           // Get token supply
           const supplyResp = await fetch(rpc, {
@@ -17941,7 +17941,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
     
     // RPC endpoints with fallback
     const RPC_ENDPOINTS = [
-      'https://rpc.whistle.ninja',
+      'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba',
     ];
     const MAINNET_RPC = RPC_ENDPOINTS[0];
     
@@ -19454,7 +19454,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           console.log('? This node is selected for relay, processing...');
           
           try {
-            const connection = new solanaWeb3.Connection('https://rpc.whistle.ninja', 'confirmed');
+            const connection = new solanaWeb3.Connection('https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba', 'confirmed');
             const recipientPubkey = new solanaWeb3.PublicKey(relayData.recipient);
             const userPubkey = new solanaWeb3.PublicKey(walletAddress);
             const programId = new solanaWeb3.PublicKey('2uZWi6wC6CumhcCDCuNZcBaDSd7UJKf4BKreWdx1Pyaq');
@@ -19561,7 +19561,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
           console.log('?? Executing final relay:', instructions);
           
           const connection = new solanaWeb3.Connection(
-            'https://rpc.whistle.ninja',
+            'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba',
             'confirmed'
           );
           
@@ -26669,7 +26669,7 @@ echo "Visit: https://whatismyip.com to verify"`;
           console.log('?? Checking staker status for:', address);
           
           // Create connection using Helius RPC with your API key
-          const connection = new solanaWeb3.Connection('https://rpc.whistle.ninja');
+          const connection = new solanaWeb3.Connection('https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba');
           
           const userPubkey = new solanaWeb3.PublicKey(address);
           
@@ -26741,7 +26741,7 @@ echo "Visit: https://whatismyip.com to verify"`;
         
         try {
           console.log('?? DEBUG: Full stake verification for:', address);
-          const connection = new solanaWeb3.Connection('https://rpc.whistle.ninja');
+          const connection = new solanaWeb3.Connection('https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba');
           const userPubkey = new solanaWeb3.PublicKey(address);
           
           // Check all program accounts for both program IDs
@@ -27909,7 +27909,7 @@ echo "Visit: https://whatismyip.com to verify"`;
 
       const loadTokenBalance = async (publicKey) => {
         try {
-          const connection = new solanaWeb3.Connection('https://rpc.whistle.ninja');
+          const connection = new solanaWeb3.Connection('https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba');
           const TOKEN_MINT = new solanaWeb3.PublicKey('6Hb2xgEhyN9iVVH3cgSxYjfN774ExzgiCftwiWdjpump');
           const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, { mint: TOKEN_MINT });
           if (tokenAccounts.value.length > 0) {
@@ -27981,7 +27981,7 @@ echo "Visit: https://whatismyip.com to verify"`;
         
         setCreating(true);
         try {
-          const connection = new solanaWeb3.Connection('https://rpc.whistle.ninja', 'confirmed');
+          const connection = new solanaWeb3.Connection('https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba', 'confirmed');
           const recipientPubkey = new solanaWeb3.PublicKey(recipient);
           const userPubkey = new solanaWeb3.PublicKey(walletAddress);
           
@@ -29783,7 +29783,7 @@ https://whistle.ninja
         setLoading(true);
         try {
           const connection = new solanaWeb3.Connection(
-            'https://rpc.whistle.ninja',
+            'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba',
             'confirmed'
           );
 

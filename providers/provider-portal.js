@@ -350,16 +350,16 @@ async function runCacheEasy() {
     const platform = os.platform();
     
     if (platform === 'win32') {
-      const scriptPath = path.resolve(__dirname, '..', 'CACHE-NODE-EASY.bat');
+    const scriptPath = path.resolve(__dirname, '..', 'CACHE-NODE-EASY.bat');
       if (fs.existsSync(scriptPath)) {
-        log.log('');
-        log.log('{yellow-fg}> Launching real CACHE-NODE-EASY.bat in a new window...{/yellow-fg}');
-        spawn('cmd.exe', ['/c', 'start', '""', scriptPath], {
-          detached: true,
-          stdio: 'ignore',
-        }).unref();
-        screen.render();
-      } else {
+      log.log('');
+      log.log('{yellow-fg}> Launching real CACHE-NODE-EASY.bat in a new window...{/yellow-fg}');
+      spawn('cmd.exe', ['/c', 'start', '""', scriptPath], {
+        detached: true,
+        stdio: 'ignore',
+      }).unref();
+      screen.render();
+    } else {
         log.log('{red-fg}> Windows launcher not found.{/red-fg}');
         screen.render();
       }

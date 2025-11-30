@@ -2173,16 +2173,15 @@ fn register_provider(
 
     // Create provider account
     let rent = Rent::get()?;
-    // CRITICAL SECURITY FIX: Correct space calculation for ProviderAccount with dynamic String
-    // ProviderAccount fields (excluding String):
-    // provider(32) + registered_at(8) + is_active(1) + stake_bond(8) +
+    // CRITICAL FIX: Correct space calculation for ProviderAccount with dynamic String
+    // ProviderAccount fields: provider(32) + registered_at(8) + is_active(1) + stake_bond(8) +
     // total_earned(8) + pending_earnings(8) + queries_served(8) + reputation_score(8) +
     // uptime_percentage(8) + response_time_avg(8) + accuracy_score(8) + last_heartbeat(8) +
     // slashed_amount(8) + penalty_count(4) + bump(1)
-    // = 32 + 8 + 1 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 4 + 1 = 118 bytes
-    // String in Borsh: 4 bytes (length prefix) + actual string bytes
-    let base_size: usize = 118;
-    let space = base_size + 4 + endpoint.len(); // 4 for Borsh String length prefix
+    // = 32 + 8 + 1 + (8 × 11) + 4 + 1 = 32 + 9 + 88 + 5 = 126 bytes (NOT 122!)
+    // String in Borsh: 4 bytes (length) + actual string bytes
+    let base_size = 126;
+    let space = base_size + 4 + endpoint.len(); // +4 for Borsh String length prefix
     let lamports = rent.minimum_balance(space);
 
     invoke_signed(
