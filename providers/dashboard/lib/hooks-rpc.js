@@ -87,7 +87,7 @@ export function useLiveMetrics(refreshInterval = 5000) {
           errorCount: 0
         },
         rpc: {
-          endpoint: 'https://mainnet.helius-rpc.com',
+          endpoint: 'https://api.mainnet-beta.solana.com',
           totalRequests: 0,
           requestsLastHour: 0,
           avgLatencyMs: 0

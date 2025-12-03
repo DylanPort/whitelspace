@@ -3,7 +3,7 @@
  * Connects directly to Helius RPC
  */
 
-const RPC_URL = process.env.NEXT_PUBLIC_RPC_ENDPOINT || 'https://mainnet.helius-rpc.com/?api-key=1c8db5f3-5e9a-4fd3-bbb1-d5f84ef6cf5a'
+const RPC_URL = process.env.NEXT_PUBLIC_RPC_ENDPOINT || 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba'
 
 class SolanaRPC {
   constructor(endpoint = RPC_URL) {

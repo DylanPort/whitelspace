@@ -59,7 +59,7 @@ export function ProviderOnboarding() {
   const [success, setSuccess] = useState(null)
   const [txSig, setTxSig] = useState(null)
   
-  const [endpoint, setEndpoint] = useState('https://mainnet.helius-rpc.com/?api-key=1c8db5f3-5e9a-4fd3-bbb1-d5f84ef6cf5a')
+  const [endpoint, setEndpoint] = useState('https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba')
   const [bondAmount, setBondAmount] = useState(MIN_PROVIDER_BOND)
   const [stakeAmount, setStakeAmount] = useState(1000)
   const [manualStep, setManualStep] = useState(null) // For manual navigation

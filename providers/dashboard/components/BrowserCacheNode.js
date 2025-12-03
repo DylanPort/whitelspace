@@ -47,7 +47,7 @@ export function BrowserCacheNode() {
       // Create cache node instance
       const node = new CacheNodeClient({
         coordinatorUrl: process.env.NEXT_PUBLIC_COORDINATOR_WS || 'ws://localhost:3003/ws',
-        upstreamRpc: 'https://mainnet.helius-rpc.com/?api-key=1c8db5f3-5e9a-4fd3-bbb1-d5f84ef6cf5a',
+        upstreamRpc: 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba',
         wallet: walletAddress,
         name: `Browser-${walletAddress.slice(0, 8)}`,
         onStatusChange: (newStatus) => {
