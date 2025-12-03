@@ -45,12 +45,12 @@ export function ValidatorInfo({ metrics, loading }) {
               <span className="text-gray-500 text-sm uppercase tracking-wider">RPC</span>
             </div>
             <a 
-              href="https://rpc.whistle.ninja/rpc"
+              href="https://helius.dev"
               target="_blank"
               rel="noopener noreferrer"
               className="text-whistle-accent font-mono text-sm hover:underline flex items-center gap-1"
             >
-              whistle.ninja
+              helius
               <ExternalLink size={10} />
             </a>
           </div>

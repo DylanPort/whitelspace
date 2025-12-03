@@ -578,7 +578,7 @@ curl http://localhost:8545/metrics`} />
               headers={['Variable', 'Default', 'Description']}
               rows={[
                 ['PORT', '8545', 'Cache node listen port'],
-                ['UPSTREAM_RPC', 'https://rpc.whistle.ninja/rpc', 'Upstream Solana RPC'],
+                ['UPSTREAM_RPC', 'https://mainnet.helius-rpc.com/?api-key=YOUR_KEY', 'Upstream Solana RPC (Helius)'],
                 ['COORDINATOR_URL', 'https://whitelspace-1.onrender.com', 'Coordinator for metrics'],
                 ['PROVIDER_WALLET', '(required)', 'Your Solana wallet'],
                 ['ENABLE_HEARTBEAT', 'false', 'Enable on-chain heartbeats'],

@@ -60,7 +60,7 @@ export function useLiveMetrics(refreshInterval = 5000) {
       // Build metrics object
       const newMetrics = {
         validator: {
-          pubkey: 'rpc.whistle.ninja',
+          pubkey: 'helius-rpc',
           version: version?.['solana-core'] || version?.['feature-set'] || 'unknown',
           featureSet: version?.['feature-set'] || null
         },
@@ -87,7 +87,7 @@ export function useLiveMetrics(refreshInterval = 5000) {
           errorCount: 0
         },
         rpc: {
-          endpoint: 'https://rpc.whistle.ninja/rpc',
+          endpoint: 'https://mainnet.helius-rpc.com',
           totalRequests: 0,
           requestsLastHour: 0,
           avgLatencyMs: 0
