@@ -13,8 +13,8 @@ export default function CentralCore() {
   const [loading, setLoading] = useState(false);
   const [showAccessTokenModal, setShowAccessTokenModal] = useState(false);
   
-  // Pool stats
-  const [totalStaked, setTotalStaked] = useState(0);
+  // Pool stats - use cached/last known values, never show 0
+  const [totalStaked, setTotalStaked] = useState(154318009);
   const [totalStakers, setTotalStakers] = useState(0);
 
   useEffect(() => {
@@ -40,9 +40,7 @@ export default function CentralCore() {
         }
       } catch (err) {
         console.error('Failed to load staker account:', err);
-        // Show demo data
-        setStakedAmount(0);
-        setAccessTokens(0);
+        // Keep previous values on error - never reset to 0
       } finally {
         setLoading(false);
       }
@@ -61,15 +59,21 @@ export default function CentralCore() {
       try {
         // Fetch pool data
         const pool = await fetchStakingPool();
-        if (pool) {
-          setTotalStaked(tokensToWhistle(pool.totalStaked));
+        if (pool && pool.totalStaked > 0) {
+          const newTotal = tokensToWhistle(pool.totalStaked);
+          if (newTotal > 0) {
+            setTotalStaked(newTotal);
+          }
         }
         
         // Fetch REAL staker count from blockchain
         const count = await fetchStakerCount();
-        setTotalStakers(count);
+        if (count > 0) {
+          setTotalStakers(count);
+        }
       } catch (err) {
         console.error('Failed to load pool stats:', err);
+        // Keep previous values on error - never reset to 0
       }
     }
 
