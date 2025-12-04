@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import PanelFrame from './PanelFrame';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 interface Subscription {
@@ -13,11 +14,34 @@ interface Subscription {
   isActive: boolean;
 }
 
+// Mini bar chart component
+const MiniChart = ({ data, color }: { data: number[], color: string }) => {
+  const max = Math.max(...data, 1);
+  return (
+    <div className="flex items-end gap-0.5 h-8">
+      {data.map((value, i) => (
+        <motion.div
+          key={i}
+          className={`w-1.5 rounded-t ${color}`}
+          initial={{ height: 0 }}
+          animate={{ height: `${(value / max) * 100}%` }}
+          transition={{ delay: i * 0.05, duration: 0.3 }}
+          style={{ minHeight: value > 0 ? '2px' : '1px', opacity: value > 0 ? 1 : 0.2 }}
+        />
+      ))}
+    </div>
+  );
+};
+
 export default function SubscriptionStatusPanel() {
   const { publicKey, connected } = useWallet();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [copying, setCopying] = useState(false);
+
+  // Mock usage data (all zeros for preview)
+  const usageData = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  const queryData = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
   useEffect(() => {
     if (connected && publicKey) {
@@ -34,7 +58,6 @@ export default function SubscriptionStatusPanel() {
     setLoading(true);
     try {
       // TODO: Fetch subscription from backend/KV
-      // For now, mock data
       const mockSub: Subscription = {
         apiKey: publicKey.toBase58(),
         packageName: 'Month Pass',
@@ -113,17 +136,92 @@ export default function SubscriptionStatusPanel() {
         className="min-h-[200px]"
       >
         <div className="space-y-4">
-          <h3 className="text-[11px] font-semibold tracking-[0.15em]">
-            SUBSCRIPTION STATUS
-          </h3>
-          
-          <div className="text-center py-8 space-y-3">
-            <div className="text-4xl">🔒</div>
-            <div className="text-sm text-gray-400">
-              No active subscription
+          <div className="flex items-center justify-between">
+            <h3 className="text-[11px] font-semibold tracking-[0.15em]">
+              API DASHBOARD
+            </h3>
+            <div className="px-2 py-0.5 rounded text-[8px] font-bold bg-gray-500/20 text-gray-400">
+              NO SUBSCRIPTION
             </div>
-            <div className="text-xs text-gray-600">
-              Purchase a package to get started
+          </div>
+
+          {/* API Key Preview */}
+          <div className="space-y-2">
+            <div className="text-[9px] text-gray-500 font-semibold tracking-wider">
+              YOUR API KEY
+            </div>
+            <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded p-2">
+              <code className="flex-1 text-[10px] text-gray-600 font-mono">
+                ••••••••••••••••••••••••••••••••
+              </code>
+              <div className="px-2 py-1 bg-white/5 border border-white/10 rounded text-[9px] text-gray-500">
+                LOCKED
+              </div>
+            </div>
+          </div>
+
+          {/* Metrics Grid */}
+          <div className="grid grid-cols-4 gap-3">
+            {/* Total Queries */}
+            <div className="bg-black/30 rounded border border-white/5 p-2">
+              <div className="text-[8px] text-gray-500 mb-1">TOTAL QUERIES</div>
+              <div className="text-lg font-bold text-white">0</div>
+              <MiniChart data={queryData} color="bg-emerald-500/50" />
+            </div>
+
+            {/* Requests Today */}
+            <div className="bg-black/30 rounded border border-white/5 p-2">
+              <div className="text-[8px] text-gray-500 mb-1">TODAY</div>
+              <div className="text-lg font-bold text-white">0</div>
+              <MiniChart data={usageData} color="bg-blue-500/50" />
+            </div>
+
+            {/* Rate Limit */}
+            <div className="bg-black/30 rounded border border-white/5 p-2">
+              <div className="text-[8px] text-gray-500 mb-1">RATE LIMIT</div>
+              <div className="text-lg font-bold text-gray-500">--</div>
+              <div className="text-[8px] text-gray-600 mt-1">req/sec</div>
+            </div>
+
+            {/* Quota */}
+            <div className="bg-black/30 rounded border border-white/5 p-2">
+              <div className="text-[8px] text-gray-500 mb-1">QUOTA LEFT</div>
+              <div className="text-lg font-bold text-gray-500">--</div>
+              <div className="w-full h-1 bg-white/5 rounded mt-2">
+                <div className="h-full bg-gray-500/30 rounded" style={{ width: '0%' }} />
+              </div>
+            </div>
+          </div>
+
+          {/* Usage Chart Preview */}
+          <div className="bg-black/30 rounded border border-white/5 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-[9px] text-gray-500 font-semibold">USAGE (24H)</div>
+              <div className="text-[8px] text-gray-600">No data</div>
+            </div>
+            <div className="flex items-end justify-between h-12 gap-1">
+              {Array(24).fill(0).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex-1 bg-white/5 rounded-t"
+                  style={{ height: '4px' }}
+                />
+              ))}
+            </div>
+            <div className="flex justify-between mt-1">
+              <span className="text-[7px] text-gray-600">00:00</span>
+              <span className="text-[7px] text-gray-600">12:00</span>
+              <span className="text-[7px] text-gray-600">24:00</span>
+            </div>
+          </div>
+
+          {/* CTA */}
+          <div className="text-center pt-2 border-t border-white/10">
+            <div className="text-[10px] text-gray-400 mb-1">
+              Purchase a package to unlock your API key
+            </div>
+            <div className="text-[8px] text-gray-600">
+              Metrics and usage tracking will appear here
             </div>
           </div>
         </div>
