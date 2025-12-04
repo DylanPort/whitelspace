@@ -3,9 +3,8 @@
  * Routes through coordinator to cache nodes, falls back to validator
  */
 
-// Use coordinator's RPC proxy (routes through cache nodes)
-// Falls back to direct validator if coordinator unavailable
-const RPC_URL = process.env.NEXT_PUBLIC_RPC_PROXY || 'https://coordinator.whistle.ninja/rpc'
+// Use Whistle's own Solana validator RPC
+const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://rpc.whistle.ninja'
 
 class SolanaRPC {
   constructor(endpoint = RPC_URL) {

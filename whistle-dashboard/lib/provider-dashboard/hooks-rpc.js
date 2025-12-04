@@ -87,7 +87,7 @@ export function useLiveMetrics(refreshInterval = 5000) {
           errorCount: 0
         },
         rpc: {
-          endpoint: 'https://rpc.whistle.ninja/rpc',
+          endpoint: 'https://rpc.whistle.ninja',
           totalRequests: 0,
           requestsLastHour: 0,
           avgLatencyMs: 0
