@@ -2,6 +2,7 @@
 
 import PanelFrame from './PanelFrame';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 
 export default function RpcProvidersPanel() {
   return (
@@ -13,15 +14,9 @@ export default function RpcProvidersPanel() {
         transition: { duration: 0.6 }
       }}
     >
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-[11px] font-semibold tracking-[0.15em]">
-          RPC PROVIDERS
-        </h3>
-      </div>
-
-      <div className="flex flex-col items-center justify-center py-4">
+      <div className="flex flex-col items-center justify-center py-6">
         {/* Animated Logo Container */}
-        <div className="relative w-20 h-20 mb-4">
+        <div className="relative w-24 h-24 mb-5">
           {/* Outer spinning ring */}
           <motion.div
             className="absolute inset-0 rounded-full border-2 border-emerald-500/30"
@@ -38,9 +33,9 @@ export default function RpcProvidersPanel() {
 
           {/* Pulsing glow */}
           <motion.div
-            className="absolute inset-4 rounded-full bg-emerald-500/10"
+            className="absolute inset-3 rounded-full bg-emerald-500/10"
             animate={{ 
-              scale: [1, 1.2, 1],
+              scale: [1, 1.15, 1],
               opacity: [0.3, 0.6, 0.3]
             }}
             transition={{ duration: 2, repeat: Infinity }}
@@ -56,25 +51,27 @@ export default function RpcProvidersPanel() {
               duration: 4, 
               repeat: Infinity, 
               ease: "easeInOut",
-              repeatDelay: 1
+              repeatDelay: 2
             }}
             style={{ transformStyle: 'preserve-3d' }}
           >
             <motion.div
-              className="text-3xl font-black text-emerald-400"
+              className="relative w-12 h-12"
               animate={{
-                textShadow: [
-                  '0 0 10px rgba(52, 211, 153, 0.5)',
-                  '0 0 30px rgba(52, 211, 153, 0.8)',
-                  '0 0 10px rgba(52, 211, 153, 0.5)',
+                filter: [
+                  'drop-shadow(0 0 8px rgba(52, 211, 153, 0.4))',
+                  'drop-shadow(0 0 20px rgba(52, 211, 153, 0.8))',
+                  'drop-shadow(0 0 8px rgba(52, 211, 153, 0.4))',
                 ]
               }}
               transition={{ duration: 2, repeat: Infinity }}
-              style={{
-                fontFamily: 'system-ui',
-              }}
             >
-              W
+              <Image
+                src="/whistel_logo_top_right_2048.png"
+                alt="Whistle"
+                fill
+                className="object-contain"
+              />
             </motion.div>
           </motion.div>
 
@@ -88,8 +85,8 @@ export default function RpcProvidersPanel() {
                 left: '50%',
               }}
               animate={{
-                x: [0, 40, 0, -40, 0].map(v => v * Math.cos(i * (2 * Math.PI / 3))),
-                y: [40, 0, -40, 0, 40].map(v => v * Math.sin(i * (2 * Math.PI / 3) + Math.PI/2)),
+                x: [0, 48, 0, -48, 0].map(v => v * Math.cos(i * (2 * Math.PI / 3))),
+                y: [48, 0, -48, 0, 48].map(v => v * Math.sin(i * (2 * Math.PI / 3) + Math.PI/2)),
                 opacity: [0.3, 1, 0.3],
               }}
               transition={{
@@ -110,31 +107,27 @@ export default function RpcProvidersPanel() {
           transition={{ delay: 0.5 }}
         >
           <motion.div
-            className="text-[13px] font-bold tracking-[0.3em] text-white mb-1"
+            className="text-[14px] font-bold tracking-[0.4em] text-white"
             animate={{
-              opacity: [0.7, 1, 0.7],
+              opacity: [0.6, 1, 0.6],
+              textShadow: [
+                '0 0 10px rgba(255,255,255,0.1)',
+                '0 0 20px rgba(255,255,255,0.3)',
+                '0 0 10px rgba(255,255,255,0.1)',
+              ]
             }}
-            transition={{ duration: 2, repeat: Infinity }}
+            transition={{ duration: 2.5, repeat: Infinity }}
           >
             COMING SOON
-          </motion.div>
-          <motion.div 
-            className="text-[8px] text-gray-500 tracking-wider"
-            animate={{
-              opacity: [0.5, 0.8, 0.5],
-            }}
-            transition={{ duration: 3, repeat: Infinity }}
-          >
-            Provider Network Launching
           </motion.div>
         </motion.div>
 
         {/* Animated loading dots */}
-        <div className="flex gap-1 mt-3">
+        <div className="flex gap-1.5 mt-4">
           {[0, 1, 2].map((i) => (
             <motion.div
               key={i}
-              className="w-1 h-1 bg-emerald-400/50 rounded-full"
+              className="w-1.5 h-1.5 bg-emerald-400/50 rounded-full"
               animate={{
                 scale: [1, 1.5, 1],
                 opacity: [0.3, 1, 0.3],
