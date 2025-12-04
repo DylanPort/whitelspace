@@ -4,21 +4,8 @@ import { useState } from 'react';
 import PanelFrame from './PanelFrame';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const ENDPOINTS = [
-  { name: 'RPC', url: 'rpc.whistle.ninja', desc: 'JSON-RPC 2.0' },
-  { name: 'WSS', url: 'wss://rpc.whistle.ninja', desc: 'WebSocket' },
-  { name: 'GEYSER', url: 'geyser.whistle.ninja', desc: 'Real-time data' },
-];
-
 export default function ApiMethodsPanel() {
   const [expanded, setExpanded] = useState(false);
-  const [copied, setCopied] = useState<string | null>(null);
-
-  const copyEndpoint = (url: string) => {
-    navigator.clipboard.writeText(url);
-    setCopied(url);
-    setTimeout(() => setCopied(null), 2000);
-  };
 
   return (
     <>
@@ -31,9 +18,9 @@ export default function ApiMethodsPanel() {
           transition: { duration: 0.6, delay: 0.5 }
         }}
       >
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-4">
           <h3 className="text-[11px] font-semibold tracking-[0.15em]">
-            RPC ENDPOINTS
+            RPC FEATURES
           </h3>
           <button
             onClick={() => setExpanded(true)}
@@ -43,53 +30,31 @@ export default function ApiMethodsPanel() {
           </button>
         </div>
 
-        {/* Endpoints List */}
-        <div className="space-y-1.5 mb-3">
-          {ENDPOINTS.map((ep, i) => (
-            <motion.div
-              key={ep.name}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className="flex items-center justify-between p-1.5 bg-black/30 rounded border border-white/5 hover:border-emerald-500/30 transition-all group"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-[8px] font-bold text-emerald-400 w-10">{ep.name}</span>
-                <span className="text-[7px] text-gray-400 font-mono truncate">{ep.url}</span>
-              </div>
-              <button
-                onClick={() => copyEndpoint(ep.url)}
-                className="text-[7px] px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                {copied === ep.url ? '✓' : 'COPY'}
-              </button>
-            </motion.div>
-          ))}
-        </div>
-
         {/* Features List */}
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2 flex-1 content-start">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-3 flex-1 content-start">
           {[
-            'Low Latency',
+            'Low Latency Response',
             'WebSocket Support',
-            'Data Streaming',
+            'Real-time Data Streaming',
             'Embeddable Widgets',
-            'JSON-RPC 2.0',
+            'JSON-RPC 2.0 Standard',
             'Account Subscriptions',
+            'Transaction Tracking',
+            'Geyser Integration',
           ].map((feat, i) => (
             <motion.div
               key={feat}
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 + i * 0.05 }}
+              transition={{ delay: 0.1 + i * 0.05 }}
               className="flex items-center gap-2"
             >
               <motion.div 
-                className="w-1.5 h-1.5 rounded-full bg-emerald-400"
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 }}
+                className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"
+                animate={{ scale: [1, 1.3, 1], opacity: [0.7, 1, 0.7] }}
+                transition={{ duration: 2, repeat: Infinity, delay: i * 0.2 }}
               />
-              <span className="text-[8px] text-gray-300">{feat}</span>
+              <span className="text-[9px] text-gray-300">{feat}</span>
             </motion.div>
           ))}
         </div>
