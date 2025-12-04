@@ -4,13 +4,21 @@ import { useState } from 'react';
 import PanelFrame from './PanelFrame';
 
 export default function RpcEndpointPanel() {
-  const [copied, setCopied] = useState(false);
-  const endpoint = 'https://rpc.whistle.ninja/rpc';
+  const [copiedHttp, setCopiedHttp] = useState(false);
+  const [copiedWss, setCopiedWss] = useState(false);
+  const httpEndpoint = 'https://rpc.whistle.ninja/rpc';
+  const wssEndpoint = 'wss://rpc.whistle.ninja';
 
-  const copyEndpoint = () => {
-    navigator.clipboard.writeText(endpoint);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const copyHttpEndpoint = () => {
+    navigator.clipboard.writeText(httpEndpoint);
+    setCopiedHttp(true);
+    setTimeout(() => setCopiedHttp(false), 2000);
+  };
+
+  const copyWssEndpoint = () => {
+    navigator.clipboard.writeText(wssEndpoint);
+    setCopiedWss(true);
+    setTimeout(() => setCopiedWss(false), 2000);
   };
 
   return (
@@ -38,17 +46,17 @@ export default function RpcEndpointPanel() {
           </div>
         </div>
 
-        {/* RPC Endpoint Display - Clickable */}
+        {/* HTTP Endpoint Display - Clickable */}
         <div 
           className="p-2 bg-black/30 rounded border border-emerald-500/20 cursor-pointer hover:bg-black/40 hover:border-emerald-500/40 transition-all relative group"
-          onClick={copyEndpoint}
+          onClick={copyHttpEndpoint}
         >
-          <div className="text-[8px] text-gray-500 mb-1">ENDPOINT</div>
+          <div className="text-[8px] text-gray-500 mb-1">HTTP ENDPOINT</div>
           <div className="text-[9px] text-emerald-400 font-mono break-all pr-6">
-            {endpoint}
+            {httpEndpoint}
           </div>
           <div className="absolute top-2 right-2 text-[10px]">
-            {copied ? (
+            {copiedHttp ? (
               <span className="text-emerald-400">✓</span>
             ) : (
               <span className="text-gray-500 group-hover:text-emerald-400 transition-colors">📋</span>
@@ -56,10 +64,21 @@ export default function RpcEndpointPanel() {
           </div>
         </div>
 
-        {/* Rate Limit Info */}
-        <div className="p-2 bg-black/20 rounded border border-white/10">
-          <div className="text-[9px] text-gray-400 text-center">
-            100 requests/minute per IP
+        {/* WSS Endpoint Display - Clickable */}
+        <div 
+          className="p-2 bg-black/30 rounded border border-blue-500/20 cursor-pointer hover:bg-black/40 hover:border-blue-500/40 transition-all relative group"
+          onClick={copyWssEndpoint}
+        >
+          <div className="text-[8px] text-gray-500 mb-1">WEBSOCKET</div>
+          <div className="text-[9px] text-blue-400 font-mono break-all pr-6">
+            {wssEndpoint}
+          </div>
+          <div className="absolute top-2 right-2 text-[10px]">
+            {copiedWss ? (
+              <span className="text-blue-400">✓</span>
+            ) : (
+              <span className="text-gray-500 group-hover:text-blue-400 transition-colors">📋</span>
+            )}
           </div>
         </div>
 
