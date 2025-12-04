@@ -2,199 +2,160 @@
 
 import { useState } from 'react';
 import PanelFrame from './PanelFrame';
-import QueryResultModal from './QueryResultModal';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
 
-const RPC_METHODS = [
-  { value: 'getHealth', label: 'getHealth', params: false },
-  { value: 'getSlot', label: 'getSlot', params: false },
-  { value: 'getBlockHeight', label: 'getBlockHeight', params: false },
-  { value: 'getEpochInfo', label: 'getEpochInfo', params: false },
-  { value: 'getVersion', label: 'getVersion', params: false },
-  { value: 'getRecentBlockhash', label: 'getRecentBlockhash (deprecated)', params: false },
-  { value: 'getLatestBlockhash', label: 'getLatestBlockhash', params: false },
-  { value: 'getGenesisHash', label: 'getGenesisHash', params: false },
-  { value: 'getClusterNodes', label: 'getClusterNodes', params: false },
-  { value: 'getSupply', label: 'getSupply', params: false },
-  { value: 'getInflationRate', label: 'getInflationRate', params: false },
-  { value: 'getInflationReward', label: 'getInflationReward', params: true, placeholder: 'Enter addresses (comma separated)...' },
-  { value: 'getBalance', label: 'getBalance', params: true, placeholder: 'Enter address...' },
-  { value: 'getAccountInfo', label: 'getAccountInfo', params: true, placeholder: 'Enter address...' },
-  { value: 'getMultipleAccounts', label: 'getMultipleAccounts', params: true, placeholder: 'Enter addresses (comma separated)...' },
-  { value: 'getProgramAccounts', label: 'getProgramAccounts', params: true, placeholder: 'Enter program ID...' },
-  { value: 'getTransaction', label: 'getTransaction', params: true, placeholder: 'Enter signature...' },
-  { value: 'getSignaturesForAddress', label: 'getSignaturesForAddress', params: true, placeholder: 'Enter address...' },
-  { value: 'getBlock', label: 'getBlock', params: true, placeholder: 'Enter slot number...' },
-  { value: 'getBlocks', label: 'getBlocks', params: true, placeholder: 'Enter start slot...' },
-  { value: 'getBlockTime', label: 'getBlockTime', params: true, placeholder: 'Enter slot number...' },
-  { value: 'getTokenAccountBalance', label: 'getTokenAccountBalance', params: true, placeholder: 'Enter token account...' },
-  { value: 'getTokenAccountsByOwner', label: 'getTokenAccountsByOwner', params: true, placeholder: 'Enter owner address...' },
-  { value: 'getTokenSupply', label: 'getTokenSupply', params: true, placeholder: 'Enter mint address...' },
-  { value: 'getTokenLargestAccounts', label: 'getTokenLargestAccounts', params: true, placeholder: 'Enter mint address...' },
-  { value: 'getVoteAccounts', label: 'getVoteAccounts', params: false },
-  { value: 'getLeaderSchedule', label: 'getLeaderSchedule', params: false },
-  { value: 'getRecentPerformanceSamples', label: 'getRecentPerformanceSamples', params: false },
-  { value: 'minimumLedgerSlot', label: 'minimumLedgerSlot', params: false },
-  { value: 'getFirstAvailableBlock', label: 'getFirstAvailableBlock', params: false },
+const RPC_PACKAGES = [
+  { 
+    id: 'basic',
+    name: 'BASIC',
+    price: 0.2,
+    features: ['100 req/min', 'Standard latency', 'HTTP only'],
+    color: 'emerald'
+  },
+  { 
+    id: 'advanced',
+    name: 'ADVANCED',
+    price: 1,
+    features: ['No rate limits', 'Priority routing', 'WebSocket access'],
+    color: 'blue',
+    popular: true
+  },
+  { 
+    id: 'premium',
+    name: 'PREMIUM',
+    price: 2,
+    features: ['Unlimited usage', 'Data streaming', 'Dedicated node', 'Priority support'],
+    color: 'purple'
+  },
 ];
 
+// Treasury wallet for RPC payments
+const TREASURY_WALLET = new PublicKey('BMiSBoT5aPCrFcxaTrHuzXMkfrtzCLMcDYqrPTVymNbU');
+
 export default function QueryInterfacePanel() {
-  const [method, setMethod] = useState('getHealth');
-  const [params, setParams] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
-  const [showModal, setShowModal] = useState(false);
+  const { publicKey, sendTransaction, connected } = useWallet();
+  const [loading, setLoading] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
-  const currentMethod = RPC_METHODS.find(m => m.value === method);
-
-  const handleSendQuery = async () => {
-    if (currentMethod?.params && !params.trim()) {
-      alert('Please enter parameters for this method');
+  const handlePurchase = async (pkg: typeof RPC_PACKAGES[0]) => {
+    if (!publicKey || !sendTransaction) {
+      alert('Please connect your wallet first');
       return;
     }
 
-    setLoading(true);
+    setLoading(pkg.id);
+    setSuccess(null);
 
     try {
-      // Build params array
-      let queryParams: any[] = [];
+      const connection = new Connection('https://rpc.whistle.ninja', 'confirmed');
       
-      if (currentMethod?.params && params.trim()) {
-        // Methods that need slot numbers
-        if (['getBlock', 'getBlockTime', 'getBlocks'].includes(method)) {
-          queryParams = [parseInt(params.trim())];
-        }
-        // Methods that accept multiple addresses (comma separated)
-        else if (['getMultipleAccounts', 'getInflationReward'].includes(method)) {
-          const addresses = params.split(',').map(a => a.trim()).filter(a => a);
-          queryParams = [addresses];
-        }
-        // Token account methods need mint filter
-        else if (method === 'getTokenAccountsByOwner') {
-          // Simple format: just owner address, we'll use a common token (USDC)
-          queryParams = [
-            params.trim(),
-            { mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' } // USDC
-          ];
-        }
-        // Single parameter methods
-        else {
-          queryParams = [params.trim()];
-        }
-      }
+      const transaction = new Transaction().add(
+        SystemProgram.transfer({
+          fromPubkey: publicKey,
+          toPubkey: TREASURY_WALLET,
+          lamports: pkg.price * LAMPORTS_PER_SOL,
+        })
+      );
 
-      // Make RPC call to public endpoint
-      const response = await fetch('https://rpc.whistle.ninja/rpc', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 1,
-          method,
-          params: queryParams,
-        }),
-      });
+      const { blockhash } = await connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = publicKey;
 
-      const data = await response.json();
-      
-      if (data.error) {
-        setResult({ error: data.error });
-      } else {
-        setResult(data);
-      }
-      
-      setShowModal(true);
+      const signature = await sendTransaction(transaction, connection);
+      await connection.confirmTransaction(signature, 'confirmed');
+
+      setSuccess(pkg.id);
+      setTimeout(() => setSuccess(null), 5000);
       
     } catch (err: any) {
-      console.error('Query failed:', err);
-      setResult({ error: { message: err.message || 'Query failed' } });
-      setShowModal(true);
+      console.error('Purchase failed:', err);
+      alert(err.message || 'Purchase failed');
     } finally {
-      setLoading(false);
+      setLoading(null);
     }
   };
 
   return (
-    <>
-      <PanelFrame
-        cornerType="silver"
-        className="min-h-[280px] flex flex-col"
-        motionProps={{
-          initial: { opacity: 0, x: -50 },
-          animate: { opacity: 1, x: 0 },
-          transition: { duration: 0.6 }
-        }}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-[11px] font-semibold tracking-[0.15em]">
-            QUERY
-          </h3>
-          <div className="text-[9px] text-emerald-400 tracking-wider">
-            FREE
-          </div>
+    <PanelFrame
+      cornerType="silver"
+      className="min-h-[380px] flex flex-col"
+      motionProps={{
+        initial: { opacity: 0, x: -50 },
+        animate: { opacity: 1, x: 0 },
+        transition: { duration: 0.6 }
+      }}
+    >
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-[11px] font-semibold tracking-[0.15em]">
+          RPC PACKAGES
+        </h3>
+        <div className="text-[8px] text-emerald-400 tracking-wider">
+          100% TO COMMUNITY
         </div>
+      </div>
 
-        <div className="space-y-3">
-          {/* Query method dropdown */}
-          <div>
-            <label className="text-[9px] text-gray-500 mb-1 block">METHOD</label>
-            <select
-              value={method}
-              onChange={(e) => {
-                setMethod(e.target.value);
-                setParams(''); // Clear params when method changes
-              }}
-              className="w-full px-3 py-2 bg-black/60 border border-white/20 rounded text-[10px] text-white focus:border-emerald-500/50 focus:outline-none transition-colors"
-            >
-              {RPC_METHODS.map((m) => (
-                <option key={m.value} value={m.value}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Params input */}
-          {currentMethod?.params && (
-            <div>
-              <label className="text-[9px] text-gray-500 mb-1 block">PARAMS</label>
-              <input
-                type="text"
-                value={params}
-                onChange={(e) => setParams(e.target.value)}
-                placeholder={currentMethod.placeholder}
-                className="w-full px-3 py-2 bg-black/60 border border-white/20 rounded text-[10px] text-white placeholder-gray-600 focus:border-emerald-500/50 focus:outline-none transition-colors"
-              />
-            </div>
-          )}
-
-          {/* Info */}
-          <div className="text-[9px] text-gray-500 pt-2 border-t border-white/10">
-            Test our public RPC endpoint with any Solana method
-          </div>
-
-          {/* Send button */}
-          <button
-            disabled={loading}
-            onClick={handleSendQuery}
-            className={`w-full px-4 py-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 hover:border-emerald-500/50 rounded text-[10px] font-bold text-emerald-400 tracking-wider transition-all duration-200 ${
-              loading ? 'opacity-50 cursor-not-allowed' : ''
+      <div className="space-y-3 flex-1">
+        {RPC_PACKAGES.map((pkg) => (
+          <div 
+            key={pkg.id}
+            className={`p-3 rounded border transition-all ${
+              pkg.popular 
+                ? 'border-blue-500/50 bg-blue-500/5' 
+                : 'border-white/10 bg-black/20 hover:border-white/20'
             }`}
           >
-            {loading ? 'SENDING...' : 'SEND QUERY'}
-          </button>
-        </div>
-      </PanelFrame>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] font-bold text-${pkg.color}-400`}>
+                  {pkg.name}
+                </span>
+                {pkg.popular && (
+                  <span className="text-[7px] px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded">
+                    POPULAR
+                  </span>
+                )}
+              </div>
+              <span className="text-[12px] font-bold text-white">
+                {pkg.price} SOL
+              </span>
+            </div>
+            
+            <div className="space-y-1 mb-3">
+              {pkg.features.map((feature, i) => (
+                <div key={i} className="flex items-center gap-2 text-[8px] text-gray-400">
+                  <span className={`text-${pkg.color}-400`}>✓</span>
+                  <span>{feature}</span>
+                </div>
+              ))}
+            </div>
 
-      {/* Result Modal */}
-      <QueryResultModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        result={result}
-        method={method}
-        params={params}
-      />
-    </>
+            <button
+              onClick={() => handlePurchase(pkg)}
+              disabled={loading !== null || !connected}
+              className={`w-full py-2 rounded text-[9px] font-bold tracking-wider transition-all ${
+                success === pkg.id
+                  ? 'bg-green-500/20 border border-green-500/50 text-green-400'
+                  : loading === pkg.id
+                  ? 'bg-gray-500/20 border border-gray-500/30 text-gray-400 cursor-wait'
+                  : !connected
+                  ? 'bg-gray-500/10 border border-gray-500/20 text-gray-500 cursor-not-allowed'
+                  : `bg-${pkg.color}-500/10 border border-${pkg.color}-500/30 text-${pkg.color}-400 hover:bg-${pkg.color}-500/20`
+              }`}
+            >
+              {success === pkg.id ? '✓ PURCHASED' : loading === pkg.id ? 'PROCESSING...' : !connected ? 'CONNECT WALLET' : 'PURCHASE'}
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <div className="pt-3 mt-3 border-t border-white/10">
+        <p className="text-[8px] text-gray-500 text-center leading-relaxed">
+          All payments are redistributed to the WHISTLE community.
+          <br />
+          No middlemen. 100% decentralized.
+        </p>
+      </div>
+    </PanelFrame>
   );
 }
