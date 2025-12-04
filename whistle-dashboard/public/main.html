@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-  <title>Whistle v1.5 — P2P encrypted tips + Solana memo</title>
+  <title>Whistle v1.5 ï¿½ P2P encrypted tips + Solana memo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: http: data: blob:; connect-src 'self' https: wss: ws: http://localhost:* ws://localhost:*; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: http:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https: http:; media-src 'self' blob: mediastream:;">
   <meta http-equiv="Permissions-Policy" content="microphone=*, camera=*, display-capture=*">
@@ -3675,7 +3675,7 @@
         if (!keypair) {
           console.error('? ALL METHODS FAILED');
           console.error('Input was:', input);
-          alert('? Could not import key\n\nTry:\n• Base58 from Phantom\n• [1,2,3...] array\n• 1,2,3... numbers\n\nCheck console (F12) for details');
+          alert('? Could not import key\n\nTry:\nï¿½ Base58 from Phantom\nï¿½ [1,2,3...] array\nï¿½ 1,2,3... numbers\n\nCheck console (F12) for details');
           return;
         }
         
@@ -7968,9 +7968,9 @@
                               <h3 className="text-white font-semibold text-base truncate">{file.name}</h3>
                               <div className="flex items-center gap-3 mt-1">
                                 <span className="text-white/60 text-sm">{(file.size / 1024 / 1024).toFixed(2)} MB</span>
-                                <span className="text-white/40">•</span>
+                                <span className="text-white/40">ï¿½</span>
                                 <span className="text-white/60 text-sm">{file.totalChunks} chunks</span>
-                                <span className="text-white/40">•</span>
+                                <span className="text-white/40">ï¿½</span>
                                 <span className="text-white/60 text-sm">{new Date(file.uploadedAt).toLocaleDateString()}</span>
                               </div>
                             </div>
@@ -8011,7 +8011,7 @@
                             </div>
                             {health && (
                               <div className="text-white/50 text-xs">
-                                {health.onlineChunks}/{health.totalChunks} chunks online • 
+                                {health.onlineChunks}/{health.totalChunks} chunks online ï¿½ 
                                 {health.needsRepair ? ' ?? Needs repair' : ' ? Healthy'}
                               </div>
                             )}
@@ -8288,9 +8288,9 @@
               </div>
               <div className="text-cyan-400/80 pl-4 space-y-1">
                 <span className="text-emerald-400">SELECTION CRITERIA:</span><br/>
-                <span className="text-white">  • Reputation score: HIGH</span><br/>
-                <span className="text-white">  • Uptime: {nodes.filter(n => n.online).length > 0 ? (nodes.filter(n => n.online).reduce((sum, n) => sum + n.uptime, 0) / nodes.filter(n => n.online).length).toFixed(1) : 0}% avg</span><br/>
-                <span className="text-white">  • Stake amount: {nodes.filter(n => n.stakedAmount).length} nodes staking</span>
+                <span className="text-white">  ï¿½ Reputation score: HIGH</span><br/>
+                <span className="text-white">  ï¿½ Uptime: {nodes.filter(n => n.online).length > 0 ? (nodes.filter(n => n.online).reduce((sum, n) => sum + n.uptime, 0) / nodes.filter(n => n.online).length).toFixed(1) : 0}% avg</span><br/>
+                <span className="text-white">  ï¿½ Stake amount: {nodes.filter(n => n.stakedAmount).length} nodes staking</span>
               </div>
               
               <div className="flex items-start gap-2">
@@ -9222,7 +9222,7 @@
                             </div>
                             <div className="text-sm text-white/50 mt-1">$WHISTLE available for redistribution</div>
                             <div className="text-xs text-white/40 mt-2">
-                              From x402 payments • Wallet: G1RH...M6Pg
+                              From x402 payments ï¿½ Wallet: G1RH...M6Pg
                             </div>
                           </div>
                           <div className="text-5xl">??</div>
@@ -9277,7 +9277,7 @@
                                     {estimatedShare.toLocaleString(undefined, {maximumFractionDigits: 2})}
                                   </div>
                                   <div className="text-[9px] text-white/40">
-                                    $WHISTLE • {((estimatedShare / distributionPool) * 100).toFixed(2)}% of distribution pool
+                                    $WHISTLE ï¿½ {((estimatedShare / distributionPool) * 100).toFixed(2)}% of distribution pool
                                   </div>
                                 </div>
                               </div>
@@ -9323,7 +9323,7 @@
                         <span className="text-base text-white/30">...</span>
                       }
                     </div>
-                    <div className="text-[9px] text-white/40 mt-1">$WHISTLE • 90% of fee pool</div>
+                    <div className="text-[9px] text-white/40 mt-1">$WHISTLE ï¿½ 90% of fee pool</div>
                   </div>
                   
                   {/* Total Staked */}
@@ -9385,7 +9385,7 @@
                         </div>
                         <div className="col-span-2 text-right">
                           <div className="text-emerald-400 font-mono text-xs font-bold">
-                            {staker.estimatedShare > 0 ? staker.estimatedShare.toLocaleString(undefined, {maximumFractionDigits: 2}) : '—'}
+                            {staker.estimatedShare > 0 ? staker.estimatedShare.toLocaleString(undefined, {maximumFractionDigits: 2}) : 'ï¿½'}
                           </div>
                         </div>
                       </div>
@@ -9404,12 +9404,12 @@
                 90% of x402 fees are redistributed to stakers every 24h. Your share is calculated using:
               </div>
               <div className="bg-black/60 rounded-lg p-2 text-[10px] text-white/70 font-mono border border-white/10 backdrop-blur-xl">
-                share = (stake_weight × 0.6) + (time_weight × 0.2) + (reputation_weight × 0.2)
+                share = (stake_weight ï¿½ 0.6) + (time_weight ï¿½ 0.2) + (reputation_weight ï¿½ 0.2)
               </div>
               <div className="text-white/50 text-[10px]">
-                • <span className="text-emerald-400">stake_weight</span>: your_stake / total_staked<br/>
-                • <span className="text-white/60">time_weight</span>: min(days_staked / 30, 1)<br/>
-                • <span className="text-white/60">reputation_weight</span>: reputation / 100,000
+                ï¿½ <span className="text-emerald-400">stake_weight</span>: your_stake / total_staked<br/>
+                ï¿½ <span className="text-white/60">time_weight</span>: min(days_staked / 30, 1)<br/>
+                ï¿½ <span className="text-white/60">reputation_weight</span>: reputation / 100,000
               </div>
             </div>
           </div>
@@ -10912,7 +10912,7 @@ console.log('? Fingerprint spoofing active!');`;
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 relative z-10">
               <div>
                 <h1 className="text-xl font-black text-white tracking-tight mb-1">Solana Privacy Toolkit</h1>
-                <p className="text-xs text-white/50">7 Production-ready privacy tools • Pure client-side</p>
+                <p className="text-xs text-white/50">7 Production-ready privacy tools ï¿½ Pure client-side</p>
               </div>
               <div className="px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/30">
                 <span className="text-emerald-400 text-[10px] font-bold">ACTIVE</span>
@@ -11839,7 +11839,7 @@ console.log('? Fingerprint spoofing active!');`;
                       <div className="space-y-2 mb-6">
                         {tool.features.map((feature, idx) => (
                           <div key={idx} className="flex items-center gap-2 text-xs text-white/50">
-                            <span className={isFirst && idx === 0 ? 'text-emerald-500' : 'text-white/40'}>•</span>
+                            <span className={isFirst && idx === 0 ? 'text-emerald-500' : 'text-white/40'}>ï¿½</span>
                             <span>{feature}</span>
                           </div>
                         ))}
@@ -12090,7 +12090,7 @@ console.log('? Fingerprint spoofing active!');`;
               </h1>
               
               <p className="text-sm sm:text-base text-white/40 max-w-2xl mx-auto mb-6 leading-relaxed font-light">
-                Stake $WHISTLE • Run Privacy Nodes • Earn Rewards
+                Stake $WHISTLE ï¿½ Run Privacy Nodes ï¿½ Earn Rewards
               </p>
               
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 max-w-2xl mx-auto">
@@ -12272,7 +12272,7 @@ console.log('? Fingerprint spoofing active!');`;
                 <ul className="text-sm text-white/70 list-disc list-inside space-y-1 mt-1">
                   <li>Write tip + attach files</li>
                   <li>Generate Offer and share it</li>
-                  <li>Paste Answer • Connect • Send</li>
+                  <li>Paste Answer ï¿½ Connect ï¿½ Send</li>
                 </ul>
                 <button onClick={() => { setStep('send'); setOpen(false); }} className="mt-3 w-full rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold px-4 py-2 border border-white/10">I'm the Sender</button>
 </div>
@@ -12442,7 +12442,7 @@ console.log('? Fingerprint spoofing active!');`;
         a.download = 'vacation-photo.png';
         a.click();
         URL.revokeObjectURL(url);
-        pushToast("Image downloaded — share it anywhere!", "ok");
+        pushToast("Image downloaded ï¿½ share it anywhere!", "ok");
       }
 
       async function copyOffer(){
@@ -12457,7 +12457,7 @@ console.log('? Fingerprint spoofing active!');`;
             pushToast("Shared", "ok");
           } else {
             await navigator.clipboard.writeText(message);
-            pushToast("Offer + instructions copied — share anywhere", "ok");
+            pushToast("Offer + instructions copied ï¿½ share anywhere", "ok");
           }
         }catch(e){ pushToast("Share failed", "err"); }
       }
@@ -12498,7 +12498,7 @@ console.log('? Fingerprint spoofing active!');`;
           if (!peerRef.current) throw new Error("Create an Offer first");
           const ans = JSON.parse(b64ToText(answerIn.trim()));
           await peerRef.current.setRemoteDescription(new RTCSessionDescription(ans));
-          setConnStatus("Connecting…");
+          setConnStatus("Connectingï¿½");
           setConnecting(true);
         } catch (e) {
           pushToast("Accept failed: " + (e.message || e), "err");
@@ -12578,7 +12578,7 @@ console.log('? Fingerprint spoofing active!');`;
         <>
           <OpSecChecklist open={showOpSec} onClose={()=>setShowOpSec(false)} onConfirm={actualSend} />
           
-          <GlassCard title="Sender — Send" subtitle="Compose, connect, and send end-to-end encrypted">
+          <GlassCard title="Sender ï¿½ Send" subtitle="Compose, connect, and send end-to-end encrypted">
             {/* Privacy Tools */}
             <div className="mb-4 p-3 rounded-xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-400/20">
               <div className="flex items-center gap-2 mb-2">
@@ -12603,7 +12603,7 @@ console.log('? Fingerprint spoofing active!');`;
                     <h5 className="text-white/90 font-semibold text-xs">?? Covert Communication Mode</h5>
                   </div>
                   <p className="text-xs text-white/60 mb-2">
-                    <strong>The offer will be hidden inside an image.</strong> Share it like a normal photo — no suspicious text codes needed!
+                    <strong>The offer will be hidden inside an image.</strong> Share it like a normal photo ï¿½ no suspicious text codes needed!
                   </p>
                   <input ref={stegoFileRef} type="file" accept="image/*" className="w-full rounded-lg bg-white/[0.06] border border-white/10 p-2 text-xs mb-2" />
                   <div className="flex gap-2">
@@ -12634,7 +12634,7 @@ console.log('? Fingerprint spoofing active!');`;
                         <i data-lucide="check-circle" className="w-4 h-4"></i>
                         <strong>Ready to share!</strong>
                       </div>
-                      <p className="text-white/70">Send via: Email, WhatsApp, Telegram, Twitter DM, Instagram, Facebook, Discord, or any messaging app. The image looks 100% innocent — perfect cover!</p>
+                      <p className="text-white/70">Send via: Email, WhatsApp, Telegram, Twitter DM, Instagram, Facebook, Discord, or any messaging app. The image looks 100% innocent ï¿½ perfect cover!</p>
                     </div>
                   )}
                   {!offerOut && (
@@ -12679,7 +12679,7 @@ console.log('? Fingerprint spoofing active!');`;
                 <h4 className="text-white/90 font-semibold">?? Steganography Mode Active</h4>
               </div>
               <p className="text-sm text-white/80">
-                Your Offer is ready. <strong>Don't copy/paste the text below</strong> — instead, use the stego image above. 
+                Your Offer is ready. <strong>Don't copy/paste the text below</strong> ï¿½ instead, use the stego image above. 
                 It's hidden inside an innocent-looking photo for maximum security.
               </p>
             </div>
@@ -12689,7 +12689,7 @@ console.log('? Fingerprint spoofing active!');`;
       <div>
               <h4 className="flex items-center gap-2 text-white/90 font-semibold mb-1">
                 <i data-lucide="key" className="w-5 h-5 text-cyan-400"></i>
-                Step A — Create Offer {stegoMode && '(for Stego Image)'}
+                Step A ï¿½ Create Offer {stegoMode && '(for Stego Image)'}
               </h4>
               <div className="flex gap-2">
                 <button onClick={(e)=>{ ripple(e); makeOffer(); }} className="flex items-center gap-2 rounded-xl bg-cyan-500/80 hover:bg-cyan-400 text-black font-semibold px-4 py-2 btn-ripple active:scale-[.98]">
@@ -12718,14 +12718,14 @@ console.log('? Fingerprint spoofing active!');`;
               {waitingForAnswer && !answerIn.trim() && connStatus!=="Connected" && (
                 <div className="mt-2 flex items-center gap-2 text-xs text-white/60 scale-in">
                   <span className="inline-block h-3 w-3 rounded-full border-2 border-white/30 border-t-cyan-400 animate-spin rotate-slow" />
-                  <span className="pulse-glow">Waiting for newsroom Answer…</span>
+                  <span className="pulse-glow">Waiting for newsroom Answerï¿½</span>
                 </div>
               )}
       </div>
       <div>
               <h4 className="flex items-center gap-2 text-white/90 font-semibold mb-1">
                 <i data-lucide="message-square" className="w-5 h-5 text-purple-400"></i>
-                Step B — Paste Answer
+                Step B ï¿½ Paste Answer
               </h4>
               <textarea value={answerIn} onChange={(e) => { setAnswerIn(e.target.value); if(e.target.value.trim()) setWaitingForAnswer(false); }} rows={6} className="w-full rounded-xl bg-white/[0.06] border border-white/10 p-3 font-mono text-xs" placeholder="Paste newsroom Answer here" />
               <div className="flex items-center gap-3 mt-2 flex-wrap">
@@ -12749,7 +12749,7 @@ console.log('? Fingerprint spoofing active!');`;
               {connecting && connStatus!=="Connected" && (
                 <div className="mt-2 flex items-center gap-2 text-xs text-white/60 scale-in">
                   <span className="inline-block h-3 w-3 rounded-full border-2 border-white/30 border-t-purple-400 animate-spin rotate-slow" />
-                  <span className="pulse-glow">Connecting to newsroom…</span>
+                  <span className="pulse-glow">Connecting to newsroomï¿½</span>
     </div>
               )}
       </div>
@@ -12758,7 +12758,7 @@ console.log('? Fingerprint spoofing active!');`;
           <div className="mt-4">
             <button onClick={(e)=>{ ripple(e); sendNow(); }} className="flex items-center gap-2 justify-center rounded-xl bg-gradient-to-r from-cyan-400 to-purple-400 hover:from-cyan-300 hover:to-purple-300 text-black font-semibold px-6 py-3 disabled:opacity-60 btn-ripple btn-press shadow-lg hover:shadow-xl transition-all" disabled={connStatus !== "Connected" || sending}>
               <i data-lucide={sending ? "loader" : "rocket"} className={`w-5 h-5 ${sending ? 'animate-spin' : ''}`}></i>
-              {sending ? "Sending…" : "Send Encrypted Tip"}
+              {sending ? "Sendingï¿½" : "Send Encrypted Tip"}
             </button>
             {sending && (
               <div className="mt-2 h-2 w-full rounded-full bg-white/10 overflow-hidden scale-in">
@@ -12779,7 +12779,7 @@ console.log('? Fingerprint spoofing active!');`;
     function Receiver({ pushToast, onHashReady, setVerifyHash }) {
       const [offerIn, setOfferIn] = useState("");
       const [answerOut, setAnswerOut] = useState("");
-      const [status, setStatus] = useState("Waiting…");
+      const [status, setStatus] = useState("Waitingï¿½");
       const [prog, setProg] = useState(0);
       const [text, setText] = useState("");
       const [files, setFiles] = useState([]);
@@ -12832,7 +12832,7 @@ console.log('? Fingerprint spoofing active!');`;
         try{ dcRef.current?.close?.(); }catch{}
         try{ peerRef.current?.close?.(); }catch{}
         if (destructTimerRef.current) clearInterval(destructTimerRef.current);
-        setOfferIn(""); setAnswerOut(""); setStatus("Waiting…"); setProg(0); setText(""); setFiles([]); setHash(""); setDestructCountdown(null);
+        setOfferIn(""); setAnswerOut(""); setStatus("Waitingï¿½"); setProg(0); setText(""); setFiles([]); setHash(""); setDestructCountdown(null);
         pushToast("Newsroom reset", "ok");
       }
       
@@ -12921,7 +12921,7 @@ console.log('? Fingerprint spoofing active!');`;
       }
 
       return (
-        <GlassCard title="Receiver — Receive" subtitle="Paste Offer, generate Answer, accept the stream">
+        <GlassCard title="Receiver ï¿½ Receive" subtitle="Paste Offer, generate Answer, accept the stream">
           {/* Steganography Extraction */}
           <div className="mb-4 p-3 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-400/20">
             <div className="flex items-center gap-2 mb-2">
@@ -12969,7 +12969,7 @@ console.log('? Fingerprint spoofing active!');`;
             <div>
               <h4 className="flex items-center gap-2 text-white/90 font-semibold mb-1">
                 <i data-lucide="inbox" className="w-5 h-5 text-cyan-400"></i>
-                Step 1 — Paste Offer
+                Step 1 ï¿½ Paste Offer
               </h4>
                <p className="text-xs text-white/50 mb-1">Paste the code the sender sent you. Then click <span className="text-white/70 font-semibold">Generate Answer</span> and send the Answer back to the sender.</p>
               <textarea value={offerIn} onChange={(e) => setOfferIn(e.target.value)} rows={6} className="w-full rounded-xl bg-white/[0.06] border border-white/10 p-3 font-mono text-xs" placeholder="Paste tipster Offer here (or extract from image above)" />
@@ -13095,7 +13095,7 @@ console.log('? Fingerprint spoofing active!');`;
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="text-xs text-white/60">Bundle hash (sha256 hex or short code)</label>
-              <input value={hashIn} onChange={(e) => setHashIn(e.target.value)} placeholder="e.g., 4f2c… or whis.abcd.efgh…" className="mt-1 w-full rounded-xl bg-white/[0.06] border border-white/10 p-3 font-mono text-xs outline-none focus:ring-2 focus:ring-cyan-400/40" />
+              <input value={hashIn} onChange={(e) => setHashIn(e.target.value)} placeholder="e.g., 4f2cï¿½ or whis.abcd.efghï¿½" className="mt-1 w-full rounded-xl bg-white/[0.06] border border-white/10 p-3 font-mono text-xs outline-none focus:ring-2 focus:ring-cyan-400/40" />
 
               <button onClick={postMemo} className="mt-3 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold px-4 py-2 border border-white/10">Post Memo</button>
               {memoSig && (
@@ -13115,7 +13115,7 @@ console.log('? Fingerprint spoofing active!');`;
                   <div key={h.id} className="flex items-center justify-between px-3 py-2 border-b border-white/5">
                     <div className="min-w-0">
                       <div className="text-white/80 font-mono truncate">{h.short}</div>
-                      <div className="text-white/40 text-[11px]">{h.kind} • {new Date(h.at).toLocaleString()}</div>
+                      <div className="text-white/40 text-[11px]">{h.kind} ï¿½ {new Date(h.at).toLocaleString()}</div>
                     </div>
                     <div className="flex gap-2 ml-3 shrink-0">
                       <button onClick={async ()=>{ try{ await navigator.clipboard.writeText(h.short); pushToast('Copied short code','ok'); }catch{} }} className="rounded-md bg-white/10 hover:bg-white/20 text-white text-[11px] px-2 py-1 border border-white/10">Copy</button>
@@ -13245,7 +13245,7 @@ console.log('? Fingerprint spoofing active!');`;
       }
       
       return (
-        <GlassCard title="?? Steganography — Sender" subtitle="Hide your message inside an innocent-looking image">
+        <GlassCard title="?? Steganography ï¿½ Sender" subtitle="Hide your message inside an innocent-looking image">
           <div className="space-y-4">
             {/* Mode Selection */}
             <div className="p-3 rounded-xl bg-gradient-to-r from-cyan-500/10 to-purple-500/10 border border-cyan-400/20">
@@ -13273,7 +13273,7 @@ console.log('? Fingerprint spoofing active!');`;
                 </button>
               </div>
               <p className="text-xs text-white/60 mt-2">
-                ?? <strong>Spread Spectrum</strong> is recommended — it survives compression from social media apps!
+                ?? <strong>Spread Spectrum</strong> is recommended ï¿½ it survives compression from social media apps!
               </p>
             </div>
             
@@ -13479,7 +13479,7 @@ console.log('? Fingerprint spoofing active!');`;
       }
       
       return (
-        <GlassCard title="?? Steganography — Receiver" subtitle="Extract hidden messages from images">
+        <GlassCard title="?? Steganography ï¿½ Receiver" subtitle="Extract hidden messages from images">
           <div className="space-y-4">
             {/* Mode Selection */}
             <div className="p-3 rounded-xl bg-gradient-to-r from-cyan-500/10 to-purple-500/10 border border-cyan-400/20">
@@ -13827,7 +13827,7 @@ console.log('? Fingerprint spoofing active!');`;
       }
       
       return (
-        <GlassCard title="?? Audio Steganography — Sender" subtitle="Hide messages inside audio files (WAV, MP3)">
+        <GlassCard title="?? Audio Steganography ï¿½ Sender" subtitle="Hide messages inside audio files (WAV, MP3)">
           <div className="space-y-4">
             <div className="p-3 rounded-xl bg-gradient-to-r from-pink-500/10 to-rose-500/10 border border-pink-400/20">
               <div className="flex items-center gap-2 mb-2">
@@ -13964,7 +13964,7 @@ console.log('? Fingerprint spoofing active!');`;
       }
       
       return (
-        <GlassCard title="?? Audio Steganography — Receiver" subtitle="Extract hidden messages from audio files">
+        <GlassCard title="?? Audio Steganography ï¿½ Receiver" subtitle="Extract hidden messages from audio files">
           <div className="space-y-4">
             <div className="p-3 rounded-xl bg-gradient-to-r from-pink-500/10 to-rose-500/10 border border-pink-400/20">
               <div className="flex items-center gap-2 mb-2">
@@ -14087,7 +14087,7 @@ console.log('? Fingerprint spoofing active!');`;
       }
       
       return (
-        <GlassCard title="?? Video Steganography — Sender" subtitle="Hide messages across video frames">
+        <GlassCard title="?? Video Steganography ï¿½ Sender" subtitle="Hide messages across video frames">
           <div className="space-y-4">
             <div className="p-3 rounded-xl bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-400/20">
               <div className="flex items-center gap-2 mb-2">
@@ -14235,7 +14235,7 @@ console.log('? Fingerprint spoofing active!');`;
       }
       
       return (
-        <GlassCard title="?? Video Steganography — Receiver" subtitle="Extract hidden messages from videos">
+        <GlassCard title="?? Video Steganography ï¿½ Receiver" subtitle="Extract hidden messages from videos">
           <div className="space-y-4">
             <div className="p-3 rounded-xl bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-400/20">
               <div className="flex items-center gap-2 mb-2">
@@ -14576,8 +14576,8 @@ console.log('? Fingerprint spoofing active!');`;
           },
           // Layer 2: Ancient scripts and symbols
           {
-            'a': 'a', 'b': 'ß', 'c': '?', 'd': 'd', 'e': 'e', 'f': 'f', 'g': '?', 'h': '?',
-            'i': '?', 'j': '?', 'k': '?', 'l': '?', 'm': 'µ', 'n': '?', 'o': '?', 'p': 'p',
+            'a': 'a', 'b': 'ï¿½', 'c': '?', 'd': 'd', 'e': 'e', 'f': 'f', 'g': '?', 'h': '?',
+            'i': '?', 'j': '?', 'k': '?', 'l': '?', 'm': 'ï¿½', 'n': '?', 'o': '?', 'p': 'p',
             'q': '?', 'r': '?', 's': 's', 't': 't', 'u': '?', 'v': '?', 'w': '?', 'x': '?',
             'y': '?', 'z': '?',
             'A': '?', 'B': '?', 'C': 'G', 'D': '?', 'E': '?', 'F': 'F', 'G': 'G', 'H': '?',
@@ -14588,23 +14588,23 @@ console.log('? Fingerprint spoofing active!');`;
           // Layer 3: Mathematical operators and symbols
           {
             'a': '?', 'b': '?', 'c': '?', 'd': '?', 'e': '?', 'f': '?', 'g': '?', 'h': '?',
-            'i': '?', 'j': '?', 'k': '?', 'l': '?', 'm': '?', 'n': '8', 'o': 'Ø', 'p': '?',
+            'i': '?', 'j': '?', 'k': '?', 'l': '?', 'm': '?', 'n': '8', 'o': 'ï¿½', 'p': '?',
             'q': '?', 'r': '?', 's': '?', 't': '?', 'u': '?', 'v': 'n', 'w': '?', 'x': '?',
             'y': '?', 'z': '?',
             'A': '?', 'B': '?', 'C': '?', 'D': '?', 'E': '?', 'F': '?', 'G': '?', 'H': '?',
-            'I': '?', 'J': '?', 'K': '?', 'L': '?', 'M': '?', 'N': '8', 'O': 'Ø', 'P': '?',
+            'I': '?', 'J': '?', 'K': '?', 'L': '?', 'M': '?', 'N': '8', 'O': 'ï¿½', 'P': '?',
             'Q': '?', 'R': '?', 'S': '?', 'T': '?', 'U': '?', 'V': 'n', 'W': '?', 'X': '?',
             'Y': '?', 'Z': '?'
           },
           // Layer 4: Weird Unicode blocks and symbols
           {
-            'a': '?', 'b': '?', 'c': '?', 'd': '_', 'e': '?', 'f': '?', 'g': '?', 'h': '¦',
-            'i': '?', 'j': '?', 'k': '?', 'l': '¦', 'm': '?', 'n': '?', 'o': '?', 'p': '¦',
-            'q': '¦', 'r': '¦', 's': '¦', 't': '¦', 'u': '¯', 'v': '?', 'w': '?', 'x': '?',
+            'a': '?', 'b': '?', 'c': '?', 'd': '_', 'e': '?', 'f': '?', 'g': '?', 'h': 'ï¿½',
+            'i': '?', 'j': '?', 'k': '?', 'l': 'ï¿½', 'm': '?', 'n': '?', 'o': '?', 'p': 'ï¿½',
+            'q': 'ï¿½', 'r': 'ï¿½', 's': 'ï¿½', 't': 'ï¿½', 'u': 'ï¿½', 'v': '?', 'w': '?', 'x': '?',
             'y': '_', 'z': '?',
-            'A': '?', 'B': '?', 'C': '¦', 'D': '?', 'E': '?', 'F': '?', 'G': '¦', 'H': '?',
-            'I': '?', 'J': '?', 'K': '¦', 'L': '¦', 'M': '¦', 'N': '¦', 'O': '¦', 'P': '¯',
-            'Q': '?', 'R': '?', 'S': '?', 'T': '_', 'U': '?', 'V': '?', 'W': '?', 'X': '¦',
+            'A': '?', 'B': '?', 'C': 'ï¿½', 'D': '?', 'E': '?', 'F': '?', 'G': 'ï¿½', 'H': '?',
+            'I': '?', 'J': '?', 'K': 'ï¿½', 'L': 'ï¿½', 'M': 'ï¿½', 'N': 'ï¿½', 'O': 'ï¿½', 'P': 'ï¿½',
+            'Q': '?', 'R': '?', 'S': '?', 'T': '_', 'U': '?', 'V': '?', 'W': '?', 'X': 'ï¿½',
             'Y': '?', 'Z': '?'
           },
           // Layer 5: Musical and currency symbols
@@ -14651,8 +14651,8 @@ console.log('? Fingerprint spoofing active!');`;
           '?': 'Y', '?': 'Z',
           
           // Layer 2: Ancient scripts and symbols
-          'a': 'a', 'ß': 'b', '?': 'c', 'd': 'd', 'e': 'e', 'f': 'f', '?': 'h',
-          '?': 'i', '?': 'k', '?': 'l', 'µ': 'm', '?': 'n', '?': 'o', 'p': 'p',
+          'a': 'a', 'ï¿½': 'b', '?': 'c', 'd': 'd', 'e': 'e', 'f': 'f', '?': 'h',
+          '?': 'i', '?': 'k', '?': 'l', 'ï¿½': 'm', '?': 'n', '?': 'o', 'p': 'p',
           '?': 'q', '?': 'r', 's': 's', 't': 't', '?': 'u', '?': 'w', '?': 'x',
           '?': 'y', '?': 'z',
           '?': 'A', '?': 'B', 'G': 'C', '?': 'D', '?': 'E', 'F': 'F', '?': 'H',
@@ -14662,13 +14662,13 @@ console.log('? Fingerprint spoofing active!');`;
           
           // Layer 3: Mathematical operators and symbols
           '?': 'a', '?': 'b', '?': 'c', '?': 'd', '?': 'g', '?': 'h',
-          '?': 'i', '?': 'j', '?': 'k', '?': 'l', '?': 'm', '8': 'n', 'Ø': 'o', '?': 'p',
+          '?': 'i', '?': 'j', '?': 'k', '?': 'l', '?': 'm', '8': 'n', 'ï¿½': 'o', '?': 'p',
           '?': 'q', '?': 'u', 'n': 'v', '?': 'w', '?': 'x', '?': 'y', '?': 'z',
           
           // Layer 4: Weird Unicode blocks and symbols
-          '?': 'a', '?': 'b', '?': 'c', '_': 'd', '?': 'e', '?': 'f', '?': 'g', '¦': 'h',
-          '?': 'i', '?': 'j', '?': 'k', '¦': 'l', '?': 'm', '?': 'n', '?': 'o', '¦': 'p',
-          '¦': 'q', '¦': 'r', '¦': 's', '¯': 'u',
+          '?': 'a', '?': 'b', '?': 'c', '_': 'd', '?': 'e', '?': 'f', '?': 'g', 'ï¿½': 'h',
+          '?': 'i', '?': 'j', '?': 'k', 'ï¿½': 'l', '?': 'm', '?': 'n', '?': 'o', 'ï¿½': 'p',
+          'ï¿½': 'q', 'ï¿½': 'r', 'ï¿½': 's', 'ï¿½': 'u',
           
           // Layer 5: Musical and currency symbols
           '?': 'a', '?': 'b', '?': 'c', '?': 'd', '?': 'e', '?': 'f', '?': 'g', '?': 'h',
@@ -15756,7 +15756,7 @@ console.log('? Fingerprint spoofing active!');`;
                     className="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 disabled:bg-gray-500 disabled:cursor-not-allowed text-white rounded-lg transition-all"
                     title={!mainWalletConnected ? "Connect your wallet in the navbar first" : "Create a new Pump Portal wallet"}
                   >
-                    {creating ? 'Creating…' : 'Create Wallet'}
+                    {creating ? 'Creatingï¿½' : 'Create Wallet'}
                   </button>
                   <button onClick={resetAll} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all">Reset</button>
                 </div>
@@ -16201,7 +16201,7 @@ console.log('? Fingerprint spoofing active!');`;
                   </div>
                   <div>
                     <h2 className="text-2xl font-bold text-white mb-1">Developer Credibility Score</h2>
-                    <p className="text-emerald-300 text-sm">Anonymous • Verified • Shareable</p>
+                    <p className="text-emerald-300 text-sm">Anonymous ï¿½ Verified ï¿½ Shareable</p>
                   </div>
                 </div>
               </div>
@@ -16903,11 +16903,11 @@ console.log('? Fingerprint spoofing active!');`;
                     <div>
                       <h3 className="text-white font-semibold mb-2">Improve Your Privacy</h3>
                       <ul className="text-sm text-white/70 space-y-1">
-                        <li>• Use privacy-focused browser (Brave, Firefox with hardening)</li>
-                        <li>• Enable DNS-over-HTTPS (DoH) in browser settings</li>
-                        <li>• Install WebRTC blocking extension</li>
-                        <li>• Disable JavaScript on sensitive sites</li>
-                        <li>• Consider using Tor Browser for maximum anonymity</li>
+                        <li>ï¿½ Use privacy-focused browser (Brave, Firefox with hardening)</li>
+                        <li>ï¿½ Enable DNS-over-HTTPS (DoH) in browser settings</li>
+                        <li>ï¿½ Install WebRTC blocking extension</li>
+                        <li>ï¿½ Disable JavaScript on sensitive sites</li>
+                        <li>ï¿½ Consider using Tor Browser for maximum anonymity</li>
                       </ul>
                     </div>
                   </div>
@@ -16923,10 +16923,10 @@ console.log('? Fingerprint spoofing active!');`;
                   <div>
                     <h3 className="text-white font-semibold mb-2">What We Check</h3>
                     <ul className="text-sm text-white/70 space-y-1">
-                      <li>• <strong>WebRTC Leaks:</strong> Can reveal your real IP even with VPN</li>
-                      <li>• <strong>DNS Privacy:</strong> Are your DNS queries encrypted?</li>
-                      <li>• <strong>Browser Fingerprint:</strong> How unique/trackable you are</li>
-                      <li>• <strong>Privacy Score:</strong> Overall assessment (0-100)</li>
+                      <li>ï¿½ <strong>WebRTC Leaks:</strong> Can reveal your real IP even with VPN</li>
+                      <li>ï¿½ <strong>DNS Privacy:</strong> Are your DNS queries encrypted?</li>
+                      <li>ï¿½ <strong>Browser Fingerprint:</strong> How unique/trackable you are</li>
+                      <li>ï¿½ <strong>Privacy Score:</strong> Overall assessment (0-100)</li>
                     </ul>
                   </div>
                 </div>
@@ -17037,9 +17037,9 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 ))}
               </div>
               <div className="mt-2 text-xs text-white/50">
-                {transport === 'obfs4' && '• Most reliable, looks like random traffic'}
-                {transport === 'snowflake' && '• Uses temporary proxies, good for heavy censorship'}
-                {transport === 'meek' && '• Mimics HTTPS traffic to CDN, slowest but hardest to block'}
+                {transport === 'obfs4' && 'ï¿½ Most reliable, looks like random traffic'}
+                {transport === 'snowflake' && 'ï¿½ Uses temporary proxies, good for heavy censorship'}
+                {transport === 'meek' && 'ï¿½ Mimics HTTPS traffic to CDN, slowest but hardest to block'}
               </div>
             </div>
 
@@ -17115,10 +17115,10 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   <div>
                     <h3 className="text-white font-semibold mb-2">Why Use Tor Bridges?</h3>
                     <ul className="text-sm text-white/70 space-y-1">
-                      <li>• <strong>Bypass Censorship:</strong> Access Tor in countries that block it</li>
-                      <li>• <strong>Extra Privacy:</strong> Your ISP can't see you're using Tor</li>
-                      <li>• <strong>Unlisted Relays:</strong> Harder for censors to find and block</li>
-                      <li>• <strong>Multiple Transports:</strong> Different methods to evade detection</li>
+                      <li>ï¿½ <strong>Bypass Censorship:</strong> Access Tor in countries that block it</li>
+                      <li>ï¿½ <strong>Extra Privacy:</strong> Your ISP can't see you're using Tor</li>
+                      <li>ï¿½ <strong>Unlisted Relays:</strong> Harder for censors to find and block</li>
+                      <li>ï¿½ <strong>Multiple Transports:</strong> Different methods to evade detection</li>
                     </ul>
                   </div>
                 </div>
@@ -17452,10 +17452,10 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                     <div>
                       <h3 className="text-white font-semibold mb-2">How to Bypass Censorship in {censorshipData.country}</h3>
                       <ul className="text-sm text-white/70 space-y-1">
-                        <li>• <strong>Use Tor Bridges:</strong> Access our Tor Bridge Finder tool</li>
-                        <li>• <strong>VPN Services:</strong> Use VPNs with obfuscation (Mullvad, ProtonVPN)</li>
-                        <li>• <strong>Encrypted DNS:</strong> Enable DNS-over-HTTPS to bypass DNS blocking</li>
-                        <li>• <strong>Steganography:</strong> Hide messages in images to avoid detection</li>
+                        <li>ï¿½ <strong>Use Tor Bridges:</strong> Access our Tor Bridge Finder tool</li>
+                        <li>ï¿½ <strong>VPN Services:</strong> Use VPNs with obfuscation (Mullvad, ProtonVPN)</li>
+                        <li>ï¿½ <strong>Encrypted DNS:</strong> Enable DNS-over-HTTPS to bypass DNS blocking</li>
+                        <li>ï¿½ <strong>Steganography:</strong> Hide messages in images to avoid detection</li>
                       </ul>
                     </div>
                   </div>
@@ -17471,11 +17471,11 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   <div>
                     <h3 className="text-white font-semibold mb-2">About This Tool</h3>
                     <ul className="text-sm text-white/70 space-y-1">
-                      <li>• <strong>Live Data:</strong> Real censorship measurements from around the world</li>
-                      <li>• <strong>Severity Levels:</strong> Extreme, High, and Moderate censorship classifications</li>
-                      <li>• <strong>Blocked Content:</strong> See which platforms and websites are inaccessible</li>
-                      <li>• <strong>Bypass Tools:</strong> Get specific recommendations for each country</li>
-                      <li>• <strong>Updated Daily:</strong> Fresh data from network measurements</li>
+                      <li>ï¿½ <strong>Live Data:</strong> Real censorship measurements from around the world</li>
+                      <li>ï¿½ <strong>Severity Levels:</strong> Extreme, High, and Moderate censorship classifications</li>
+                      <li>ï¿½ <strong>Blocked Content:</strong> See which platforms and websites are inaccessible</li>
+                      <li>ï¿½ <strong>Bypass Tools:</strong> Get specific recommendations for each country</li>
+                      <li>ï¿½ <strong>Updated Daily:</strong> Fresh data from network measurements</li>
                     </ul>
                     <div className="mt-3 pt-3 border-t border-white/10">
                       <p className="text-xs text-white/50">
@@ -17553,7 +17553,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
             privacy: 100,
             color: 'cyan',
             icon: 'shield-check',
-            description: 'This is an Orchard unified address—the latest and most private!',
+            description: 'This is an Orchard unified addressï¿½the latest and most private!',
             recommendation: 'Perfect! You\'re using Zcash\'s newest privacy technology.',
             features: ['? Maximum privacy', '? Orchard protocol', '? Future-proof']
           };
@@ -17648,9 +17648,9 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                       <div className="text-sm text-white/70">
                         <p className="font-semibold text-white mb-1">What's the difference?</p>
                         <ul className="space-y-1 text-xs">
-                          <li>• <strong className="text-red-400">Transparent (t-address):</strong> Like Bitcoin - everything visible</li>
-                          <li>• <strong className="text-emerald-400">Shielded (z-address):</strong> Private transactions - amounts & addresses hidden</li>
-                          <li>• <strong className="text-cyan-400">Orchard (u1-address):</strong> Latest protocol - maximum privacy</li>
+                          <li>ï¿½ <strong className="text-red-400">Transparent (t-address):</strong> Like Bitcoin - everything visible</li>
+                          <li>ï¿½ <strong className="text-emerald-400">Shielded (z-address):</strong> Private transactions - amounts & addresses hidden</li>
+                          <li>ï¿½ <strong className="text-cyan-400">Orchard (u1-address):</strong> Latest protocol - maximum privacy</li>
                         </ul>
                       </div>
                     </div>
@@ -17899,10 +17899,10 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                     <div>
                       <h3 className="text-white font-semibold mb-2">Privacy Tips</h3>
                       <ul className="text-sm text-white/70 space-y-1">
-                        <li>• Archive.today creates permanent snapshots without ads or tracking</li>
-                        <li>• 12ft Ladder bypasses paywalls on many news sites</li>
-                        <li>• Alternative frontends (Nitter, Invidious) don't track you</li>
-                        <li>• Combine with Tor or VPN for maximum anonymity</li>
+                        <li>ï¿½ Archive.today creates permanent snapshots without ads or tracking</li>
+                        <li>ï¿½ 12ft Ladder bypasses paywalls on many news sites</li>
+                        <li>ï¿½ Alternative frontends (Nitter, Invidious) don't track you</li>
+                        <li>ï¿½ Combine with Tor or VPN for maximum anonymity</li>
                       </ul>
                     </div>
                   </div>
@@ -17918,12 +17918,12 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   <div>
                     <h3 className="text-white font-semibold mb-2">Available Proxy Services</h3>
                     <ul className="text-sm text-white/70 space-y-1">
-                      <li>• <strong>Archive.today:</strong> Create permanent, ad-free snapshots</li>
-                      <li>• <strong>12ft Ladder:</strong> Bypass article paywalls</li>
-                      <li>• <strong>Nitter:</strong> View Twitter without tracking or login</li>
-                      <li>• <strong>Invidious:</strong> Watch YouTube without Google tracking</li>
-                      <li>• <strong>Teddit:</strong> Browse Reddit anonymously</li>
-                      <li>• <strong>Bibliogram:</strong> View Instagram without Meta tracking</li>
+                      <li>ï¿½ <strong>Archive.today:</strong> Create permanent, ad-free snapshots</li>
+                      <li>ï¿½ <strong>12ft Ladder:</strong> Bypass article paywalls</li>
+                      <li>ï¿½ <strong>Nitter:</strong> View Twitter without tracking or login</li>
+                      <li>ï¿½ <strong>Invidious:</strong> Watch YouTube without Google tracking</li>
+                      <li>ï¿½ <strong>Teddit:</strong> Browse Reddit anonymously</li>
+                      <li>ï¿½ <strong>Bibliogram:</strong> View Instagram without Meta tracking</li>
                     </ul>
                   </div>
                 </div>
@@ -20815,11 +20815,6 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                 </div>
                 
                 <div className="text-center">
-                  <div className="text-[10px] text-white/40 uppercase mb-1">Stakers</div>
-                  <div className="text-sm font-bold text-white">{globalStats.totalStakers}</div>
-                </div>
-                
-                <div className="text-center">
                   <div className="text-[10px] text-white/40 uppercase mb-1">Nodes</div>
                   <div className="text-sm font-bold text-white">{networkStats.totalNodes}</div>
                 </div>
@@ -21564,7 +21559,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                       ?? Anonymous Relay Service
                     </h2>
                     <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
-                      Send transactions anonymously through privacy nodes • Works offline • Multi-hop encryption
+                      Send transactions anonymously through privacy nodes ï¿½ Works offline ï¿½ Multi-hop encryption
                     </p>
                   </div>
                   <div className="px-4 py-2 bg-purple-100 dark:bg-purple-900/50 rounded-full">
@@ -21697,7 +21692,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                             />
                             <div>
                               <div className="font-bold text-slate-900 dark:text-white">Standard (3 hops)</div>
-                              <div className="text-xs text-slate-600 dark:text-slate-400">Good privacy • Fast</div>
+                              <div className="text-xs text-slate-600 dark:text-slate-400">Good privacy ï¿½ Fast</div>
                             </div>
                           </div>
                           <div className="text-sm font-bold text-purple-600 dark:text-purple-400">15 $WHISTLE</div>
@@ -21714,7 +21709,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                             />
                             <div>
                               <div className="font-bold text-slate-900 dark:text-white">High (5 hops) ? Recommended</div>
-                              <div className="text-xs text-slate-600 dark:text-slate-400">Strong privacy • Balanced</div>
+                              <div className="text-xs text-slate-600 dark:text-slate-400">Strong privacy ï¿½ Balanced</div>
                             </div>
                           </div>
                           <div className="text-sm font-bold text-purple-600 dark:text-purple-400">25 $WHISTLE</div>
@@ -21731,7 +21726,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                             />
                             <div>
                               <div className="font-bold text-slate-900 dark:text-white">Maximum (7 hops)</div>
-                              <div className="text-xs text-slate-600 dark:text-slate-400">Extreme privacy • Slower</div>
+                              <div className="text-xs text-slate-600 dark:text-slate-400">Extreme privacy ï¿½ Slower</div>
                             </div>
                           </div>
                           <div className="text-sm font-bold text-purple-600 dark:text-purple-400">50 $WHISTLE</div>
@@ -21751,9 +21746,9 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                             Sign transaction offline, then transmit via:
                           </div>
                           <div className="text-xs text-indigo-600 dark:text-indigo-400 space-y-1">
-                            <div>• Nearby nodes (automatic if node detected)</div>
-                            <div>• QR Code (scan with internet-connected device)</div>
-                            <div>• Bluetooth/WiFi Direct</div>
+                            <div>ï¿½ Nearby nodes (automatic if node detected)</div>
+                            <div>ï¿½ QR Code (scan with internet-connected device)</div>
+                            <div>ï¿½ Bluetooth/WiFi Direct</div>
                           </div>
                         </div>
                       </div>
@@ -21826,7 +21821,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                                  relay.status === 'in-progress' ? 'In Progress' : 'Completed'}
                               </div>
                               <div className="text-sm text-slate-600 dark:text-slate-400">
-                                {relay.hops} hops • {relay.fee} $WHISTLE • {new Date(relay.created).toLocaleTimeString()}
+                                {relay.hops} hops ï¿½ {relay.fee} $WHISTLE ï¿½ {new Date(relay.created).toLocaleTimeString()}
                               </div>
                             </div>
                           </div>
@@ -21868,7 +21863,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                     </div>
                     
                     <div className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-                      Privacy: {privacyLevel} hops • Fee: {calculateRelayFee(privacyLevel)} $WHISTLE
+                      Privacy: {privacyLevel} hops ï¿½ Fee: {calculateRelayFee(privacyLevel)} $WHISTLE
                     </div>
                     
                     <button
@@ -21950,7 +21945,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   <div className="bg-slate-100 dark:bg-slate-800 rounded-xl p-4">
                     <div className="text-xs text-slate-600 dark:text-slate-400 mb-1 uppercase tracking-wider">Wallet Balance</div>
                     <div className="text-2xl font-black text-slate-900 dark:text-white">{tokenBalance === null ? 'Loading...' : tokenBalance.toLocaleString()} $WHISTLE</div>
-                    <div className="text-xs text-slate-500 dark:text-slate-500 mt-1">˜ ${tokenBalance === null ? '0.00' : (tokenBalance * 0.00013).toFixed(2)} USD</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-500 mt-1">ï¿½ ${tokenBalance === null ? '0.00' : (tokenBalance * 0.00013).toFixed(2)} USD</div>
                   </div>
 
                   {/* Amount Input */}
@@ -22266,11 +22261,11 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   <div className="bg-gray-900 rounded-lg p-4 border border-gray-700">
                     <h3 className="text-lg font-bold text-white mb-3">KEY FEATURES</h3>
                     <ul className="space-y-2 text-sm text-gray-300">
-                      <li>• Anonymous SOL transfers</li>
-                      <li>• Multi-hop privacy (minimum 3 hops)</li>
-                      <li>• Decentralized node network</li>
-                      <li>• Reputation-based rewards</li>
-                      <li>• Smart contract security</li>
+                      <li>ï¿½ Anonymous SOL transfers</li>
+                      <li>ï¿½ Multi-hop privacy (minimum 3 hops)</li>
+                      <li>ï¿½ Decentralized node network</li>
+                      <li>ï¿½ Reputation-based rewards</li>
+                      <li>ï¿½ Smart contract security</li>
                     </ul>
                   </div>
                 </div>
@@ -22418,11 +22413,11 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                   <div className="bg-gray-900 rounded-lg p-4 border border-gray-700">
                     <h3 className="text-lg font-bold text-white mb-3">FUTURE ROADMAP</h3>
                     <ul className="space-y-2 text-sm text-gray-300">
-                      <li>• Cross-chain relays</li>
-                      <li>• AI-powered routing</li>
-                      <li>• Enterprise features</li>
-                      <li>• Layer 2 integration</li>
-                      <li>• Developer SDK</li>
+                      <li>ï¿½ Cross-chain relays</li>
+                      <li>ï¿½ AI-powered routing</li>
+                      <li>ï¿½ Enterprise features</li>
+                      <li>ï¿½ Layer 2 integration</li>
+                      <li>ï¿½ Developer SDK</li>
                     </ul>
                   </div>
                 </div>
@@ -23310,7 +23305,7 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                                   Download Protected Image
                                 </button>
                                 <div className="mt-3 text-center text-emerald-400/80 text-xs font-mono">
-                                  Adversarial noise applied • AI training disrupted
+                                  Adversarial noise applied ï¿½ AI training disrupted
                                 </div>
                               </div>
                             </div>
@@ -23321,10 +23316,10 @@ ${bridges.map(b => `Bridge ${b}`).join('\n')}
                       <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                         <h4 className="text-white font-semibold mb-2 text-sm">How it works:</h4>
                         <ul className="text-white/60 text-xs space-y-1">
-                          <li>• Adds imperceptible pixel-level noise patterns</li>
-                          <li>• Disrupts AI model training without visible changes</li>
-                          <li>• Protects your art from unauthorized AI use</li>
-                          <li>• Like Glaze/Nightshade but instant and free</li>
+                          <li>ï¿½ Adds imperceptible pixel-level noise patterns</li>
+                          <li>ï¿½ Disrupts AI model training without visible changes</li>
+                          <li>ï¿½ Protects your art from unauthorized AI use</li>
+                          <li>ï¿½ Like Glaze/Nightshade but instant and free</li>
                         </ul>
                       </div>
                     </div>
@@ -23927,7 +23922,7 @@ PersistentKeepalive = 25`;
                   </p>
                   
                   <p className="text-base text-white/50 max-w-2xl mx-auto mb-10">
-                    <span className="text-emerald-400 font-bold">$100 Free Credit</span> • Zero Logs • Auto-Setup • Global Locations
+                    <span className="text-emerald-400 font-bold">$100 Free Credit</span> ï¿½ Zero Logs ï¿½ Auto-Setup ï¿½ Global Locations
                   </p>
 
                   {/* Feature Pills */}
@@ -24239,7 +24234,7 @@ PersistentKeepalive = 25`;
                     
                     <p className="text-xs text-center text-white/40">
                       <i data-lucide="shield-check" className="w-3 h-3 inline mr-1"></i>
-                      Ghost Whistle Cloud • By continuing, you agree to our Terms of Service
+                      Ghost Whistle Cloud ï¿½ By continuing, you agree to our Terms of Service
                     </p>
                   </div>
                 </div>
@@ -25740,7 +25735,7 @@ echo "Visit: https://whatismyip.com to verify"`;
                       GHOST CALLS
                     </h1>
                     <p className="text-[10px] text-white/50 font-mono">
-                      Anonymous • Encrypted • P2P
+                      Anonymous ï¿½ Encrypted ï¿½ P2P
                     </p>
                   </div>
                 </div>
@@ -26238,7 +26233,7 @@ echo "Visit: https://whatismyip.com to verify"`;
           title: 'EARNINGS_TRACKER',
           subtitle: 'Monitor & Claim',
           description: 'Real-time performance analytics and instant reward claiming from node operations',
-          icon: '¦',
+          icon: 'ï¿½',
           features: [
             { label: 'TRACKING', value: 'Real-time' },
             { label: 'CLAIMS', value: 'Instant' },
@@ -26350,7 +26345,7 @@ echo "Visit: https://whatismyip.com to verify"`;
                       Real work = Real earnings. Node operators earn 8 $WHISTLE per relay. Users pay for privacy. Circular economy.
                     </p>
                     <div className="flex items-center gap-2 text-[10px] text-white/40">
-                      <span>No VC dumps • No inflation</span>
+                      <span>No VC dumps ï¿½ No inflation</span>
                     </div>
                   </div>
                 </div>
@@ -26366,7 +26361,7 @@ echo "Visit: https://whatismyip.com to verify"`;
                       Every browser = Full node. No apps required. P2P WebRTC mesh. Works offline via WiFi Direct & Bluetooth.
                     </p>
                     <div className="flex items-center gap-2 text-[10px] text-white/40">
-                      <span>No servers • No middlemen</span>
+                      <span>No servers ï¿½ No middlemen</span>
                     </div>
                   </div>
                 </div>
@@ -26382,7 +26377,7 @@ echo "Visit: https://whatismyip.com to verify"`;
                       3-7 hop onion routing. E2E AES-256 encryption. Zero metadata. Zero IP logging.
                     </p>
                     <div className="flex items-center gap-2 text-[10px] text-white/40">
-                      <span>No tracking • Maximum privacy</span>
+                      <span>No tracking ï¿½ Maximum privacy</span>
                     </div>
                   </div>
                 </div>
@@ -26403,29 +26398,29 @@ echo "Visit: https://whatismyip.com to verify"`;
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <div className="flex items-start gap-2 text-xs">
-                      <span className="text-white/60 mt-0.5">•</span>
+                      <span className="text-white/60 mt-0.5">ï¿½</span>
                       <span className="text-white/60">??? <span className="text-white font-medium">Censorship Resistance:</span> Authoritarian regimes, firewalls, blocked exchanges</span>
                     </div>
                     <div className="flex items-start gap-2 text-xs">
-                      <span className="text-white/60 mt-0.5">•</span>
+                      <span className="text-white/60 mt-0.5">ï¿½</span>
                       <span className="text-white/60">?? <span className="text-white font-medium">Disaster Relief:</span> Earthquakes, hurricanes, internet blackouts</span>
                     </div>
                     <div className="flex items-start gap-2 text-xs">
-                      <span className="text-emerald-500 mt-0.5">•</span>
+                      <span className="text-emerald-500 mt-0.5">ï¿½</span>
                       <span className="text-white/60">??? <span className="text-white font-medium">Rural Banking:</span> Poor connectivity, remote areas</span>
                     </div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-start gap-2 text-xs">
-                      <span className="text-white/60 mt-0.5">•</span>
+                      <span className="text-white/60 mt-0.5">ï¿½</span>
                       <span className="text-white/60">?? <span className="text-white font-medium">Whistleblower Support:</span> Journalists, activists, dissidents</span>
                     </div>
                     <div className="flex items-start gap-2 text-xs">
-                      <span className="text-white/60 mt-0.5">•</span>
+                      <span className="text-white/60 mt-0.5">ï¿½</span>
                       <span className="text-white/60">?? <span className="text-white font-medium">Private Transactions:</span> No surveillance, no tracking</span>
                     </div>
                     <div className="flex items-start gap-2 text-xs">
-                      <span className="text-white/60 mt-0.5">•</span>
+                      <span className="text-white/60 mt-0.5">ï¿½</span>
                       <span className="text-white/60">?? <span className="text-white font-medium">Passive Income:</span> Earn while you sleep</span>
                     </div>
                   </div>
@@ -26477,7 +26472,7 @@ echo "Visit: https://whatismyip.com to verify"`;
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                           isFirst ? 'bg-emerald-500/15 border border-emerald-500/25' : 'bg-white/5 border border-white/10'
                         }`}>
-                          <span className="text-2xl">{service.icon === '?' ? '??' : service.icon === '?' ? '??' : service.icon === '?' ? '??' : service.icon === '¦' ? '??' : service.icon === '?' ? '??' : '??'}</span>
+                          <span className="text-2xl">{service.icon === '?' ? '??' : service.icon === '?' ? '??' : service.icon === '?' ? '??' : service.icon === 'ï¿½' ? '??' : service.icon === '?' ? '??' : '??'}</span>
                         </div>
                         {isComingSoon && (
                           <div className="px-2 py-1 rounded bg-white/5 border border-white/10">
@@ -26544,27 +26539,27 @@ echo "Visit: https://whatismyip.com to verify"`;
                   <h4 className="text-white text-sm font-bold mb-3">Core Functions</h4>
                   <ul className="space-y-2 text-xs">
                     <li className="flex items-center gap-2 text-white/60">
-                      <span className="text-white/40">•</span>
+                      <span className="text-white/40">ï¿½</span>
                       <code className="text-white/80 font-mono">stake()</code>
-                      <span className="text-white/30">—</span>
+                      <span className="text-white/30">ï¿½</span>
                       <span>Lock tokens</span>
                     </li>
                     <li className="flex items-center gap-2 text-white/60">
-                      <span className="text-white/40">•</span>
+                      <span className="text-white/40">ï¿½</span>
                       <code className="text-white/80 font-mono">record_relay()</code>
-                      <span className="text-white/30">—</span>
+                      <span className="text-white/30">ï¿½</span>
                       <span>Process TX</span>
                     </li>
                     <li className="flex items-center gap-2 text-white/60">
-                      <span className="text-emerald-500">•</span>
+                      <span className="text-emerald-500">ï¿½</span>
                       <code className="text-white/80 font-mono">claim_rewards()</code>
-                      <span className="text-white/30">—</span>
+                      <span className="text-white/30">ï¿½</span>
                       <span>Withdraw</span>
                     </li>
                     <li className="flex items-center gap-2 text-white/60">
-                      <span className="text-white/40">•</span>
+                      <span className="text-white/40">ï¿½</span>
                       <code className="text-white/80 font-mono">unstake()</code>
-                      <span className="text-white/30">—</span>
+                      <span className="text-white/30">ï¿½</span>
                       <span>Unlock</span>
                     </li>
                   </ul>
@@ -26574,23 +26569,23 @@ echo "Visit: https://whatismyip.com to verify"`;
                   <h4 className="text-white text-sm font-bold mb-3">Relay Functions</h4>
                   <ul className="space-y-2 text-xs">
                     <li className="flex items-center gap-2 text-white/60">
-                      <span className="text-white/40">•</span>
+                      <span className="text-white/40">ï¿½</span>
                       <code className="text-white/80 font-mono">create_relay_request()</code>
                     </li>
                     <li className="flex items-center gap-2 text-white/60">
-                      <span className="text-white/40">•</span>
+                      <span className="text-white/40">ï¿½</span>
                       <code className="text-white/80 font-mono">join_relay()</code>
-                      <span className="text-white/30">—</span>
+                      <span className="text-white/30">ï¿½</span>
                       <span>Join hop</span>
                     </li>
                     <li className="flex items-center gap-2 text-white/60">
-                      <span className="text-white/40">•</span>
+                      <span className="text-white/40">ï¿½</span>
                       <code className="text-white/80 font-mono">complete_relay()</code>
-                      <span className="text-white/30">—</span>
+                      <span className="text-white/30">ï¿½</span>
                       <span>Finalize</span>
                     </li>
                     <li className="flex items-center gap-2 text-white/60">
-                      <span className="text-white/40">•</span>
+                      <span className="text-white/40">ï¿½</span>
                       <code className="text-white/80 font-mono">claim_relay_payment()</code>
                     </li>
                   </ul>
@@ -31079,7 +31074,7 @@ https://whistle.ninja
               <li>Scroll down and tap <span class="font-semibold">Add to Home Screen</span>.</li>
               <li>Tap <span class="font-semibold">Add</span>. The app will appear on your Home Screen.</li>
             </ol>
-            <div class="mt-4 text-xs text-slate-400">Note: iOS doesn’t allow PWAs to run indefinitely in the background. For 24/7 nodes, use the Android APK or upcoming iOS native app.</div>
+            <div class="mt-4 text-xs text-slate-400">Note: iOS doesnï¿½t allow PWAs to run indefinitely in the background. For 24/7 nodes, use the Android APK or upcoming iOS native app.</div>
           </div>`;
         document.body.appendChild(modal);
         modal.querySelector('#ios-close').addEventListener('click', () => modal.remove());
@@ -31128,7 +31123,7 @@ https://whistle.ninja
             {/* Transaction Queue - Minimalist */}
             <div className="backdrop-blur-sm bg-white/70 dark:bg-slate-900/70 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 overflow-hidden shadow-xl">
               <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Transaction Queue · {pendingTxs.length}</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Transaction Queue ï¿½ {pendingTxs.length}</h3>
               </div>
               <div className="p-3">
                 {pendingTxs.length === 0 ? (
@@ -31556,7 +31551,7 @@ https://whistle.ninja
                   <div className="bg-slate-100 dark:bg-slate-800 rounded-xl p-4">
                     <div className="text-xs text-slate-600 dark:text-slate-400 mb-1 uppercase tracking-wider">Wallet Balance</div>
                     <div className="text-2xl font-black text-slate-900 dark:text-white">{tokenBalance === null ? 'Loading...' : tokenBalance.toLocaleString()} $WHISTLE</div>
-                    <div className="text-xs text-slate-500 dark:text-slate-500 mt-1">˜ ${tokenBalance === null ? '0.00' : (tokenBalance * 0.00013).toFixed(2)} USD</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-500 mt-1">ï¿½ ${tokenBalance === null ? '0.00' : (tokenBalance * 0.00013).toFixed(2)} USD</div>
                   </div>
 
                   {/* Amount Input */}
@@ -31913,7 +31908,7 @@ https://whistle.ninja
     
     if (quoteElement && authorElement) {
       quoteElement.textContent = '"' + selectedQuote.quote + '"';
-      authorElement.textContent = '— ' + selectedQuote.author;
+      authorElement.textContent = 'ï¿½ ' + selectedQuote.author;
     }
   }
   
