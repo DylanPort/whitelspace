@@ -45,7 +45,7 @@ export function ServerCacheSetup() {
       name: 'Windows',
       icon: Monitor,
       file: 'WHISTLE-Cache-Node-Setup-1.0.0.exe',
-      url: 'https://github.com/DylanPort/whitelspace/releases/latest/download/WHISTLE-Cache-Node-Setup-1.0.0.exe',
+      url: 'https://github.com/DylanPort/whitelspace/releases/download/v1.02/WHISTLE-Cache-Node-Setup-1.0.0.exe',
       color: 'from-blue-500 to-blue-600',
       size: '~80 MB',
       available: true
@@ -64,7 +64,7 @@ export function ServerCacheSetup() {
       name: 'macOS',
       icon: Laptop,
       file: 'WHISTLE-Cache-Node-1.0.0.dmg',
-      url: 'https://github.com/DylanPort/whitelspace/releases/latest/download/WHISTLE-Cache-Node-1.0.0-x64.dmg',
+      url: 'https://github.com/DylanPort/whitelspace/releases/download/v1.02/WHISTLE-Cache-Node-1.0.0-x64.dmg',
       color: 'from-gray-600 to-gray-700',
       size: '~85 MB',
       available: true
