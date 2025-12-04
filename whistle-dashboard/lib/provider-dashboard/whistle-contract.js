@@ -34,18 +34,16 @@ export const WHISTLE_DECIMALS = 6;
 export const MIN_PROVIDER_BOND = 1000; // 1000 WHISTLE minimum
 export const QUERY_COST = 10_000; // 0.00001 SOL per query
 
-// RPC Connection - Whistle Network (our own validator!)
-// Disable WebSocket to avoid connection errors (use polling for confirmations)
-const RPC_ENDPOINT = 'https://rpc.whistle.ninja';
+// RPC Connection - Using Helius (temporary fix)
+const RPC_ENDPOINT = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
 export const connection = new Connection(RPC_ENDPOINT, {
   commitment: 'confirmed',
-  wsEndpoint: undefined,  // Disable WebSocket - use HTTP polling instead
+  wsEndpoint: undefined,
   disableRetryOnRateLimit: false,
 });
 
-// Our own RPC - no rate limits!
 const RPC_LIST = [
-  'https://rpc.whistle.ninja',
+  'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba',
 ];
 
 /**
@@ -54,7 +52,7 @@ const RPC_LIST = [
 export async function fetchWhistleBalance(wallet) {
   // Our own RPC - no rate limits!
   const RPC_ENDPOINTS = [
-    'https://rpc.whistle.ninja',
+    'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba',
   ];
   
   for (const rpcUrl of RPC_ENDPOINTS) {
@@ -84,7 +82,7 @@ export async function fetchWhistleBalance(wallet) {
   // Try fetching all token accounts as fallback (using our RPC)
   try {
     console.log('[Contract] Trying getParsedTokenAccountsByOwner fallback...');
-    const conn = new Connection('https://rpc.whistle.ninja', 'confirmed');
+    const conn = new Connection('https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba', 'confirmed');
     
     const tokenAccounts = await conn.getParsedTokenAccountsByOwner(wallet, {
       mint: WHISTLE_MINT
@@ -122,7 +120,7 @@ export async function fetchWhistleBalance(wallet) {
 export async function fetchSolBalance(wallet) {
   // Our own RPC - no rate limits!
   const RPC_ENDPOINTS = [
-    'https://rpc.whistle.ninja',
+    'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba',
   ];
   
   for (const rpcUrl of RPC_ENDPOINTS) {
