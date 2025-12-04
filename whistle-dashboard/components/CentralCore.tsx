@@ -216,7 +216,7 @@ export default function CentralCore() {
                   STAKERS
                 </div>
                 <div className="text-[22px] md:text-[28px] font-bold leading-none tracking-tight">
-                  {totalStakers}
+                  -
                 </div>
                 <div className="text-[9px] md:text-[10px] text-gray-400 mt-1">
                   ACTIVE
