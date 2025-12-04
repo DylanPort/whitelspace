@@ -10,6 +10,7 @@ import RpcEndpointPanel from '@/components/RpcEndpointPanel';
 import NetworkStatsPanel from '@/components/NetworkStatsPanel';
 import RecentActivityPanel from '@/components/RecentActivityPanel';
 import ApiMethodsPanel from '@/components/ApiMethodsPanel';
+import ProviderRegistrationPanel from '@/components/ProviderRegistrationPanel';
 import HowItWorksModal from '@/components/HowItWorksModal';
 import HowItWorksButton from '@/components/HowItWorksButton';
 import PoolInfoPanel from '@/components/PoolInfoPanel';
@@ -20,6 +21,8 @@ import GhostWhistlePanel from '@/components/GhostWhistlePanel';
 import ResourcesPanel from '@/components/ResourcesPanel';
 import DecentralizationProgress from '@/components/DecentralizationProgress';
 import GovernancePanel from '@/components/GovernancePanel';
+// Removed DeveloperAccessButton - RPC is now public
+import SubscriptionStatusPanel from '@/components/SubscriptionStatusPanel';
 import { api } from '@/lib/api';
 
 export default function Home() {
@@ -159,8 +162,14 @@ export default function Home() {
           {/* FAR RIGHT COLUMN - Provider Info */}
           <div className="w-full lg:w-[200px] space-y-3 md:space-y-4 flex-shrink-0 lg:ml-0">
             <RpcProvidersPanel />
+            <ProviderRegistrationPanel />
           </div>
 
+        </div>
+
+        {/* RPC Subscription Status - Single Panel */}
+        <div id="developer-access-section" className="max-w-[600px] mx-auto w-full mb-4 md:mb-6">
+          <SubscriptionStatusPanel />
         </div>
 
         {/* System Info Section - Responsive Grid */}

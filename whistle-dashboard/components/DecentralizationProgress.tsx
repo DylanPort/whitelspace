@@ -51,7 +51,7 @@ export default function DecentralizationProgress() {
         {/* Header Label */}
         <div className="relative flex justify-between items-end mb-10 z-10">
           <div className="flex flex-col">
-            <span className="text-[10px] text-cyan-400/80 font-medium mb-1 tracking-wide">SYS.INIT_SEQUENCE</span>
+            <span className="text-[10px] text-emerald-400/80 font-medium mb-1 tracking-wide">SYS.INIT_SEQUENCE</span>
             <span className="text-[13px] font-bold text-white tracking-[0.12em] drop-shadow-md">PRODUCT ROADMAP</span>
           </div>
           <div className="text-[10px] text-white/30 font-mono tracking-widest">v1.0.4</div>
@@ -116,7 +116,7 @@ export default function DecentralizationProgress() {
                   <div 
                     className={`w-[1px] h-5 mt-0 mb-2 transition-all duration-500 ${
                       isActive 
-                        ? 'bg-cyan-500/60 shadow-[0_0_8px_rgba(16,185,129,0.6)]' 
+                        ? 'bg-emerald-500/60 shadow-[0_0_8px_rgba(16,185,129,0.6)]' 
                         : 'bg-white/5'
                     }`} 
                   />
@@ -132,7 +132,7 @@ export default function DecentralizationProgress() {
                   
                   {/* Status Label */}
                   <div className={`text-[8px] font-medium mt-1 tracking-wider transition-all duration-500 ${
-                    isActive ? 'text-cyan-400' : 'text-white/10'
+                    isActive ? 'text-emerald-400' : 'text-white/10'
                   }`}>
                     {stage.status}
                   </div>
@@ -145,7 +145,7 @@ export default function DecentralizationProgress() {
         {/* Footer Console */}
         <div className="absolute bottom-6 left-7 right-7 flex items-center gap-3 z-10">
           <div 
-            className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(16,185,129,1)] animate-pulse"
+            className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,1)] animate-pulse"
           />
           <div className="text-[10px] text-white/40 font-mono overflow-hidden whitespace-nowrap">
             <motion.span

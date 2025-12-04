@@ -12,7 +12,6 @@ import { MyRewards } from '../components/MyRewards'
 import { Leaderboard } from '../components/Leaderboard'
 import { OnChainLeaderboard } from '../components/OnChainLeaderboard'
 import { ProviderOnboarding } from '../components/ProviderOnboarding'
-import { CreditAccount } from '../components/CreditAccount'
 import { NodeMap } from '../components/NodeMap'
 import { useLiveMetrics, useMetricsHistory } from '../lib/hooks-rpc'
 import { RefreshCw } from 'lucide-react'
@@ -48,10 +47,10 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-3xl font-bold text-white uppercase tracking-wider mb-1">
-                <span className="text-whistle-accent">Provider</span> Dashboard
+                Provider Dashboard
               </h1>
               <p className="text-gray-500 font-mono text-sm">
-                // Real-time Solana mainnet metrics via Whistlenet RPC
+                Real-time Solana mainnet metrics
               </p>
             </div>
             <button
@@ -79,64 +78,11 @@ export default function Dashboard() {
             
             {/* LEFT COLUMN - 3 cols */}
             <div className="lg:col-span-3 space-y-6">
-              {/* RPC Credits Card */}
-              <CreditAccount />
+              {/* Validator Info */}
+              <ValidatorInfo metrics={metrics} loading={metricsLoading} />
               
-              {/* Network Stats Card */}
-              <div className="card p-6">
-                <div className="card-inner">
-                  <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <span className="text-whistle-accent">⚡</span>
-                    Network Stats
-                  </h3>
-                  
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-500 text-sm uppercase tracking-wider">Latency</span>
-                      <span className="text-whistle-accent font-mono font-bold">
-                        {metrics?.rpc?.latency || '—'}ms
-                        <span className="inline-block w-2 h-2 bg-whistle-accent rounded-full ml-2 animate-pulse" />
-                      </span>
-                    </div>
-                    
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-500 text-sm uppercase tracking-wider">Uptime</span>
-                      <span className="text-whistle-accent font-mono font-bold">100%</span>
-                    </div>
-                    
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-500 text-sm uppercase tracking-wider">Requests</span>
-                      <span className="text-white font-mono font-bold">
-                        {metrics?.rpc?.totalRequests?.toLocaleString() || '0'}
-                      </span>
-                    </div>
-                    
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-500 text-sm uppercase tracking-wider">Rate Limit</span>
-                      <span className="text-white font-mono">100/min</span>
-                    </div>
-                    
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-500 text-sm uppercase tracking-wider">Status</span>
-                      <span className="status-online font-mono font-bold text-sm">ONLINE</span>
-                    </div>
-                    
-                    <div className="pt-2">
-                      <span className="text-gray-500 text-xs uppercase tracking-wider block mb-2">Response Time</span>
-                      <div className="response-bars">
-                        {[...Array(20)].map((_, i) => (
-                          <div 
-                            key={i} 
-                            className="response-bar" 
-                            style={{ height: `${Math.random() * 30 + 10}px` }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
+              {/* Cacheable Methods */}
+              <CacheableMethods />
             </div>
 
             {/* CENTER COLUMN - 6 cols */}
@@ -158,13 +104,13 @@ export default function Dashboard() {
               <div className="card p-6">
                 <div className="card-inner">
                   <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-4">
-                    <span className="text-whistle-accent">//</span> Epoch Progress
+                    Epoch Progress
                   </h3>
                   {metrics?.chain ? (
                     <div className="space-y-4">
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-500 uppercase tracking-wider">Epoch {metrics.chain.epoch}</span>
-                        <span className="text-whistle-accent font-mono font-bold">{metrics.chain.epochProgress}%</span>
+                        <span className="text-white font-mono font-bold">{metrics.chain.epochProgress}%</span>
                       </div>
                       <div className="progress-bar">
                         <div 
@@ -198,14 +144,8 @@ export default function Dashboard() {
 
             {/* RIGHT COLUMN - 3 cols */}
             <div className="lg:col-span-3 space-y-6">
-              {/* Validator Info */}
-              <ValidatorInfo metrics={metrics} loading={metricsLoading} />
-              
               {/* Browser Cache Node */}
               <BrowserCacheNode />
-              
-              {/* Cacheable Methods */}
-              <CacheableMethods />
             </div>
           </div>
 
@@ -242,8 +182,7 @@ export default function Dashboard() {
         {/* Footer - Centered at bottom */}
         <footer className="py-8">
           <p className="text-center text-gray-500 text-sm font-mono">
-            WHISTLE Provider Dashboard • Powered by{' '}
-            <span className="text-whistle-accent">whistle.ninja</span>
+            WHISTLE Provider Dashboard • whistle.ninja
           </p>
         </footer>
       </div>

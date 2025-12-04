@@ -76,24 +76,24 @@ export default function QueryInterfacePanel() {
   };
 
   return (
-    <PanelFrame
-      cornerType="silver"
+      <PanelFrame
+        cornerType="silver"
       className="h-[280px] flex flex-col overflow-hidden"
-      motionProps={{
+        motionProps={{
         initial: { opacity: 0, x: 50 },
-        animate: { opacity: 1, x: 0 },
-        transition: { duration: 0.6 }
-      }}
-    >
+          animate: { opacity: 1, x: 0 },
+          transition: { duration: 0.6 }
+        }}
+      >
       {/* Packages Header */}
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-[11px] font-semibold tracking-[0.15em]">
+          <h3 className="text-[11px] font-semibold tracking-[0.15em]">
           RPC PACKAGES
-        </h3>
-        <div className="text-[7px] text-cyan-400 tracking-wider">
+          </h3>
+        <div className="text-[7px] text-emerald-400 tracking-wider">
           100% TO COMMUNITY
         </div>
-      </div>
+          </div>
 
       {/* Packages List */}
       <div className="space-y-1.5 flex-1 overflow-y-auto">
@@ -121,7 +121,7 @@ export default function QueryInterfacePanel() {
                 <div className={`text-[16px] font-bold ${pkg.gold ? 'text-yellow-400' : 'text-white'}`}>
                   {pkg.price}
                   <span className="text-[8px] text-gray-500 ml-0.5">SOL</span>
-                </div>
+            </div>
                 <div className="flex items-center gap-1">
                   <span className={`text-[9px] font-bold ${pkg.gold ? 'text-yellow-400' : 'text-white'}`}>
                     {pkg.name}
@@ -139,10 +139,10 @@ export default function QueryInterfacePanel() {
                     </motion.span>
                   )}
                 </div>
-              </div>
+          </div>
 
               {/* Right: Button */}
-              <button
+          <button
                 onClick={() => handlePurchase(pkg)}
                 disabled={loading !== null || !connected}
                 className={`px-3 py-1 rounded text-[7px] font-bold tracking-wider transition-all ${
@@ -155,10 +155,10 @@ export default function QueryInterfacePanel() {
                     : pkg.gold
                     ? 'bg-yellow-500/10 border border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/20'
                     : 'bg-white/5 border border-white/20 text-white hover:bg-white/10'
-                }`}
-              >
+            }`}
+          >
                 {success === pkg.id ? '✓' : loading === pkg.id ? '...' : 'BUY'}
-              </button>
+          </button>
             </div>
             
             {/* Features */}
@@ -185,7 +185,7 @@ export default function QueryInterfacePanel() {
         <p className="text-[7px] text-gray-500 text-center">
           Powered by WHISTLE validators
         </p>
-      </div>
-    </PanelFrame>
+        </div>
+      </PanelFrame>
   );
 }

@@ -97,7 +97,7 @@ export default function StakingPanel() {
             href={`https://solscan.io/tx/${signature}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-cyan-400 hover:text-cyan-300 underline"
+            className="text-xs text-emerald-400 hover:text-emerald-300 underline"
             onClick={() => toast.dismiss(t.id)}
           >
             View Transaction →
@@ -245,7 +245,7 @@ export default function StakingPanel() {
             href={`https://solscan.io/tx/${signature}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-cyan-400 hover:text-cyan-300 underline"
+            className="text-xs text-emerald-400 hover:text-emerald-300 underline"
             onClick={() => toast.dismiss(t.id)}
           >
             View Transaction →

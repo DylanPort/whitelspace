@@ -37,8 +37,8 @@ export default function RpcEndpointPanel() {
       <div className="space-y-3">
         {/* Status Message */}
         <div className="py-2 text-center">
-          <div className="text-cyan-400 text-lg mb-1">🌐</div>
-          <div className="text-cyan-400 text-[10px] tracking-wider mb-1">
+          <div className="text-emerald-400 text-lg mb-1">🌐</div>
+          <div className="text-emerald-400 text-[10px] tracking-wider mb-1">
             PUBLIC RPC
           </div>
           <div className="text-gray-400 text-[9px] leading-relaxed">
@@ -48,36 +48,36 @@ export default function RpcEndpointPanel() {
 
         {/* HTTP Endpoint Display - Clickable */}
         <div 
-          className="p-2 bg-black/30 rounded border border-cyan-500/20 cursor-pointer hover:bg-black/40 hover:border-cyan-500/40 transition-all relative group"
+          className="p-2 bg-black/30 rounded border border-emerald-500/20 cursor-pointer hover:bg-black/40 hover:border-emerald-500/40 transition-all relative group"
           onClick={copyHttpEndpoint}
         >
           <div className="text-[8px] text-gray-500 mb-1">HTTP ENDPOINT</div>
-          <div className="text-[9px] text-cyan-400 font-mono break-all pr-6">
+          <div className="text-[9px] text-emerald-400 font-mono break-all pr-6">
             {httpEndpoint}
           </div>
           <div className="absolute top-2 right-2 text-[10px]">
             {copiedHttp ? (
-              <span className="text-cyan-400">✓</span>
+              <span className="text-emerald-400">✓</span>
             ) : (
-              <span className="text-gray-500 group-hover:text-cyan-400 transition-colors">📋</span>
+              <span className="text-gray-500 group-hover:text-emerald-400 transition-colors">📋</span>
             )}
           </div>
         </div>
 
         {/* WSS Endpoint Display - Clickable */}
         <div 
-          className="p-2 bg-black/30 rounded border border-cyan-500/20 cursor-pointer hover:bg-black/40 hover:border-cyan-500/40 transition-all relative group"
+          className="p-2 bg-black/30 rounded border border-blue-500/20 cursor-pointer hover:bg-black/40 hover:border-blue-500/40 transition-all relative group"
           onClick={copyWssEndpoint}
         >
           <div className="text-[8px] text-gray-500 mb-1">WEBSOCKET</div>
-          <div className="text-[9px] text-cyan-400 font-mono break-all pr-6">
+          <div className="text-[9px] text-blue-400 font-mono break-all pr-6">
             {wssEndpoint}
           </div>
           <div className="absolute top-2 right-2 text-[10px]">
             {copiedWss ? (
-              <span className="text-cyan-400">✓</span>
+              <span className="text-blue-400">✓</span>
             ) : (
-              <span className="text-gray-500 group-hover:text-cyan-400 transition-colors">📋</span>
+              <span className="text-gray-500 group-hover:text-blue-400 transition-colors">📋</span>
             )}
           </div>
         </div>
@@ -86,7 +86,7 @@ export default function RpcEndpointPanel() {
         <div className="pt-2 border-t border-white/10 space-y-1">
           <div className="flex justify-between text-[10px]">
             <span className="text-gray-500">Status</span>
-            <span className="font-semibold text-cyan-400">Available</span>
+            <span className="font-semibold text-emerald-400">Available</span>
           </div>
           <div className="flex justify-between text-[10px]">
             <span className="text-gray-500">Network</span>

@@ -54,7 +54,7 @@ export default function HowItWorksButton({ onClick }: HowItWorksButtonProps) {
       <Rivet className="bottom-1 right-3" />
 
       {/* Text Content */}
-      <span className="relative z-10 text-[11px] font-bold tracking-widest text-cyan-400 group-hover:text-cyan-300 transition-colors uppercase">
+      <span className="relative z-10 text-[11px] font-bold tracking-widest text-emerald-400 group-hover:text-emerald-300 transition-colors uppercase">
         How It Works
       </span>
     </motion.button>
