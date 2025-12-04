@@ -10,9 +10,9 @@
  * - WHISTLE branding
  */
 
-// Upstream RPC endpoints - Using Helius for better performance
-const UPSTREAM_HTTP = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
-const UPSTREAM_WS = 'wss://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
+// Upstream RPC endpoints - WHISTLE's own Solana validator
+const UPSTREAM_HTTP = 'https://api.mainnet-beta.solana.com';  // Fallback, main traffic goes direct
+const UPSTREAM_WS = 'wss://api.mainnet-beta.solana.com';
 
 export default {
   async fetch(request, env, ctx) {
