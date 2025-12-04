@@ -2,7 +2,6 @@
 
 import PanelFrame from './PanelFrame';
 import { motion } from 'framer-motion';
-import Image from 'next/image';
 
 export default function RpcProvidersPanel() {
   return (
@@ -55,8 +54,10 @@ export default function RpcProvidersPanel() {
             }}
             style={{ transformStyle: 'preserve-3d' }}
           >
-            <motion.div
-              className="relative w-12 h-12"
+            <motion.img
+              src="/whistel_logo_top_right_2048.png"
+              alt="Whistle"
+              className="w-14 h-14 object-contain"
               animate={{
                 filter: [
                   'drop-shadow(0 0 8px rgba(52, 211, 153, 0.4))',
@@ -65,14 +66,7 @@ export default function RpcProvidersPanel() {
                 ]
               }}
               transition={{ duration: 2, repeat: Infinity }}
-            >
-              <Image
-                src="/whistel_logo_top_right_2048.png"
-                alt="Whistle"
-                fill
-                className="object-contain"
-              />
-            </motion.div>
+            />
           </motion.div>
 
           {/* Orbiting dots */}
