@@ -17,17 +17,22 @@ export default function ApiMethodsPanel() {
         RPC HEALTH
       </h3>
 
-      {/* Health iframe */}
+      {/* Health iframe - scaled to show full page */}
       <div className="flex-1 rounded overflow-hidden border border-emerald-500/20">
-        <iframe
-          src="https://health.whistle.ninja"
-          className="w-full h-full"
-          style={{ 
-            border: 'none',
-            background: 'transparent'
-          }}
-          loading="lazy"
-        />
+        <div className="relative w-full h-full overflow-hidden">
+          <iframe
+            src="https://health.whistle.ninja"
+            style={{ 
+              border: 'none',
+              background: 'transparent',
+              width: '400%',
+              height: '400%',
+              transform: 'scale(0.25)',
+              transformOrigin: 'top left',
+            }}
+            loading="lazy"
+          />
+        </div>
       </div>
     </PanelFrame>
   );

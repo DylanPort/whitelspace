@@ -17,18 +17,23 @@ export default function NetworkStatsPanel() {
         WHISTLE DEX
       </h3>
 
-      {/* DEX iframe */}
+      {/* DEX iframe - scaled to show full page */}
       <div className="flex-1 relative z-10 rounded overflow-hidden border border-emerald-500/20">
-        <iframe
-          src="https://dex.whistle.ninja"
-          className="w-full h-full min-h-[280px]"
-          style={{ 
-            border: 'none',
-            background: 'transparent'
-          }}
-          allow="clipboard-write"
-          loading="lazy"
-        />
+        <div className="relative w-full h-full min-h-[280px] overflow-hidden">
+          <iframe
+            src="https://dex.whistle.ninja"
+            style={{ 
+              border: 'none',
+              background: 'transparent',
+              width: '400%',
+              height: '400%',
+              transform: 'scale(0.25)',
+              transformOrigin: 'top left',
+            }}
+            allow="clipboard-write"
+            loading="lazy"
+          />
+        </div>
       </div>
     </PanelFrame>
   );
