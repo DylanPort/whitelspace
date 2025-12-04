@@ -1292,7 +1292,7 @@ app.get('/health', (req, res) => {
 app.get('/api/info', (req, res) => {
   res.json({
     name: 'WHISTLE Coordinator',
-    version: '1.1.0',
+    version: '1.2.0',
     rewardPoolPerHour: REWARD_POOL_PER_HOUR,
     tiers: {
       server: { tier: 1, multiplier: TIER_MULTIPLIERS.server, description: '24/7 server nodes' },
@@ -1307,8 +1307,142 @@ app.get('/api/info', (req, res) => {
       'POST /api/nodes/report',
       'GET  /api/rewards/:wallet',
       'GET  /api/leaderboard',
+      'POST /rpc (RPC proxy with caching)',
       'WS   /ws (browser nodes)'
     ]
+  });
+});
+
+// =============================================================================
+// RPC PROXY - Routes to cache nodes with fallback to validator
+// =============================================================================
+
+const FALLBACK_RPC = process.env.FALLBACK_RPC || 'https://rpc.whistle.ninja';
+
+// Get online cache nodes (server type, seen in last 2 minutes)
+function getOnlineCacheNodes() {
+  const now = Date.now();
+  const nodes = db.prepare(`
+    SELECT * FROM nodes 
+    WHERE node_type = 'server' 
+    AND status = 'active' 
+    AND endpoint IS NOT NULL
+    AND last_seen > ?
+    ORDER BY total_hits DESC
+  `).all(now - 120000);
+  
+  return nodes;
+}
+
+// Pick best cache node (weighted by hit rate)
+function pickCacheNode(nodes) {
+  if (!nodes || nodes.length === 0) return null;
+  
+  // Simple random selection for now
+  // TODO: Weighted by performance/latency
+  return nodes[Math.floor(Math.random() * nodes.length)];
+}
+
+// RPC Proxy endpoint
+app.post('/rpc', async (req, res) => {
+  const startTime = Date.now();
+  const body = req.body;
+  
+  // Get online cache nodes
+  const cacheNodes = getOnlineCacheNodes();
+  const selectedNode = pickCacheNode(cacheNodes);
+  
+  let targetRpc = FALLBACK_RPC;
+  let usedCache = false;
+  let nodeId = null;
+  
+  if (selectedNode && selectedNode.endpoint) {
+    targetRpc = selectedNode.endpoint;
+    usedCache = true;
+    nodeId = selectedNode.id;
+  }
+  
+  try {
+    // Forward request to target
+    const response = await fetch(targetRpc, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Forwarded-By': 'whistle-coordinator'
+      },
+      body: JSON.stringify(body)
+    });
+    
+    const data = await response.json();
+    const latency = Date.now() - startTime;
+    
+    // Add routing metadata
+    data._whistle = {
+      routed_through: usedCache ? 'cache_node' : 'validator',
+      node_id: nodeId,
+      latency_ms: latency,
+      cache_nodes_online: cacheNodes.length,
+      timestamp: Date.now()
+    };
+    
+    // Log routing
+    console.log(`[RPC] ${body.method || 'batch'} -> ${usedCache ? nodeId : 'validator'} (${latency}ms)`);
+    
+    res.json(data);
+    
+  } catch (error) {
+    // If cache node failed, try fallback
+    if (usedCache && targetRpc !== FALLBACK_RPC) {
+      console.log(`[RPC] Cache node ${nodeId} failed, falling back to validator`);
+      
+      try {
+        const fallbackResponse = await fetch(FALLBACK_RPC, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        
+        const data = await fallbackResponse.json();
+        data._whistle = {
+          routed_through: 'validator_fallback',
+          failed_node: nodeId,
+          latency_ms: Date.now() - startTime,
+          timestamp: Date.now()
+        };
+        
+        return res.json(data);
+        
+      } catch (fallbackError) {
+        return res.status(500).json({
+          jsonrpc: '2.0',
+          error: { code: -32603, message: 'All RPC endpoints unavailable' },
+          id: body.id || null
+        });
+      }
+    }
+    
+    res.status(500).json({
+      jsonrpc: '2.0',
+      error: { code: -32603, message: error.message },
+      id: body.id || null
+    });
+  }
+});
+
+// Get RPC routing info
+app.get('/rpc/info', (req, res) => {
+  const cacheNodes = getOnlineCacheNodes();
+  
+  res.json({
+    fallback_rpc: FALLBACK_RPC,
+    cache_nodes_online: cacheNodes.length,
+    cache_nodes: cacheNodes.map(n => ({
+      id: n.id,
+      endpoint: n.endpoint,
+      hit_rate: n.total_requests > 0 ? ((n.total_hits / n.total_requests) * 100).toFixed(2) : 0,
+      total_requests: n.total_requests
+    })),
+    routing: cacheNodes.length > 0 ? 'cache_nodes' : 'direct_to_validator'
   });
 });
 

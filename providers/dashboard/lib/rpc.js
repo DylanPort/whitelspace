@@ -1,9 +1,11 @@
 /**
- * Direct RPC client for Whistlenet
- * Connects to WHISTLE RPC gateway (routes through cache nodes)
+ * RPC client for Whistlenet
+ * Routes through coordinator to cache nodes, falls back to validator
  */
 
-const RPC_URL = process.env.NEXT_PUBLIC_RPC_ENDPOINT || 'https://rpc.whistle.ninja'
+// Use coordinator's RPC proxy (routes through cache nodes)
+// Falls back to direct validator if coordinator unavailable
+const RPC_URL = process.env.NEXT_PUBLIC_RPC_PROXY || 'https://coordinator.whistle.ninja/rpc'
 
 class SolanaRPC {
   constructor(endpoint = RPC_URL) {

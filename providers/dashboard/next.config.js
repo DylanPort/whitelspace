@@ -10,7 +10,9 @@ const nextConfig = {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://api.whistle.ninja',
     NEXT_PUBLIC_RPC_URL: process.env.NEXT_PUBLIC_RPC_URL || 'https://rpc.whistle.ninja',
     NEXT_PUBLIC_COORDINATOR_HTTP: process.env.NEXT_PUBLIC_COORDINATOR_HTTP || 'https://coordinator.whistle.ninja',
-    NEXT_PUBLIC_COORDINATOR_WS: process.env.NEXT_PUBLIC_COORDINATOR_WS || 'wss://coordinator.whistle.ninja/ws'
+    NEXT_PUBLIC_COORDINATOR_WS: process.env.NEXT_PUBLIC_COORDINATOR_WS || 'wss://coordinator.whistle.ninja/ws',
+    // Use coordinator's RPC proxy (routes through cache nodes, falls back to validator)
+    NEXT_PUBLIC_RPC_PROXY: process.env.NEXT_PUBLIC_RPC_PROXY || 'https://coordinator.whistle.ninja/rpc'
   }
 }
 
