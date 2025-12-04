@@ -11,14 +11,14 @@ const RPC_PACKAGES = [
     id: 'basic',
     name: 'BASIC',
     price: 0.2,
-    tag: '100 req/min',
+    features: ['10 req/sec', '10M requests'],
     color: 'emerald'
   },
   { 
     id: 'advanced',
     name: 'ADVANCED',
     price: 1,
-    tag: 'No limits',
+    features: ['20 req/sec', '30M requests', 'Widget Integration'],
     color: 'blue',
     popular: true
   },
@@ -26,7 +26,7 @@ const RPC_PACKAGES = [
     id: 'premium',
     name: 'PREMIUM',
     price: 2,
-    tag: 'Unlimited + Stream',
+    features: ['Unlimited req', 'Geyser Data Stream', 'Widget Integration'],
     color: 'purple'
   },
 ];
@@ -97,8 +97,8 @@ export default function QueryInterfacePanel() {
         </div>
       </div>
 
-      {/* Packages List - Row Layout */}
-      <div className="space-y-2 flex-1">
+      {/* Packages List */}
+      <div className="space-y-2.5 flex-1">
         {RPC_PACKAGES.map((pkg, i) => (
           <motion.div 
             key={pkg.id}
@@ -106,38 +106,35 @@ export default function QueryInterfacePanel() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 + i * 0.1 }}
             whileHover={{ scale: 1.01 }}
-            className={`p-2.5 rounded border transition-all flex items-center justify-between ${
+            className={`p-3 rounded border transition-all ${
               pkg.popular 
                 ? 'border-blue-500/50 bg-blue-500/10' 
                 : 'border-white/10 bg-black/20 hover:border-white/20'
             }`}
           >
-            {/* Left: Name + Tag */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <span className={`text-[10px] font-bold ${
+            <div className="flex items-center justify-between">
+              {/* Left: Price + Name */}
+              <div className="flex items-center gap-3">
+                <div className={`text-[18px] font-bold ${
                   pkg.color === 'emerald' ? 'text-emerald-400' :
                   pkg.color === 'blue' ? 'text-blue-400' : 'text-purple-400'
                 }`}>
-                  {pkg.name}
-                </span>
-                {pkg.popular && (
-                  <span className="text-[6px] px-1 py-0.5 bg-blue-500/30 text-blue-300 rounded">★</span>
-                )}
+                  {pkg.price}
+                  <span className="text-[9px] text-gray-500 ml-0.5">SOL</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-white">{pkg.name}</span>
+                  {pkg.popular && (
+                    <span className="text-[6px] px-1 py-0.5 bg-blue-500/30 text-blue-300 rounded">★ POPULAR</span>
+                  )}
+                </div>
               </div>
-              <span className="text-[8px] text-gray-400">{pkg.tag}</span>
-            </div>
 
-            {/* Right: Price + Button */}
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <span className="text-[14px] font-bold text-white">{pkg.price}</span>
-                <span className="text-[8px] text-gray-500 ml-1">SOL</span>
-              </div>
+              {/* Right: Button */}
               <button
                 onClick={() => handlePurchase(pkg)}
                 disabled={loading !== null || !connected}
-                className={`px-3 py-1.5 rounded text-[8px] font-bold tracking-wider transition-all ${
+                className={`px-4 py-1.5 rounded text-[8px] font-bold tracking-wider transition-all ${
                   success === pkg.id
                     ? 'bg-green-500/20 border border-green-500/50 text-green-400'
                     : loading === pkg.id
@@ -153,6 +150,21 @@ export default function QueryInterfacePanel() {
               >
                 {success === pkg.id ? '✓' : loading === pkg.id ? '...' : 'BUY'}
               </button>
+            </div>
+            
+            {/* Features */}
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              {pkg.features.map((feature, fi) => (
+                <span 
+                  key={fi}
+                  className={`text-[8px] px-2 py-0.5 rounded ${
+                    pkg.color === 'emerald' ? 'bg-emerald-500/10 text-emerald-300' :
+                    pkg.color === 'blue' ? 'bg-blue-500/10 text-blue-300' : 'bg-purple-500/10 text-purple-300'
+                  }`}
+                >
+                  {feature}
+                </span>
+              ))}
             </div>
           </motion.div>
         ))}
