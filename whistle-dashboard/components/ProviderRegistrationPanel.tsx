@@ -1,74 +1,118 @@
 'use client';
 
+import { useState } from 'react';
 import PanelFrame from './PanelFrame';
-import { ExternalLink } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ProviderRegistrationPanel() {
+  const [expanded, setExpanded] = useState(false);
+
   return (
-    <PanelFrame
-      cornerType="gold"
-      motionProps={{
-        initial: { opacity: 0, x: 50 },
-        animate: { opacity: 1, x: 0 },
-        transition: { duration: 0.6, delay: 0.4 }
-      }}
-    >
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-[11px] font-semibold tracking-[0.15em]">
-          BECOME A PROVIDER
-        </h3>
-        <span className="px-2 py-0.5 text-[9px] font-bold tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-sm animate-pulse">
-          NEW
-        </span>
-      </div>
-
-      <div className="space-y-4">
-        <div className="text-xs text-gray-400 leading-relaxed">
-          Run a WHISTLE node and earn SOL by serving RPC queries to the network.
+    <>
+      <PanelFrame
+        cornerType="gold"
+        motionProps={{
+          initial: { opacity: 0, x: 50 },
+          animate: { opacity: 1, x: 0 },
+          transition: { duration: 0.6, delay: 0.4 }
+        }}
+      >
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-[11px] font-semibold tracking-[0.15em]">
+            BECOME A PROVIDER
+          </h3>
+          <button
+            onClick={() => setExpanded(true)}
+            className="text-[8px] px-2 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded text-emerald-400 hover:bg-emerald-500/20 transition-all"
+          >
+            EXPAND ↗
+          </button>
         </div>
 
-        <div className="space-y-2">
-          <div className="flex items-start gap-2">
-            <span className="text-emerald-400 text-xs mt-0.5">✓</span>
-            <span className="text-xs text-gray-300">Earn SOL per query</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-emerald-400 text-xs mt-0.5">✓</span>
-            <span className="text-xs text-gray-300">No rate limits</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-emerald-400 text-xs mt-0.5">✓</span>
-            <span className="text-xs text-gray-300">Decentralized network</span>
-          </div>
-        </div>
-
-        <div className="pt-3 border-t border-white/10">
-          <div className="text-[9px] text-gray-500 tracking-widest mb-2">REQUIREMENTS</div>
-          <div className="space-y-1 text-[10px] text-gray-400">
-            <div>• Min stake: 1k WHISTLE</div>
-            <div>• 2TB NVMe storage</div>
-            <div>• 64GB RAM (recommended)</div>
-            <div>• 99%+ uptime</div>
-          </div>
-        </div>
-
-        <a
-          href="https://provider.whistle.ninja"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 w-full mt-4 py-3 px-4 
-                     bg-gradient-to-r from-emerald-600 to-emerald-500 
-                     hover:from-emerald-500 hover:to-emerald-400
-                     text-white font-bold text-xs tracking-wider
-                     border border-emerald-400/50 
-                     transition-all duration-300 
-                     hover:shadow-[0_0_20px_rgba(16,185,129,0.3)]
-                     group"
+        {/* Provider iframe - scaled preview */}
+        <div 
+          className="relative rounded overflow-hidden border border-yellow-500/20 cursor-pointer hover:border-yellow-500/40 transition-all"
+          onClick={() => setExpanded(true)}
+          style={{ height: '320px' }}
         >
-          REGISTER NOW
-          <ExternalLink size={12} className="opacity-70 group-hover:opacity-100 transition-opacity" />
-        </a>
-      </div>
-    </PanelFrame>
+          <div className="relative w-full h-full overflow-hidden">
+            <iframe
+              src="https://provider.whistle.ninja"
+              style={{ 
+                border: 'none',
+                background: '#000',
+                width: '1600px',
+                height: '2000px',
+                transform: 'scale(0.13)',
+                transformOrigin: 'top left',
+                pointerEvents: 'none',
+              }}
+              loading="lazy"
+            />
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
+          <div className="absolute bottom-2 left-2 right-2 text-[8px] text-gray-400 text-center pointer-events-none">
+            Click to interact
+          </div>
+        </div>
+      </PanelFrame>
+
+      {/* Expanded Modal */}
+      <AnimatePresence>
+        {expanded && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setExpanded(false)}
+              className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm"
+            />
+            
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ type: 'spring', damping: 25 }}
+              className="fixed inset-4 md:inset-8 lg:inset-16 z-50 flex flex-col"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 bg-black/80 border border-yellow-500/30 border-b-0 rounded-t-lg">
+                <h2 className="text-sm font-bold tracking-wider text-yellow-400">
+                  PROVIDER REGISTRATION
+                </h2>
+                <div className="flex items-center gap-3">
+                  <a
+                    href="https://provider.whistle.ninja"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] px-3 py-1 bg-yellow-500/10 border border-yellow-500/30 rounded text-yellow-400 hover:bg-yellow-500/20 transition-all"
+                  >
+                    Open in new tab ↗
+                  </a>
+                  <button
+                    onClick={() => setExpanded(false)}
+                    className="text-2xl text-gray-400 hover:text-white transition-colors"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+              
+              {/* iframe */}
+              <div className="flex-1 bg-black border border-yellow-500/30 border-t-0 rounded-b-lg overflow-hidden">
+                <iframe
+                  src="https://provider.whistle.ninja"
+                  className="w-full h-full"
+                  style={{ border: 'none' }}
+                />
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
