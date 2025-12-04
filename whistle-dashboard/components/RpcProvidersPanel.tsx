@@ -30,15 +30,6 @@ export default function RpcProvidersPanel() {
             transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
           />
 
-          {/* Pulsing glow */}
-          <motion.div
-            className="absolute inset-3 rounded-full bg-emerald-500/10"
-            animate={{ 
-              scale: [1, 1.15, 1],
-              opacity: [0.3, 0.6, 0.3]
-            }}
-            transition={{ duration: 2, repeat: Infinity }}
-          />
 
           {/* Logo with 3D flip animation */}
           <motion.div
@@ -54,18 +45,10 @@ export default function RpcProvidersPanel() {
             }}
             style={{ transformStyle: 'preserve-3d' }}
           >
-            <motion.img
+            <img
               src="/whistel_logo_top_right_2048.png"
               alt="Whistle"
               className="w-14 h-14 object-contain"
-              animate={{
-                filter: [
-                  'drop-shadow(0 0 8px rgba(52, 211, 153, 0.4))',
-                  'drop-shadow(0 0 20px rgba(52, 211, 153, 0.8))',
-                  'drop-shadow(0 0 8px rgba(52, 211, 153, 0.4))',
-                ]
-              }}
-              transition={{ duration: 2, repeat: Infinity }}
             />
           </motion.div>
 
