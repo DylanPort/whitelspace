@@ -44,8 +44,8 @@ export function ServerCacheSetup() {
     windows: {
       name: 'Windows',
       icon: Monitor,
-      file: 'WHISTLE-Cache-Node-Setup-1.0.0.exe',
-      url: 'https://github.com/DylanPort/whitelspace/releases/download/v1.02/WHISTLE-Cache-Node-Setup-1.0.0.exe',
+      file: 'Ghost.Whistle.Desktop.1.0.0.exe',
+      url: 'https://github.com/DylanPort/whitelspace/releases/download/v1.01/Ghost.Whistle.Desktop.1.0.0.exe',
       color: 'from-blue-500 to-blue-600',
       size: '~80 MB',
       available: true
@@ -53,21 +53,21 @@ export function ServerCacheSetup() {
     linux: {
       name: 'Linux',
       icon: Terminal,
-      file: 'Docker / AppImage',
-      url: '#',
+      file: 'ghost-node-runner-linux',
+      url: 'https://github.com/DylanPort/whitelspace/releases/download/v1.02/ghost-node-runner-linux',
       color: 'from-orange-500 to-orange-600',
-      size: 'Docker',
+      size: 'Binary',
       available: true,
       isLinux: true
     },
     mac: {
       name: 'macOS',
       icon: Laptop,
-      file: 'WHISTLE-Cache-Node-1.0.0.dmg',
-      url: 'https://github.com/DylanPort/whitelspace/releases/download/v1.02/WHISTLE-Cache-Node-1.0.0-x64.dmg',
+      file: 'Coming Soon',
+      url: '#',
       color: 'from-gray-600 to-gray-700',
-      size: '~85 MB',
-      available: true
+      size: 'N/A',
+      available: false
     }
   }
 
