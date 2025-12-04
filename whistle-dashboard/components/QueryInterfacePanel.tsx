@@ -12,22 +12,20 @@ const RPC_PACKAGES = [
     name: 'BASIC',
     price: 0.2,
     features: ['10 req/sec', '10M requests'],
-    color: 'emerald'
   },
   { 
     id: 'advanced',
     name: 'ADVANCED',
     price: 1,
-    features: ['20 req/sec', '30M requests', 'Widget Integration'],
-    color: 'blue',
+    features: ['20 req/sec', '30M requests', 'Widgets'],
     popular: true
   },
   { 
     id: 'premium',
     name: 'PREMIUM',
     price: 2,
-    features: ['Unlimited req', 'Geyser Data Stream', 'Widget Integration'],
-    color: 'purple'
+    features: ['Unlimited', 'Geyser Stream', 'Widgets'],
+    gold: true
   },
 ];
 
@@ -80,7 +78,7 @@ export default function QueryInterfacePanel() {
   return (
     <PanelFrame
       cornerType="silver"
-      className="h-[280px] flex flex-col"
+      className="h-[280px] flex flex-col overflow-hidden"
       motionProps={{
         initial: { opacity: 0, x: 50 },
         animate: { opacity: 1, x: 0 },
@@ -88,7 +86,7 @@ export default function QueryInterfacePanel() {
       }}
     >
       {/* Packages Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-2">
         <h3 className="text-[11px] font-semibold tracking-[0.15em]">
           RPC PACKAGES
         </h3>
@@ -98,7 +96,7 @@ export default function QueryInterfacePanel() {
       </div>
 
       {/* Packages List */}
-      <div className="space-y-2.5 flex-1">
+      <div className="space-y-1.5 flex-1 overflow-y-auto">
         {RPC_PACKAGES.map((pkg, i) => (
           <motion.div 
             key={pkg.id}
@@ -106,26 +104,39 @@ export default function QueryInterfacePanel() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 + i * 0.1 }}
             whileHover={{ scale: 1.01 }}
-            className={`p-3 rounded border transition-all ${
-              pkg.popular 
-                ? 'border-blue-500/50 bg-blue-500/10' 
+            className={`p-2 rounded border transition-all ${
+              pkg.gold 
+                ? 'border-yellow-500/50 bg-gradient-to-r from-yellow-500/10 via-amber-500/5 to-yellow-500/10' 
+                : pkg.popular
+                ? 'border-white/30 bg-white/5'
                 : 'border-white/10 bg-black/20 hover:border-white/20'
             }`}
+            style={pkg.gold ? {
+              boxShadow: '0 0 15px rgba(234, 179, 8, 0.15), inset 0 0 20px rgba(234, 179, 8, 0.05)'
+            } : {}}
           >
             <div className="flex items-center justify-between">
               {/* Left: Price + Name */}
-              <div className="flex items-center gap-3">
-                <div className={`text-[18px] font-bold ${
-                  pkg.color === 'emerald' ? 'text-emerald-400' :
-                  pkg.color === 'blue' ? 'text-blue-400' : 'text-purple-400'
-                }`}>
+              <div className="flex items-center gap-2">
+                <div className={`text-[16px] font-bold ${pkg.gold ? 'text-yellow-400' : 'text-white'}`}>
                   {pkg.price}
-                  <span className="text-[9px] text-gray-500 ml-0.5">SOL</span>
+                  <span className="text-[8px] text-gray-500 ml-0.5">SOL</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-bold text-white">{pkg.name}</span>
+                <div className="flex items-center gap-1">
+                  <span className={`text-[9px] font-bold ${pkg.gold ? 'text-yellow-400' : 'text-white'}`}>
+                    {pkg.name}
+                  </span>
                   {pkg.popular && (
-                    <span className="text-[6px] px-1 py-0.5 bg-blue-500/30 text-blue-300 rounded">★ POPULAR</span>
+                    <span className="text-[6px] px-1 py-0.5 bg-white/10 text-white/70 rounded">★</span>
+                  )}
+                  {pkg.gold && (
+                    <motion.span 
+                      className="text-[6px] px-1 py-0.5 bg-yellow-500/20 text-yellow-400 rounded"
+                      animate={{ opacity: [0.7, 1, 0.7] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      ✦
+                    </motion.span>
                   )}
                 </div>
               </div>
@@ -134,18 +145,16 @@ export default function QueryInterfacePanel() {
               <button
                 onClick={() => handlePurchase(pkg)}
                 disabled={loading !== null || !connected}
-                className={`px-4 py-1.5 rounded text-[8px] font-bold tracking-wider transition-all ${
+                className={`px-3 py-1 rounded text-[7px] font-bold tracking-wider transition-all ${
                   success === pkg.id
                     ? 'bg-green-500/20 border border-green-500/50 text-green-400'
                     : loading === pkg.id
                     ? 'bg-gray-500/20 border border-gray-500/30 text-gray-400 cursor-wait'
                     : !connected
                     ? 'bg-gray-500/10 border border-gray-500/20 text-gray-500'
-                    : pkg.color === 'emerald' 
-                    ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
-                    : pkg.color === 'blue'
-                    ? 'bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500/20'
-                    : 'bg-purple-500/10 border border-purple-500/30 text-purple-400 hover:bg-purple-500/20'
+                    : pkg.gold
+                    ? 'bg-yellow-500/10 border border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/20'
+                    : 'bg-white/5 border border-white/20 text-white hover:bg-white/10'
                 }`}
               >
                 {success === pkg.id ? '✓' : loading === pkg.id ? '...' : 'BUY'}
@@ -153,13 +162,14 @@ export default function QueryInterfacePanel() {
             </div>
             
             {/* Features */}
-            <div className="flex items-center gap-2 mt-2 flex-wrap">
+            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
               {pkg.features.map((feature, fi) => (
                 <span 
                   key={fi}
-                  className={`text-[8px] px-2 py-0.5 rounded ${
-                    pkg.color === 'emerald' ? 'bg-emerald-500/10 text-emerald-300' :
-                    pkg.color === 'blue' ? 'bg-blue-500/10 text-blue-300' : 'bg-purple-500/10 text-purple-300'
+                  className={`text-[7px] px-1.5 py-0.5 rounded ${
+                    pkg.gold 
+                      ? 'bg-yellow-500/10 text-yellow-300/80' 
+                      : 'bg-white/5 text-gray-400'
                   }`}
                 >
                   {feature}
@@ -171,9 +181,9 @@ export default function QueryInterfacePanel() {
       </div>
 
       {/* Bottom Info */}
-      <div className="pt-2 mt-2 border-t border-white/10">
+      <div className="pt-1.5 mt-1.5 border-t border-white/10">
         <p className="text-[7px] text-gray-500 text-center">
-          Powered by WHISTLE validators • Decentralized
+          Powered by WHISTLE validators
         </p>
       </div>
     </PanelFrame>
