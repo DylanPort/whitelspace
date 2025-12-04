@@ -87,7 +87,7 @@ export function useLiveMetrics(refreshInterval = 5000) {
           errorCount: 0
         },
         rpc: {
-          endpoint: 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba',
+          endpoint: 'https://rpc.whistle.ninja',
           totalRequests: 0,
           requestsLastHour: 0,
           avgLatencyMs: 0

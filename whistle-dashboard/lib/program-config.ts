@@ -49,7 +49,7 @@ export const DISTRIBUTION = {
 
 // RPC Configuration
 export const RPC_CONFIG = {
-  endpoint: 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba',
+  endpoint: 'https://rpc.whistle.ninja',
   commitment: 'confirmed' as const,
 };
 

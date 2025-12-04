@@ -3,7 +3,7 @@
  * Our own validator - no rate limits!
  */
 
-const RPC_URL = process.env.NEXT_PUBLIC_RPC_ENDPOINT || 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba'
+const RPC_URL = process.env.NEXT_PUBLIC_RPC_ENDPOINT || 'https://rpc.whistle.ninja'
 
 class SolanaRPC {
   constructor(endpoint = RPC_URL) {
