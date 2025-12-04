@@ -10,13 +10,9 @@
  * - WHISTLE branding
  */
 
-// Upstream RPC endpoints
-const UPSTREAM_HTTP = 'https://api.mainnet-beta.solana.com';
-const UPSTREAM_WS = 'wss://api.mainnet-beta.solana.com';
-
-// Alternative: Use Helius if you have an API key
-// const UPSTREAM_HTTP = 'https://mainnet.helius-rpc.com/?api-key=YOUR_KEY';
-// const UPSTREAM_WS = 'wss://mainnet.helius-rpc.com/?api-key=YOUR_KEY';
+// Upstream RPC endpoints - Using Helius for better performance
+const UPSTREAM_HTTP = 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
+const UPSTREAM_WS = 'wss://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
 
 export default {
   async fetch(request, env, ctx) {

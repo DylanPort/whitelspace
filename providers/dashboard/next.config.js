@@ -8,7 +8,7 @@ const nextConfig = {
   },
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://api.whistle.ninja',
-    NEXT_PUBLIC_RPC_URL: process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba',
+    NEXT_PUBLIC_RPC_URL: process.env.NEXT_PUBLIC_RPC_URL || 'https://rpc.whistle.ninja',
     NEXT_PUBLIC_COORDINATOR_HTTP: process.env.NEXT_PUBLIC_COORDINATOR_HTTP || 'https://coordinator.whistle.ninja',
     NEXT_PUBLIC_COORDINATOR_WS: process.env.NEXT_PUBLIC_COORDINATOR_WS || 'wss://coordinator.whistle.ninja/ws'
   }

@@ -47,7 +47,7 @@ export function OnChainProvider() {
   const [success, setSuccess] = useState(null)
   const [txSig, setTxSig] = useState(null)
   
-  const [endpoint, setEndpoint] = useState('https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba')
+  const [endpoint, setEndpoint] = useState('https://rpc.whistle.ninja')
   const [bondAmount, setBondAmount] = useState(MIN_PROVIDER_BOND)
   const [stakeAmount, setStakeAmount] = useState(1000)
 

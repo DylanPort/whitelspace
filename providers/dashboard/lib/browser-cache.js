@@ -37,7 +37,7 @@ const NO_CACHE_METHODS = [
 class BrowserCacheNode {
   constructor(options = {}) {
     this.coordinatorUrl = options.coordinatorUrl || 'ws://localhost:3003/ws';
-    this.upstreamRpc = options.upstreamRpc || 'https://mainnet.helius-rpc.com/?api-key=413dfeef-84d4-4a37-98a7-1e0716bfc4ba';
+    this.upstreamRpc = options.upstreamRpc || 'https://rpc.whistle.ninja';
     this.wallet = options.wallet || null;
     this.name = options.name || 'Browser Node';
     
