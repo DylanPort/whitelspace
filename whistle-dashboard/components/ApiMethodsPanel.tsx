@@ -67,23 +67,29 @@ export default function ApiMethodsPanel() {
           ))}
         </div>
 
-        {/* Features Grid */}
-        <div className="grid grid-cols-4 gap-1.5 flex-1">
+        {/* Features List */}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 flex-1 content-start">
           {[
-            { icon: '⚡', label: 'Low Latency' },
-            { icon: '🔄', label: 'WebSocket' },
-            { icon: '📊', label: 'Data Stream' },
-            { icon: '🧩', label: 'Widgets' },
+            'Low Latency',
+            'WebSocket Support',
+            'Data Streaming',
+            'Embeddable Widgets',
+            'JSON-RPC 2.0',
+            'Account Subscriptions',
           ].map((feat, i) => (
             <motion.div
-              key={feat.label}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
+              key={feat}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 + i * 0.05 }}
-              className="p-1.5 bg-black/20 rounded border border-white/5 text-center flex flex-col items-center justify-center"
+              className="flex items-center gap-2"
             >
-              <div className="text-xs mb-0.5">{feat.icon}</div>
-              <div className="text-[7px] font-semibold text-white leading-tight">{feat.label}</div>
+              <motion.div 
+                className="w-1.5 h-1.5 rounded-full bg-emerald-400"
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 }}
+              />
+              <span className="text-[8px] text-gray-300">{feat}</span>
             </motion.div>
           ))}
         </div>

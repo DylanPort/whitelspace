@@ -97,24 +97,25 @@ export default function QueryInterfacePanel() {
         </div>
       </div>
 
-      {/* Packages Grid */}
-      <div className="flex gap-2 flex-1">
+      {/* Packages List - Row Layout */}
+      <div className="space-y-2 flex-1">
         {RPC_PACKAGES.map((pkg, i) => (
           <motion.div 
             key={pkg.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 + i * 0.1 }}
-            whileHover={{ scale: 1.02 }}
-            className={`flex-1 p-2 rounded border transition-all flex flex-col ${
+            whileHover={{ scale: 1.01 }}
+            className={`p-2.5 rounded border transition-all flex items-center justify-between ${
               pkg.popular 
                 ? 'border-blue-500/50 bg-blue-500/10' 
                 : 'border-white/10 bg-black/20 hover:border-white/20'
             }`}
           >
-            <div className="text-center flex-1">
-              <div className="flex items-center justify-center gap-1 mb-1">
-                <span className={`text-[9px] font-bold ${
+            {/* Left: Name + Tag */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <span className={`text-[10px] font-bold ${
                   pkg.color === 'emerald' ? 'text-emerald-400' :
                   pkg.color === 'blue' ? 'text-blue-400' : 'text-purple-400'
                 }`}>
@@ -124,32 +125,35 @@ export default function QueryInterfacePanel() {
                   <span className="text-[6px] px-1 py-0.5 bg-blue-500/30 text-blue-300 rounded">★</span>
                 )}
               </div>
-              <div className="text-[18px] font-bold text-white">{pkg.price}</div>
-              <div className="text-[7px] text-gray-500 mb-2">SOL</div>
-              <div className="text-[7px] text-gray-400 leading-tight">
-                {pkg.tag}
-              </div>
+              <span className="text-[8px] text-gray-400">{pkg.tag}</span>
             </div>
 
-            <button
-              onClick={() => handlePurchase(pkg)}
-              disabled={loading !== null || !connected}
-              className={`w-full py-1.5 rounded text-[7px] font-bold tracking-wider transition-all mt-2 ${
-                success === pkg.id
-                  ? 'bg-green-500/20 border border-green-500/50 text-green-400'
-                  : loading === pkg.id
-                  ? 'bg-gray-500/20 border border-gray-500/30 text-gray-400 cursor-wait'
-                  : !connected
-                  ? 'bg-gray-500/10 border border-gray-500/20 text-gray-500'
-                  : pkg.color === 'emerald' 
-                  ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
-                  : pkg.color === 'blue'
-                  ? 'bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500/20'
-                  : 'bg-purple-500/10 border border-purple-500/30 text-purple-400 hover:bg-purple-500/20'
-              }`}
-            >
-              {success === pkg.id ? '✓' : loading === pkg.id ? '...' : 'BUY'}
-            </button>
+            {/* Right: Price + Button */}
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <span className="text-[14px] font-bold text-white">{pkg.price}</span>
+                <span className="text-[8px] text-gray-500 ml-1">SOL</span>
+              </div>
+              <button
+                onClick={() => handlePurchase(pkg)}
+                disabled={loading !== null || !connected}
+                className={`px-3 py-1.5 rounded text-[8px] font-bold tracking-wider transition-all ${
+                  success === pkg.id
+                    ? 'bg-green-500/20 border border-green-500/50 text-green-400'
+                    : loading === pkg.id
+                    ? 'bg-gray-500/20 border border-gray-500/30 text-gray-400 cursor-wait'
+                    : !connected
+                    ? 'bg-gray-500/10 border border-gray-500/20 text-gray-500'
+                    : pkg.color === 'emerald' 
+                    ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
+                    : pkg.color === 'blue'
+                    ? 'bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500/20'
+                    : 'bg-purple-500/10 border border-purple-500/30 text-purple-400 hover:bg-purple-500/20'
+                }`}
+              >
+                {success === pkg.id ? '✓' : loading === pkg.id ? '...' : 'BUY'}
+              </button>
+            </div>
           </motion.div>
         ))}
       </div>
