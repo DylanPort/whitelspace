@@ -17,8 +17,6 @@ import PoolInfoPanel from '@/components/PoolInfoPanel';
 import PersonalStatsPanel from '@/components/PersonalStatsPanel';
 import NetworkProviderPanel from '@/components/NetworkProviderPanel';
 import TreasuryPanel from '@/components/TreasuryPanel';
-import WhyStakePanel from '@/components/WhyStakePanel';
-import OurPlansPanel from '@/components/OurPlansPanel';
 import GhostWhistlePanel from '@/components/GhostWhistlePanel';
 import ResourcesPanel from '@/components/ResourcesPanel';
 import DecentralizationProgress from '@/components/DecentralizationProgress';
@@ -132,7 +130,6 @@ export default function Home() {
           <div className="w-full lg:w-[250px] space-y-3 md:space-y-5 flex-shrink-0 lg:mr-0">
             <QueryInterfacePanel />
             <NetworkStatsPanel />
-            <WhyStakePanel />
           </div>
 
           {/* CENTER - Core (Wallet + Credits) + Info Buttons */}
@@ -160,7 +157,6 @@ export default function Home() {
           <div className="w-full lg:w-[250px] space-y-3 md:space-y-5 flex-shrink-0 lg:ml-0">
             <StakingPanel />
             <ProviderEarningsPanel />
-            <OurPlansPanel />
           </div>
 
           {/* FAR RIGHT COLUMN - Provider Info */}
