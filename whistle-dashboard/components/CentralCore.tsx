@@ -13,9 +13,9 @@ export default function CentralCore() {
   const [loading, setLoading] = useState(false);
   const [showAccessTokenModal, setShowAccessTokenModal] = useState(false);
   
-  // Pool stats - use cached/last known values, never show 0
-  const [totalStaked, setTotalStaked] = useState(154318009);
-  const [totalStakers, setTotalStakers] = useState(0);
+  // Pool stats
+  const [totalStaked, setTotalStaked] = useState<number | null>(null);
+  const [poolLoading, setPoolLoading] = useState(true);
 
   useEffect(() => {
     async function loadStakerData() {
@@ -30,25 +30,20 @@ export default function CentralCore() {
         const stakerAccount = await fetchStakerAccount(publicKey);
         if (stakerAccount) {
           setStakedAmount(tokensToWhistle(stakerAccount.stakedAmount));
-          // Access tokens are calculated as: staked_lamports * tokens_per_whistle
-          // Since WHISTLE has 6 decimals, divide by 1,000,000 for display
           setAccessTokens(Number(stakerAccount.accessTokens) / 1_000_000);
         } else {
-          // No account yet - new staker
           setStakedAmount(0);
           setAccessTokens(0);
         }
       } catch (err) {
         console.error('Failed to load staker account:', err);
-        // Keep previous values on error - never reset to 0
+        // Keep loading state - never show 0
       } finally {
         setLoading(false);
       }
     }
 
     loadStakerData();
-    
-    // Refresh every 30 seconds
     const interval = setInterval(loadStakerData, 30000);
     return () => clearInterval(interval);
   }, [publicKey]);
@@ -57,29 +52,19 @@ export default function CentralCore() {
   useEffect(() => {
     async function loadPoolStats() {
       try {
-        // Fetch pool data
         const pool = await fetchStakingPool();
         if (pool && pool.totalStaked > 0) {
-          const newTotal = tokensToWhistle(pool.totalStaked);
-          if (newTotal > 0) {
-            setTotalStaked(newTotal);
-          }
+          setTotalStaked(tokensToWhistle(pool.totalStaked));
+          setPoolLoading(false);
         }
-        
-        // Fetch REAL staker count from blockchain
-        const count = await fetchStakerCount();
-        if (count > 0) {
-          setTotalStakers(count);
-        }
+        // If pool returns 0 or null, keep loading state
       } catch (err) {
         console.error('Failed to load pool stats:', err);
-        // Keep previous values on error - never reset to 0
+        // Keep loading state on error - never show 0
       }
     }
 
     loadPoolStats();
-    
-    // Refresh every 10 seconds
     const interval = setInterval(loadPoolStats, 10000);
     return () => clearInterval(interval);
   }, []);
@@ -204,7 +189,11 @@ export default function CentralCore() {
                   TOTAL STAKED
                 </div>
                 <div className="text-[22px] md:text-[28px] font-bold leading-none tracking-tight">
-                  {Math.floor(totalStaked).toLocaleString()}
+                  {poolLoading || totalStaked === null ? (
+                    <span className="text-gray-500 animate-pulse">Loading...</span>
+                  ) : (
+                    Math.floor(totalStaked).toLocaleString()
+                  )}
                 </div>
                 <div className="text-[9px] md:text-[10px] text-gray-400 mt-1">
                   WHISTLE
