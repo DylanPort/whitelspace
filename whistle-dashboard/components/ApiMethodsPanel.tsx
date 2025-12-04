@@ -24,7 +24,7 @@ export default function ApiMethodsPanel() {
           </h3>
           <button
             onClick={() => setExpanded(true)}
-            className="text-[8px] px-2 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded text-emerald-400 hover:bg-emerald-500/20 transition-all"
+            className="text-[8px] px-2 py-1 bg-cyan-500/10 border border-cyan-500/30 rounded text-cyan-400 hover:bg-cyan-500/20 transition-all"
           >
             HEALTH ↗
           </button>
@@ -50,7 +50,7 @@ export default function ApiMethodsPanel() {
               className="flex items-center gap-2"
             >
               <motion.div 
-                className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"
+                className="w-1.5 h-1.5 rounded-full bg-cyan-400 flex-shrink-0"
                 animate={{ scale: [1, 1.3, 1], opacity: [0.7, 1, 0.7] }}
                 transition={{ duration: 2, repeat: Infinity, delay: i * 0.2 }}
               />
@@ -82,8 +82,8 @@ export default function ApiMethodsPanel() {
               className="fixed inset-4 md:inset-8 lg:inset-16 z-50 flex flex-col"
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-4 bg-black/80 border border-emerald-500/30 border-b-0 rounded-t-lg">
-                <h2 className="text-sm font-bold tracking-wider text-emerald-400">
+              <div className="flex items-center justify-between p-4 bg-black/80 border border-cyan-500/30 border-b-0 rounded-t-lg">
+                <h2 className="text-sm font-bold tracking-wider text-cyan-400">
                   RPC HEALTH MONITOR
                 </h2>
                 <div className="flex items-center gap-3">
@@ -91,7 +91,7 @@ export default function ApiMethodsPanel() {
                     href="https://health.whistle.ninja"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[10px] px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded text-emerald-400 hover:bg-emerald-500/20 transition-all"
+                    className="text-[10px] px-3 py-1 bg-cyan-500/10 border border-cyan-500/30 rounded text-cyan-400 hover:bg-cyan-500/20 transition-all"
                   >
                     Open in new tab ↗
                   </a>
@@ -105,7 +105,7 @@ export default function ApiMethodsPanel() {
               </div>
               
               {/* iframe */}
-              <div className="flex-1 bg-black border border-emerald-500/30 border-t-0 rounded-b-lg overflow-hidden">
+              <div className="flex-1 bg-black border border-cyan-500/30 border-t-0 rounded-b-lg overflow-hidden">
                 <iframe
                   src="https://health.whistle.ninja"
                   className="w-full h-full"

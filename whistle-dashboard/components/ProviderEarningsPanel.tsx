@@ -228,7 +228,7 @@ export default function ProviderEarningsPanel() {
             href={`https://solscan.io/tx/${signature}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-emerald-400 hover:text-emerald-300 underline"
+            className="text-xs text-cyan-400 hover:text-cyan-300 underline"
             onClick={() => toast.dismiss(t.id)}
           >
             View Transaction →
@@ -325,11 +325,11 @@ export default function ProviderEarningsPanel() {
               
               {/* Micro-rewards indicator */}
               {earnings > 0 && earnings < 0.01 && (
-                <div className="mt-2 bg-emerald-900/30 border border-emerald-500/30 rounded px-2 py-1">
-                  <div className="text-[11px] text-emerald-400 font-mono animate-pulse">
+                <div className="mt-2 bg-cyan-900/30 border border-cyan-500/30 rounded px-2 py-1">
+                  <div className="text-[11px] text-cyan-400 font-mono animate-pulse">
                     💎 {earnings.toFixed(8)} SOL
                   </div>
-                  <div className="text-[9px] text-emerald-300/80">
+                  <div className="text-[9px] text-cyan-300/80">
                     ≈ ${(earnings * 200).toFixed(4)} USD
                   </div>
                 </div>
@@ -376,14 +376,14 @@ export default function ProviderEarningsPanel() {
             {totalStakerRewards > 0 && (
               <div className="flex justify-between">
                 <span>Total Pool:</span>
-                <span className="text-emerald-400">{totalStakerRewards.toFixed(4)} SOL</span>
+                <span className="text-cyan-400">{totalStakerRewards.toFixed(4)} SOL</span>
               </div>
             )}
             {claimHistory && claimHistory.claimCount > 0 && (
               <>
                 <div className="flex justify-between pt-1 border-t border-white/5 mt-1">
                   <span>Last Claim:</span>
-                  <span className="text-emerald-300">
+                  <span className="text-cyan-300">
                     {claimHistory.lastClaimTime
                       ? new Date(claimHistory.lastClaimTime).toLocaleDateString()
                       : 'Never'}
@@ -391,15 +391,15 @@ export default function ProviderEarningsPanel() {
                 </div>
                 <div className="flex justify-between">
                   <span>Last Amount:</span>
-                  <span className="text-emerald-300">{claimHistory.lastClaimAmount.toFixed(6)} SOL</span>
+                  <span className="text-cyan-300">{claimHistory.lastClaimAmount.toFixed(6)} SOL</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Total Claimed:</span>
-                  <span className="text-emerald-300">{claimHistory.totalClaimed.toFixed(6)} SOL</span>
+                  <span className="text-cyan-300">{claimHistory.totalClaimed.toFixed(6)} SOL</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Claim Count:</span>
-                  <span className="text-emerald-300">{claimHistory.claimCount}</span>
+                  <span className="text-cyan-300">{claimHistory.claimCount}</span>
                 </div>
               </>
             )}

@@ -90,7 +90,7 @@ export default function QueryInterfacePanel() {
         <h3 className="text-[11px] font-semibold tracking-[0.15em]">
           RPC PACKAGES
         </h3>
-        <div className="text-[7px] text-emerald-400 tracking-wider">
+        <div className="text-[7px] text-cyan-400 tracking-wider">
           100% TO COMMUNITY
         </div>
       </div>

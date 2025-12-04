@@ -79,7 +79,7 @@ export default function PoolInfoPanel() {
         {poolData?.tokenBalance && (
           <div className="flex justify-between pt-1 border-t border-white/5">
             <span className="text-gray-500">Staked Tokens</span>
-            <span className="font-semibold text-emerald-400">
+            <span className="font-semibold text-cyan-400">
               {poolData.tokenBalance}
             </span>
           </div>

@@ -18,14 +18,14 @@ export default function RpcProvidersPanel() {
         <div className="relative w-24 h-24 mb-5">
           {/* Outer spinning ring */}
           <motion.div
-            className="absolute inset-0 rounded-full border-2 border-emerald-500/30"
+            className="absolute inset-0 rounded-full border-2 border-cyan-500/30"
             animate={{ rotate: 360 }}
             transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
           />
           
           {/* Inner spinning ring (opposite direction) */}
           <motion.div
-            className="absolute inset-2 rounded-full border border-emerald-400/20"
+            className="absolute inset-2 rounded-full border border-cyan-400/20"
             animate={{ rotate: -360 }}
             transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
           />
@@ -56,7 +56,7 @@ export default function RpcProvidersPanel() {
           {[0, 1, 2].map((i) => (
             <motion.div
               key={i}
-              className="absolute w-1.5 h-1.5 bg-emerald-400 rounded-full"
+              className="absolute w-1.5 h-1.5 bg-cyan-400 rounded-full"
               style={{
                 top: '50%',
                 left: '50%',
@@ -104,7 +104,7 @@ export default function RpcProvidersPanel() {
           {[0, 1, 2].map((i) => (
             <motion.div
               key={i}
-              className="w-1.5 h-1.5 bg-emerald-400/50 rounded-full"
+              className="w-1.5 h-1.5 bg-cyan-400/50 rounded-full"
               animate={{
                 scale: [1, 1.5, 1],
                 opacity: [0.3, 1, 0.3],
