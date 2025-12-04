@@ -207,21 +207,6 @@ export default function CentralCore() {
                 </div>
               </div>
 
-              {/* Divider */}
-              <div className="w-px h-10 md:h-12 bg-white/10" />
-
-              {/* Total Stakers */}
-              <div className="text-center">
-                <div className="text-[8px] md:text-[9px] text-gray-500 tracking-[0.2em] mb-1">
-                  STAKERS
-                </div>
-                <div className="text-[22px] md:text-[28px] font-bold leading-none tracking-tight">
-                  -
-                </div>
-                <div className="text-[9px] md:text-[10px] text-gray-400 mt-1">
-                  ACTIVE
-                </div>
-              </div>
             </div>
           </div>
         </motion.div>
