@@ -33,7 +33,7 @@ export default function ProviderRegistrationPanel() {
         <div 
           className="relative rounded overflow-hidden border border-yellow-500/20 cursor-pointer hover:border-yellow-500/40 transition-all"
           onClick={() => setExpanded(true)}
-          style={{ height: '320px' }}
+          style={{ height: '180px' }}
         >
           <div className="relative w-full h-full overflow-hidden">
             <iframe
@@ -42,8 +42,8 @@ export default function ProviderRegistrationPanel() {
                 border: 'none',
                 background: '#000',
                 width: '1600px',
-                height: '2000px',
-                transform: 'scale(0.13)',
+                height: '1400px',
+                transform: 'scale(0.12)',
                 transformOrigin: 'top left',
                 pointerEvents: 'none',
               }}
