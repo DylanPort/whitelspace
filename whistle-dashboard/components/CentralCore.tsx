@@ -4,7 +4,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import { fetchStakerAccount, fetchStakingPool, fetchStakerCount, tokensToWhistle, TOKEN_VAULT_ADDRESS } from '@/lib/contract';
+import { fetchStakerAccount, fetchTokenVault, tokensToWhistle, TOKEN_VAULT_ADDRESS } from '@/lib/contract';
 
 export default function CentralCore() {
   const { publicKey, connected, disconnect } = useWallet();
@@ -48,16 +48,17 @@ export default function CentralCore() {
     return () => clearInterval(interval);
   }, [publicKey]);
 
-  // Load pool stats
+  // Load pool stats - fetch REAL vault balance from blockchain
   useEffect(() => {
     async function loadPoolStats() {
       try {
-        const pool = await fetchStakingPool();
-        if (pool && pool.totalStaked > 0) {
-          setTotalStaked(tokensToWhistle(pool.totalStaked));
+        // Fetch actual token vault balance (the REAL total staked)
+        const vault = await fetchTokenVault();
+        if (vault && vault.uiAmount && vault.uiAmount > 0) {
+          setTotalStaked(vault.uiAmount);
           setPoolLoading(false);
         }
-        // If pool returns 0 or null, keep loading state
+        // If vault returns 0 or null, keep loading state
       } catch (err) {
         console.error('Failed to load pool stats:', err);
         // Keep loading state on error - never show 0
