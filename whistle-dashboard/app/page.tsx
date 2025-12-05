@@ -23,6 +23,7 @@ import DecentralizationProgress from '@/components/DecentralizationProgress';
 import GovernancePanel from '@/components/GovernancePanel';
 // Removed DeveloperAccessButton - RPC is now public
 import SubscriptionStatusPanel from '@/components/SubscriptionStatusPanel';
+import LiveAnalyticsPanel from '@/components/LiveAnalyticsPanel';
 import { api } from '@/lib/api';
 
 export default function Home() {
@@ -170,6 +171,11 @@ export default function Home() {
         {/* RPC Subscription Status - Single Panel */}
         <div id="developer-access-section" className="max-w-[600px] mx-auto w-full mb-4 md:mb-6">
           <SubscriptionStatusPanel />
+        </div>
+
+        {/* Live Analytics */}
+        <div className="max-w-[600px] mx-auto w-full mb-4 md:mb-6">
+          <LiveAnalyticsPanel />
         </div>
 
         {/* System Info Section - Responsive Grid */}
