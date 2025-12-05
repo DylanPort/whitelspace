@@ -33,21 +33,34 @@ const ANALYTICS_KEY = 'whistle_analytics';
 const WALLETS_KEY = 'whistle_connected_wallets';
 const VISITORS_KEY = 'whistle_visitors';
 
+// Default analytics data object
+const DEFAULT_ANALYTICS: AnalyticsData = {
+  totalVisitors: 0,
+  uniqueWallets: 0,
+  stakersCount: 0,
+  totalStakerWallets: 0,
+  todayVisitors: 0,
+  weeklyGrowth: 0,
+  totalNodes: 0,
+  totalRelays: 0,
+  totalClaims: 0,
+};
+
 function getStoredAnalytics(): AnalyticsData {
   if (typeof window === 'undefined') {
-    return { totalVisitors: 0, uniqueWallets: 0, stakersCount: 0, todayVisitors: 0, weeklyGrowth: 0 };
+    return DEFAULT_ANALYTICS;
   }
   
   try {
     const stored = localStorage.getItem(ANALYTICS_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      return { ...DEFAULT_ANALYTICS, ...JSON.parse(stored) };
     }
   } catch (e) {
     console.error('Error reading analytics:', e);
   }
   
-  return { totalVisitors: 0, uniqueWallets: 0, stakersCount: 0, todayVisitors: 0, weeklyGrowth: 0 };
+  return DEFAULT_ANALYTICS;
 }
 
 function trackVisit() {
