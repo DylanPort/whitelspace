@@ -4,14 +4,28 @@ import { useEffect, useState, useCallback } from 'react';
 import PanelFrame from './PanelFrame';
 import { motion } from 'framer-motion';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { fetchStakerCount } from '@/lib/contract';
+import { fetchStakerCount, connection, WHISTLE_PROGRAM_ID } from '@/lib/contract';
+import { createClient } from '@supabase/supabase-js';
+
+// Supabase client for historical data
+const SUPABASE_URL = 'https://avhmgbkwfwlatykotxwv.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2aG1nYmt3ZndsYXR5a290eHd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEyMjMxOTksImV4cCI6MjA3Njc5OTE5OX0.s8DxqkwH-ZJtJdr1ve1HRGTw-038KEfYf8rlowYKtlE';
+
+let supabase: any = null;
+if (typeof window !== 'undefined') {
+  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
 
 interface AnalyticsData {
   totalVisitors: number;
   uniqueWallets: number;
   stakersCount: number;
+  totalStakerWallets: number;
   todayVisitors: number;
   weeklyGrowth: number;
+  totalNodes: number;
+  totalRelays: number;
+  totalClaims: number;
 }
 
 // Simple analytics storage keys
@@ -127,12 +141,16 @@ export default function LiveAnalyticsPanel() {
     totalVisitors: 0,
     uniqueWallets: 0,
     stakersCount: 0,
+    totalStakerWallets: 0,
     todayVisitors: 0,
     weeklyGrowth: 0,
+    totalNodes: 0,
+    totalRelays: 0,
+    totalClaims: 0,
   });
   const [loading, setLoading] = useState(true);
 
-  // Track visit on mount
+  // Track visit on mount (for new visitors)
   useEffect(() => {
     const visitorsData = trackVisit();
     const walletsData = JSON.parse(localStorage.getItem(WALLETS_KEY) || '{"count":0}');
@@ -158,48 +176,105 @@ export default function LiveAnalyticsPanel() {
     }
   }, [connected, publicKey]);
 
-  // Fetch real staker count from blockchain
+  // Fetch REAL data from blockchain and Supabase
   useEffect(() => {
-    async function loadStakerCount() {
+    async function loadRealData() {
       try {
-        const count = await fetchStakerCount();
+        // 1. Get staker count from blockchain (REAL)
+        const stakerCount = await fetchStakerCount();
+        
+        // 2. Get unique staker wallet addresses from blockchain
+        let uniqueStakerWallets = 0;
+        try {
+          const accounts = await connection.getProgramAccounts(WHISTLE_PROGRAM_ID, {
+            filters: [{ dataSize: 82 }] // StakerAccount size
+          });
+          const uniqueWallets = new Set(
+            accounts.map(acc => acc.account.data.slice(0, 32).toString('hex'))
+          );
+          uniqueStakerWallets = uniqueWallets.size;
+        } catch (e) {
+          console.error('Error fetching unique wallets:', e);
+        }
+
+        // 3. Fetch historical node data from Supabase
+        let totalNodes = 0;
+        let totalRelays = 0;
+        let totalClaims = 0;
+        
+        if (supabase) {
+          try {
+            // Get total unique nodes
+            const { count: nodesCount } = await supabase
+              .from('node_performance')
+              .select('*', { count: 'exact', head: true });
+            totalNodes = nodesCount || 0;
+            
+            // Get total relays
+            const { data: relayData } = await supabase
+              .from('node_performance')
+              .select('total_relays')
+              .limit(1000);
+            if (relayData) {
+              totalRelays = relayData.reduce((sum: number, r: any) => sum + (r.total_relays || 0), 0);
+            }
+            
+            // Get total claims
+            const { count: claimsCount } = await supabase
+              .from('claim_history')
+              .select('*', { count: 'exact', head: true });
+            totalClaims = claimsCount || 0;
+          } catch (e) {
+            console.error('Supabase fetch error:', e);
+          }
+        }
+
         setAnalytics(prev => ({
           ...prev,
-          stakersCount: count,
+          stakersCount: stakerCount,
+          totalStakerWallets: uniqueStakerWallets || stakerCount,
+          totalNodes,
+          totalRelays,
+          totalClaims,
         }));
       } catch (err) {
-        console.error('Error fetching staker count:', err);
+        console.error('Error loading real data:', err);
       } finally {
         setLoading(false);
       }
     }
 
-    loadStakerCount();
-    const interval = setInterval(loadStakerCount, 60000); // Refresh every minute
+    loadRealData();
+    const interval = setInterval(loadRealData, 60000); // Refresh every minute
     return () => clearInterval(interval);
   }, []);
 
   const stats = [
     {
-      label: 'TOTAL VISITORS',
-      value: analytics.totalVisitors,
-      color: 'text-white',
-    },
-    {
-      label: 'WALLETS CONNECTED',
-      value: analytics.uniqueWallets,
-      color: 'text-emerald-400',
-    },
-    {
-      label: 'ON-CHAIN STAKERS',
+      label: 'UNIQUE STAKERS',
       value: analytics.stakersCount,
       color: 'text-yellow-400',
       isRealtime: true,
+      source: 'blockchain',
     },
     {
-      label: 'TODAY',
-      value: analytics.todayVisitors,
+      label: 'TOTAL NODES',
+      value: analytics.totalNodes,
+      color: 'text-emerald-400',
+      isRealtime: true,
+      source: 'supabase',
+    },
+    {
+      label: 'TOTAL RELAYS',
+      value: analytics.totalRelays,
       color: 'text-blue-400',
+      source: 'supabase',
+    },
+    {
+      label: 'REWARD CLAIMS',
+      value: analytics.totalClaims,
+      color: 'text-purple-400',
+      source: 'supabase',
     },
   ];
 
@@ -235,34 +310,54 @@ export default function LiveAnalyticsPanel() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: i * 0.1 }}
-            className="text-center p-2 bg-black/20 rounded border border-white/5"
+            className="text-center p-2 bg-black/20 rounded border border-white/5 relative group"
           >
             <div className="text-[7px] text-gray-500 tracking-wider mb-1">
               {stat.label}
               {stat.isRealtime && (
-                <span className="ml-1 text-emerald-400">●</span>
+                <motion.span 
+                  className="ml-1 text-emerald-400"
+                  animate={{ opacity: [1, 0.3, 1] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                >●</motion.span>
               )}
             </div>
             <div className={`text-lg font-bold ${stat.color}`}>
-              {loading && stat.isRealtime ? (
+              {loading ? (
                 <span className="text-gray-500 animate-pulse">...</span>
               ) : (
                 stat.value.toLocaleString()
               )}
             </div>
+            {/* Source tooltip */}
+            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className={`text-[6px] px-1 py-0.5 rounded ${
+                stat.source === 'blockchain' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-blue-500/20 text-blue-400'
+              }`}>
+                {stat.source === 'blockchain' ? '⛓ ON-CHAIN' : '📊 DATABASE'}
+              </span>
+            </div>
           </motion.div>
         ))}
       </div>
 
-      {/* Growth Indicator */}
-      <div className="mt-3 pt-2 border-t border-white/5 flex items-center justify-between">
-        <span className="text-[8px] text-gray-500">Weekly Growth</span>
-        <div className={`flex items-center gap-1 text-[10px] font-bold ${
-          analytics.weeklyGrowth >= 0 ? 'text-emerald-400' : 'text-red-400'
-        }`}>
-          <span>{analytics.weeklyGrowth >= 0 ? '↑' : '↓'}</span>
-          <span>{Math.abs(analytics.weeklyGrowth)}%</span>
+      {/* Session visitors */}
+      <div className="mt-3 pt-2 border-t border-white/5">
+        <div className="flex items-center justify-between text-[8px]">
+          <span className="text-gray-500">Session Visitors (local)</span>
+          <span className="text-white font-bold">{analytics.totalVisitors.toLocaleString()}</span>
         </div>
+        <div className="flex items-center justify-between text-[8px] mt-1">
+          <span className="text-gray-500">Wallets Connected (local)</span>
+          <span className="text-emerald-400 font-bold">{analytics.uniqueWallets.toLocaleString()}</span>
+        </div>
+      </div>
+
+      {/* Data source note */}
+      <div className="mt-2 pt-2 border-t border-white/5 text-center">
+        <span className="text-[7px] text-gray-600">
+          ⛓ = Solana blockchain • 📊 = Supabase DB
+        </span>
       </div>
     </PanelFrame>
   );
