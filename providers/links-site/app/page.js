@@ -363,6 +363,36 @@ export default function LinksPage() {
             gradient="from-purple-500/20 via-transparent to-pink-500/10"
             delay={200}
           />
+          
+          <LinkCard
+            href="https://dex.whistle.ninja"
+            customIcon={({ className }) => (
+              <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 3v18h18" />
+                <path d="M7 16l4-8 4 5 5-9" />
+              </svg>
+            )}
+            title="WHISTLE DEX"
+            subtitle="Trade • Charts • Analytics"
+            gradient="from-cyan-500/20 via-transparent to-blue-500/10"
+            delay={250}
+          />
+          
+          <LinkCard
+            href="https://ai.whistle.ninja"
+            customIcon={({ className }) => (
+              <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M12 2v4m0 12v4M2 12h4m12 0h4" />
+                <path d="M12 12l6 6M12 12l-6-6M12 12l6-6M12 12l-6 6" />
+                <circle cx="12" cy="12" r="10" strokeDasharray="4 2" />
+              </svg>
+            )}
+            title="WHISTLE AI"
+            subtitle="AI-Powered Tools • Coming Soon"
+            gradient="from-pink-500/20 via-transparent to-purple-500/10"
+            delay={300}
+          />
         </div>
 
         {/* Divider */}
