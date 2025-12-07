@@ -26,6 +26,7 @@
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-hot-toast": "^2.6.0",
+    "react-is": "^19.2.1",
     "react-leaflet": "^5.0.0",
     "react-loading-skeleton": "^3.5.0",
     "recharts": "^3.4.1"
