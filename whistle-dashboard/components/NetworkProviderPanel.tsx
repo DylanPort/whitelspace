@@ -13,20 +13,28 @@ export default function NetworkProviderPanel() {
       try {
         const providerList = await fetchAllProviders();
         setProviders(providerList);
-      } catch (error) {
-        console.error('Error fetching providers:', error);
+      } catch (error: any) {
+        // Silently handle RPC limitations
+        if (error?.message?.includes('excluded from account secondary indexes') || 
+            error?.message?.includes('RPC method unavailable')) {
+          setProviders([]);
+        } else {
+          console.error('Error fetching providers:', error);
+        }
       } finally {
         setLoading(false);
       }
     }
 
     fetchData();
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
+    // Don't poll if RPC doesn't support this method
+    // const interval = setInterval(fetchData, 30000);
+    // return () => clearInterval(interval);
   }, []);
 
-  const activeProviders = providers.filter(p => p.active).length;
-  const totalBonded = providers.reduce((sum, p) => sum + (p.bonded || 0), 0);
+  const activeProviders = providers.filter(p => p.isActive).length;
+  // Total bonded not available from this RPC method
+  const totalBonded = 0;
 
   return (
     <PanelFrame

@@ -406,7 +406,14 @@ export async function fetchAllProviders(): Promise<Array<{ pubkey: PublicKey; is
         return null;
       }
     }).filter((p): p is { pubkey: PublicKey; isActive: boolean; endpoint: string } => p !== null);
-  } catch (error) {
+  } catch (error: any) {
+    // RPC endpoint doesn't support getProgramAccounts for this program
+    // This is expected - return empty array gracefully
+    if (error?.message?.includes('excluded from account secondary indexes') || 
+        error?.message?.includes('RPC method unavailable')) {
+      console.warn('getProgramAccounts not supported by RPC endpoint, returning empty provider list');
+      return [];
+    }
     console.error('Error fetching providers:', error);
     return [];
   }
