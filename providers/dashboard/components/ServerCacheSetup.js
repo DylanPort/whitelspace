@@ -45,7 +45,7 @@ export function ServerCacheSetup() {
       name: 'Windows',
       icon: Monitor,
       file: 'Ghost.Whistle.Desktop.1.0.0.exe',
-      url: 'https://github.com/DylanPort/whitelspace/releases/download/v1.01/Ghost.Whistle.Desktop.1.0.0.exe',
+      url: 'https://github.com/DylanPort/whitelspace/releases/download/untagged-1ce945971b84ecf4fae1/Ghost.Whistle.Desktop.1.0.0.exe',
       color: 'from-blue-500 to-blue-600',
       size: '~80 MB',
       available: true
