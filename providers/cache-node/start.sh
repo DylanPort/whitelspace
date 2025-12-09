@@ -46,7 +46,7 @@ elif command -v node &> /dev/null; then
     # Set environment and run
     export PORT=8545
     export UPSTREAM_RPC=https://rpc.whistle.ninja/rpc
-    export COORDINATOR_URL=https://coordinator.whistle.ninja
+    export COORDINATOR_URL=https://whitelspace-1.onrender.com
     export PROVIDER_WALLET=$WALLET
     
     node src/index.js

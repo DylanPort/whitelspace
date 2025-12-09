@@ -18,7 +18,7 @@ services:
     environment:
       - PORT=8545
       - UPSTREAM_RPC=${UPSTREAM_RPC:-https://rpc.whistle.ninja/rpc}
-      - COORDINATOR_URL=${COORDINATOR_URL:-https://coordinator.whistle.ninja}
+      - COORDINATOR_URL=${COORDINATOR_URL:-https://whitelspace-1.onrender.com}
       - PROVIDER_WALLET=${PROVIDER_WALLET:-}
       - NODE_ID=${NODE_ID:-}
     healthcheck:

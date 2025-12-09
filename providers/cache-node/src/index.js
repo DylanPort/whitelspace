@@ -31,7 +31,7 @@ const fs = require('fs');
 // Configuration
 const PORT = process.env.PORT || 8545;
 const UPSTREAM_RPC = process.env.UPSTREAM_RPC || 'https://rpc.whistle.ninja/rpc';
-const COORDINATOR_URL = process.env.COORDINATOR_URL || 'http://localhost:3002';
+const COORDINATOR_URL = process.env.COORDINATOR_URL || 'https://whitelspace-1.onrender.com';
 const PROVIDER_WALLET = process.env.PROVIDER_WALLET || '';
 const PROVIDER_KEYPAIR = process.env.PROVIDER_KEYPAIR || '';
 const NODE_ID = process.env.NODE_ID || uuidv4();
@@ -375,23 +375,53 @@ app.get('/metrics/prometheus', (req, res) => {
 // =============================================================================
 
 async function reportToCoordinator() {
-  if (!COORDINATOR_URL) return;
+  if (!COORDINATOR_URL) {
+    console.log(`[Reporter] COORDINATOR_URL not set, skipping report`);
+    return;
+  }
+  
+  if (!PROVIDER_WALLET) {
+    console.log(`[Reporter] PROVIDER_WALLET not set, skipping report`);
+    return;
+  }
   
   try {
     const metrics = getMetricsSummary();
     
-    await fetch(`${COORDINATOR_URL}/api/nodes/report`, {
+    // Ensure required fields are present
+    if (!metrics.nodeId || !metrics.providerWallet) {
+      console.log(`[Reporter] Missing nodeId or providerWallet, skipping report`);
+      return;
+    }
+    
+    // Use AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    
+    const response = await fetch(`${COORDINATOR_URL}/api/nodes/report`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(metrics)
+      body: JSON.stringify(metrics),
+      signal: controller.signal
     });
     
-    console.log(`[Reporter] Sent metrics to coordinator: ${metrics.totalRequests} requests, ${metrics.hitRate}% hit rate`);
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log(`[Reporter] Coordinator returned error ${response.status}: ${errorText}`);
+      return;
+    }
+    
+    const result = await response.json();
+    console.log(`[Reporter] ✅ Metrics sent: ${metrics.totalRequests} requests, ${metrics.hitRate}% hit rate, uptime: ${metrics.uptime}s`);
   } catch (error) {
-    // Coordinator might not be running - that's okay
-    console.log(`[Reporter] Could not reach coordinator: ${error.message}`);
+    console.log(`[Reporter] ❌ Error reporting to coordinator: ${error.message}`);
   }
 }
+
+// Report immediately on startup (after 5 seconds to allow metrics to accumulate)
+setTimeout(reportToCoordinator, 5000);
 
 // Report every 30 seconds
 setInterval(reportToCoordinator, 30000);
