@@ -3,7 +3,7 @@
   "name": "whistle_network",
   "metadata": {
     "address": "whttByewzTQzAz3VMxnyJHdKsd7AyNRdG2tDHXVTksr",
-    "description": "WHISTLE Network - Decentralized RPC Provider with Staking & Governance",
+    "description": "WHISTLE Network - Decentralized RPC Provider with Staking, Governance, Developer Staking & Cache Nodes",
     "repository": "https://github.com/DylanPort/whitelspace",
     "deployedAccounts": {
       "authority": "6BNdVMgx2JZJPvkRCLyV2LLxft4S1cwuqoX2BS9eFyvh",
@@ -24,8 +24,7 @@
         {"name": "tokenVault", "isMut": true, "isSigner": false},
         {"name": "whistleMint", "isMut": false, "isSigner": false},
         {"name": "tokenProgram", "isMut": false, "isSigner": false},
-        {"name": "systemProgram", "isMut": false, "isSigner": false},
-        {"name": "rent", "isMut": false, "isSigner": false}
+        {"name": "systemProgram", "isMut": false, "isSigner": false}
       ],
       "args": [
         {"name": "minStakeAmount", "type": "u64"},
@@ -66,12 +65,61 @@
       ]
     },
     {
+      "name": "TransferAccess",
+      "accounts": [
+        {"name": "owner", "isMut": false, "isSigner": true},
+        {"name": "fromAccount", "isMut": true, "isSigner": false},
+        {"name": "toAccount", "isMut": true, "isSigner": false},
+        {"name": "stakingPool", "isMut": false, "isSigner": false},
+        {"name": "toStakerPubkey", "isMut": false, "isSigner": false}
+      ],
+      "args": [
+        {"name": "accessTokens", "type": "u64"}
+      ]
+    },
+    {
+      "name": "ActivateNodeOperator",
+      "accounts": [
+        {"name": "staker", "isMut": false, "isSigner": true},
+        {"name": "stakerAccount", "isMut": true, "isSigner": false},
+        {"name": "stakingPool", "isMut": false, "isSigner": false}
+      ],
+      "args": []
+    },
+    {
+      "name": "RecordDataUsage",
+      "accounts": [
+        {"name": "nodeOperator", "isMut": false, "isSigner": true},
+        {"name": "stakerAccount", "isMut": true, "isSigner": false}
+      ],
+      "args": [
+        {"name": "dataSize", "type": "u64"}
+      ]
+    },
+    {
+      "name": "SetPoolStatus",
+      "accounts": [
+        {"name": "authority", "isMut": false, "isSigner": true},
+        {"name": "stakingPool", "isMut": true, "isSigner": false}
+      ],
+      "args": [
+        {"name": "isActive", "type": "bool"}
+      ]
+    },
+    {
+      "name": "LockRate",
+      "accounts": [
+        {"name": "authority", "isMut": false, "isSigner": true},
+        {"name": "stakingPool", "isMut": true, "isSigner": false}
+      ],
+      "args": []
+    },
+    {
       "name": "InitializePaymentVault",
       "accounts": [
         {"name": "authority", "isMut": true, "isSigner": true},
         {"name": "paymentVault", "isMut": true, "isSigner": false},
-        {"name": "systemProgram", "isMut": false, "isSigner": false},
-        {"name": "rent", "isMut": false, "isSigner": false}
+        {"name": "systemProgram", "isMut": false, "isSigner": false}
       ],
       "args": []
     },
@@ -89,6 +137,76 @@
       "args": [
         {"name": "endpoint", "type": "string"},
         {"name": "bondAmount", "type": "u64"}
+      ]
+    },
+    {
+      "name": "DeregisterProvider",
+      "accounts": [
+        {"name": "provider", "isMut": true, "isSigner": true},
+        {"name": "providerAccount", "isMut": true, "isSigner": false},
+        {"name": "stakingPool", "isMut": false, "isSigner": false},
+        {"name": "tokenVault", "isMut": true, "isSigner": false},
+        {"name": "providerTokenAccount", "isMut": true, "isSigner": false},
+        {"name": "tokenProgram", "isMut": false, "isSigner": false}
+      ],
+      "args": []
+    },
+    {
+      "name": "UpdateEndpoint",
+      "accounts": [
+        {"name": "provider", "isMut": false, "isSigner": true},
+        {"name": "providerAccount", "isMut": true, "isSigner": false}
+      ],
+      "args": [
+        {"name": "newEndpoint", "type": "string"}
+      ]
+    },
+    {
+      "name": "RecordHeartbeat",
+      "accounts": [
+        {"name": "provider", "isMut": false, "isSigner": true},
+        {"name": "providerAccount", "isMut": true, "isSigner": false},
+        {"name": "clock", "isMut": false, "isSigner": false}
+      ],
+      "args": []
+    },
+    {
+      "name": "RecordQueryMetrics",
+      "accounts": [
+        {"name": "authority", "isMut": false, "isSigner": true},
+        {"name": "providerAccount", "isMut": true, "isSigner": false},
+        {"name": "paymentVault", "isMut": false, "isSigner": false}
+      ],
+      "args": [
+        {"name": "provider", "type": "publicKey"},
+        {"name": "latencyMs", "type": "u64"},
+        {"name": "success", "type": "bool"}
+      ]
+    },
+    {
+      "name": "UpdateReputationMetrics",
+      "accounts": [
+        {"name": "authority", "isMut": false, "isSigner": true},
+        {"name": "providerAccount", "isMut": true, "isSigner": false}
+      ],
+      "args": [
+        {"name": "provider", "type": "publicKey"},
+        {"name": "uptime", "type": "u64"},
+        {"name": "latency", "type": "u64"},
+        {"name": "accuracy", "type": "u64"}
+      ]
+    },
+    {
+      "name": "SlashProvider",
+      "accounts": [
+        {"name": "authority", "isMut": false, "isSigner": true},
+        {"name": "providerAccount", "isMut": true, "isSigner": false},
+        {"name": "paymentVault", "isMut": true, "isSigner": false}
+      ],
+      "args": [
+        {"name": "provider", "type": "publicKey"},
+        {"name": "penalty", "type": "u64"},
+        {"name": "reason", "type": {"defined": "SlashReason"}}
       ]
     },
     {
@@ -116,58 +234,13 @@
       "args": []
     },
     {
-      "name": "ClaimStakerRewards",
-      "accounts": [
-        {"name": "staker", "isMut": true, "isSigner": true},
-        {"name": "stakerAccount", "isMut": true, "isSigner": false},
-        {"name": "stakingPool", "isMut": false, "isSigner": false},
-        {"name": "paymentVault", "isMut": true, "isSigner": false},
-        {"name": "systemProgram", "isMut": false, "isSigner": false},
-        {"name": "rewardsAccumulator", "isMut": true, "isSigner": false}
-      ],
-      "args": []
-    },
-    {
-      "name": "RecordHeartbeat",
-      "accounts": [
-        {"name": "provider", "isMut": false, "isSigner": true},
-        {"name": "providerAccount", "isMut": true, "isSigner": false},
-        {"name": "clock", "isMut": false, "isSigner": false}
-      ],
-      "args": []
-    },
-    {
-      "name": "UpdateEndpoint",
-      "accounts": [
-        {"name": "provider", "isMut": false, "isSigner": true},
-        {"name": "providerAccount", "isMut": true, "isSigner": false}
-      ],
-      "args": [
-        {"name": "newEndpoint", "type": "string"}
-      ]
-    },
-    {
-      "name": "InitializeX402Wallet",
-      "accounts": [
-        {"name": "authority", "isMut": true, "isSigner": true},
-        {"name": "x402Wallet", "isMut": true, "isSigner": false},
-        {"name": "paymentVault", "isMut": true, "isSigner": false},
-        {"name": "systemProgram", "isMut": false, "isSigner": false}
-      ],
-      "args": []
-    },
-    {
-      "name": "ProcessX402Payment",
+      "name": "DistributeBonusPool",
       "accounts": [
         {"name": "authority", "isMut": false, "isSigner": true},
-        {"name": "x402Wallet", "isMut": true, "isSigner": false},
-        {"name": "paymentVault", "isMut": true, "isSigner": false},
-        {"name": "stakingPool", "isMut": false, "isSigner": false},
-        {"name": "systemProgram", "isMut": false, "isSigner": false},
-        {"name": "rewardsAccumulator", "isMut": true, "isSigner": false}
+        {"name": "paymentVault", "isMut": true, "isSigner": false}
       ],
       "args": [
-        {"name": "amount", "type": "u64"}
+        {"name": "topProviders", "type": {"vec": "publicKey"}}
       ]
     },
     {
@@ -180,12 +253,237 @@
       "args": []
     },
     {
+      "name": "ClaimStakerRewards",
+      "accounts": [
+        {"name": "staker", "isMut": true, "isSigner": true},
+        {"name": "stakerAccount", "isMut": true, "isSigner": false},
+        {"name": "stakingPool", "isMut": false, "isSigner": false},
+        {"name": "paymentVault", "isMut": true, "isSigner": false},
+        {"name": "systemProgram", "isMut": false, "isSigner": false},
+        {"name": "rewardsAccumulator", "isMut": true, "isSigner": false}
+      ],
+      "args": []
+    },
+    {
+      "name": "AuthorizeQuery",
+      "accounts": [
+        {"name": "stakerAccount", "isMut": false, "isSigner": false},
+        {"name": "providerAccount", "isMut": false, "isSigner": false},
+        {"name": "stakingPool", "isMut": false, "isSigner": false}
+      ],
+      "args": [
+        {"name": "user", "type": "publicKey"},
+        {"name": "provider", "type": "publicKey"}
+      ]
+    },
+    {
+      "name": "RecordQuery",
+      "accounts": [
+        {"name": "provider", "isMut": false, "isSigner": true},
+        {"name": "providerAccount", "isMut": true, "isSigner": false}
+      ],
+      "args": [
+        {"name": "user", "type": "publicKey"}
+      ]
+    },
+    {
+      "name": "RegisterDeveloper",
+      "accounts": [
+        {"name": "developer", "isMut": true, "isSigner": true},
+        {"name": "developerAccount", "isMut": true, "isSigner": false},
+        {"name": "developerTokenAccount", "isMut": true, "isSigner": false},
+        {"name": "tokenVault", "isMut": true, "isSigner": false},
+        {"name": "tokenProgram", "isMut": false, "isSigner": false},
+        {"name": "systemProgram", "isMut": false, "isSigner": false},
+        {"name": "clock", "isMut": false, "isSigner": false}
+      ],
+      "args": [
+        {"name": "stakeAmount", "type": "u64"},
+        {"name": "referrer", "type": {"option": "publicKey"}}
+      ]
+    },
+    {
+      "name": "StakeDeveloper",
+      "accounts": [
+        {"name": "developer", "isMut": true, "isSigner": true},
+        {"name": "developerAccount", "isMut": true, "isSigner": false},
+        {"name": "developerTokenAccount", "isMut": true, "isSigner": false},
+        {"name": "tokenVault", "isMut": true, "isSigner": false},
+        {"name": "tokenProgram", "isMut": false, "isSigner": false}
+      ],
+      "args": [
+        {"name": "amount", "type": "u64"}
+      ]
+    },
+    {
+      "name": "UnstakeDeveloper",
+      "accounts": [
+        {"name": "developer", "isMut": true, "isSigner": true},
+        {"name": "developerAccount", "isMut": true, "isSigner": false},
+        {"name": "tokenVault", "isMut": true, "isSigner": false},
+        {"name": "developerTokenAccount", "isMut": true, "isSigner": false},
+        {"name": "tokenProgram", "isMut": false, "isSigner": false},
+        {"name": "stakingPool", "isMut": false, "isSigner": false}
+      ],
+      "args": [
+        {"name": "amount", "type": "u64"}
+      ]
+    },
+    {
+      "name": "ProcessDeveloperQuery",
+      "accounts": [
+        {"name": "developer", "isMut": true, "isSigner": true},
+        {"name": "developerAccount", "isMut": true, "isSigner": false},
+        {"name": "paymentVault", "isMut": true, "isSigner": false},
+        {"name": "providerAccount", "isMut": true, "isSigner": false},
+        {"name": "stakingPool", "isMut": false, "isSigner": false},
+        {"name": "systemProgram", "isMut": false, "isSigner": false},
+        {"name": "clock", "isMut": false, "isSigner": false},
+        {"name": "referrerAccount", "isMut": true, "isSigner": false}
+      ],
+      "args": [
+        {"name": "provider", "type": "publicKey"},
+        {"name": "queryCost", "type": "u64"}
+      ]
+    },
+    {
+      "name": "ClaimDeveloperRewards",
+      "accounts": [
+        {"name": "developer", "isMut": true, "isSigner": true},
+        {"name": "developerAccount", "isMut": true, "isSigner": false},
+        {"name": "paymentVault", "isMut": true, "isSigner": false},
+        {"name": "tokenVault", "isMut": true, "isSigner": false},
+        {"name": "developerTokenAccount", "isMut": true, "isSigner": false},
+        {"name": "tokenProgram", "isMut": false, "isSigner": false},
+        {"name": "stakingPool", "isMut": false, "isSigner": false}
+      ],
+      "args": []
+    },
+    {
+      "name": "ClaimReferralEarnings",
+      "accounts": [
+        {"name": "developer", "isMut": true, "isSigner": true},
+        {"name": "developerAccount", "isMut": true, "isSigner": false},
+        {"name": "paymentVault", "isMut": true, "isSigner": false},
+        {"name": "systemProgram", "isMut": false, "isSigner": false}
+      ],
+      "args": []
+    },
+    {
+      "name": "InitializeX402Wallet",
+      "accounts": [
+        {"name": "authority", "isMut": true, "isSigner": true},
+        {"name": "x402Wallet", "isMut": true, "isSigner": false},
+        {"name": "systemProgram", "isMut": false, "isSigner": false}
+      ],
+      "args": []
+    },
+    {
+      "name": "ProcessX402Payment",
+      "accounts": [
+        {"name": "authority", "isMut": false, "isSigner": true},
+        {"name": "x402Wallet", "isMut": true, "isSigner": false},
+        {"name": "paymentVault", "isMut": true, "isSigner": false},
+        {"name": "stakingPool", "isMut": false, "isSigner": false},
+        {"name": "systemProgram", "isMut": false, "isSigner": false},
+        {"name": "rewardsAccumulator", "isMut": true, "isSigner": false},
+        {"name": "cacheRewardsPool", "isMut": true, "isSigner": false}
+      ],
+      "args": [
+        {"name": "amount", "type": "u64"}
+      ]
+    },
+    {
       "name": "InitializeRewardsAccumulator",
       "accounts": [
         {"name": "authority", "isMut": true, "isSigner": true},
         {"name": "rewardsAccumulator", "isMut": true, "isSigner": false},
         {"name": "stakingPool", "isMut": false, "isSigner": false},
         {"name": "systemProgram", "isMut": false, "isSigner": false}
+      ],
+      "args": []
+    },
+    {
+      "name": "InitializeCacheRewardsPool",
+      "accounts": [
+        {"name": "authority", "isMut": true, "isSigner": true},
+        {"name": "cacheRewardsPool", "isMut": true, "isSigner": false},
+        {"name": "stakingPool", "isMut": false, "isSigner": false},
+        {"name": "systemProgram", "isMut": false, "isSigner": false}
+      ],
+      "args": []
+    },
+    {
+      "name": "RegisterCacheNode",
+      "accounts": [
+        {"name": "operator", "isMut": true, "isSigner": true},
+        {"name": "cacheNodeAccount", "isMut": true, "isSigner": false},
+        {"name": "operatorTokenAccount", "isMut": true, "isSigner": false},
+        {"name": "tokenVault", "isMut": true, "isSigner": false},
+        {"name": "cacheRewardsPool", "isMut": true, "isSigner": false},
+        {"name": "tokenProgram", "isMut": false, "isSigner": false},
+        {"name": "systemProgram", "isMut": false, "isSigner": false},
+        {"name": "clock", "isMut": false, "isSigner": false}
+      ],
+      "args": [
+        {"name": "endpoint", "type": "string"},
+        {"name": "bondAmount", "type": "u64"}
+      ]
+    },
+    {
+      "name": "CacheNodeHeartbeat",
+      "accounts": [
+        {"name": "operator", "isMut": false, "isSigner": true},
+        {"name": "cacheNodeAccount", "isMut": true, "isSigner": false},
+        {"name": "clock", "isMut": false, "isSigner": false}
+      ],
+      "args": []
+    },
+    {
+      "name": "ClaimCacheNodeEarnings",
+      "accounts": [
+        {"name": "operator", "isMut": true, "isSigner": true},
+        {"name": "cacheNodeAccount", "isMut": true, "isSigner": false},
+        {"name": "cacheRewardsPool", "isMut": true, "isSigner": false},
+        {"name": "systemProgram", "isMut": false, "isSigner": false}
+      ],
+      "args": []
+    },
+    {
+      "name": "DistributeCacheNodeRewards",
+      "accounts": [
+        {"name": "authority", "isMut": true, "isSigner": true},
+        {"name": "cacheRewardsPool", "isMut": true, "isSigner": false},
+        {"name": "stakingPool", "isMut": false, "isSigner": false}
+      ],
+      "args": [
+        {"name": "amount", "type": "u64"}
+      ]
+    },
+    {
+      "name": "SlashCacheNode",
+      "accounts": [
+        {"name": "authority", "isMut": false, "isSigner": true},
+        {"name": "cacheNodeAccount", "isMut": true, "isSigner": false},
+        {"name": "cacheRewardsPool", "isMut": true, "isSigner": false},
+        {"name": "stakingPool", "isMut": false, "isSigner": false}
+      ],
+      "args": [
+        {"name": "cacheNode", "type": "publicKey"},
+        {"name": "penalty", "type": "u64"},
+        {"name": "reason", "type": {"defined": "SlashReason"}}
+      ]
+    },
+    {
+      "name": "DeregisterCacheNode",
+      "accounts": [
+        {"name": "operator", "isMut": true, "isSigner": true},
+        {"name": "cacheNodeAccount", "isMut": true, "isSigner": false},
+        {"name": "tokenVault", "isMut": true, "isSigner": false},
+        {"name": "operatorTokenAccount", "isMut": true, "isSigner": false},
+        {"name": "cacheRewardsPool", "isMut": true, "isSigner": false},
+        {"name": "tokenProgram", "isMut": false, "isSigner": false},
+        {"name": "stakingPool", "isMut": false, "isSigner": false}
       ],
       "args": []
     }
@@ -281,6 +579,107 @@
           {"name": "bump", "type": "u8"}
         ]
       }
+    },
+    {
+      "name": "DeveloperAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {"name": "developer", "type": "publicKey"},
+          {"name": "whistleStaked", "type": "u64"},
+          {"name": "tier", "type": {"defined": "DeveloperTier"}},
+          {"name": "totalQueries", "type": "u64"},
+          {"name": "freeQueriesUsedMonth", "type": "u64"},
+          {"name": "lastMonthReset", "type": "i64"},
+          {"name": "rebatePercentage", "type": "u64"},
+          {"name": "bonusRewards", "type": "u64"},
+          {"name": "referralsMade", "type": "u32"},
+          {"name": "referredBy", "type": {"option": "publicKey"}},
+          {"name": "referralEarnings", "type": "u64"},
+          {"name": "registeredAt", "type": "i64"},
+          {"name": "lastStakeTime", "type": "i64"},
+          {"name": "isActive", "type": "bool"},
+          {"name": "bump", "type": "u8"}
+        ]
+      }
+    },
+    {
+      "name": "CacheNodeAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {"name": "operator", "type": "publicKey"},
+          {"name": "endpoint", "type": "string"},
+          {"name": "bondAmount", "type": "u64"},
+          {"name": "registeredAt", "type": "i64"},
+          {"name": "isActive", "type": "bool"},
+          {"name": "totalEarned", "type": "u64"},
+          {"name": "pendingEarnings", "type": "u64"},
+          {"name": "lastHeartbeat", "type": "i64"},
+          {"name": "requestsServed", "type": "u64"},
+          {"name": "cacheHitRate", "type": "u64"},
+          {"name": "avgLatencyMs", "type": "u64"},
+          {"name": "reputationScore", "type": "u64"},
+          {"name": "slashedAmount", "type": "u64"},
+          {"name": "penaltyCount", "type": "u32"},
+          {"name": "bump", "type": "u8"}
+        ]
+      }
+    },
+    {
+      "name": "CacheRewardsPool",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {"name": "authority", "type": "publicKey"},
+          {"name": "totalPoolBalance", "type": "u64"},
+          {"name": "totalDistributed", "type": "u64"},
+          {"name": "totalNodes", "type": "u32"},
+          {"name": "minBondAmount", "type": "u64"},
+          {"name": "lastDistribution", "type": "i64"},
+          {"name": "accumulatedPerNode", "type": "u128"},
+          {"name": "isActive", "type": "bool"},
+          {"name": "bump", "type": "u8"}
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "DeveloperTier",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {"name": "Hobbyist"},
+          {"name": "Builder"},
+          {"name": "Pro"},
+          {"name": "Enterprise"},
+          {"name": "Whale"}
+        ]
+      }
+    },
+    {
+      "name": "AccessTier",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {"name": "Basic"},
+          {"name": "Premium"},
+          {"name": "Elite"}
+        ]
+      }
+    },
+    {
+      "name": "SlashReason",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {"name": "LowUptime"},
+          {"name": "WrongData"},
+          {"name": "SlowResponse"},
+          {"name": "MissedHeartbeat"}
+        ]
+      }
     }
   ],
   "errors": [
@@ -316,10 +715,13 @@
     {"name": "AUTHORITY_ADDRESS", "type": "string", "value": "6BNdVMgx2JZJPvkRCLyV2LLxft4S1cwuqoX2BS9eFyvh"},
     {"name": "MAX_STAKE_PER_USER", "type": "u64", "value": "100000000000000"},
     {"name": "MIN_PROVIDER_BOND", "type": "u64", "value": "1000000000"},
+    {"name": "MIN_CACHE_NODE_BOND", "type": "u64", "value": "100000000"},
     {"name": "QUERY_COST", "type": "u64", "value": "10000"},
     {"name": "WHISTLE_DECIMALS", "type": "u8", "value": "6"},
     {"name": "HEARTBEAT_TIMEOUT", "type": "i64", "value": "300"},
     {"name": "MIN_HEARTBEAT_INTERVAL", "type": "i64", "value": "30"},
+    {"name": "CACHE_HEARTBEAT_TIMEOUT", "type": "i64", "value": "300"},
+    {"name": "MIN_CACHE_HEARTBEAT_INTERVAL", "type": "i64", "value": "30"},
     {"name": "TOKENS_PER_WHISTLE", "type": "u64", "value": "1000"}
   ]
 }
