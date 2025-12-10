@@ -302,6 +302,36 @@ export default function LinksPage() {
         {/* Main Links */}
         <div className="space-y-3 mb-10">
           <LinkCard
+            href="https://api.whistle.ninja"
+            customIcon={({ className }) => (
+              <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 4h16v16H4z" />
+                <path d="M8 8h8M8 12h8M8 16h4" />
+                <path d="M12 2v2m0 16v2M2 12h2m16 0h2" />
+              </svg>
+            )}
+            title="API.WHISTLE.NINJA"
+            subtitle="RPC API • Developer Tools • Documentation"
+            gradient="from-blue-500/20 via-transparent to-cyan-500/10"
+            delay={0}
+          />
+          
+          <LinkCard
+            href="https://earn.whistle.ninja"
+            customIcon={({ className }) => (
+              <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 6v6l4 2" />
+                <path d="M12 2a10 10 0 0 1 0 20" strokeDasharray="2 2" />
+              </svg>
+            )}
+            title="EARN.WHISTLE.NINJA"
+            subtitle="Provider Registration • Earn SOL • Join Network"
+            gradient="from-yellow-500/20 via-transparent to-orange-500/10"
+            delay={50}
+          />
+          
+          <LinkCard
             href="https://whistle.ninja"
             customIcon={({ className }) => (
               <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
@@ -313,7 +343,7 @@ export default function LinksPage() {
             title="WHISTLE.NINJA"
             subtitle="Main Hub • Staking • Analytics"
             gradient="from-green-500/20 via-transparent to-green-500/10"
-            delay={0}
+            delay={100}
           />
           
           <LinkCard
@@ -331,7 +361,7 @@ export default function LinksPage() {
             title="PROVIDER DASHBOARD"
             subtitle="Run Nodes • Earn SOL • Join The Network"
             gradient="from-yellow-500/20 via-transparent to-orange-500/10"
-            delay={100}
+            delay={150}
           />
           
           <LinkCard
@@ -346,7 +376,7 @@ export default function LinksPage() {
             title="DOCUMENTATION"
             subtitle="Technical Docs • Smart Contract • API"
             gradient="from-blue-500/20 via-transparent to-cyan-500/10"
-            delay={150}
+            delay={200}
           />
           
           <LinkCard
@@ -361,7 +391,7 @@ export default function LinksPage() {
             title="WHISTLE APP"
             subtitle="P2P Encrypted Tips • Solana Memo"
             gradient="from-purple-500/20 via-transparent to-pink-500/10"
-            delay={200}
+            delay={250}
           />
           
           <LinkCard
@@ -375,7 +405,7 @@ export default function LinksPage() {
             title="WHISTLE DEX"
             subtitle="Trade • Charts • Analytics"
             gradient="from-cyan-500/20 via-transparent to-blue-500/10"
-            delay={250}
+            delay={300}
           />
           
           <LinkCard
@@ -391,7 +421,7 @@ export default function LinksPage() {
             title="WHISTLE AI"
             subtitle="AI-Powered Tools • Coming Soon"
             gradient="from-pink-500/20 via-transparent to-purple-500/10"
-            delay={300}
+            delay={350}
           />
         </div>
 
