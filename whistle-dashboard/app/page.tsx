@@ -8,7 +8,6 @@ import StakingPanel from '@/components/StakingPanel';
 import ProviderEarningsPanel from '@/components/ProviderEarningsPanel';
 import RpcEndpointPanel from '@/components/RpcEndpointPanel';
 import NetworkStatsPanel from '@/components/NetworkStatsPanel';
-import RecentActivityPanel from '@/components/RecentActivityPanel';
 import ApiMethodsPanel from '@/components/ApiMethodsPanel';
 import ProviderRegistrationPanel from '@/components/ProviderRegistrationPanel';
 import HowItWorksModal from '@/components/HowItWorksModal';
@@ -21,8 +20,6 @@ import GhostWhistlePanel from '@/components/GhostWhistlePanel';
 import ResourcesPanel from '@/components/ResourcesPanel';
 import DecentralizationProgress from '@/components/DecentralizationProgress';
 import GovernancePanel from '@/components/GovernancePanel';
-// Removed DeveloperAccessButton - RPC is now public
-import SubscriptionStatusPanel from '@/components/SubscriptionStatusPanel';
 import { api } from '@/lib/api';
 
 export default function Home() {
@@ -167,22 +164,12 @@ export default function Home() {
 
         </div>
 
-        {/* RPC Subscription Status - Single Panel */}
-        <div id="developer-access-section" className="max-w-[600px] mx-auto w-full mb-4 md:mb-6">
-          <SubscriptionStatusPanel />
-        </div>
-
         {/* System Info Section - Responsive Grid */}
         <div className="max-w-[1400px] mx-auto w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
           <PoolInfoPanel />
           <PersonalStatsPanel />
           <NetworkProviderPanel />
           <TreasuryPanel />
-        </div>
-
-        {/* Bottom section - Recent Activity */}
-        <div className="max-w-[1400px] mx-auto w-full flex items-center justify-center">
-          <RecentActivityPanel />
         </div>
       </div>
 
