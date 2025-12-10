@@ -68,10 +68,13 @@ export default function Home() {
 
   return (
     <main className="relative min-h-screen overflow-x-hidden overflow-y-auto flex flex-col">
-      {/* Layered background effects */}
-      <div className="manga-speedlines" />
+      {/* Layered background effects - Optimized for performance */}
+      <div 
+        className="manga-speedlines" 
+        style={{ willChange: 'auto', transform: 'translateZ(0)' }}
+      />
       
-      {/* Subtle grid overlay */}
+      {/* Subtle grid overlay - Optimized */}
       <div 
         className="fixed inset-0 pointer-events-none z-0"
         style={{
@@ -81,10 +84,12 @@ export default function Home() {
           `,
           backgroundSize: '50px 50px',
           opacity: 0.3,
+          willChange: 'auto',
+          transform: 'translateZ(0)',
         }}
       />
 
-      {/* Monochrome radial gradient for depth */}
+      {/* Monochrome radial gradient for depth - Optimized */}
       <div 
         className="fixed inset-0 pointer-events-none z-0"
         style={{
@@ -93,6 +98,8 @@ export default function Home() {
             radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.02) 0%, transparent 40%),
             radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.015) 0%, transparent 40%)
           `,
+          willChange: 'auto',
+          transform: 'translateZ(0)',
         }}
       />
 

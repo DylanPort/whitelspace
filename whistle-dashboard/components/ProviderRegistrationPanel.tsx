@@ -1,11 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import PanelFrame from './PanelFrame';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ProviderRegistrationPanel() {
   const [expanded, setExpanded] = useState(false);
+  const [shouldLoadPreview, setShouldLoadPreview] = useState(false);
+  const previewRef = useRef<HTMLDivElement>(null);
+
+  // Lazy load preview iframe when in viewport
+  useEffect(() => {
+    if (shouldLoadPreview) return;
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setShouldLoadPreview(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '50px' }
+    );
+
+    if (previewRef.current) {
+      observer.observe(previewRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [shouldLoadPreview]);
 
   return (
     <>
@@ -31,24 +54,32 @@ export default function ProviderRegistrationPanel() {
 
         {/* Provider iframe - scaled preview */}
         <div 
+          ref={previewRef}
           className="relative rounded overflow-hidden border border-yellow-500/20 cursor-pointer hover:border-yellow-500/40 transition-all"
           onClick={() => setExpanded(true)}
           style={{ height: '180px' }}
         >
           <div className="relative w-full h-full overflow-hidden">
-            <iframe
-              src="https://provider.whistle.ninja"
-              style={{ 
-                border: 'none',
-                background: '#000',
-                width: '1600px',
-                height: '1400px',
-                transform: 'scale(0.12)',
-                transformOrigin: 'top left',
-                pointerEvents: 'none',
-              }}
-              loading="lazy"
-            />
+            {shouldLoadPreview ? (
+              <iframe
+                src="https://provider.whistle.ninja"
+                style={{ 
+                  border: 'none',
+                  background: '#000',
+                  width: '1600px',
+                  height: '1400px',
+                  transform: 'scale(0.12)',
+                  transformOrigin: 'top left',
+                  pointerEvents: 'none',
+                }}
+                loading="lazy"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="w-full h-full bg-black flex items-center justify-center">
+                <div className="text-gray-600 text-xs">Loading preview...</div>
+              </div>
+            )}
           </div>
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
           <div className="absolute bottom-2 left-2 right-2 text-[8px] text-gray-400 text-center pointer-events-none">
@@ -107,6 +138,8 @@ export default function ProviderRegistrationPanel() {
                   src="https://provider.whistle.ninja"
                   className="w-full h-full"
                   style={{ border: 'none' }}
+                  loading="eager"
+                  referrerPolicy="no-referrer"
                 />
               </div>
             </motion.div>

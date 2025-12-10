@@ -65,6 +65,7 @@ export default function GhostWhistleModal({ isOpen, onClose }: GhostWhistleModal
                   className="w-full h-full border-0"
                   title="Ghost Whistle - Full Platform"
                   sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"
+                  loading="eager"
                   style={{
                     background: '#000',
                   }}

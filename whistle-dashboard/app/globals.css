@@ -43,7 +43,7 @@ body {
   mix-blend-mode: overlay;
 } */
 
-/* Monochrome speedlines */
+/* Monochrome speedlines - Optimized for performance */
 .manga-speedlines {
   position: fixed;
   inset: 0;
@@ -57,6 +57,11 @@ body {
     rgba(255, 255, 255, 0.3) 151px
   );
   z-index: 0;
+  /* Performance optimizations */
+  will-change: auto;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 /* EXTREME 3D angular card with dramatic shadows */

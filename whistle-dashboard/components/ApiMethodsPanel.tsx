@@ -110,6 +110,8 @@ export default function ApiMethodsPanel() {
                   src="https://health.whistle.ninja"
                   className="w-full h-full"
                   style={{ border: 'none' }}
+                  loading="eager"
+                  referrerPolicy="no-referrer"
                 />
               </div>
             </motion.div>
