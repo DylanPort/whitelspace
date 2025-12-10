@@ -132,7 +132,8 @@
         {"name": "tokenVault", "isMut": true, "isSigner": false},
         {"name": "tokenProgram", "isMut": false, "isSigner": false},
         {"name": "systemProgram", "isMut": false, "isSigner": false},
-        {"name": "clock", "isMut": false, "isSigner": false}
+        {"name": "clock", "isMut": false, "isSigner": false},
+        {"name": "stakingPool", "isMut": false, "isSigner": false}
       ],
       "args": [
         {"name": "endpoint", "type": "string"},
@@ -295,7 +296,8 @@
         {"name": "tokenVault", "isMut": true, "isSigner": false},
         {"name": "tokenProgram", "isMut": false, "isSigner": false},
         {"name": "systemProgram", "isMut": false, "isSigner": false},
-        {"name": "clock", "isMut": false, "isSigner": false}
+        {"name": "clock", "isMut": false, "isSigner": false},
+        {"name": "stakingPool", "isMut": false, "isSigner": false}
       ],
       "args": [
         {"name": "stakeAmount", "type": "u64"},
@@ -309,7 +311,8 @@
         {"name": "developerAccount", "isMut": true, "isSigner": false},
         {"name": "developerTokenAccount", "isMut": true, "isSigner": false},
         {"name": "tokenVault", "isMut": true, "isSigner": false},
-        {"name": "tokenProgram", "isMut": false, "isSigner": false}
+        {"name": "tokenProgram", "isMut": false, "isSigner": false},
+        {"name": "stakingPool", "isMut": false, "isSigner": false}
       ],
       "args": [
         {"name": "amount", "type": "u64"}
@@ -423,7 +426,8 @@
         {"name": "cacheRewardsPool", "isMut": true, "isSigner": false},
         {"name": "tokenProgram", "isMut": false, "isSigner": false},
         {"name": "systemProgram", "isMut": false, "isSigner": false},
-        {"name": "clock", "isMut": false, "isSigner": false}
+        {"name": "clock", "isMut": false, "isSigner": false},
+        {"name": "stakingPool", "isMut": false, "isSigner": false}
       ],
       "args": [
         {"name": "endpoint", "type": "string"},
