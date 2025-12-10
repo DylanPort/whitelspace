@@ -210,9 +210,9 @@ export function OnChainProvider() {
 
         <button
           onClick={handleWithdrawBond}
-          disabled={loading || providerAccount.pendingEarnings > 0}
+          disabled={true}
           className="w-full py-3 bg-whistle-red/20 text-whistle-red border border-whistle-red/50 rounded-lg text-sm font-semibold hover:bg-whistle-red/30 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          title={providerAccount.pendingEarnings > 0 ? 'Claim earnings before withdrawing bond' : 'Withdraw your bonded tokens and deregister as provider'}
+          title="Withdraw bond functionality is currently disabled"
         >
           {loading ? <Loader2 size={18} className="animate-spin" /> : <Coins size={18} />}
           Withdraw Bond
