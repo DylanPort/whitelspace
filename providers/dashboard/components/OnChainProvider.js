@@ -31,7 +31,7 @@ import {
   formatSol,
   contractConfig,
   MIN_PROVIDER_BOND,
-  connection,
+  connection
 } from '../lib/whistle-contract'
 
 export function OnChainProvider() {

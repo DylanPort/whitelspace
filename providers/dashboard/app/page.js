@@ -11,6 +11,7 @@ import { CacheableMethods } from '../components/CacheableMethods'
 import { MyRewards } from '../components/MyRewards'
 import { Leaderboard } from '../components/Leaderboard'
 import { OnChainLeaderboard } from '../components/OnChainLeaderboard'
+import { OnChainProvider } from '../components/OnChainProvider'
 import { ProviderOnboarding } from '../components/ProviderOnboarding'
 import { NodeMap } from '../components/NodeMap'
 import { useLiveMetrics, useMetricsHistory } from '../lib/hooks-rpc'
@@ -144,6 +145,9 @@ export default function Dashboard() {
 
             {/* RIGHT COLUMN - 3 cols */}
             <div className="lg:col-span-3 space-y-6">
+              {/* On-Chain Provider (Bond Management) */}
+              <OnChainProvider />
+              
               {/* Browser Cache Node */}
               <BrowserCacheNode />
             </div>
