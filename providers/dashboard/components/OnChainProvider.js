@@ -24,6 +24,7 @@ import {
   createRegisterProviderTx,
   createRecordHeartbeatTx,
   createClaimProviderEarningsTx,
+  createDeregisterProviderTx,
   createStakeTx,
   createClaimStakerRewardsTx,
   formatWhistle,
@@ -189,6 +190,49 @@ export function OnChainProvider() {
       fetchData()
     } catch (err) {
       setError(err.message || 'Failed to claim earnings')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleWithdrawBond = async () => {
+    if (!publicKey || !signTransaction) return
+    
+    // Check if there are pending earnings that need to be claimed first
+    if (providerAccount && providerAccount.pendingEarnings > 0) {
+      setError('Please claim your earnings before withdrawing your bond')
+      return
+    }
+    
+    // Confirm action
+    const confirmed = window.confirm(
+      `Are you sure you want to withdraw your bonded tokens? This will deregister you as a provider.\n\n` +
+      `Bonded: ${formatWhistle(providerAccount?.stakeBond || 0)} WHISTLE\n\n` +
+      `This action cannot be undone. You will need to register again to become a provider.`
+    )
+    
+    if (!confirmed) return
+    
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const tx = await createDeregisterProviderTx(publicKey)
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash()
+      tx.recentBlockhash = blockhash
+      tx.feePayer = publicKey
+      
+      const signed = await signTransaction(tx)
+      const sig = await connection.sendRawTransaction(signed.serialize())
+      
+      setSuccess('Transaction sent! Confirming...')
+      await confirmTransactionPolling(sig, blockhash, lastValidBlockHeight)
+      
+      setTxSig(sig)
+      setSuccess('Bond withdrawn! You have been deregistered as a provider.')
+      fetchData()
+    } catch (err) {
+      setError(err.message || 'Failed to withdraw bond')
     } finally {
       setLoading(false)
     }
@@ -466,7 +510,7 @@ export function OnChainProvider() {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <button
                 onClick={handleHeartbeat}
                 disabled={loading}
@@ -485,6 +529,23 @@ export function OnChainProvider() {
                   {loading ? <Loader2 size={16} className="animate-spin" /> : <Coins size={16} />}
                   Claim Earnings
                 </button>
+              )}
+            </div>
+            
+            <div className="pt-2 border-t border-gray-700">
+              <button
+                onClick={handleWithdrawBond}
+                disabled={loading || providerAccount.pendingEarnings > 0}
+                className="w-full py-2 bg-whistle-red/20 text-whistle-red border border-whistle-red/50 rounded-lg text-sm font-semibold hover:bg-whistle-red/30 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={providerAccount.pendingEarnings > 0 ? 'Claim earnings before withdrawing bond' : 'Withdraw your bonded tokens and deregister as provider'}
+              >
+                {loading ? <Loader2 size={16} className="animate-spin" /> : <Coins size={16} />}
+                Withdraw Bond ({formatWhistle(providerAccount.stakeBond)} WHISTLE)
+              </button>
+              {providerAccount.pendingEarnings > 0 && (
+                <p className="text-xs text-gray-500 mt-1 text-center">
+                  Claim earnings first before withdrawing
+                </p>
               )}
             </div>
           </div>

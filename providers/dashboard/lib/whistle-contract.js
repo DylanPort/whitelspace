@@ -748,6 +748,64 @@ export async function createClaimStakerRewardsTx(staker) {
   return transaction;
 }
 
+/**
+ * Create transaction to deregister provider and withdraw bonded tokens
+ * Note: Must claim earnings first (pending_earnings must be 0)
+ */
+export async function createDeregisterProviderTx(provider) {
+  const transaction = new Transaction();
+  
+  // Add compute budget
+  transaction.add(
+    ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 })
+  );
+  transaction.add(
+    ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 5000 })
+  );
+
+  const [providerAccountPDA] = getProviderAccountPDA(provider);
+  const [stakingPoolPDA] = getStakingPoolPDA();
+  const [tokenVaultPDA] = getTokenVaultPDA();
+  const providerTokenAccount = getAssociatedTokenAddressSync(WHISTLE_MINT, provider);
+
+  console.log('[DeregisterProvider] Building transaction:');
+  console.log('[DeregisterProvider] Provider:', provider.toBase58());
+  console.log('[DeregisterProvider] Provider PDA:', providerAccountPDA.toBase58());
+  console.log('[DeregisterProvider] Staking Pool:', stakingPoolPDA.toBase58());
+  console.log('[DeregisterProvider] Token Vault:', tokenVaultPDA.toBase58());
+  console.log('[DeregisterProvider] Provider Token Account:', providerTokenAccount.toBase58());
+
+  // Check if token account exists, create if not
+  const tokenAccountInfo = await connection.getAccountInfo(providerTokenAccount);
+  if (!tokenAccountInfo) {
+    console.log('[DeregisterProvider] Creating token account...');
+    transaction.add(
+      createAssociatedTokenAccountInstruction(
+        provider,
+        providerTokenAccount,
+        provider,
+        WHISTLE_MINT
+      )
+    );
+  }
+
+  const deregisterIx = new TransactionInstruction({
+    programId: WHISTLE_PROGRAM_ID,
+    keys: [
+      { pubkey: provider, isSigner: true, isWritable: true },
+      { pubkey: providerAccountPDA, isSigner: false, isWritable: true },
+      { pubkey: stakingPoolPDA, isSigner: false, isWritable: false },
+      { pubkey: tokenVaultPDA, isSigner: false, isWritable: true },
+      { pubkey: providerTokenAccount, isSigner: false, isWritable: true },
+      { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+    ],
+    data: Buffer.from([Instructions.DeregisterProvider]),
+  });
+
+  transaction.add(deregisterIx);
+  return transaction;
+}
+
 // ============= UTILITY FUNCTIONS =============
 
 export function formatWhistle(amount) {
