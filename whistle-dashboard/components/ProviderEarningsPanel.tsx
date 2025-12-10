@@ -17,38 +17,6 @@ export default function ProviderEarningsPanel() {
   const [claiming, setClaiming] = useState(false);
   const [needsMigration, setNeedsMigration] = useState(false);
   const [claimHistory, setClaimHistory] = useState<ClaimHistory | null>(null);
-  
-  // Maintenance mode: 18 hours from component mount
-  const [maintenanceEndTime] = useState(() => {
-    const now = Date.now();
-    const eighteenHours = 18 * 60 * 60 * 1000; // 18 hours in milliseconds
-    return now + eighteenHours;
-  });
-  const [timeRemaining, setTimeRemaining] = useState(18 * 60 * 60 * 1000);
-  
-  // Update countdown timer
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const remaining = Math.max(0, maintenanceEndTime - now);
-      setTimeRemaining(remaining);
-      
-      if (remaining === 0) {
-        clearInterval(interval);
-      }
-    }, 1000);
-    
-    return () => clearInterval(interval);
-  }, [maintenanceEndTime]);
-  
-  const formatTimeRemaining = (ms: number) => {
-    const hours = Math.floor(ms / (1000 * 60 * 60));
-    const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((ms % (1000 * 60)) / 1000);
-    return `${hours}h ${minutes}m ${seconds}s`;
-  };
-  
-  const isMaintenanceMode = timeRemaining > 0;
 
   // Load staker rewards function (can be called from useEffect or after claim)
   const loadStakerRewards = async () => {
@@ -379,29 +347,12 @@ export default function ProviderEarningsPanel() {
 
         {/* Claim Button */}
         <button
-          disabled={!connected || (earnings === 0 && !needsMigration) || claiming || isMaintenanceMode}
+          disabled={!connected || (earnings === 0 && !needsMigration) || claiming}
           onClick={handleClaim}
           className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isMaintenanceMode ? (
-            <span className="flex flex-col items-center gap-1">
-              <span>🔧 UNDER MAINTENANCE</span>
-              <span className="text-[10px] font-normal">{formatTimeRemaining(timeRemaining)}</span>
-            </span>
-          ) : claiming ? (
-            'CLAIMING...'
-          ) : needsMigration && earnings === 0 ? (
-            'FIX REWARD DEBT (0 SOL)'
-          ) : (
-            'CLAIM REWARDS'
-          )}
+          {claiming ? 'CLAIMING...' : needsMigration && earnings === 0 ? 'FIX REWARD DEBT (0 SOL)' : 'CLAIM REWARDS'}
         </button>
-        
-        {isMaintenanceMode && (
-          <div className="mt-2 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded text-xs text-yellow-400 text-center">
-            ⚠️ Claim rewards is temporarily under maintenance. Please check back later.
-          </div>
-        )}
         
         {needsMigration && earnings === 0 && (
           <div className="mt-2 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded text-xs text-yellow-400">
