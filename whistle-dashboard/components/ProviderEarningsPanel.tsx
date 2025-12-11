@@ -156,8 +156,15 @@ export default function ProviderEarningsPanel() {
     try {
       console.log('🎁 Claiming staker rewards:', earnings, 'SOL');
 
+      // Get recent blockhash first
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('finalized');
+      
       // Create claim transaction
       const transaction = await createClaimStakerRewardsTransaction(publicKey);
+      
+      // Set recent blockhash
+      transaction.recentBlockhash = blockhash;
+      transaction.lastValidBlockHeight = lastValidBlockHeight;
       
       console.log('📝 Transaction created, requesting signature...');
       

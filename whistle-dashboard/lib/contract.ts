@@ -841,6 +841,14 @@ export async function createClaimStakerRewardsTransaction(
 ): Promise<Transaction> {
   const transaction = new Transaction();
 
+  // Add compute budget to prevent simulation errors
+  transaction.add(
+    ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 })
+  );
+  transaction.add(
+    ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 5000 })
+  );
+
   const [stakerAccountPDA] = getStakerAccountPDA(staker);
   const [stakingPoolPDA] = getStakingPoolPDA();
   const [paymentVaultPDA] = getPaymentVaultPDA();
