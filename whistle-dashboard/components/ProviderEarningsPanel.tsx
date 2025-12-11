@@ -98,13 +98,32 @@ export default function ProviderEarningsPanel() {
           
           calculatedEarnings = lamportsToSol(totalEarned);
           
+          // IMPORTANT: Cap earnings to what's actually available in the pool
+          // The accumulator formula calculates what SHOULD be earned, but the pool might not have all funds yet
+          if (vault) {
+            const availablePool = vault.stakerRewardsPool;
+            const totalEarnedLamports = totalEarned;
+            
+            // If calculated earnings exceed available pool, cap it to pool amount
+            if (totalEarnedLamports > availablePool) {
+              console.warn('⚠️ Calculated earnings exceed available pool!');
+              console.warn('  Calculated:', lamportsToSol(totalEarnedLamports), 'SOL');
+              console.warn('  Available in pool:', lamportsToSol(availablePool), 'SOL');
+              console.warn('  Capping to available amount');
+              calculatedEarnings = lamportsToSol(availablePool);
+            }
+          }
+          
           console.log('Stake amount:', stakeAmount.toString());
           console.log('Current value:', currentValue.toString());
           console.log('Reward debt (adjusted):', rewardDebt.toString());
           console.log('Earned since last claim:', earned.toString());
           console.log('Pending rewards:', stakerAccount.pendingRewards.toString());
-          console.log('Total earned:', totalEarned.toString());
-          console.log('Calculated earnings:', calculatedEarnings, 'SOL');
+          console.log('Total earned (before cap):', totalEarned.toString());
+          console.log('Calculated earnings (final):', calculatedEarnings, 'SOL');
+          if (vault) {
+            console.log('Available in pool:', lamportsToSol(vault.stakerRewardsPool), 'SOL');
+          }
         } else {
           console.warn('⚠️ Rewards accumulator not found, using pending rewards only');
           calculatedEarnings = lamportsToSol(stakerAccount.pendingRewards);
