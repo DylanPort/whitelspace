@@ -1,4 +1,4 @@
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection, PublicKey, type Message } from '@solana/web3.js';
 import { WHISTLE_PROGRAM_ID } from './contract';
 
 export interface ClaimHistory {
@@ -78,11 +78,14 @@ export async function fetchClaimHistory(
             const accountKeysObj = tx.transaction.message.getAccountKeys();
             accountKeys = accountKeysObj.staticAccountKeys;
             // Note: address lookup table keys are not included, but static keys should be enough
-          } else {
-            // Legacy transaction
-            accountKeys = tx.transaction.message.accountKeys.map(key => 
+          } else if ('accountKeys' in tx.transaction.message) {
+            // Legacy transaction - TypeScript type guard
+            const legacyMessage = tx.transaction.message as Message;
+            accountKeys = legacyMessage.accountKeys.map((key) =>
               typeof key === 'string' ? new PublicKey(key) : key
             );
+          } else {
+            throw new Error('Unsupported transaction message type');
           }
         } catch (err) {
           // If we can't get account keys, skip this transaction
