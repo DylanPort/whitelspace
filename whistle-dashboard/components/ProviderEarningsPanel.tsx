@@ -162,16 +162,18 @@ export default function ProviderEarningsPanel() {
       // Create claim transaction
       const transaction = await createClaimStakerRewardsTransaction(publicKey);
       
-      // Set recent blockhash
+      // Set recent blockhash and fee payer
       transaction.recentBlockhash = blockhash;
       transaction.lastValidBlockHeight = lastValidBlockHeight;
+      transaction.feePayer = publicKey;
       
       console.log('📝 Transaction created, requesting signature...');
       
-      // Send transaction
+      // Send transaction with proper options
       const signature = await sendTransaction(transaction, connection, {
         skipPreflight: false,
-        maxRetries: 3
+        maxRetries: 3,
+        preflightCommitment: 'confirmed'
       });
       
       console.log('✅ Transaction sent:', signature);

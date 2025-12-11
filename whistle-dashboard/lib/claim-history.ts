@@ -70,8 +70,25 @@ export async function fetchClaimHistory(
 
         if (!tx || !tx.meta || tx.meta.err) continue;
 
-        // Get account keys using the correct API for VersionedMessage
-        const accountKeys = tx.transaction.message.getAccountKeys().staticAccountKeys;
+        // Get account keys - handle both legacy and versioned transactions
+        let accountKeys: PublicKey[] = [];
+        try {
+          if ('getAccountKeys' in tx.transaction.message) {
+            // Versioned transaction - resolve address lookup tables
+            const accountKeysObj = tx.transaction.message.getAccountKeys();
+            accountKeys = accountKeysObj.staticAccountKeys;
+            // Note: address lookup table keys are not included, but static keys should be enough
+          } else {
+            // Legacy transaction
+            accountKeys = tx.transaction.message.accountKeys.map(key => 
+              typeof key === 'string' ? new PublicKey(key) : key
+            );
+          }
+        } catch (err) {
+          // If we can't get account keys, skip this transaction
+          console.warn('Could not get account keys for transaction:', sigInfo.signature, err);
+          continue;
+        }
 
         // Check if this transaction involves the WHISTLE program
         const involvesProgram = accountKeys.some(
