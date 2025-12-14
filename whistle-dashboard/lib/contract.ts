@@ -852,9 +852,11 @@ export async function createClaimStakerRewardsTransaction(
   const [stakerAccountPDA] = getStakerAccountPDA(staker);
   const [stakingPoolPDA] = getStakingPoolPDA();
   const [paymentVaultPDA] = getPaymentVaultPDA();
-  const [rewardsAccumulatorPDA] = getRewardsAccumulatorPDA();
+  // Use the deployed rewards accumulator address directly to ensure correctness
+  const rewardsAccumulatorPDA = REWARDS_ACCUMULATOR_ADDRESS;
 
-  const instructionData = new Uint8Array([StakingInstruction.ClaimStakerRewards]);
+  // Instruction data: single byte discriminator for unit variant
+  const instructionData = Buffer.from([StakingInstruction.ClaimStakerRewards]);
 
   const claimIx = new TransactionInstruction({
     programId: WHISTLE_PROGRAM_ID,
@@ -866,7 +868,7 @@ export async function createClaimStakerRewardsTransaction(
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       { pubkey: rewardsAccumulatorPDA, isSigner: false, isWritable: true }, // REQUIRED: Fair distribution
     ],
-    data: Buffer.from(instructionData),
+    data: instructionData,
   });
 
   transaction.add(claimIx);
