@@ -347,21 +347,6 @@ export default function LinksPage() {
           />
           
           <LinkCard
-            href="https://provider.whistle.ninja/docs"
-            customIcon={({ className }) => (
-              <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M4 4h16v16H4z" />
-                <path d="M8 8h8M8 12h8M8 16h4" />
-                <path d="M4 4l4-2h12l4 2" strokeLinejoin="round" />
-              </svg>
-            )}
-            title="DOCUMENTATION"
-            subtitle="Technical Docs • Smart Contract • API"
-            gradient="from-blue-500/20 via-transparent to-cyan-500/10"
-            delay={150}
-          />
-          
-          <LinkCard
             href="https://dex.whistle.ninja"
             customIcon={({ className }) => (
               <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
@@ -372,7 +357,7 @@ export default function LinksPage() {
             title="WHISTLE DEX"
             subtitle="Trade • Charts • Analytics"
             gradient="from-cyan-500/20 via-transparent to-blue-500/10"
-            delay={200}
+            delay={150}
           />
           
           <LinkCard
@@ -388,7 +373,7 @@ export default function LinksPage() {
             title="WHISTLE AI"
             subtitle="AI-Powered Tools • Coming Soon"
             gradient="from-pink-500/20 via-transparent to-purple-500/10"
-            delay={250}
+            delay={200}
           />
           
           <LinkCard
@@ -405,7 +390,7 @@ export default function LinksPage() {
             title="FUN.WHISTLE.NINJA"
             subtitle="TXN Speed Game • Web3 Gaming"
             gradient="from-purple-500/20 via-transparent to-pink-500/10"
-            delay={300}
+            delay={250}
           />
         </div>
 
