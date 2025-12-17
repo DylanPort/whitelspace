@@ -332,6 +332,23 @@ export default function LinksPage() {
           />
           
           <LinkCard
+            href="https://devs.whistle.ninja"
+            customIcon={({ className }) => (
+              <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                <path d="M2 17l10 5 10-5" />
+                <path d="M2 12l10 5 10-5" />
+                <path d="M8 8l8 8M16 8l-8 8" />
+                <circle cx="12" cy="12" r="2" />
+              </svg>
+            )}
+            title="DEVS.WHISTLE.NINJA"
+            subtitle="Devs Incentive Portal"
+            gradient="from-cyan-500/20 via-transparent to-blue-500/10"
+            delay={100}
+          />
+          
+          <LinkCard
             href="https://whistle.ninja"
             customIcon={({ className }) => (
               <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
@@ -343,7 +360,7 @@ export default function LinksPage() {
             title="WHISTLE.NINJA"
             subtitle="Main Hub • Staking • Analytics"
             gradient="from-green-500/20 via-transparent to-green-500/10"
-            delay={100}
+            delay={150}
           />
           
           <LinkCard
@@ -357,7 +374,7 @@ export default function LinksPage() {
             title="WHISTLE DEX"
             subtitle="Trade • Charts • Analytics"
             gradient="from-cyan-500/20 via-transparent to-blue-500/10"
-            delay={150}
+            delay={200}
           />
           
           <LinkCard
@@ -373,7 +390,7 @@ export default function LinksPage() {
             title="WHISTLE AI"
             subtitle="AI-Powered Tools • Coming Soon"
             gradient="from-pink-500/20 via-transparent to-purple-500/10"
-            delay={200}
+            delay={250}
           />
           
           <LinkCard
@@ -390,7 +407,7 @@ export default function LinksPage() {
             title="FUN.WHISTLE.NINJA"
             subtitle="TXN Speed Game • Web3 Gaming"
             gradient="from-purple-500/20 via-transparent to-pink-500/10"
-            delay={250}
+            delay={300}
           />
         </div>
 
