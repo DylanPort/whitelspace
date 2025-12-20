@@ -43,7 +43,7 @@ export default function NetworkStatsPanel() {
     >
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-[11px] font-semibold tracking-[0.15em] relative z-10">
-            WHISTLE DEX
+            WHISTLE OPS
           </h3>
           <button
             onClick={() => setExpanded(true)}
@@ -64,20 +64,20 @@ export default function NetworkStatsPanel() {
             style={{ width: '100%', height: '280px' }}
           >
             {shouldLoadPreview ? (
-              <iframe
-                src="https://dex.whistle.ninja"
-                style={{ 
-                  border: 'none',
-                  background: '#000',
-                  width: '1600px',
-                  height: '1200px',
-                  transform: 'scale(0.175)',
-                  transformOrigin: 'top left',
-                  pointerEvents: 'none',
-                }}
-                loading="lazy"
+            <iframe
+              src="https://ops.whistle.ninja"
+              style={{ 
+                border: 'none',
+                background: '#000',
+                width: '1600px',
+                height: '1200px',
+                transform: 'scale(0.175)',
+                transformOrigin: 'top left',
+                pointerEvents: 'none',
+              }}
+              loading="lazy"
                 referrerPolicy="no-referrer"
-              />
+            />
             ) : (
               <div className="w-full h-full bg-black flex items-center justify-center">
                 <div className="text-gray-600 text-xs">Loading preview...</div>
@@ -115,11 +115,11 @@ export default function NetworkStatsPanel() {
               {/* Header */}
               <div className="flex items-center justify-between p-4 bg-black/80 border border-emerald-500/30 border-b-0 rounded-t-lg">
                 <h2 className="text-sm font-bold tracking-wider text-emerald-400">
-                  WHISTLE DEX
+                  WHISTLE OPS
                 </h2>
                 <div className="flex items-center gap-3">
                   <a
-                    href="https://dex.whistle.ninja"
+                    href="https://ops.whistle.ninja"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[10px] px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded text-emerald-400 hover:bg-emerald-500/20 transition-all"
@@ -138,7 +138,7 @@ export default function NetworkStatsPanel() {
               {/* iframe */}
               <div className="flex-1 bg-black border border-emerald-500/30 border-t-0 rounded-b-lg overflow-hidden">
                 <iframe
-                  src="https://dex.whistle.ninja"
+                  src="https://ops.whistle.ninja"
                   className="w-full h-full"
                   style={{ border: 'none' }}
                   loading="eager"
