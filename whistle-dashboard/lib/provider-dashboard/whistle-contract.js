@@ -35,7 +35,7 @@ export const MIN_PROVIDER_BOND = 1000; // 1000 WHISTLE minimum
 export const QUERY_COST = 10_000; // 0.00001 SOL per query
 
 // RPC Connection - Using Helius (temporary fix)
-const RPC_ENDPOINT = 'https://rpc.whistle.ninja';
+const RPC_ENDPOINT = 'https://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0';
 export const connection = new Connection(RPC_ENDPOINT, {
   commitment: 'confirmed',
   wsEndpoint: undefined,
@@ -43,16 +43,16 @@ export const connection = new Connection(RPC_ENDPOINT, {
 });
 
 const RPC_LIST = [
-  'https://rpc.whistle.ninja',
+  'https://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0',
 ];
 
 /**
  * Fetch WHISTLE token balance for a wallet
  */
 export async function fetchWhistleBalance(wallet) {
-  // Our own RPC - no rate limits!
+  // Fallback RPC
   const RPC_ENDPOINTS = [
-    'https://rpc.whistle.ninja',
+    'https://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0',
   ];
   
   for (const rpcUrl of RPC_ENDPOINTS) {
@@ -79,10 +79,10 @@ export async function fetchWhistleBalance(wallet) {
     }
   }
   
-  // Try fetching all token accounts as fallback (using our RPC)
+  // Try fetching all token accounts as fallback
   try {
     console.log('[Contract] Trying getParsedTokenAccountsByOwner fallback...');
-    const conn = new Connection('https://rpc.whistle.ninja', 'confirmed');
+    const conn = new Connection('https://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0', 'confirmed');
     
     const tokenAccounts = await conn.getParsedTokenAccountsByOwner(wallet, {
       mint: WHISTLE_MINT
@@ -118,9 +118,9 @@ export async function fetchWhistleBalance(wallet) {
  * Fetch SOL balance for a wallet
  */
 export async function fetchSolBalance(wallet) {
-  // Our own RPC - no rate limits!
+  // Fallback RPC
   const RPC_ENDPOINTS = [
-    'https://rpc.whistle.ninja',
+    'https://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0',
   ];
   
   for (const rpcUrl of RPC_ENDPOINTS) {

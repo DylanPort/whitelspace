@@ -3,7 +3,7 @@
  * Our own validator - no rate limits!
  */
 
-const RPC_URL = process.env.NEXT_PUBLIC_RPC_ENDPOINT || 'https://rpc.whistle.ninja'
+const RPC_URL = process.env.NEXT_PUBLIC_RPC_ENDPOINT || 'https://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0'
 
 class SolanaRPC {
   constructor(endpoint = RPC_URL) {

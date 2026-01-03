@@ -39,7 +39,7 @@ export const TOKEN_VAULT_ADDRESS = new PublicKey('6AP8c7sCQsm2FMvNJw6fQN5PnMdkyS
 export const PAYMENT_VAULT_ADDRESS = new PublicKey('CU1ZcHccCbQT8iA6pcb3ZyTjog8ckmDHH8gaAmKfC73G');
 
 // RPC connection - Whistle Network (our own validator!)
-const RPC_ENDPOINT = process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://rpc.whistle.ninja';
+const RPC_ENDPOINT = process.env.NEXT_PUBLIC_SOLANA_RPC || 'https://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0';
 export const connection = new Connection(RPC_ENDPOINT, 'confirmed');
 
 // ============= PDA DERIVATION =============

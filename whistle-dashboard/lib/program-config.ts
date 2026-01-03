@@ -49,7 +49,7 @@ export const DISTRIBUTION = {
 
 // RPC Configuration
 export const RPC_CONFIG = {
-  endpoint: 'https://rpc.whistle.ninja',
+  endpoint: 'https://rpc-mainnet.solanatracker.io/?api_key=4f442388-ae6f-41ba-a9c4-30d3ff2ee2a0',
   commitment: 'confirmed' as const,
 };
 
